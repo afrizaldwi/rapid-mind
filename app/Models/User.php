@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role', 'token_version', 'is_active', 'facility_id', 'shelter_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -27,6 +27,29 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => \App\Enums\UserRole::class,
+            'is_active' => 'boolean',
+            'token_version' => 'integer',
         ];
+    }
+
+    public function facility()
+    {
+        return $this->belongsTo(HealthcareFacility::class);
+    }
+
+    public function shelter()
+    {
+        return $this->belongsTo(Shelter::class);
+    }
+
+    public function assessments()
+    {
+        return $this->hasMany(Assessment::class);
+    }
+
+    public function emergencyEvents()
+    {
+        return $this->hasMany(EmergencyEvent::class);
     }
 }
