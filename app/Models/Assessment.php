@@ -4,7 +4,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Assessment extends Model {
     use HasUuids;
-    protected $primaryKey = 'uuid';
     protected $fillable = ['patient_id', 'user_id', 'status', 'mode', 'started_at', 'completed_at'];
     protected function casts(): array {
         return [

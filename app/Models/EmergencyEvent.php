@@ -4,7 +4,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class EmergencyEvent extends Model {
     use HasUuids;
-    protected $primaryKey = 'uuid';
     protected $fillable = ['patient_id', 'assessment_id', 'user_id', 'red_flag_type', 'status', 'latitude', 'longitude', 'shelter_id', 'notes'];
     protected function casts(): array {
         return [
