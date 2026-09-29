@@ -1,0 +1,56 @@
+name: rapid-mind
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rapid-mind
+
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - rapid-mind
+
+  postgres:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-rapid_mind}
+      POSTGRES_USER: ${DB_USERNAME:-rapid_mind}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rapid_mind_dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${DB_USERNAME:-rapid_mind} -d ${DB_DATABASE:-rapid_mind}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - rapid-mind
+
+networks:
+  rapid-mind:
+    driver: bridge
+
+volumes:
+  postgres-data:
