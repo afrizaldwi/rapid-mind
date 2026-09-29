@@ -1,0 +1,405 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Relawan;
+
+use App\Enums\AssessmentMode;
+use App\Enums\AssessmentStatus;
+use App\Enums\EmergencyStatus;
+use App\Enums\RedFlagType;
+use App\Enums\TriageCategory;
+use App\Http\Controllers\Controller;
+use App\Models\Assessment;
+use App\Models\EmergencyEvent;
+use App\Models\FunctionResponse;
+use App\Models\Patient;
+use App\Models\RiskResponse;
+use App\Models\Shelter;
+use App\Models\SrqResponse;
+use App\Models\TriageResult;
+use App\Domain\Triage\TriageCalculator;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
+
+final class RelawanController extends Controller
+{
+    public function home(): InertiaResponse
+    {
+        $user = Auth::user();
+
+        $activeDraft = Assessment::with('patient')
+            ->where('user_id', $user->id)
+            ->where('status', AssessmentStatus::IN_PROGRESS)
+            ->latest('updated_at')
+            ->first();
+
+        $recentAssessments = Assessment::with(['patient', 'triageResult'])
+            ->where('user_id', $user->id)
+            ->latest('created_at')
+            ->take(5)
+            ->get();
+
+        $activeEmergency = EmergencyEvent::with('patient')
+            ->where('user_id', $user->id)
+            ->whereIn('status', [EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING])
+            ->latest()
+            ->first();
+
+        $shelter = $user->shelter_id ? Shelter::find($user->shelter_id) : null;
+
+        return Inertia::render('Relawan/Home', [
+            'activeDraft' => $activeDraft,
+            'recentAssessments' => $recentAssessments,
+            'activeEmergency' => $activeEmergency,
+            'shelter' => $shelter,
+        ]);
+    }
+
+    public function pfa(): InertiaResponse
+    {
+        return Inertia::render('Relawan/Pfa');
+    }
+
+    public function assessmentIndex(): InertiaResponse
+    {
+        $user = Auth::user();
+
+        $inProgressAssessments = Assessment::with('patient')
+            ->where('user_id', $user->id)
+            ->where('status', AssessmentStatus::IN_PROGRESS)
+            ->latest()
+            ->get();
+
+        $patients = Patient::where('shelter_id', $user->shelter_id)
+            ->orWhere('created_by', $user->id)
+            ->latest()
+            ->get();
+
+        return Inertia::render('Relawan/Assessment/Index', [
+            'inProgressAssessments' => $inProgressAssessments,
+            'patients' => $patients,
+        ]);
+    }
+
+    public function createAssessment(Request $request): JsonResponse|RedirectResponse
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'patient_id' => ['nullable', 'uuid', 'exists:patients,id'],
+            'nik' => ['nullable', 'string', 'max:20'],
+            'name' => ['required_without:patient_id', 'nullable', 'string', 'max:100'],
+            'age' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'gender' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
+            'mode' => ['nullable', 'string', 'in:VERBAL,NON_VERBAL'],
+        ]);
+
+        $patientId = $validated['patient_id'] ?? null;
+
+        if (!$patientId) {
+            $patient = Patient::create([
+                'nik' => $validated['nik'] ?? null,
+                'name' => $validated['name'],
+                'age' => $validated['age'] ?? null,
+                'gender' => $validated['gender'] ?? null,
+                'shelter_id' => $user->shelter_id,
+                'created_by' => $user->id,
+            ]);
+            $patientId = $patient->id;
+        }
+
+        $assessment = Assessment::create([
+            'patient_id' => $patientId,
+            'user_id' => $user->id,
+            'status' => AssessmentStatus::IN_PROGRESS,
+            'mode' => isset($validated['mode']) ? AssessmentMode::from($validated['mode']) : AssessmentMode::VERBAL,
+            'started_at' => now(),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['assessment_id' => $assessment->id], 201);
+        }
+
+        return redirect("/relawan/assessment/{$assessment->id}/srq");
+    }
+
+    public function assessmentIdentity(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with('patient')->findOrFail($assessmentId);
+
+        return Inertia::render('Relawan/Assessment/Identity', [
+            'assessment' => $assessment,
+            'patient' => $assessment->patient,
+        ]);
+    }
+
+    public function assessmentSrq(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with(['patient', 'srqResponses'])->findOrFail($assessmentId);
+
+        $existingResponses = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
+
+        return Inertia::render('Relawan/Assessment/Srq', [
+            'assessment' => $assessment,
+            'patient' => $assessment->patient,
+            'responses' => $existingResponses,
+        ]);
+    }
+
+    public function saveSrq(Request $request, string $assessmentId): JsonResponse
+    {
+        $assessment = Assessment::findOrFail($assessmentId);
+
+        $validated = $request->validate([
+            'responses' => ['required', 'array'],
+            'responses.*.question_number' => ['required', 'integer', 'between:1,20'],
+            'responses.*.answer' => ['required', 'boolean'],
+            'mode' => ['nullable', 'string', 'in:VERBAL,NON_VERBAL'],
+        ]);
+
+        if (isset($validated['mode'])) {
+            $assessment->update(['mode' => AssessmentMode::from($validated['mode'])]);
+        }
+
+        foreach ($validated['responses'] as $resp) {
+            SrqResponse::updateOrCreate(
+                [
+                    'assessment_id' => $assessment->id,
+                    'question_number' => $resp['question_number'],
+                ],
+                [
+                    'answer' => $resp['answer'],
+                ]
+            );
+        }
+
+        return response()->json(['message' => 'Tersimpan di perangkat & server.']);
+    }
+
+    public function assessmentRisk(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with(['patient', 'riskAssessment'])->findOrFail($assessmentId);
+
+        $existingRisks = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
+
+        return Inertia::render('Relawan/Assessment/Risk', [
+            'assessment' => $assessment,
+            'patient' => $assessment->patient,
+            'risks' => $existingRisks,
+        ]);
+    }
+
+    public function saveRisk(Request $request, string $assessmentId): JsonResponse
+    {
+        $assessment = Assessment::findOrFail($assessmentId);
+
+        $validated = $request->validate([
+            'risks' => ['required', 'array'],
+        ]);
+
+        $weights = [
+            'R1' => 2,
+            'R2' => 2,
+            'R3' => 1,
+            'R4' => 2,
+            'R5' => 1,
+        ];
+
+        foreach ($validated['risks'] as $indicator => $answer) {
+            if (isset($weights[$indicator])) {
+                RiskResponse::updateOrCreate(
+                    [
+                        'assessment_id' => $assessment->id,
+                        'indicator' => $indicator,
+                    ],
+                    [
+                        'answer' => (bool)$answer,
+                        'weight' => $weights[$indicator],
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => 'Faktor risiko tersimpan.']);
+    }
+
+    public function assessmentFunction(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with(['patient', 'functionAssessment'])->findOrFail($assessmentId);
+
+        $existingFunctions = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
+
+        return Inertia::render('Relawan/Assessment/Function', [
+            'assessment' => $assessment,
+            'patient' => $assessment->patient,
+            'functions' => $existingFunctions,
+        ]);
+    }
+
+    public function saveFunction(Request $request, string $assessmentId): JsonResponse
+    {
+        $assessment = Assessment::findOrFail($assessmentId);
+
+        $validated = $request->validate([
+            'functions' => ['required', 'array'],
+        ]);
+
+        foreach ($validated['functions'] as $domain => $level) {
+            if (in_array($domain, ['F1', 'F2', 'F3'], true)) {
+                FunctionResponse::updateOrCreate(
+                    [
+                        'assessment_id' => $assessment->id,
+                        'domain' => $domain,
+                    ],
+                    [
+                        'level' => (int)$level,
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => 'Fungsi harian tersimpan.']);
+    }
+
+    public function assessmentReview(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with(['patient', 'srqResponses', 'riskAssessment', 'functionAssessment'])->findOrFail($assessmentId);
+
+        return Inertia::render('Relawan/Assessment/Review', [
+            'assessment' => $assessment,
+            'patient' => $assessment->patient,
+            'srqResponses' => $assessment->srqResponses->pluck('answer', 'question_number'),
+            'riskResponses' => $assessment->riskAssessment->pluck('answer', 'indicator'),
+            'functionResponses' => $assessment->functionAssessment->pluck('level', 'domain'),
+        ]);
+    }
+
+    public function completeAssessment(Request $request, string $assessmentId, TriageCalculator $calculator): JsonResponse|RedirectResponse
+    {
+        $assessment = Assessment::with(['srqResponses', 'riskAssessment', 'functionAssessment'])->findOrFail($assessmentId);
+
+        $srqMap = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
+        $riskMap = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
+        $functionMap = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
+
+        $result = $calculator->calculate($srqMap, $riskMap, $functionMap);
+
+        TriageResult::updateOrCreate(
+            ['assessment_id' => $assessment->id],
+            [
+                'srq_score' => $result->srqScore,
+                'risk_score' => $result->riskScore,
+                'function_score' => $result->functionScore,
+                'total_score' => $result->totalScore,
+                'system_recommendation' => $result->recommendation,
+                'is_red_flag_override' => $result->isRedFlagOverride,
+                'red_flag_source' => $result->redFlagSource,
+            ]
+        );
+
+        $assessment->update([
+            'status' => AssessmentStatus::COMPLETED,
+            'completed_at' => now(),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Asesmen berhasil diselesaikan.',
+                'result' => $result,
+            ]);
+        }
+
+        return redirect("/relawan/assessment/{$assessment->id}/result");
+    }
+
+    public function assessmentResult(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with(['patient', 'triageResult'])->findOrFail($assessmentId);
+
+        return Inertia::render('Relawan/Assessment/Result', [
+            'assessment' => $assessment,
+            'patient' => $assessment->patient,
+            'triageResult' => $assessment->triageResult,
+        ]);
+    }
+
+    public function data(): InertiaResponse
+    {
+        $user = Auth::user();
+
+        $inProgress = Assessment::with('patient')
+            ->where('user_id', $user->id)
+            ->where('status', AssessmentStatus::IN_PROGRESS)
+            ->latest('updated_at')
+            ->get();
+
+        $completed = Assessment::with(['patient', 'triageResult'])
+            ->where('user_id', $user->id)
+            ->where('status', AssessmentStatus::COMPLETED)
+            ->latest('completed_at')
+            ->get();
+
+        return Inertia::render('Relawan/Data', [
+            'inProgress' => $inProgress,
+            'completed' => $completed,
+        ]);
+    }
+
+    public function emergencyDetail(string $emergencyId): InertiaResponse
+    {
+        $emergency = EmergencyEvent::with(['patient', 'shelter', 'verifications.verifier'])->findOrFail($emergencyId);
+
+        return Inertia::render('Relawan/Emergency', [
+            'emergency' => $emergency,
+        ]);
+    }
+
+    public function triggerEmergency(Request $request): JsonResponse|RedirectResponse
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'patient_id' => ['nullable', 'uuid', 'exists:patients,id'],
+            'red_flag_type' => ['required', 'string'],
+            'latitude' => ['nullable', 'numeric'],
+            'longitude' => ['nullable', 'numeric'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'assessment_id' => ['nullable', 'uuid', 'exists:assessments,id'],
+        ]);
+
+        $redFlag = RedFlagType::from($validated['red_flag_type']);
+
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $validated['patient_id'] ?? null,
+            'assessment_id' => $validated['assessment_id'] ?? null,
+            'user_id' => $user->id,
+            'red_flag_type' => $redFlag,
+            'status' => EmergencyStatus::PENDING,
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'shelter_id' => $user->shelter_id,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Broadcast realtime alert to Healthcare facilities
+        try {
+            event(new \App\Events\EmergencyCreated($emergency));
+        } catch (\Throwable) {
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Sinyal darurat T0 berhasil dikirim.',
+                'emergency_id' => $emergency->id,
+            ], 201);
+        }
+
+        return redirect("/relawan/emergencies/{$emergency->id}");
+    }
+}
