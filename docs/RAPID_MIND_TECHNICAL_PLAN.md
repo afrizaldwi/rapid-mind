@@ -17,22 +17,25 @@ This section defines the **authoritative implementation sequence for the `demo` 
 ## 1. Current Repository Checkpoint
 
 - **Branch:** `demo`
-- **Current Repository Checkpoint:** `953c5fc230400ff18d42b625fd0ad13dd7c5b2b8` (`docs(healthcare): record browser verification checkpoint`)
-- **Healthcare Implementation Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
+- **Current Repository Checkpoint:** `a699b8c35f87c5e94cad7448e6e1dd05d7981592` (`fix(healthcare): normalize emergency coordinate rendering`)
+- **Phase A Main Implementation Checkpoint:** `e778ddfb5f842eab467881f2c15be929290c6a0e` (`feat(healthcare): harden realtime and referral lifecycle`)
+- **Prior Healthcare Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
 
 ### Verification Baseline
-- **Laravel Test Suite:** `90 passed, 1,052 assertions` (`docker compose exec -T app php artisan test`)
-- **Vue TypeScript Check:** `vue-tsc --noEmit` PASS (0 errors)
+- **Laravel Test Suite:** `96 tests passed, 1,137 assertions` (`docker compose exec -T app php artisan test`)
+- **Vue TypeScript Check:** `npx vue-tsc --noEmit` PASS (0 errors)
 - **Frontend Production Build:** `npm run build` PASS (clean asset manifest, standard large-chunk advisory warning for Map/Analytics assets)
-- **Git Formatting / Diff Check:** `git diff --check` PASS (clean, no trailing whitespace or EOF issues)
-- **Healthcare Antigravity Browser Verification:** **PASS** for directly testable selected prototype scope (Gates A, B1–B7, C1–C3, C6, D, E, F, G, I)
+- **Git Formatting / Diff Check:** `git diff --check` PASS (clean, no trailing whitespace or formatting defects)
+- **Phase A Status:** **COMPLETE / PASS for the directly testable selected prototype scope** (does not represent full production certification, full production hardening, or user manual sign-off)
+- **Healthcare Antigravity Browser Verification:** **PASS** for the directly testable selected prototype scope; preserved NDVs and limited-evidence gates are documented in the Phase A verification matrix below.
 - **User Manual Final Retest:** **NOT YET PERFORMED** (pending project owner verification prior to final team demo)
 
-### Explicit Browser NDVs (Preserved as Not Directly Verified, Not Failures)
-- **B8 — Missing-phone T0 fallback:** NDV (all existing demo T0 emergencies were reported by a volunteer with a provisioned phone number; covered by automated test `selected emergency exposes contact but queue does not and missing phone renders fallback`).
-- **C4 — T1-before-T2 priority ordering:** NDV (initial demo worklist contained only one unvalidated assessment; covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`).
-- **C5 — Same-category FIFO ordering:** NDV (single unvalidated assessment in initial demo worklist; covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`).
-- **H — Historical referral to inactive Faskes:** NDV (all historical demo referrals point to active `RSUD Candi`; covered by automated test `historical referral remains readable after facility becomes inactive`).
+### Preserved Phase A Browser Limitations (Preserved as NDV / Documented Constraints)
+- **A1-3 Equal-timestamp ID tie-break:** AUTOMATED-ONLY / NDV in browser (verified oldest-first ordering by distinguishable timestamps in DOM; identical-timestamp ID tie-break is covered by automated feature test suite).
+- **A2-4 Duplicate-click protection:** PASS WITH LIMITATION / source-supported (UI disables mutation controls while request is in-flight via `busyId` guard; rapid-double-click race condition not directly reproduced as a browser timing test).
+- **A2-6 Stale different mutation:** Backend 409 conflict PASS (direct authenticated browser request verified `expected_status: ACTIVE`, `status: ON_SITE` returned HTTP 409 and preserved canonical state `EN_ROUTE`); Natural visible Inertia conflict UI path NDV (forward-only button filtering structurally prevents user from selecting divergent stale action).
+- **A2-7 Exact replay idempotency:** HTTP exact replay PASS in authenticated browser runtime; no-duplicate history invariant automated/database-supported, not browser-visual PASS.
+- **Historical NDVs Retained:** Missing-phone T0 fallback (B8), T1-before-T2 priority ordering (C4), Same-category FIFO ordering (C5), Historical referral to inactive Faskes (H).
 
 ---
 
@@ -89,8 +92,8 @@ To complete the end-to-end competition prototype safely without scope creep, rem
 
 ```mermaid
 flowchart TD
-    PhaseA["Phase A: Healthcare Realtime & Referral/Dispatch Completion"]
-    PhaseB["Phase B: Relawan Offline / PWA Completion"]
+    PhaseA["Phase A: Healthcare Realtime & Referral Lifecycle (COMPLETE)"]
+    PhaseB["Phase B: Relawan Offline / PWA Completion (NEXT)"]
     PhaseC["Phase C: STT Safety & Interaction Hardening"]
     PhaseD["Phase D: Cross-Role Integration Hardening"]
     FinalVerif["Final Verification & End-to-End Rehearsal"]
@@ -102,59 +105,110 @@ flowchart TD
 
 ### Phase A — Healthcare Realtime + Referral/Dispatch Completion
 
+#### Status
+**COMPLETE / PASS for the directly testable selected prototype scope** (Main Implementation: `e778ddfb5f842eab467881f2c15be929290c6a0e`, Coordinate Correction: `a699b8c35f87c5e94cad7448e6e1dd05d7981592`).
+*(Note: Covers the current prototype demonstration scope; does not represent full production certification, full production hardening, or user manual sign-off).*
+
 #### Goal
-Verify and harden the existing realtime reception path and complete referral/dispatch handling from a newly triggered T0 emergency through Healthcare operational response without requiring manual page reloads.
+Harden the realtime emergency reception path and complete the operational referral lifecycle from newly triggered T0 emergency through Healthcare response, verification, and terminal completion without requiring manual page reloads.
 
-#### Existing Foundation
-- Reverb WebSocket service running in Docker Compose (`rapid-mind-reverb-1`).
-- `@laravel/echo-vue` configured via `configureEcho({ broadcaster: 'reverb' })` in `resources/js/app.ts`.
-- Private `emergencies` broadcast channel authorized for `HEALTHCARE` and `ADMIN` in `routes/channels.php`.
-- `App\Events\EmergencyCreated` event dispatched upon Relawan T0 submission.
-- `resources/js/layouts/HealthcareLayout.vue` already imports `echo` and `useConnectionStatus` from `@laravel/echo-vue`, subscribes to the private `emergencies` channel, listens for `EmergencyCreated`, plays a finite ~0.3-second audio notification, calls `router.reload()` for `pendingT0Count`, and when the current component is `Healthcare/Emergencies/Index`, also reloads `emergencies`, while displaying basic Reverb connected/not-connected state.
+#### Implemented & Verified Capabilities
 
-#### Current Gaps to Address
-- The Healthcare layout already consumes `EmergencyCreated` and refreshes the authoritative Inertia queue automatically when the emergency page is open. However, this behavior has not yet been directly multi-browser verified as a complete realtime arrival path.
-- Reconnect reconciliation is incomplete: a period of disconnected Reverb can miss events, and there is no explicit authoritative reconciliation triggered specifically when the WebSocket reconnects.
-- The current connection UI is basic connected/not-connected state and does not yet clearly distinguish connected, reconnecting/stale realtime, and broader server availability.
+##### 1. Healthcare Realtime Reception Hardening
+- **Single Subscription Ownership:** `HealthcareLayout.vue` remains the sole owner of the private `emergencies` Reverb subscription. Redundant page-level subscriptions were avoided, preventing duplicate listeners, race conditions, or multiple audio alerts.
+- **Push Without Reload:** Newly triggered T0 emergencies update the open Healthcare emergency queue in real time without requiring manual browser refresh.
+- **Duplicate Event Suppression:** Broadcast events are deduplicated in memory using a bounded set of stable emergency IDs (`seenIds` up to 100 entries). Repeated broadcast deliveries of the same emergency ID do not trigger duplicate audio alarms or multiple queue rows.
+- **Coalesced Reconciliation:** Realtime-triggered reload requests (`requestReconciliation()`) use in-flight locking (`reloadInFlight` / `reloadRequested`) to prevent overlapping, uncontrolled Inertia requests.
+- **Reconnect Server Catch-Up:** WebSocket reconnection automatically triggers authoritative server state reconciliation, pulling in any T0 incidents created during an outage.
+- **Finite Audio Notification:** Incoming T0 events play exactly one finite Web Audio tone (~0.3s sine wave at 880 Hz). No continuous, looping, or bouncing alert animations were added.
+- **No False Reconnection Alarm:** Reconnection reconciliation does NOT trigger audio alerts; audio is strictly reserved for live incoming emergency pushes.
+- **Queue Prioritization:** The pending T0 queue strictly prioritizes the oldest unacknowledged emergencies first (FIFO). Equal-timestamp ordering uses stable internal ID tie-breaking, verified via automated test coverage.
+- **Payload & Privacy Protection:**
+  - Raw `emergencies` channel is restricted to `HEALTHCARE` only; Admin is intentionally excluded from this patient-level realtime channel.
+  - `EmergencyCreated` broadcasts only `{ emergency: { id } }` over WebSockets rather than sensitive patient-level payloads.
+  - Queue cards conceal volunteer phone numbers; reporter contact info is revealed only on the selected emergency detail page.
+- **Server vs. WebSocket Reachability Distinction:**
+  - Independent periodic HTTP probe (`/up` every 15s) decouples application server reachability from WebSocket socket state.
+  - Three distinct operational states are communicated:
+    1. *Realtime aktif* (both server and WebSocket healthy).
+    2. *Realtime terputus* (Reverb down, Laravel HTTP server still reachable; displays *"Pembaruan otomatis sementara tidak tersedia. Data mungkin tidak terbaru. Terakhir diperbarui [time]"*).
+    3. *Koneksi ke server terputus* (Laravel HTTP unreachable; takes strict precedence over WebSocket state and displays *"Data di layar mungkin tidak terbaru. Terakhir diperbarui [time]"*).
+  - Existing loaded queue data remains visible during outages; pages do not collapse into empty states.
+  - Recovery of either Reverb or Laravel automatically restores the healthy indicator and reconciles authoritative data.
 
-#### Required Implementation
-1. **Realtime Emergency Reception Verification & Hardening:**
-   - Verify and harden the existing layout-level `emergencies` subscription and reload behavior rather than introducing a redundant second subscription in `Healthcare/Emergencies/Index.vue` (prefer one subscription owner to avoid duplicate audio alerts, duplicate reloads, or duplicate event handling).
-   - Ensure newly created T0 incidents update the open Healthcare queue in real time without a user-initiated browser refresh.
-   - Deduplicate incoming emergencies and guard against race conditions.
-   - Newly arrived T0 appears in the correct `PENDING` urgent queue state.
-   - Retain the finite (~0.3s) audio notification and non-continuous visual attention indicator (strictly no infinite pulsing or disruptive loops).
-2. **Connection State & Reconnect Reconciliation:**
-   - Enhance the connection state UI to clearly distinguish connected, reconnecting/stale realtime, and broader server availability.
-   - Graceful fallback when Reverb is disconnected without representing WebSocket disconnection as total server failure.
-   - On WebSocket reconnect, perform explicit reconciliation against authoritative server state to catch events missed during disconnection.
-3. **Privacy & Domain Integrity:**
-   - Maintain privacy boundaries: queue list conceals volunteer contact; only selected emergency detail renders contact.
-   - Preserve existing 2-step acknowledgement, tele-verification, and classification behavior.
-4. **Referral / Dispatch Progression Completion:**
-   - Inspect and enforce the existing referral status lifecycle:
-     ```text
-     ACTIVE
-     → EN_ROUTE
-     → ON_SITE
-     → TRANSPORT
-     → COMPLETED
-     ```
-     corresponding to Indonesian presentation (`Aktif Terbit`, `Ambulans Menuju Posko`, `Tiba di Posko`, `Perjalanan ke RS`, `Selesai di RS`).
-   - Enforce valid forward state transitions; prevent backward or illegal status jumps.
-   - Preserve append-only `referral_status_history` and immutable audit logs.
-   - Preserve idempotency and replay protection.
-   - Do not add `CANCELLED` or another state merely because it appears useful; a new state may only be introduced if an approved project specification explicitly requires it and the user agrees to the domain change.
-   - Add response-team assignment only if supported by concrete existing model semantics; do not invent speculative ambulance dispatch policies.
-   - Do not redesign the Healthcare workspace.
+##### 2. Referral Operational Lifecycle & Concurrency Integrity
+- **Canonical Lifecycle Graph:**
+  Enforces the approved operational progression:
+  ```text
+  ACTIVE
+  → EN_ROUTE
+  → ON_SITE
+     ├→ TRANSPORT → COMPLETED
+     └────────────→ COMPLETED
+  ```
+  Valid edges:
+  - `ACTIVE → EN_ROUTE`
+  - `EN_ROUTE → ON_SITE`
+  - `ON_SITE → TRANSPORT`
+  - `ON_SITE → COMPLETED` (optional direct completion without transport)
+  - `TRANSPORT → COMPLETED`
+  All backward transitions and state skips are rejected. `COMPLETED` is terminal.
+- **Centralized Domain Logic:** Progression rules centralized in `App\Enums\ReferralStatus::canTransitionTo()`.
+- **Concurrency & Pessimistic Locking:** Database mutations execute within a database transaction with `Referral::whereKey($id)->lockForUpdate()`.
+- **Expected-Status Assertion:** Client requests pass `expected_status` alongside target `status`. Stale requests attempting different transitions are rejected with HTTP 409 Conflict without overwriting canonical state.
+- **Idempotent Replay Support:** Exact replay requests (`expected_status` matching prior state, target `status` already applied) return HTTP 200 without duplicating history rows.
+- **Immutable Status History:** Every accepted status mutation transactionally appends exactly one record to `referral_status_histories`.
+- **Forward-Only UI Controls:** The interface renders only legitimate next action buttons for the current state (`nextReferralActions()`), blocking illegal transitions at the UI layer.
+- **Terminal Confirmation:** Transitioning to `COMPLETED` requires concise explicit confirmation via a confirmation dialog.
+- **Neutral Operational Terminology:** Uses approved neutral Indonesian labels:
+  - `Aktif`
+  - `Menuju lokasi`
+  - `Tiba di lokasi`
+  - `Transportasi`
+  - `Selesai`
+  *(Misleading legacy terminology such as "Ambulans Menuju Posko", "Tiba di Posko", "Selesai di RS", and "Diterima RS" has been eliminated).*
 
-#### Verification Gate
-- **Multi-Browser Test:**
-  - Browser A: Logged in as Healthcare with queue already open on `/healthcare/emergencies`.
-  - Browser B: Logged in as Relawan, submits a new T0 emergency.
-  - Expected: Browser A updates automatically without user-initiated refresh.
-- **Resilience:** Disconnect/reconnect WebSocket and verify reconciliation; verify duplicate events do not create multiple rows.
+##### 3. Architectural Caveat: Combined Referral Progression vs. Future Dispatch Domain
+- **Explicit Domain Scope:** The current Phase A implementation hardens the existing combined prototype referral/operational progression within the `Referral` model and `ReferralStatus` enum.
+- **No Separate Dispatch Domain Claimed:** Phase A does NOT introduce an independent `EmergencyDispatch` model, dedicated ambulance/vehicle registry, fleet management, response-team entity, or dispatch-team CRUD. The dedicated UX specifications still conceptually distinguish Referral from Dispatch/response team. The prototype currently unites these concepts in a hardened operational lifecycle.
 
+##### 4. Coordinate Rendering Corrective Fix & Retest
+- **Runtime Defect Discovered:** During the initial Phase A browser verification run on demo-seeded incident `81b5391a-9632-528b-a211-12a907125561` ("Bambang Sudarmono"), non-null decimal coordinates caused a client-side exception: `TypeError: latitude.toFixed is not a function`.
+- **Root Cause:** Laravel's `decimal:8` model attribute casts serialize coordinates as string primitives in Inertia JSON payloads, while the component invoked `.toFixed()` directly.
+- **Corrective Commit:** `a699b8c35f87c5e94cad7448e6e1dd05d7981592` (`fix(healthcare): normalize emergency coordinate rendering`).
+- **Correction Details:** `resources/js/Pages/Healthcare/Emergencies/Show.vue` introduces `parseCoordinate()` and `formatCoordinates()` to safely normalize numbers/strings to finite numbers, format with 4 decimal places, and provide a clean fallback (`"Sesuai Posko"`) for missing or non-finite values.
+- **Corrective Browser Retest Results:**
+  - Decimal-string coordinate rendering (`-7.6892, 110.4234`) — `PASS`
+  - Missing/null coordinate fallback (`Sesuai Posko`) — `PASS`
+  - Normal emergency detail regression — `PASS`
+  - Healthcare emergency queue smoke — `PASS`
+  - Healthcare referral worklist smoke — `PASS`
+  - Runtime / console errors: `0`
+
+##### 5. Phase A Browser Verification Matrix Summary
+
+| Gate | Description | Browser Verification Status | Evidence / Notes |
+| :--- | :--- | :--- | :--- |
+| **A1-1** | Initial Healthy Realtime State | **PASS** | "Realtime aktif", 0 warnings, queue loaded, private auth 200 OK |
+| **A1-2** | Realtime T0 Push Delivery | **PASS** | Auto-delivery without reload, pending count 2→3, finite audio (1 tone), no focus stealing |
+| **A1-3** | Queue FIFO Priority Ordering | **PASS** | Oldest unacknowledged T0 rendered first; ID tie-break automated-only / NDV in browser |
+| **A1-4** | Queue vs Detail Contact Privacy | **PASS** | Queue conceals phone number; detail page exposes volunteer name, phone, and `tel:` action |
+| **A1-5** | Reverb-Only Outage State | **PASS** | Reverb stopped: shows "Realtime terputus" + stale notice; "Koneksi ke server terputus" absent; data preserved |
+| **A1-6** | T0 Persists During Reverb Outage | **PASS** | Emergency saved to DB; Relawan shows fallback warning; Healthcare does not receive event while down |
+| **A1-7** | Reconnection Catch-Up | **PASS** | Reverb restarted: returns to "Realtime aktif", missed T0 reconciled into queue (count 3→4), 0 audio calls |
+| **A1-8** | Duplicate Event Suppression | **PASS** | Immediate duplicate broadcast rejected by `seenIds`; audio alert sounded exactly once; single DOM card |
+| **A1-9** | Server Unreachable Precedence | **PASS** | App container stopped: `/up` probe fails, "Koneksi ke server terputus" takes precedence over open WebSocket |
+| **A1-10**| Server Recovery & Resumption | **PASS** | App container restarted: `/up` probe recovers, queue reconciles, returns cleanly to "Realtime aktif" |
+| **A2-1** | Valid Next Action: ACTIVE | **PASS** | Only "Mulai menuju lokasi" displayed; subsequent buttons strictly hidden |
+| **A2-2** | Progression: EN_ROUTE → ON_SITE | **PASS** | Transition succeeds without page reload; status updates to "Tiba di lokasi" |
+| **A2-3A**| Transport Progression Branch | **PASS** | ON_SITE exposes both actions; ON_SITE → TRANSPORT → Selesaikan; confirmation modal confirmed; terminal state |
+| **A2-3B**| Non-Transport Direct Completion | **PASS** | ON_SITE → Selesaikan directly; confirmation modal confirmed; terminal state without transport required |
+| **A2-4** | Duplicate-Click Protection | **PASS WITH LIMITATION** | Source-supported via `busyId` button disablement; timing race not directly browser reproduced |
+| **A2-5** | Dual-Browser Canonical Update | **PASS** | Browser A advances ACTIVE → EN_ROUTE; Browser B retains stale view |
+| **A2-6** | Stale Different Mutation | **PASS (Backend) / NDV (UI)**| Authenticated POST rejected with HTTP 409 Conflict; natural visible UI conflict NDV due to forward-only gating |
+| **A2-7** | Exact Replay Idempotency | **PASS (HTTP) / automated + database-supported** | Authenticated browser-runtime replay returns HTTP 200; no-duplicate history invariant is covered by automated tests and database inspection, not browser-visual verification |
+| **Sec 9** | Neutral Operational Wording | **PASS** | Rendered labels verified: Aktif, Menuju lokasi, Tiba di lokasi, Transportasi, Selesai; legacy terms absent |
+| **Sec 14** | Referral Provenance & History | **PASS WITH LIMITATION** | Browser directly verified assessment-validation provenance and the rendered status-history trail; distinct T0-vs-assessment provenance and append-only integrity remain additionally covered by source/automated tests |
 ---
 
 ### Phase B — Relawan Offline/PWA Completion
@@ -265,13 +319,17 @@ Execute targeted integration and stability hardening across all three role exper
 Once Phases A through D are completed, the final verification sequence will be executed in this exact order:
 
 ```text
-Phase A: Automated tests + Antigravity multi-browser realtime verification
-→ Phase B: Automated tests + Antigravity offline / outbox sync verification
-→ Phase C: Automated tests + Antigravity STT safety & manual override verification
-→ Phase D: Automated tests + Cross-role integration verification
-→ Final Antigravity cross-role end-to-end rehearsal
-→ Project-owner manual retest
-→ Final demo polish (only if concrete defects remain)
+Phase A — COMPLETE / PASS for selected prototype scope
+↓
+Phase B — Relawan Offline / PWA Completion (NEXT)
+↓
+Phase C — STT Safety & Interaction Hardening
+↓
+Phase D — Cross-Role Integration Hardening
+↓
+Final Antigravity end-to-end rehearsal
+↓
+Project-owner manual final retest
 ```
 
 ### Final Cross-Role Golden Demo Path:
@@ -315,7 +373,7 @@ Before starting any task in the remaining demo sprint:
 1. **Read this Current Demo Sprint Execution Anchor.**
 2. **Inspect the current `demo` branch codebase.**
 3. **Read the applicable dedicated UX specification.**
-4. **Confirm the requested task belongs to the active phase (Phase A, B, C, or D).**
+4. **Confirm the requested task belongs to the active phase (Phase B, C, or D; Phase A is complete).**
 5. **Implement the smallest coherent, working slice.**
 6. **Run automated verification (`docker compose exec -T app php artisan test`, frontend build/lint).**
 7. **Perform focused browser verification where required.**
