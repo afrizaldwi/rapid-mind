@@ -391,10 +391,29 @@ final class RelawanController extends Controller
             'assessment_id' => ['nullable', 'uuid', 'exists:assessments,id'],
         ]);
 
+        $patientId = $validated['patient_id'] ?? null;
+        if (isset($validated['assessment_id'])) {
+            $assessment = Assessment::find($validated['assessment_id']);
+
+            if (!$assessment || $assessment->user_id !== $user->id) {
+                throw ValidationException::withMessages([
+                    'assessment_id' => 'Asesmen tidak tersedia untuk Relawan ini.',
+                ]);
+            }
+
+            if ($patientId !== null && $patientId !== $assessment->patient_id) {
+                throw ValidationException::withMessages([
+                    'patient_id' => 'Penyintas tidak sesuai dengan asesmen yang dipilih.',
+                ]);
+            }
+
+            $patientId = $assessment->patient_id;
+        }
+
         $redFlag = RedFlagType::from($validated['red_flag_type']);
 
         $emergency = EmergencyEvent::create([
-            'patient_id' => $validated['patient_id'] ?? null,
+            'patient_id' => $patientId,
             'assessment_id' => $validated['assessment_id'] ?? null,
             'user_id' => $user->id,
             'red_flag_type' => $redFlag,

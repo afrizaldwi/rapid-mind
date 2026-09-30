@@ -41,6 +41,9 @@
     <!-- T0 Verification Task Sheet Modal -->
     <T0Verification
       :show="showEmergencyModal"
+      :patient-id="t0AssessmentContext?.patientId"
+      :patient-name="t0AssessmentContext?.patientName"
+      :assessment-id="t0AssessmentContext?.assessmentId"
       @close="showEmergencyModal = false"
     />
 
@@ -103,6 +106,23 @@ import T0Verification from '@/components/Relawan/T0Verification.vue';
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
 const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(page.url.split('?')[0]));
+
+const t0AssessmentContext = computed(() => {
+  const route = page.url.split('?')[0].match(/^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/);
+  const assessment = page.props.assessment as { id?: unknown; patient_id?: unknown } | undefined;
+  const patient = page.props.patient as { id?: unknown; name?: unknown } | undefined;
+
+  if (!route || typeof assessment?.id !== 'string' || assessment.id !== route[1]
+    || typeof patient?.id !== 'string' || assessment.patient_id !== patient.id) {
+    return null;
+  }
+
+  return {
+    assessmentId: assessment.id,
+    patientId: patient.id,
+    patientName: typeof patient.name === 'string' ? patient.name : undefined,
+  };
+});
 
 const showEmergencyModal = ref(false);
 const isOnline = ref(true);
