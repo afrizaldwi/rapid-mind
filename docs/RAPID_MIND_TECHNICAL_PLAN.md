@@ -17,7 +17,7 @@ This section defines the **authoritative implementation sequence for the `demo` 
 ## 1. Current Repository Checkpoint
 
 - **Branch:** `demo`
-- **Current Repository Checkpoint:** `a699b8c35f87c5e94cad7448e6e1dd05d7981592` (`fix(healthcare): normalize emergency coordinate rendering`)
+- **Current Repository Checkpoint:** `ce90474836b02ad3484ad01ed82d85d272aa78e4` (`docs(plan): record phase A completion and verification`)
 - **Phase A Main Implementation Checkpoint:** `e778ddfb5f842eab467881f2c15be929290c6a0e` (`feat(healthcare): harden realtime and referral lifecycle`)
 - **Prior Healthcare Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
 
@@ -213,50 +213,918 @@ Harden the realtime emergency reception path and complete the operational referr
 
 ### Phase B — Relawan Offline/PWA Completion
 
+#### Status
+
+**NEXT / NOT YET IMPLEMENTED**
+
+Phase B is intentionally divided into three implementation checkpoints:
+
+```text
+B1 — Local Data & Replay Contract
+↓
+B2 — Relawan Local-First Workflow Integration
+↓
+B3 — PWA Shell & Offline Browser Verification
+```
+
+These checkpoints must be completed in order.
+
+The split is deliberate. The current repository already contains partial IndexedDB, draft persistence, and outbox infrastructure, but the active Relawan workflow is still materially server-first. A Service Worker must not be used to hide or compensate for an incomplete local data model.
+
+---
+
 #### Goal
-Finish the required field-operational local-first behavior for frontline volunteers using the existing Dexie/IndexedDB outbox architecture.
 
-#### Existing Foundation
-- `resources/js/offline/db.ts` (IndexedDB schema via Dexie).
-- `resources/js/offline/assessmentDraft.ts` (local draft persistence).
-- `resources/js/offline/syncManager.ts` (outbox queue and synchronization manager).
-- Data workspace (`/relawan/data`) with server-backed in-progress assessments, completed assessments, and a manual `Sinkronkan` action through `syncManager`.
+Complete the required field-operational local-first behavior for Relawan so that assessment work and verified T0-Suspect events remain safe on the device, survive interruption/reload/restart where applicable, and synchronize deterministically when server access returns.
 
-#### Current Gaps to Address
-- Relawan shell header does not dynamically reflect real sync-manager queue counts.
-- T0 emergency creation is not fully local-first (must be guaranteed persisted locally before server sync).
-- Priority-capable outbox infrastructure already exists and sorts lower numeric priority first, but the T0 submission flow is not currently wired through the local-first emergency outbox path. Therefore emergency priority exists as infrastructure but is not yet exercised by actual T0 creation (assessment server mutations also need source inspection during Phase B before claiming complete outbox integration).
-- A production PWA/service-worker offline shell is not currently configured in Vite. Phase B must determine and implement the minimum approved PWA/offline-shell solution required by the final handoff, then verify it directly.
+The required conceptual write path is:
 
-#### Required Implementation
-1. **Local-First T0 & Assessment Persistence:**
-   - T0 emergency submission must persist locally to IndexedDB before server transmission is attempted.
-   - Routine assessment sessions must save complete responses locally to outbox, with source inspection of assessment server mutations to ensure full outbox coverage.
-   - Interrupted assessments must support deterministic recovery on page reload or device restart.
-   - Client-generated UUIDs ensure idempotency and prevent duplicate records upon server replay.
-2. **Prioritized Outbox Synchronization:**
-   - Wire actual T0 creation through the local-first emergency outbox path to exercise existing priority queueing (priority 1 emergencies synchronized before priority 2 routine assessments).
-   - Distinct, explicit status states: `Local Saved` ≠ `Syncing` ≠ `Server Confirmed`.
-   - Never display "Tersinkron" when records remain in local outbox.
-3. **UI & Shell Integration:**
-   - Relawan layout header consumes real sync-manager state (`Tersinkron` vs `Pending Sync (N)` vs `Offline`).
-   - Extend `/relawan/data` so it truthfully exposes local pending records, actual outbox counts/items where appropriate, and synchronization state (do not claim an outbox listing exists before it is implemented).
-   - Native SMS fallback remains available as a manual device handoff only; do not invent automated SMS background sending.
-   - Do NOT claim fresh-login offline authentication unless an explicit local credentials cache is implemented and verified.
-4. **PWA Offline Shell:**
-   - Determine and implement the minimum approved PWA/service-worker solution in Vite.
-   - Verify Service Worker registers and caches essential PWA app shell assets for offline startup.
-   - Offline form interactions must survive browser reload/restart without data loss.
+```text
+Relawan interaction
+↓
+local IndexedDB persistence
+↓
+local domain record
+↓
+outbox / synchronization state
+↓
+Laravel server reconciliation
+↓
+canonical PostgreSQL state
+```
 
-#### Verification Gate
-- **Actual Browser Offline Test:**
-  - Online → switch network to Offline in DevTools.
-  - Create/edit assessment and create T0 emergency.
-  - Reload browser while offline: verify data survives.
-  - Switch network to Online → trigger sync.
-  - Verify authoritative server records created without duplicates.
-  - Confirm T0 emergency is synchronized ahead of normal assessments.
+Not:
 
+```text
+Relawan interaction
+↓
+Laravel request
+↓
+database
+↓
+local recovery only after failure
+```
+
+Local persistence, server acceptance, synchronization, and realtime delivery remain separate states.
+
+---
+
+#### Phase B Existing Foundation
+
+The following implementation already exists and must be reused where sound:
+
+- `resources/js/offline/db.ts`
+  - Dexie database;
+  - local patient, assessment, emergency, and outbox stores.
+- `resources/js/offline/assessmentDraft.ts`
+  - serialized local SRQ/Risk/Function draft writes;
+  - draft validation;
+  - local/server draft merge helpers.
+- `resources/js/offline/syncManager.ts`
+  - outbox infrastructure;
+  - priority field;
+  - online and visibility-triggered synchronization hooks;
+  - manual synchronization support.
+- SRQ-20, Faktor Risiko, and Fungsi Harian pages already persist meaningful answer changes locally.
+- TypeScript triage domain logic already exists under `resources/js/domain/triage/`.
+- `/relawan/data` already exposes the current server-backed assessment workspace and a manual synchronization action.
+- T0 verification UI already exists.
+- Backend T0 validation already supports:
+  - identified patient context;
+  - assessment-derived patient context;
+  - unidentified emergency context;
+  - GPS-independent creation.
+- SMS fallback is already represented as a native/device composer handoff rather than guaranteed automatic SMS delivery.
+- Existing backend assessment validation and server-side triage calculation remain canonical.
+
+These foundations must not be discarded through a broad rewrite unless a concrete correctness problem requires replacement.
+
+---
+
+#### Confirmed Current Gaps
+
+Source inspection confirms the following Phase B gaps.
+
+##### Local assessment lifecycle
+
+Current local persistence is primarily answer-draft persistence after a server assessment already exists.
+
+A completely new assessment cannot yet be created, progressed, completed, reloaded, and synchronized entirely from a local-first record.
+
+Current assessment creation remains server-first:
+
+```text
+UI
+→ POST /relawan/assessment
+→ server creates patient / assessment UUID
+→ assessment stages begin
+```
+
+Phase B must instead establish stable local patient/assessment identity before server synchronization is required.
+
+##### Assessment outbox coverage
+
+SRQ, risk, and function pages currently attempt direct server writes when advancing between stages.
+
+Failed server writes are not currently converted into a canonical assessment outbox operation.
+
+The existing `ASSESSMENT` outbox type therefore does not yet establish complete assessment synchronization coverage.
+
+##### T0 local-first behavior
+
+`T0Verification.vue` currently submits directly to the server.
+
+The required sequence is:
+
+```text
+validate emergency input
+→ generate/stabilize emergency UUID
+→ persist LocalEmergency
+→ enqueue priority emergency outbox item
+→ attempt transmission
+```
+
+Server transmission must never be a prerequisite for emergency data durability.
+
+##### Shell synchronization state
+
+The Relawan shell currently tracks raw browser online/offline state, but it does not consume the real `syncManager` state.
+
+Therefore the shell can display `Tersinkron` while local outbox work still exists.
+
+This must be corrected.
+
+##### Data workspace
+
+`/relawan/data` currently primarily reflects server-backed assessments.
+
+It does not yet truthfully expose all required local states such as:
+
+```text
+Sedang Dikerjakan
+Belum Selesai
+Menunggu Sinkronisasi
+Sinkronisasi belum berhasil
+Tersinkron
+local-only T0
+pending outbox work
+```
+
+##### Server replay / idempotency
+
+Current server-created UUID behavior is insufficient for deterministic offline replay.
+
+Client-originated synchronized entities must use stable UUIDs so an exact retry does not create another logical patient, assessment, or T0 incident.
+
+T0 exact replay must not produce duplicate Healthcare alerts.
+
+##### Local account isolation
+
+The existing fixed Dexie database is not yet sufficient evidence of account-isolated local clinical/emergency data.
+
+Phase B must prevent locally stored Relawan data from one authenticated account from becoming visible or synchronizable under another Relawan account on the same browser profile/device.
+
+##### PWA shell
+
+A production Service Worker / PWA application-shell configuration is not currently present.
+
+Phase B must establish the minimum approved PWA runtime needed for Relawan offline startup without broadly caching sensitive authenticated clinical server responses.
+
+---
+
+#### B1 — Local Data & Replay Contract
+
+##### Goal
+
+Establish the durable local domain model and deterministic server replay contract before changing the visible Relawan workflow.
+
+B1 is primarily a correctness and data-integrity checkpoint.
+
+---
+
+##### B1.1 Account-Isolated Local Storage
+
+The Relawan local data layer must be isolated by authenticated account.
+
+Required behavior:
+
+```text
+Relawan A local data
+≠
+Relawan B local data
+```
+
+A Relawan account must not read, display, or synchronize another account's local:
+
+- patients;
+- assessments;
+- emergencies;
+- outbox records;
+- synchronization metadata.
+
+The implementation may use an appropriately account-scoped database/repository strategy, but account isolation is a required behavior rather than an optional optimization.
+
+Do not store the user's normal password, refresh credential, or long-lived authentication credential in IndexedDB merely to support offline work.
+
+Fresh offline login remains outside the current prototype scope.
+
+---
+
+##### B1.2 Stable Client UUID Strategy
+
+Major locally created entities must receive stable UUIDs before server synchronization:
+
+```text
+patient
+assessment
+emergency event
+```
+
+The same UUID must survive:
+
+```text
+local creation
+→ browser/PWA interruption
+→ retry
+→ synchronization
+→ exact replay
+```
+
+Do not generate a different server identity merely because synchronization is retried.
+
+---
+
+##### B1.3 Local Repositories
+
+Introduce focused local repository/service boundaries for at minimum:
+
+```text
+patient
+assessment
+emergency
+outbox
+```
+
+Do not place all offline behavior into one large component or one oversized utility file.
+
+Assessment repositories must preserve:
+
+- patient context;
+- assessment identity;
+- mode;
+- SRQ answers;
+- risk answers;
+- function answers;
+- local triage result where complete;
+- workflow/completion state;
+- local timestamps;
+- synchronization state.
+
+Emergency repositories must preserve:
+
+- stable emergency UUID;
+- patient/assessment context when available;
+- Red Flag reason;
+- notes;
+- coordinates when available;
+- local creation timestamp;
+- local operational state;
+- synchronization state.
+
+---
+
+##### B1.4 Canonical Assessment Synchronization Payload
+
+Do not model offline assessment synchronization as a fragile sequence of unrelated replay operations for every individual stage.
+
+Prefer one canonical assessment synchronization contract containing the necessary assessment aggregate, including where applicable:
+
+```text
+assessment UUID
+patient UUID + patient identity
+mode
+SRQ answers
+risk answers
+function answers
+completion state
+client-calculated triage result / metadata
+```
+
+The server remains authoritative.
+
+The server must:
+
+1. validate the payload;
+2. reconcile/create the patient using the stable patient UUID;
+3. reconcile/create the assessment using the stable assessment UUID;
+4. persist structured response sets transactionally;
+5. recalculate triage using the PHP domain implementation;
+6. store the canonical server triage result;
+7. return canonical server state for local reconciliation.
+
+The server must never trust the client-provided score as authoritative.
+
+---
+
+##### B1.5 Idempotent Assessment Replay
+
+Assessment synchronization must support deterministic replay.
+
+Required behavior:
+
+```text
+first valid UUID submission
+→ create/reconcile canonical server record
+
+same UUID + same logical payload replay
+→ success
+→ no duplicate logical record
+
+same UUID + conflicting incompatible payload
+→ explicit deterministic conflict
+```
+
+Do not silently create a second assessment because the client retried after an uncertain network response.
+
+Existing uniqueness constraints for SRQ, risk, function, and triage records should be preserved and reused where appropriate.
+
+---
+
+##### B1.6 Idempotent Emergency Replay
+
+T0 synchronization requires stronger guarantees because duplicate replay can produce duplicate operational alerts.
+
+Required behavior:
+
+```text
+new emergency UUID
+→ create one emergency
+→ publish one Healthcare emergency event
+
+same UUID + exact replay
+→ return existing successful state
+→ do not create another emergency
+→ do not publish another Healthcare alert
+
+same UUID + conflicting incompatible replay
+→ reject explicitly
+```
+
+The locally generated emergency UUID becomes the server emergency UUID.
+
+Emergency acceptance must reconcile local dependencies without waiting for routine assessment synchronization. A priority-1 `EMERGENCY` operation must be eligible to synchronize before any priority-2 `ASSESSMENT` operation.
+
+If the emergency identifies a locally created patient, its emergency payload must carry sufficient patient identity data together with the stable patient UUID. The server transaction must reconcile or create that patient before creating the emergency.
+
+If the T0 originated from a local assessment whose UUID does not yet exist on the server, the emergency transaction may reconcile or create only the minimum `IN_PROGRESS` assessment identity required to preserve the emergency relationship. This emergency dependency reconciliation must not synchronize SRQ, risk, function, or routine assessment completion data.
+
+The later priority-2 canonical `ASSESSMENT` aggregate must reconcile into that same stable assessment UUID rather than creating another assessment. An unidentified T0 remains valid without patient or assessment dependencies.
+
+Idempotent emergency replay rules apply to the entire dependency-reconciliation transaction: exact replay must neither duplicate the emergency nor broadcast another Healthcare alert. This is dependency reconciliation for emergency acceptance, not routine assessment synchronization.
+
+---
+
+##### B1.7 Outbox Operation Model
+
+The outbox must represent real synchronizable domain operations rather than unused generic placeholders.
+
+At minimum:
+
+```text
+EMERGENCY
+ASSESSMENT
+```
+
+Priority ordering remains:
+
+```text
+EMERGENCY  → priority 1
+ASSESSMENT → priority 2
+```
+
+The `PATIENT` operation must not remain a misleading partially supported queue type.
+
+Either:
+
+- implement a real independent patient synchronization contract when genuinely required;
+
+or preferably for the current MVP:
+
+- synchronize patient identity as part of the canonical assessment aggregate where appropriate.
+
+Do not retain an outbox type that can be queued but never processed.
+
+---
+
+##### B1.8 Synchronization Metadata
+
+The local data layer must distinguish at least:
+
+```text
+locally saving
+locally saved
+pending synchronization
+synchronizing
+synchronized
+previous synchronization failed
+local persistence failed
+```
+
+A failed server synchronization must not imply local data loss.
+
+A successful server synchronization must reconcile the relevant local entity before its outbox operation is considered fully complete.
+
+Do not simply delete the outbox item without updating the local domain record's canonical synchronization state.
+
+---
+
+##### B1.9 Shared Request Transport
+
+Relawan synchronization requests must use one consistent same-origin request mechanism that correctly carries the application's required browser authentication/CSRF context.
+
+Do not duplicate ad-hoc request-header logic across every assessment stage.
+
+B1 must specifically verify that normal browser synchronization does not fail because of missing CSRF/session context.
+
+---
+
+##### B1 Verification Gate
+
+Automated/server-side tests must cover at minimum:
+
+- first assessment synchronization creates one canonical assessment;
+- exact assessment replay does not duplicate the assessment;
+- conflicting incompatible assessment replay is deterministic;
+- server triage is recalculated rather than trusted from the client;
+- first emergency synchronization creates one emergency;
+- exact emergency replay produces one emergency only;
+- exact emergency replay does not broadcast a second Healthcare alert;
+- conflicting emergency replay is rejected explicitly;
+- Relawan ownership/role boundaries remain enforced;
+- malformed synchronization payloads do not corrupt existing server state.
+
+Existing Phase A and previous Relawan/Healthcare behavior must remain green.
+
+B1 does **not** claim complete browser offline operation yet.
+
+---
+
+#### B2 — Relawan Local-First Workflow Integration
+
+##### Goal
+
+Connect the B1 data/replay contract to the real Relawan UI so the field workflow uses IndexedDB as the primary durability boundary.
+
+---
+
+##### B2.1 Local-First Assessment Creation
+
+Starting a new assessment must no longer require the server to create its identity first.
+
+Required sequence:
+
+```text
+Relawan starts assessment
+→ stable patient identity resolved/created locally
+→ stable assessment UUID created locally
+→ assessment stored in IndexedDB
+→ focused assessment workflow begins
+→ server synchronization occurs separately
+```
+
+An existing remotely known patient may be reused where available and safe.
+
+A new local patient must remain usable while disconnected.
+
+---
+
+##### B2.2 Identity Stage
+
+Resolve the existing route/screen inconsistency around:
+
+```text
+/relawan/assessment/:assessmentId/identity
+```
+
+The MVP identity stage must exist and be capable of operating from the local assessment/patient repositories.
+
+Do not turn it into a separate patient-management module.
+
+---
+
+##### B2.3 Assessment Stage Persistence
+
+SRQ-20, Faktor Risiko, and Fungsi Harian must use the canonical local assessment as their durability source.
+
+Every meaningful answer remains locally persisted immediately.
+
+Advancing between stages must not require successful server synchronization.
+
+Expected behavior:
+
+```text
+answer
+→ local save
+→ continue
+
+stage complete
+→ update local assessment
+→ continue to next stage
+```
+
+Server synchronization is separate.
+
+Do not clear locally authoritative answers merely because one server request succeeds.
+
+---
+
+##### B2.4 Local Review and Triage Result
+
+A complete local assessment must be reviewable and calculable without server access.
+
+Use the existing TypeScript triage domain implementation.
+
+Do not reimplement triage thresholds directly inside Vue view components.
+
+Required flow:
+
+```text
+SRQ complete
++
+Risk complete
++
+Function complete
+↓
+TypeScript triage calculation
+↓
+local recommendation displayed
+↓
+assessment marked locally complete
+↓
+ASSESSMENT outbox operation pending
+```
+
+The result remains a system recommendation.
+
+The synchronized server result remains canonical after Laravel recalculation.
+
+---
+
+##### B2.5 Draft and Restart Recovery
+
+Local incomplete assessments must be discoverable after interruption.
+
+Required states remain distinct:
+
+```text
+Sedang Dikerjakan
+Belum Selesai
+Menunggu Sinkronisasi
+```
+
+Completed-but-unsynchronized work must not be represented as an unfinished draft.
+
+Multiple incomplete assessments remain allowed.
+
+---
+
+##### B2.6 T0 Local-First Creation
+
+After explicit Relawan verification:
+
+```text
+validate required input
+→ generate/reuse stable emergency UUID
+→ persist emergency locally
+→ enqueue EMERGENCY priority 1
+→ show locally safe active incident state
+→ attempt server synchronization
+```
+
+Network failure must never remove the locally stored emergency.
+
+GPS failure must not block local emergency creation.
+
+Patient identity may remain unknown where the approved emergency workflow permits it.
+
+---
+
+##### B2.7 Local Active T0 State
+
+The active T0 view must be capable of rendering the local emergency before server receipt.
+
+It must never hardcode server success.
+
+Transmission copy must derive from actual state, for example:
+
+```text
+Tersimpan di perangkat
+Menunggu sinkronisasi
+Menyinkronkan
+Diterima server
+Sinkronisasi belum berhasil
+```
+
+Healthcare acknowledgement/validation remains a separate operational state.
+
+---
+
+##### B2.8 Real Shell Synchronization State
+
+`RelawanLayout.vue` must consume the actual synchronization/local persistence state rather than only `navigator.onLine`.
+
+The shell must never show:
+
+```text
+Tersinkron
+```
+
+while relevant outbox work remains.
+
+Expected high-level states include:
+
+```text
+Tersinkron
+Menyinkronkan N data…
+Offline • N data tersimpan
+N data menunggu sinkronisasi
+Sinkronisasi belum berhasil
+Data belum tersimpan di perangkat
+```
+
+Raw connectivity and data durability must remain distinct.
+
+---
+
+##### B2.9 Data Workspace
+
+Extend `/relawan/data` into the operational local-data workspace defined by the final UX handoff.
+
+It should truthfully represent local and synchronized state such as:
+
+```text
+Sedang Dikerjakan / Belum Selesai
+Menunggu Sinkronisasi
+Tersinkron
+failed previous synchronization where applicable
+pending T0 incidents
+```
+
+Manual `Sinkronkan` remains supplemental.
+
+Automatic synchronization remains the normal behavior.
+
+Do not expose low-level database implementation details to the user.
+
+---
+
+##### B2.10 Synchronization Triggers
+
+Supported synchronization triggers should include where practical:
+
+```text
+new queued submission
+network restoration
+application startup
+application resume / visibility restoration
+manual retry
+```
+
+Duplicate concurrent sync runs must remain guarded.
+
+Emergency operations must be processed before routine assessment operations.
+
+---
+
+##### B2.11 SMS Handoff
+
+Retain the existing safe browser/device SMS handoff.
+
+The application may claim:
+
+```text
+composer SMS dibuka
+```
+
+where observable.
+
+It must not claim:
+
+```text
+SMS berhasil dikirim
+```
+
+without actual confirmation.
+
+Do not introduce native automatic SMS sending in Phase B.
+
+---
+
+##### B2 Verification Gate
+
+Before B3, verify through source/tests and browser runtime where possible:
+
+- new local assessment receives stable UUID before synchronization;
+- meaningful answers persist locally immediately;
+- stage navigation does not require server success;
+- local triage result is calculated using the TypeScript domain implementation;
+- locally completed assessment enters assessment outbox;
+- verified T0 is persisted locally before any transmission attempt;
+- T0 receives priority 1;
+- routine assessment receives priority 2;
+- shell count/state comes from real local/outbox data;
+- `/relawan/data` displays truthful pending/local state;
+- synchronization success reconciles local records;
+- synchronization failure leaves data locally safe;
+- switching Relawan accounts does not expose another account's local records.
+
+Full offline page reload/startup is not claimed until B3 is complete.
+
+---
+
+#### B3 — PWA Shell & Offline Browser Verification
+
+##### Goal
+
+Add the minimum approved production PWA/runtime layer after the local-first domain workflow is already correct.
+
+---
+
+##### B3.1 PWA Integration
+
+Implement the minimum Vite/Workbox-compatible PWA integration required for the prototype.
+
+Required capabilities:
+
+```text
+web app manifest
+service worker registration
+application-shell availability
+essential static asset caching
+offline Relawan startup after successful prior load/install
+```
+
+Do not introduce a large custom Service Worker when standard Vite/Workbox primitives are sufficient.
+
+Dependency installation remains a separate explicit development step.
+
+---
+
+##### B3.2 Sensitive Data Cache Boundary
+
+Do not broadly cache authenticated patient/clinical Inertia responses merely to make navigation appear offline-capable.
+
+Sensitive field data belongs in the account-isolated IndexedDB model.
+
+The Service Worker should principally provide the neutral application/runtime shell and safe static assets required to start the Relawan experience.
+
+Any navigation fallback must avoid creating an uncontrolled second patient-data store in Cache Storage.
+
+---
+
+##### B3.3 Offline Relawan Startup
+
+After the application has previously been loaded successfully:
+
+```text
+browser/PWA reopened
+→ server unavailable
+→ Relawan application shell loads
+→ local account context/eligibility is evaluated
+→ IndexedDB local work is restored
+```
+
+Do not claim fresh offline password authentication.
+
+If existing offline eligibility cannot be established safely, preserve local data without pretending a new server-authenticated session exists.
+
+---
+
+##### B3.4 Offline Functional Scope
+
+Required offline-capable Relawan behavior for the prototype:
+
+```text
+PFA content
+existing locally cached patient context
+new local patient identity
+new assessment
+SRQ-20
+Faktor Risiko
+Fungsi Harian
+local triage calculation
+assessment completion
+T0 verification
+T0 local creation
+local active T0 guidance/state
+Data/local sync workspace
+```
+
+Server-dependent synchronization and remote Healthcare updates wait until connectivity/server access returns.
+
+---
+
+##### B3.5 Actual Browser Offline Verification
+
+The final Phase B browser gate is:
+
+```text
+login while online
+→ load/warm Relawan application
+→ create or prepare test context
+→ switch browser network to Offline
+→ create/edit assessment
+→ create verified T0-Suspect
+→ verify both are safely stored locally
+→ reload/reopen while offline
+→ verify local assessment and T0 survive
+→ verify shell does not claim remote synchronization
+→ return network to Online
+→ automatic or explicit sync runs
+→ verify T0 priority processing before normal assessment
+→ verify one canonical server assessment
+→ verify one canonical server emergency
+→ verify Healthcare receives one T0 incident
+→ retry/reload again
+→ verify no duplicate server records or duplicate T0 alert
+→ verify Relawan local state becomes synchronized
+```
+
+Where ordering cannot be proven from visual UI alone, inspect the outbox/runtime/network evidence directly and document the evidence source.
+
+---
+
+##### B3.6 PWA Verification
+
+Also verify directly:
+
+- manifest is discoverable;
+- Service Worker registers successfully;
+- Service Worker controls the expected Relawan application scope;
+- essential application assets are available offline;
+- offline startup does not depend on a live Laravel response after the required prior load/install;
+- PFA remains usable offline;
+- local assessment/T0 restoration works after reload/reopen;
+- no false `Tersinkron` state is displayed;
+- no sensitive authenticated clinical response is intentionally broadly cached as the PWA shell.
+
+---
+
+#### Phase B Non-Goals
+
+Do not expand Phase B into:
+
+- Phase C STT safety changes;
+- new NLP behavior;
+- automatic native SMS sending;
+- fresh offline password authentication;
+- password/credential lifecycle redesign;
+- Healthcare UI redesign;
+- Admin UI redesign;
+- new map/analytics work;
+- broad visual redesign;
+- large unrelated architecture refactors;
+- a new frontend testing framework solely for this phase unless a concrete requirement cannot be verified using existing infrastructure.
+
+The existing STT direct-answer mutation issue remains assigned to Phase C.
+
+---
+
+#### Phase B Completion Criteria
+
+Phase B may be marked **COMPLETE / PASS for the selected prototype scope** only when all three checkpoints are complete:
+
+```text
+B1 — Local Data & Replay Contract
+PASS
+↓
+B2 — Relawan Local-First Workflow Integration
+PASS
+↓
+B3 — PWA Shell & Offline Browser Verification
+PASS
+```
+
+Required final evidence:
+
+1. stable local patient/assessment/emergency UUIDs;
+2. account-isolated Relawan local data;
+3. complete assessment can be performed and completed locally;
+4. local TypeScript triage calculation works offline;
+5. complete assessment can enter and survive the outbox;
+6. verified T0 is persisted locally before transmission;
+7. T0 is synchronized ahead of routine assessment work;
+8. exact replay does not create duplicate assessment/emergency records;
+9. exact T0 replay does not publish another Healthcare incident;
+10. Relawan shell truthfully distinguishes local save, pending sync, syncing, server confirmation, and failure;
+11. `/relawan/data` truthfully represents local/pending/synchronized work;
+12. Service Worker/PWA shell supports the required offline startup;
+13. offline assessment/T0 survives reload/reopen;
+14. reconnect synchronizes successfully;
+15. authoritative server state is reconciled locally;
+16. existing Healthcare/Admin workflows remain regression-free.
+
+Phase B completion does not constitute production security certification or full production offline-authentication certification.
 ---
 
 ### Phase C — STT Safety & Interaction Hardening
