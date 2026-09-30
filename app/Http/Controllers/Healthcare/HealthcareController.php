@@ -147,6 +147,7 @@ final class HealthcareController extends Controller
         };
 
         DB::transaction(function () use ($emergency, $newStatus, $user, $clinicalResult, $validated): void {
+            $emergency = EmergencyEvent::whereKey($emergency->id)->lockForUpdate()->firstOrFail();
             $emergency->update([
                 'status' => $newStatus,
             ]);
@@ -164,21 +165,22 @@ final class HealthcareController extends Controller
                 $facilityId = $validated['facility_id'] ?? $user->facility_id ?? HealthcareFacility::first()?->id;
 
                 if ($emergency->patient_id && $facilityId) {
-                    $referral = Referral::create([
-                        'emergency_event_id' => $emergency->id,
-                        'patient_id' => $emergency->patient_id,
-                        'referred_by' => $user->id,
-                        'facility_id' => $facilityId,
-                        'status' => ReferralStatus::ACTIVE,
-                        'notes' => $validated['notes'] ?? 'Rujukan darurat T0 dikonfirmasi.',
-                    ]);
+                    if (! $emergency->referrals()->exists()) {
+                        $referral = $emergency->referrals()->create([
+                            'patient_id' => $emergency->patient_id,
+                            'referred_by' => $user->id,
+                            'facility_id' => $facilityId,
+                            'status' => ReferralStatus::ACTIVE,
+                            'notes' => $validated['notes'] ?? 'Rujukan darurat T0 dikonfirmasi.',
+                        ]);
 
-                    ReferralStatusHistory::create([
-                        'referral_id' => $referral->id,
-                        'status' => ReferralStatus::ACTIVE,
-                        'changed_by' => $user->id,
-                        'notes' => 'Rujukan darurat diterbitkan.',
-                    ]);
+                        ReferralStatusHistory::create([
+                            'referral_id' => $referral->id,
+                            'status' => ReferralStatus::ACTIVE,
+                            'changed_by' => $user->id,
+                            'notes' => 'Rujukan darurat diterbitkan.',
+                        ]);
+                    }
                 }
             }
 
@@ -229,7 +231,8 @@ final class HealthcareController extends Controller
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
 
         DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
-            ClinicalValidation::updateOrCreate(
+            $assessment = Assessment::whereKey($assessment->id)->lockForUpdate()->firstOrFail();
+            $validation = ClinicalValidation::updateOrCreate(
                 ['assessment_id' => $assessment->id],
                 [
                     'validated_by' => $user->id,
@@ -243,20 +246,22 @@ final class HealthcareController extends Controller
             if ($validated['referral_required'] ?? false) {
                 $facilityId = $validated['facility_id'] ?? $user->facility_id ?? HealthcareFacility::first()?->id;
                 if ($facilityId) {
-                    $ref = Referral::create([
-                        'patient_id' => $assessment->patient_id,
-                        'referred_by' => $user->id,
-                        'facility_id' => $facilityId,
-                        'status' => ReferralStatus::ACTIVE,
-                        'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
-                    ]);
+                    if (! $validation->referral()->exists()) {
+                        $referral = $validation->referral()->create([
+                            'patient_id' => $assessment->patient_id,
+                            'referred_by' => $user->id,
+                            'facility_id' => $facilityId,
+                            'status' => ReferralStatus::ACTIVE,
+                            'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
+                        ]);
 
-                    ReferralStatusHistory::create([
-                        'referral_id' => $ref->id,
-                        'status' => ReferralStatus::ACTIVE,
-                        'changed_by' => $user->id,
-                        'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
-                    ]);
+                        ReferralStatusHistory::create([
+                            'referral_id' => $referral->id,
+                            'status' => ReferralStatus::ACTIVE,
+                            'changed_by' => $user->id,
+                            'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
+                        ]);
+                    }
                 }
             }
 

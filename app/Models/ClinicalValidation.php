@@ -11,4 +11,5 @@ class ClinicalValidation extends Model {
     }
     public function assessment() { return $this->belongsTo(Assessment::class); }
     public function validator() { return $this->belongsTo(User::class, 'validated_by'); }
+    public function referral() { return $this->hasOne(Referral::class); }
 }

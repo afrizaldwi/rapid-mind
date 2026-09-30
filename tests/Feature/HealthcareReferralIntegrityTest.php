@@ -171,4 +171,124 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame(1, $emergency->referrals()->count());
         $this->assertSame(1, $emergency->referrals()->firstOrFail()->statusHistory()->count());
     }
+
+    public function test_successful_emergency_replay_keeps_one_referral_and_its_completed_state(): void
+    {
+        $emergency = $this->emergency();
+        $url = "/healthcare/emergencies/{$emergency->id}/classify";
+        $payload = ['clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id, 'notes' => 'Initial referral'];
+
+        $this->postJson($url, $payload)->assertOk();
+        $referral = $emergency->referrals()->firstOrFail();
+        $this->postJson($url, $payload)->assertOk();
+
+        $this->assertSame(1, $emergency->referrals()->count());
+        $this->assertSame($referral->id, $emergency->referrals()->firstOrFail()->id);
+        $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
+
+        $this->postJson("/healthcare/referrals/{$referral->id}/status", ['status' => 'COMPLETED'])->assertOk();
+        $otherFacility = HealthcareFacility::create(['name' => 'Faskes Lain', 'type' => 'HOSPITAL', 'is_active' => true]);
+        $this->postJson($url, ['clinical_result' => 'T0_CONFIRMED', 'facility_id' => $otherFacility->id, 'notes' => 'Replay notes'])->assertOk();
+
+        $this->assertSame(1, $emergency->referrals()->count());
+        $this->assertSame($referral->id, $emergency->referrals()->firstOrFail()->id);
+        $this->assertSame(ReferralStatus::COMPLETED, $referral->fresh()->status);
+        $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
+        $this->assertSame('Initial referral', $referral->fresh()->notes);
+        $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
+        $this->assertSame(2, $referral->statusHistory()->count());
+    }
+
+    public function test_successful_assessment_replay_keeps_one_validation_and_completed_referral(): void
+    {
+        $assessment = $this->assessment();
+        $url = "/healthcare/validations/{$assessment->id}";
+        $payload = [
+            'clinical_result' => 'T1',
+            'referral_required' => true,
+            'facility_id' => $this->facility->id,
+            'intervention_plan' => 'Initial plan',
+        ];
+
+        $this->postJson($url, $payload)->assertOk();
+        $validation = $assessment->clinicalValidation()->firstOrFail();
+        $referral = $validation->referral()->firstOrFail();
+        $this->postJson($url, $payload)->assertOk();
+
+        $this->assertSame(1, $assessment->clinicalValidation()->count());
+        $this->assertSame($validation->id, $assessment->clinicalValidation()->firstOrFail()->id);
+        $this->assertSame(1, $validation->referral()->count());
+        $this->assertSame($referral->id, $validation->referral()->firstOrFail()->id);
+        $this->assertSame($validation->id, $referral->fresh()->clinical_validation_id);
+        $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
+
+        $this->postJson("/healthcare/referrals/{$referral->id}/status", ['status' => 'COMPLETED'])->assertOk();
+        $otherFacility = HealthcareFacility::create(['name' => 'Faskes Lain', 'type' => 'HOSPITAL', 'is_active' => true]);
+        $this->postJson($url, [
+            'clinical_result' => 'T1',
+            'referral_required' => true,
+            'facility_id' => $otherFacility->id,
+            'intervention_plan' => 'Replay plan',
+        ])->assertOk();
+
+        $this->assertSame(1, $assessment->clinicalValidation()->count());
+        $this->assertSame(1, $validation->referral()->count());
+        $this->assertSame($referral->id, $validation->referral()->firstOrFail()->id);
+        $this->assertSame(ReferralStatus::COMPLETED, $referral->fresh()->status);
+        $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
+        $this->assertSame('Initial plan', $referral->fresh()->notes);
+        $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
+        $this->assertSame(2, $referral->statusHistory()->count());
+    }
+
+    public function test_distinct_sources_for_one_patient_have_distinct_referrals(): void
+    {
+        $firstEmergency = $this->emergency();
+        $secondEmergency = $this->emergency();
+        $assessment = $this->assessment();
+
+        foreach ([$firstEmergency, $secondEmergency] as $emergency) {
+            $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
+                'clinical_result' => 'T0_CONFIRMED',
+                'facility_id' => $this->facility->id,
+            ])->assertOk();
+        }
+        $this->postJson("/healthcare/validations/{$assessment->id}", [
+            'clinical_result' => 'T1',
+            'referral_required' => true,
+            'facility_id' => $this->facility->id,
+        ])->assertOk();
+
+        $firstReferral = $firstEmergency->referrals()->firstOrFail();
+        $secondReferral = $secondEmergency->referrals()->firstOrFail();
+        $validation = $assessment->clinicalValidation()->firstOrFail();
+        $assessmentReferral = $validation->referral()->firstOrFail();
+        $this->assertCount(3, array_unique([$firstReferral->id, $secondReferral->id, $assessmentReferral->id]));
+        $this->assertSame(3, Referral::where('patient_id', $this->patient->id)->count());
+        $this->assertSame(3, ReferralStatusHistory::where('status', ReferralStatus::ACTIVE)->count());
+    }
+
+    public function test_legacy_unlinked_referral_is_preserved_when_validation_creates_a_linked_one(): void
+    {
+        $legacy = Referral::create([
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::COMPLETED,
+            'notes' => 'Legacy source unknown',
+        ]);
+        $assessment = $this->assessment();
+
+        $this->postJson("/healthcare/validations/{$assessment->id}", [
+            'clinical_result' => 'T1',
+            'referral_required' => true,
+            'facility_id' => $this->facility->id,
+        ])->assertOk();
+
+        $this->assertNull($legacy->fresh()->clinical_validation_id);
+        $this->assertSame(ReferralStatus::COMPLETED, $legacy->fresh()->status);
+        $this->assertSame('Legacy source unknown', $legacy->fresh()->notes);
+        $this->assertNotSame($legacy->id, $assessment->clinicalValidation()->firstOrFail()->referral()->firstOrFail()->id);
+        $this->assertSame(2, Referral::where('patient_id', $this->patient->id)->count());
+    }
 }
