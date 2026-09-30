@@ -287,3 +287,33 @@ The selected review's prior-assessment list now excludes newer records. Validasi
 **SOURCE-INSPECTED / AUTOMATED TESTED:** Full Laravel suite **90 passed, 1,052 assertions**; route list **68 routes**; Vue TypeScript check, production build, and `git diff --check` passed. The build transformed 1,243 modules and retained its large-chunk advisory warning. Dependencies installed: **NONE**.
 
 **BROWSER VERIFIED — ANTIGRAVITY: NOT YET PERFORMED. USER MANUAL RETEST: NOT YET PERFORMED.** The previous prototype limitations remain; this correction pass did not perform browser, mobile, realtime, offline, or clinical verification.
+
+---
+
+## Healthcare Operational Completion MVP — Browser Verification (1 October 2026)
+
+**SOURCE-INSPECTED / AUTOMATED TESTED (90 tests, 1,052 assertions) / ANTIGRAVITY BROWSER VERIFIED.** External browser runtime verification was performed on `http://localhost:8080` using Google Chrome with DevTools/CDP automation. Zero functional defects, zero fatal browser console errors, and no unexpected HTTP 4xx/5xx responses were observed. No application source code, tests, or documentation were modified during the browser run (`git status --short` returned clean).
+
+Demo database state was manipulated solely through normal application UI interactions (not source changes):
+- Created synthetic volunteer `Relawan Phone Test` (`relawan.phone@example.test`, ID 24) assigned to `Posko Candi`.
+- Verified Indonesian phone input validation (`12345` rejected) and normalization (`081234567890` saved as `+6281234567890`; updated with `6289876543210` saved as `+6289876543210`).
+- Completed Healthcare validation for assessment `6c000387-12cc-5435-a880-6b4967b08031` (Siti Aminah, initial system recommendation T2): validated as `T2`, diagnosis note `"Observasi reaksi stres pascabencana sedang"`, intervention plan `"Konseling suportif dan rujukan lanjutan"`, and generated an active referral to `RSUD Candi`.
+
+### Browser Gates Summary:
+- **Gate A — Admin Relawan Phone Provisioning: PASS**. Required phone field present on Relawan form, omitted from Healthcare form; invalid format rejected with visible Indonesian error; valid `08...` and `62...` inputs persisted and normalized to `+628...`.
+- **Gate B — T0 Relawan Contact: PASS (with B8 NDV)**. Queue list conceals phone numbers; selected detail displays reporting volunteer name, phone, and native `tel:+628...` anchor without triggering phone verification or advancing workflow. *Limitation: B8 is NDV (no demo T0 incident lacked a phone number; covered by automated test). Actual device/OS telephone call connectivity: NOT VERIFIED.*
+- **Gate C — Validasi Worklist: PASS (with C4, C5 NDV)**. Segregated `Perlu Divalidasi` and `Selesai` sections; only completed T1/T2 assessments appear in active work; T3 excluded; completed validations appear under `Selesai`. *Limitations: C4 (T1-before-T2) and C5 (FIFO ordering) are NDV due to a single initial unvalidated demo assessment; both covered by automated tests.*
+- **Gate D — Selected Validation Detail: PASS**. Displays patient identity, NIK, Posko, reporting Relawan name, timestamp, system recommendation, full score breakdown, expandable structured SRQ/risk/function answers, prior assessments, and clinical disclaimer. Zero Relawan phone/email exposed. Completed validations render read-only with no editable form.
+- **Gate E — Validation Failure Behavior: PASS**. Submitting with referral required but no facility selected was rejected; remained on page with field error; form inputs preserved; no success state.
+- **Gate F — Successful Non-T0 Validation and Referral: PASS**. Selecting active facility `RSUD Candi` succeeded; transitioned to read-only stored view; moved from `Perlu Divalidasi` to `Selesai`; re-opening was read-only; reload caused no duplicate referrals. Patient history displayed `Sumber: Validasi Asesmen`, `RSUD Candi`, Indonesian status, referrer, timestamp, and status history.
+- **Gate G — Patient T0 Referral Provenance: PASS**. Patient history distinguished `Sumber: Darurat T0` from `Sumber: Validasi Asesmen`, showing destination, Indonesian status, referrer, and multi-stage dispatch history.
+- **Gate H — Historical Inactive Faskes: NDV**. All demo referrals pointed to active `RSUD Candi` (covered by automated test).
+- **Gate I — T0 Regression Smoke: PASS**. Emergency queue, detail, confirmed status, verification history, and referral data rendered cleanly without 4xx/5xx errors.
+
+### Retained Boundaries & Limitations:
+- **USER MANUAL RETEST: NOT YET PERFORMED**.
+- **Browser NDVs**: B8 (missing-phone fallback), C4 (T1-before-T2 ordering), C5 (same-category FIFO ordering), and H (historical inactive Faskes referral).
+- **Actual device/OS telephone call connectivity: NOT VERIFIED**.
+- Non-T0 `Sedang Ditinjau` persistent owner/review state remains not implemented.
+- T0 confirmation still automatically creates referral in the prototype.
+- Production readiness, clinical validity, security hardening, offline/PWA, realtime beyond tested scope, and full E2E remain unproven and out of scope.

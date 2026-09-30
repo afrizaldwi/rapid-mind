@@ -887,3 +887,80 @@ The 30 September checkpoint above remains historical evidence. This correction p
 - **USER MANUAL RETEST:** NOT YET PERFORMED for the Healthcare phase.
 
 The retained prototype limits in the 30 September checkpoint still apply, including no persistent non-T0 `Sedang Ditinjau` state and the existing automatic T0 referral behavior. The next verification step is the separate Antigravity browser pass.
+
+---
+
+## Healthcare Operational Completion MVP — Browser Verification (1 October 2026)
+
+Status: **SOURCE-INSPECTED / AUTOMATED TESTED (90 tests, 1,052 assertions) / ANTIGRAVITY BROWSER VERIFIED** (for the selected prototype scope and subject to explicit NDVs below).
+
+**USER MANUAL RETEST: NOT YET PERFORMED**.
+
+External browser runtime verification was executed on `http://localhost:8080` using Google Chrome with DevTools/CDP automation. The browser pass found:
+- Zero functional defects
+- Zero fatal browser console errors
+- No unexpected HTTP 4xx/5xx responses
+- No application/source/documentation changes during browser verification (`git status --short` was clean)
+
+Testing intentionally modified demo database state through normal application UI interactions (not source changes):
+- Created synthetic volunteer `Relawan Phone Test` (`relawan.phone@example.test`, ID 24) assigned to `Posko Candi`.
+- Verified Indonesian phone input validation (`12345` rejected) and normalization (`081234567890` saved as `+6281234567890`; updated with `6289876543210` saved as `+6289876543210`).
+- Completed Healthcare validation for assessment `6c000387-12cc-5435-a880-6b4967b08031` (Siti Aminah, initial system recommendation T2): validated as `T2`, diagnosis note `"Observasi reaksi stres pascabencana sedang"`, intervention plan `"Konseling suportif dan rujukan lanjutan"`, and generated an active referral to `RSUD Candi`.
+
+### Verification Matrix (Gates A through I)
+
+| Gate | Item | Status | Verification & Evidence |
+|---|---|---|---|
+| **Gate A: Admin Relawan Phone Provisioning** | A1 | **PASS** | Relawan create form (`/admin/volunteers/create`) contains required `Nomor telepon *` input field (`<input id="phone_number" type="tel" required ...>`). |
+| | A2 | **PASS** | Healthcare provisioning form (`/admin/facilities/users/create`) does not show or require the Relawan phone field. |
+| | A3 | **PASS** | Submitting invalid phone (`12345`) displays visible error `"Masukkan nomor telepon Relawan Indonesia yang valid."`; form remains usable and interactive. |
+| | A4 | **PASS** | Valid Indonesian format `081234567890` saves successfully; redirects to `/admin/volunteers/24` with flash notice `"Akun berhasil dibuat."`. |
+| | A5 | **PASS** | Re-opened/reloaded edit page displays phone number normalized to `+6281234567890`. |
+| | A6 | **PASS** | Editing with alternate format `6289876543210` saves successfully and normalizes upon reload to `+6289876543210`. |
+| **Gate B: T0 Relawan Contact** | B1 | **PASS** | Emergency queue (`/healthcare/emergencies`) displays volunteer name but conceals phone numbers. |
+| | B2 | **PASS** | Selected emergency detail (`/healthcare/emergencies/01a0f1fe-843f-716b-af1f-8b1dc5e8b7ec`) renders `"Kontak Relawan Pelapor"` card. |
+| | B3 | **PASS** | Contact card renders reporting Relawan name (`Relawan Lapangan Budi`), normalized phone (`+6281234567890`), and `"Hubungi Relawan"` button/link. |
+| | B4 | **PASS** | Anchor element uses native `tel:+6281234567890` protocol link. |
+| | B5 | **PASS** | Native link verified via DOM inspection without claiming actual telephone connectivity. |
+| | B6 | **PASS** | Advisory text verified: *"Panggilan dibuka melalui perangkat Anda. Simpan metode verifikasi secara terpisah setelah menghubungi Relawan."*. |
+| | B7 | **PASS** | Viewing or inspecting contact link does not create a `PHONE` verification, does not alter emergency status (`PENDING`), and does not advance clinical workflow. |
+| | B8 | **NDV** | Fallback message when Relawan has no phone number: **Not Directly Verified** (all existing demo T0 emergencies were reported by a volunteer with a provisioned phone number; covered by automated test `selected emergency exposes contact but queue does not and missing phone renders fallback`). |
+| **Gate C: Validasi Worklist** | C1 | **PASS** | Worklist (`/healthcare/validations`) displays distinct `"Perlu Divalidasi"` and `"Selesai"` sections. |
+| | C2 | **PASS** | `"Perlu Divalidasi"` contains only completed source assessments with T1/T2 recommendations (Siti Aminah, T2). |
+| | C3 | **PASS** | T3 assessments do not appear as active validation work. |
+| | C4 | **NDV** | T1-before-T2 priority ordering: **Not Directly Verified** (initial demo worklist contained only one unvalidated assessment; covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`). |
+| | C5 | **NDV** | Same-category FIFO ordering: **Not Directly Verified** (single unvalidated assessment in demo dataset; covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`). |
+| | C6 | **PASS** | Completed validations appear in `"Selesai"` with recommendation, doctor validation badge, and detail link. |
+| **Gate D: Selected Validation Detail** | D | **PASS** | Selected assessment (`/healthcare/validations/6c000387-12cc-5435-a880-6b4967b08031`) renders patient identity, NIK, Posko, reporting volunteer, timestamp, system recommendation (T2), total score (11/37), SRQ (6/20), Risk (3/8), Function (2/9), expandable structured SRQ/risk/function answers, prior assessment history, active Faskes selector, and clinical disclaimer. Zero Relawan phone/email exposed. Previously completed validation renders read-only without editable form. |
+| **Gate E: Validation Failure Behavior** | E | **PASS** | Submitting validation with clinical notes and `Rujukan diperlukan = true` without selecting a Faskes was rejected; user remained on page; facility required validation error displayed; form inputs preserved; no success state shown. |
+| **Gate F: Successful Validation & Referral** | F | **PASS** | Submitting with active Faskes (`RSUD Candi`) succeeded; page transitioned to read-only stored validation; clinical result `T2`, notes, plan, and destination retained; moved from `"Perlu Divalidasi"` to `"Selesai"`; re-opening remained read-only; reload created no duplicate referrals. Patient detail (`/healthcare/patients/01a0f1e7-5fbb-72c3-a962-ed5699f19a37`) rendered referral with `Sumber: Validasi Asesmen (Rekomendasi Sistem T2)`, `RSUD Candi`, Indonesian status (`Aktif Terbit`), referrer, created timestamp, and status history. |
+| **Gate G: T0 Referral Provenance** | G | **PASS** | Patient history (`/healthcare/patients/01a0f1dd-3d34-702b-b6bb-203571e99c32`) explicitly distinguishes `Sumber: Darurat T0` from `Sumber: Validasi Asesmen`, displaying destination (`RSUD Candi`), current Indonesian status (`Selesai di RS`), referrer, and multi-stage status history. |
+| **Gate H: Historical Inactive Faskes** | H | **NDV** | Referral pointing to inactive Faskes: **Not Directly Verified** (all existing demo referrals point to active `RSUD Candi`; covered by automated test `historical referral remains readable after facility becomes inactive`). |
+| **Gate I: T0 Regression Smoke** | I | **PASS** | Emergency queue loads; selected emergency loads; emergency status (`CONFIRMED`) renders; verification history renders; referral data renders; zero unexpected 4xx/5xx HTTP errors observed during navigation. |
+
+### Explicit NDV List & Reasons:
+1. **B8 — Missing-Phone Fallback:** In the current demo dataset, all reporting Relawans for existing T0 emergencies have provisioned phone numbers. Covered by automated test `selected emergency exposes contact but queue does not and missing phone renders fallback`.
+2. **C4 — T1-before-T2 Priority Ordering:** The initial demo worklist contained only one unvalidated assessment (`T2` Siti Aminah). Covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`.
+3. **C5 — Same-Category FIFO Ordering:** Single unvalidated assessment in initial demo worklist. Covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`.
+4. **H — Historical Inactive Faskes Referral:** All historical demo referrals point to active `RSUD Candi`. Covered by automated test `historical referral remains readable after facility becomes inactive`.
+
+### Retained Limitations & Project Boundaries:
+- **USER MANUAL RETEST — NOT YET PERFORMED**: The browser verification above was conducted autonomously by **Antigravity (Chrome-CDP)**. It provides external browser-level evidence, but does NOT substitute for the project owner's manual verification before the final team demonstration.
+- **Actual device/OS telephone call connectivity: NOT VERIFIED** (verified native `tel:` URI and DOM attributes only).
+- **Non-T0 Sedang Ditinjau persistent review/ownership state:** Still not implemented in this prototype.
+- **Automatic T0 Referral:** T0 confirmation still automatically creates a referral in the current prototype.
+- **Standard Prototype Caveats:** Production readiness, security hardening, offline/PWA sync, realtime beyond tested scope, clinical validity, and full E2E coverage remain unproven and out of scope.
+
+### Checklist for Owner Manual Retest (Healthcare Completion Scope):
+1. **Relawan Phone Provisioning:** Admin create/edit Relawan, verify phone requirement, invalid rejection, and normalization (`08...` and `62...` to `+628...`).
+2. **Healthcare Provisioning:** Verify Healthcare user creation does not expose Relawan phone field.
+3. **T0 Relawan Contact:** Verify emergency queue hides phone number; verify selected emergency shows name, normalized phone, and `Hubungi Relawan` `tel:` link.
+4. **Validasi Worklist:** Verify `Perlu Divalidasi` shows T1/T2 assessments and excludes T3; verify `Selesai` lists completed validations.
+5. **Validation Review & Form Failure:** Open T1/T2 assessment, verify full clinical evidence and disclaimer; submit with referral checked but no facility selected, verify rejection and input preservation.
+6. **Validation & Referral Success:** Select active Faskes, submit, verify transition to read-only stored view, verify movement to `Selesai`, and verify patient profile shows `Sumber: Validasi Asesmen` with Indonesian status.
+7. **T0 Provenance:** Open patient with T0 referral, verify provenance is marked `Sumber: Darurat T0` distinct from assessment referrals.
+8. **T0 Regression Smoke:** Verify emergency queue, detail, verification logs, and referral dispatch progression.
+9. **Missing-Phone T0 Fallback:** If a safe fixture is available, open a T0 incident whose reporting Relawan has no phone number and verify the fallback coordination message is displayed instead of `Hubungi Relawan`.
+10. **Validasi Priority Ordering:** With both unvalidated T1 and T2 assessments available, verify T1 appears before T2 in `Perlu Divalidasi`.
+11. **Validasi FIFO Ordering:** With multiple unvalidated assessments in the same T1/T2 category, verify the older assessment appears before the newer assessment.
+12. **Historical Inactive Faskes:** If a safe historical fixture is available, open a patient whose existing referral points to a now-inactive Faskes and verify the original destination remains visible and is marked `(Nonaktif saat ini)`.
