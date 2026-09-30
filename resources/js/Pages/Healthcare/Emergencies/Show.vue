@@ -49,7 +49,7 @@
           <div class="p-3 bg-slate-50 rounded-xl">
             <span class="text-slate-400 block text-[10px] font-bold uppercase">Koordinat GPS</span>
             <span class="font-bold text-slate-800">
-              {{ emergency.latitude ? `${emergency.latitude.toFixed(4)}, ${emergency.longitude.toFixed(4)}` : 'Sesuai Posko' }}
+              {{ formatCoordinates(emergency.latitude, emergency.longitude) }}
             </span>
           </div>
           <div class="p-3 bg-slate-50 rounded-xl">
@@ -345,5 +345,26 @@ function formatRedFlag(rf?: string) {
     default:
       return 'Kegawatdaruratan Medis & Somatik';
   }
+}
+
+function formatCoordinates(latitude: unknown, longitude: unknown): string {
+  const latitudeNumber = parseCoordinate(latitude);
+  const longitudeNumber = parseCoordinate(longitude);
+
+  if (latitudeNumber === null || longitudeNumber === null) {
+    return 'Sesuai Posko';
+  }
+
+  return `${latitudeNumber.toFixed(4)}, ${longitudeNumber.toFixed(4)}`;
+}
+
+function parseCoordinate(value: unknown): number | null {
+  if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+    return null;
+  }
+
+  const numberValue = typeof value === 'number' ? value : Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 </script>
