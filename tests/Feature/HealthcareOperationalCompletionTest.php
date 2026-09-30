@@ -96,6 +96,37 @@ final class HealthcareOperationalCompletionTest extends TestCase
         $this->assertSame(EmergencyStatus::PENDING, $emergency->fresh()->status);
     }
 
+    public function test_pending_emergencies_are_oldest_first_with_deterministic_ties(): void
+    {
+        $old = EmergencyEvent::create([
+            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+        ]);
+        $old->forceFill(['created_at' => now()->subHours(2)])->save();
+        $new = EmergencyEvent::create([
+            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+        ]);
+        $new->forceFill(['created_at' => now()->subHour()])->save();
+        $sameTime = EmergencyEvent::create([
+            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+        ]);
+        $sameTime->forceFill(['created_at' => $new->created_at])->save();
+        $tieIds = [$new->id, $sameTime->id];
+        sort($tieIds);
+        $resolved = EmergencyEvent::create([
+            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::CONFIRMED,
+        ]);
+
+        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('emergencies.0.id', $old->id)
+            ->where('emergencies.1.id', $tieIds[0])
+            ->where('emergencies.2.id', $tieIds[1])
+            ->where('emergencies.3.id', $resolved->id)->etc());
+    }
+
     public function test_worklist_prioritizes_oldest_t1_then_t2_and_keeps_t3_in_patient_history(): void
     {
         $t2 = $this->assessment(TriageCategory::T2, 90);

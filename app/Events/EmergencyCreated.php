@@ -18,7 +18,6 @@ final class EmergencyCreated implements ShouldBroadcastNow
 
     public function __construct(public EmergencyEvent $emergency)
     {
-        $this->emergency->load(['patient', 'shelter', 'user']);
     }
 
     public function broadcastOn(): array
@@ -30,20 +29,6 @@ final class EmergencyCreated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        return [
-            'emergency' => [
-                'id' => $this->emergency->id,
-                'red_flag_type' => $this->emergency->red_flag_type?->value ?? (string)$this->emergency->red_flag_type,
-                'status' => $this->emergency->status?->value ?? (string)$this->emergency->status,
-                'patient_name' => $this->emergency->patient?->name ?? 'Tanpa Identitas',
-                'nik' => $this->emergency->patient?->nik,
-                'shelter_name' => $this->emergency->shelter?->name ?? 'Posko Lapangan',
-                'volunteer_name' => $this->emergency->user?->name ?? 'Relawan',
-                'created_at' => $this->emergency->created_at?->toIso8601String(),
-                'notes' => $this->emergency->notes,
-                'latitude' => $this->emergency->latitude,
-                'longitude' => $this->emergency->longitude,
-            ],
-        ];
+        return ['emergency' => ['id' => $this->emergency->id]];
     }
 }

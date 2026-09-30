@@ -71,20 +71,17 @@
       </nav>
 
       <!-- Connection & Logout Footer -->
-      <div class="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-        <div class="flex items-center space-x-1.5">
-          <span class="w-2 h-2 rounded-full" :class="realtimeConnected ? 'bg-teal-400' : 'bg-slate-500'"></span>
-          <span class="text-[11px] font-medium" :class="realtimeConnected ? 'text-teal-300' : 'text-slate-400'">
-            {{ realtimeConnected ? 'Reverb Terhubung' : 'Reverb Belum Terhubung' }}
+      <div class="p-4 border-t border-slate-800 space-y-3 text-xs">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-medium" :class="serverReachable !== false && realtimeConnected ? 'text-teal-300' : 'text-amber-200'">
+            {{ serverReachable === false ? 'Koneksi ke server terputus' : realtimeConnected ? 'Realtime aktif' : 'Realtime terputus' }}
           </span>
+          <button type="button" @click="logout" class="text-slate-400 hover:text-white">Keluar</button>
         </div>
-        <button
-          type="button"
-          @click="logout"
-          class="text-xs text-slate-400 hover:text-red-400 transition"
-        >
-          Keluar
-        </button>
+        <p v-if="serverReachable === false || !realtimeConnected" class="text-slate-300 leading-relaxed" role="status">
+          {{ serverReachable === false ? 'Data di layar mungkin tidak terbaru.' : 'Pembaruan otomatis sementara tidak tersedia. Data mungkin tidak terbaru.' }}
+          <span class="block">Terakhir diperbarui {{ lastRefreshedLabel }}</span>
+        </p>
       </div>
     </aside>
 
@@ -121,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { echo, useConnectionStatus } from '@laravel/echo-vue';
 
@@ -129,7 +126,18 @@ const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
 const pendingT0Count = computed(() => Number(page.props.pendingT0Count ?? 0));
 const connectionStatus = useConnectionStatus();
-const realtimeConnected = computed(() => connectionStatus.value === 'connected');
+const subscriptionReady = ref(false);
+const realtimeConnected = computed(() => connectionStatus.value === 'connected' && subscriptionReady.value);
+const serverReachable = ref<boolean | null>(null);
+const lastRefreshedAt = ref<Date | null>(null);
+const lastRefreshedLabel = computed(() => lastRefreshedAt.value?.toLocaleTimeString('id-ID') ?? 'belum diketahui');
+const seenIds = new Set<string>();
+const seenOrder: string[] = [];
+let reloadInFlight = false;
+let reloadRequested = false;
+let healthTimer: ReturnType<typeof setInterval> | undefined;
+let healthProbeInFlight = false;
+let mounted = false;
 
 function isRoute(path: string) {
   return page.url.startsWith(path);
@@ -139,20 +147,82 @@ function logout() {
   router.post('/logout');
 }
 
-function onEmergencyCreated() {
-  playAudioNotification();
+function requestReconciliation() {
+  reloadRequested = true;
+  if (reloadInFlight || !mounted) return;
+  reloadInFlight = true;
+  reloadRequested = false;
   router.reload({
     only: page.component === 'Healthcare/Emergencies/Index'
       ? ['pendingT0Count', 'emergencies']
       : ['pendingT0Count'],
+    onSuccess: () => {
+      lastRefreshedAt.value = new Date();
+      serverReachable.value = true;
+    },
+    onFinish: () => {
+      reloadInFlight = false;
+      if (reloadRequested) requestReconciliation();
+    },
   });
 }
 
+function onEmergencyCreated(payload: { emergency?: { id?: string } }) {
+  const id = payload?.emergency?.id;
+  if (typeof id !== 'string' || !id || seenIds.has(id)) return;
+  seenIds.add(id);
+  seenOrder.push(id);
+  if (seenOrder.length > 100) seenIds.delete(seenOrder.shift()!);
+  playAudioNotification();
+  requestReconciliation();
+}
+
+async function probeServer() {
+  if (healthProbeInFlight) return;
+  healthProbeInFlight = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch('/up', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal });
+    const wasUnavailable = serverReachable.value === false;
+    serverReachable.value = response.ok;
+    if (response.ok && wasUnavailable) requestReconciliation();
+  } catch {
+    serverReachable.value = false;
+  } finally {
+    clearTimeout(timeout);
+    healthProbeInFlight = false;
+  }
+}
+
+watch(connectionStatus, (current) => {
+  if (current !== 'connected') {
+    subscriptionReady.value = false;
+    void probeServer();
+  }
+});
+
 onMounted(() => {
-  echo().private('emergencies').listen('EmergencyCreated', onEmergencyCreated);
+  mounted = true;
+  lastRefreshedAt.value = new Date(); // Initial Inertia page was served by Laravel.
+  echo().private('emergencies')
+    .listen('EmergencyCreated', onEmergencyCreated)
+    .subscribed(() => {
+      subscriptionReady.value = true;
+      serverReachable.value = true;
+      requestReconciliation();
+    })
+    .error(() => {
+      subscriptionReady.value = false;
+      void probeServer();
+    });
+  void probeServer();
+  healthTimer = setInterval(() => { void probeServer(); }, 15000);
 });
 
 onUnmounted(() => {
+  mounted = false;
+  if (healthTimer) clearInterval(healthTimer);
   echo().private('emergencies').stopListening('EmergencyCreated', onEmergencyCreated);
   echo().leave('emergencies');
 });

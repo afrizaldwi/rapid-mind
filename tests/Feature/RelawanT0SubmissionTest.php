@@ -16,6 +16,7 @@ use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Broadcast;
 use Inertia\Testing\AssertableInertia as Assert;
 use RuntimeException;
 use Tests\TestCase;
@@ -177,5 +178,23 @@ final class RelawanT0SubmissionTest extends TestCase
                 ->component('Relawan/Emergency', false)
                 ->where('emergency.id', $emergency->id)
                 ->where('flash.error', fn ($warning) => str_contains($warning, 'belum dapat dikonfirmasi')));
+    }
+
+    public function test_emergency_broadcast_is_healthcare_only_and_contains_id_only(): void
+    {
+        $patient = Patient::create(['name' => 'Rahasia', 'created_by' => $this->relawan->id]);
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $patient->id,
+            'user_id' => $this->relawan->id,
+            'red_flag_type' => RedFlagType::PSYCHOSIS,
+            'status' => EmergencyStatus::PENDING,
+            'notes' => 'Catatan rahasia',
+        ]);
+        $payload = (new EmergencyCreated($emergency))->broadcastWith();
+        $this->assertSame(['emergency' => ['id' => $emergency->id]], $payload);
+        $authorize = Broadcast::getChannels()->get('emergencies');
+        $this->assertTrue($authorize(User::factory()->make(['role' => UserRole::HEALTHCARE])));
+        $this->assertFalse($authorize(User::factory()->make(['role' => UserRole::ADMIN])));
+        $this->assertFalse($authorize($this->relawan));
     }
 }

@@ -13,5 +13,5 @@ Broadcast::channel('healthcare.facility.{facilityId}', function ($user, $facilit
 
 Broadcast::channel('emergencies', function ($user) {
     $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : (string) $user->role;
-    return in_array(strtoupper($role), ['HEALTHCARE', 'ADMIN'], true);
+    return strtoupper($role) === 'HEALTHCARE';
 });

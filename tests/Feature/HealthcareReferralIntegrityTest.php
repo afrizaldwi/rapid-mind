@@ -191,12 +191,13 @@ final class HealthcareReferralIntegrityTest extends TestCase
         ]);
 
         $this->postJson("/healthcare/referrals/{$referral->id}/status", [
-            'status' => 'COMPLETED',
-            'notes' => 'Tindak lanjut selesai.',
+            'expected_status' => 'ACTIVE',
+            'status' => 'EN_ROUTE',
+            'notes' => 'Menuju lokasi.',
         ])->assertOk();
 
-        $this->assertSame(ReferralStatus::COMPLETED, $referral->fresh()->status);
-        $this->assertSame(ReferralStatus::COMPLETED, $referral->statusHistory()->firstOrFail()->status);
+        $this->assertSame(ReferralStatus::EN_ROUTE, $referral->fresh()->status);
+        $this->assertSame(ReferralStatus::EN_ROUTE, $referral->statusHistory()->firstOrFail()->status);
     }
 
     public function test_late_history_failure_rolls_back_classification_and_retry_creates_one_referral(): void
@@ -245,7 +246,9 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame($referral->id, $emergency->referrals()->firstOrFail()->id);
         $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
 
-        $this->postJson("/healthcare/referrals/{$referral->id}/status", ['status' => 'COMPLETED'])->assertOk();
+        foreach (['ACTIVE' => 'EN_ROUTE', 'EN_ROUTE' => 'ON_SITE', 'ON_SITE' => 'COMPLETED'] as $from => $to) {
+            $this->postJson("/healthcare/referrals/{$referral->id}/status", ['expected_status' => $from, 'status' => $to])->assertOk();
+        }
         $otherFacility = HealthcareFacility::create(['name' => 'Faskes Lain', 'type' => 'HOSPITAL', 'is_active' => true]);
         $this->postJson($url, ['clinical_result' => 'T0_CONFIRMED', 'facility_id' => $otherFacility->id, 'notes' => 'Replay notes'])->assertOk();
 
@@ -255,7 +258,7 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
         $this->assertSame('Initial referral', $referral->fresh()->notes);
         $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
-        $this->assertSame(2, $referral->statusHistory()->count());
+        $this->assertSame(4, $referral->statusHistory()->count());
     }
 
     public function test_successful_assessment_replay_keeps_one_validation_and_completed_referral(): void
@@ -281,7 +284,9 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame($validation->id, $referral->fresh()->clinical_validation_id);
         $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
 
-        $this->postJson("/healthcare/referrals/{$referral->id}/status", ['status' => 'COMPLETED'])->assertOk();
+        foreach (['ACTIVE' => 'EN_ROUTE', 'EN_ROUTE' => 'ON_SITE', 'ON_SITE' => 'COMPLETED'] as $from => $to) {
+            $this->postJson("/healthcare/referrals/{$referral->id}/status", ['expected_status' => $from, 'status' => $to])->assertOk();
+        }
         $otherFacility = HealthcareFacility::create(['name' => 'Faskes Lain', 'type' => 'HOSPITAL', 'is_active' => true]);
         $this->postJson($url, [
             'clinical_result' => 'T1',
@@ -299,7 +304,7 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame('Initial plan', $validation->fresh()->intervention_plan);
         $this->assertSame(1, AuditLog::where('action', 'ASSESSMENT_VALIDATED')->count());
         $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
-        $this->assertSame(2, $referral->statusHistory()->count());
+        $this->assertSame(4, $referral->statusHistory()->count());
     }
 
     public function test_distinct_sources_for_one_patient_have_distinct_referrals(): void
@@ -352,4 +357,84 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertNotSame($legacy->id, $assessment->clinicalValidation()->firstOrFail()->referral()->firstOrFail()->id);
         $this->assertSame(2, Referral::where('patient_id', $this->patient->id)->count());
     }
+    private function newReferral(): Referral
+    {
+        return Referral::create([
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::ACTIVE,
+        ]);
+    }
+
+    public function test_all_approved_forward_edges_append_one_history_each(): void
+    {
+        foreach ([
+            ['ACTIVE', 'EN_ROUTE', 'ON_SITE', 'TRANSPORT', 'COMPLETED'],
+            ['ACTIVE', 'EN_ROUTE', 'ON_SITE', 'COMPLETED'],
+        ] as $path) {
+            $referral = $this->newReferral();
+            foreach (array_slice($path, 1) as $index => $next) {
+                $this->postJson("/healthcare/referrals/{$referral->id}/status", [
+                    'expected_status' => $path[$index], 'status' => $next,
+                ])->assertOk();
+                $this->assertSame(ReferralStatus::from($next), $referral->fresh()->status);
+            }
+            $this->assertSame(count($path) - 1, $referral->statusHistory()->count());
+            $this->assertSame(array_slice($path, 1), $referral->statusHistory()->orderBy('id')->get()->pluck('status')->map(fn ($status) => $status->value)->all());
+        }
+    }
+
+    public function test_illegal_skips_backwards_and_terminal_mutations_leave_history_unchanged(): void
+    {
+        foreach ([
+            ['ACTIVE', 'ON_SITE'], ['ACTIVE', 'COMPLETED'],
+            ['EN_ROUTE', 'TRANSPORT'], ['EN_ROUTE', 'ACTIVE'],
+            ['TRANSPORT', 'ON_SITE'], ['COMPLETED', 'EN_ROUTE'],
+        ] as [$from, $to]) {
+            $referral = $this->newReferral();
+            $referral->update(['status' => ReferralStatus::from($from)]);
+            $this->postJson("/healthcare/referrals/{$referral->id}/status", [
+                'expected_status' => $from, 'status' => $to,
+            ])->assertUnprocessable()->assertJsonValidationErrors('status');
+            $this->assertSame(ReferralStatus::from($from), $referral->fresh()->status);
+            $this->assertSame(0, $referral->statusHistory()->count());
+        }
+    }
+
+    public function test_replay_is_no_op_and_stale_different_mutation_returns_conflict(): void
+    {
+        $referral = $this->newReferral();
+        $url = "/healthcare/referrals/{$referral->id}/status";
+        $payload = ['expected_status' => 'ACTIVE', 'status' => 'EN_ROUTE'];
+        $this->postJson($url, $payload)->assertOk();
+        $this->postJson($url, $payload)->assertOk();
+        $this->assertSame(1, $referral->statusHistory()->count());
+        $this->postJson($url, ['expected_status' => 'ACTIVE', 'status' => 'ON_SITE'])
+            ->assertConflict()->assertJsonPath('current_status', 'EN_ROUTE');
+        $this->assertSame(ReferralStatus::EN_ROUTE, $referral->fresh()->status);
+        $this->assertSame(1, $referral->statusHistory()->count());
+        $this->from('/healthcare/referrals')->post($url, ['expected_status' => 'ACTIVE', 'status' => 'ON_SITE'])
+            ->assertRedirect('/healthcare/referrals')->assertSessionHasErrors('conflict');
+    }
+
+    public function test_history_failure_rolls_back_referral_status(): void
+    {
+        $referral = $this->newReferral();
+        ReferralStatusHistory::creating(fn () => throw new RuntimeException('History unavailable'));
+        $this->withoutExceptionHandling();
+        try {
+            $this->postJson("/healthcare/referrals/{$referral->id}/status", [
+                'expected_status' => 'ACTIVE', 'status' => 'EN_ROUTE',
+            ]);
+            $this->fail('History creation should have failed.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('History unavailable', $exception->getMessage());
+        } finally {
+            ReferralStatusHistory::flushEventListeners();
+        }
+        $this->assertSame(ReferralStatus::ACTIVE, $referral->fresh()->status);
+        $this->assertSame(0, $referral->statusHistory()->count());
+    }
+
 }

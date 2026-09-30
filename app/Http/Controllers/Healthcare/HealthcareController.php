@@ -51,7 +51,11 @@ final class HealthcareController extends Controller
         $user = Auth::user();
 
         $emergencies = EmergencyEvent::with(['patient', 'shelter', 'user:id,name', 'verifications.verifier'])
-            ->latest('created_at')
+            ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN status = 'PENDING' THEN created_at END ASC")
+            ->orderByRaw("CASE WHEN status = 'PENDING' THEN id END ASC")
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         $facility = $user->facility_id ? HealthcareFacility::find($user->facility_id) : null;
@@ -361,33 +365,53 @@ final class HealthcareController extends Controller
 
     public function updateReferralStatus(Request $request, string $referralId): JsonResponse|RedirectResponse
     {
-        $user = Auth::user();
-        $referral = Referral::findOrFail($referralId);
-
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:ACTIVE,EN_ROUTE,ON_SITE,TRANSPORT,COMPLETED'],
+            'expected_status' => ['required', 'string', Rule::enum(ReferralStatus::class)],
+            'status' => ['required', 'string', Rule::enum(ReferralStatus::class)],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
-
+        $expectedStatus = ReferralStatus::from($validated['expected_status']);
         $newStatus = ReferralStatus::from($validated['status']);
 
-        DB::transaction(function () use ($referral, $newStatus, $user, $validated): void {
-            $referral->update([
-                'status' => $newStatus,
-            ]);
+        $result = DB::transaction(function () use ($referralId, $expectedStatus, $newStatus, $validated): array {
+            $referral = Referral::whereKey($referralId)->lockForUpdate()->firstOrFail();
+            $current = $referral->status;
 
+            // A response lost after a successful write may be retried with the old expectation.
+            if ($current === $newStatus) {
+                return ['replay' => true, 'current' => $current];
+            }
+            if ($current !== $expectedStatus) {
+                return ['conflict' => true, 'current' => $current];
+            }
+            if (! $current->canTransitionTo($newStatus)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Perubahan status rujukan ini tidak diizinkan.',
+                ]);
+            }
+
+            $referral->update(['status' => $newStatus]);
             ReferralStatusHistory::create([
                 'referral_id' => $referral->id,
                 'status' => $newStatus,
-                'changed_by' => $user->id,
+                'changed_by' => Auth::id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
+
+            return ['updated' => true];
         });
+
+        if (isset($result['conflict'])) {
+            $message = 'Data telah diperbarui oleh pengguna lain. Muat data terbaru sebelum melakukan perubahan.';
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $message, 'current_status' => $result['current']->value], 409);
+            }
+            return back()->withErrors(['conflict' => $message]);
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Status rujukan berhasil diperbarui.']);
         }
-
         return back()->with('message', 'Status rujukan berhasil diperbarui.');
     }
 
