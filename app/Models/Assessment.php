@@ -19,4 +19,5 @@ class Assessment extends Model {
     public function riskAssessment() { return $this->hasMany(RiskResponse::class); }
     public function functionAssessment() { return $this->hasMany(FunctionResponse::class); }
     public function triageResult() { return $this->hasOne(TriageResult::class); }
+    public function clinicalValidation() { return $this->hasOne(ClinicalValidation::class); }
 }

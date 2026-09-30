@@ -7,4 +7,5 @@ class Shelter extends Model {
     public function region() { return $this->belongsTo(Region::class); }
     public function patients() { return $this->hasMany(Patient::class); }
     public function users() { return $this->hasMany(User::class); }
+    public function volunteers() { return $this->hasMany(User::class)->where('role', \App\Enums\UserRole::RELAWAN); }
 }
