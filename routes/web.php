@@ -58,6 +58,7 @@ Route::middleware(['auth.jwt', 'role:HEALTHCARE'])->prefix('healthcare')->name('
 
     // Clinical Validations
     Route::get('/validations', [HealthcareController::class, 'validations'])->name('validations.index');
+    Route::get('/validations/{assessmentId}', [HealthcareController::class, 'validationDetail'])->name('validations.show');
     Route::post('/validations/{assessmentId}', [HealthcareController::class, 'validateAssessment'])->name('validations.store');
 
     // Referrals & Dispatch Tracking
@@ -82,7 +83,7 @@ Route::middleware(['auth.jwt', 'role:ADMIN'])->prefix('admin')->name('admin.')->
     Route::get('/volunteers/{userId}', [ProvisioningController::class, 'showVolunteer'])->name('volunteers.show');
     Route::put('/volunteers/{userId}', [ProvisioningController::class, 'updateVolunteer'])->name('volunteers.update');
     Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
-    Route::get('/facilities', fn () => redirect('/admin/facilities/organizations'))->name('facilities');
+    Route::get('/facilities', fn() => redirect('/admin/facilities/organizations'))->name('facilities');
     Route::get('/operations/posko', [ShelterManagementController::class, 'index'])->name('posko.index');
     Route::get('/operations/posko/create', [ShelterManagementController::class, 'create'])->name('posko.create');
     Route::post('/operations/posko', [ShelterManagementController::class, 'store'])->name('posko.store');

@@ -106,6 +106,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
         $first = $this->shelter();
         $second = Shelter::create(['name' => 'Posko Kedua', 'region_id' => $first->region_id, 'is_active' => true]);
         $this->post('/admin/volunteers', [
+            'phone_number' => '081234567890',
             'name' => 'Relawan Baru', 'email' => 'relawan-baru@example.test',
             'password' => 'rahasia123', 'password_confirmation' => 'rahasia123',
             'shelter_id' => $first->id, 'is_active' => true, 'role' => 'ADMIN',
@@ -120,6 +121,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
             'status' => AssessmentStatus::COMPLETED, 'mode' => AssessmentMode::VERBAL, 'completed_at' => now(),
         ]);
         $this->put("/admin/volunteers/{$user->id}", [
+            'phone_number' => '081234567890',
             'name' => 'Relawan Revisi', 'email' => 'relawan-baru@example.test',
             'shelter_id' => $second->id, 'is_active' => false,
         ])->assertSessionHasNoErrors();
@@ -132,11 +134,40 @@ final class AdminBootstrapProvisioningTest extends TestCase
         $this->post('/login', ['email' => $user->email, 'password' => 'rahasia123'])->assertSessionHasErrors('email');
         $this->actingAs($this->admin());
         $this->put("/admin/volunteers/{$user->id}", [
+            'phone_number' => '081234567890',
             'name' => 'Relawan Revisi', 'email' => $user->email,
             'shelter_id' => $second->id, 'is_active' => true,
         ])->assertSessionHasNoErrors();
         $this->post('/logout');
         $this->post('/login', ['email' => $user->email, 'password' => 'rahasia123'])->assertRedirect('/relawan/home');
+    }
+
+    public function test_relawan_phone_is_required_normalized_and_invalid_values_are_rejected(): void
+    {
+        $this->admin();
+        $shelter = $this->shelter();
+        $payload = [
+            'name' => 'Relawan Telepon', 'email' => 'telepon@example.test',
+            'password' => 'rahasia123', 'password_confirmation' => 'rahasia123',
+            'shelter_id' => $shelter->id, 'is_active' => true,
+        ];
+        $this->post('/admin/volunteers', $payload)->assertSessionHasErrors('phone_number');
+        $this->post('/admin/volunteers', $payload + ['phone_number' => '123'])->assertSessionHasErrors('phone_number');
+        $this->post('/admin/volunteers', $payload + ['phone_number' => '081234567890'])->assertSessionHasNoErrors();
+        $volunteer = User::where('email', 'telepon@example.test')->firstOrFail();
+        $this->assertSame('+6281234567890', $volunteer->phone_number);
+        $this->put("/admin/volunteers/{$volunteer->id}", [
+            'name' => $volunteer->name, 'email' => $volunteer->email,
+            'shelter_id' => $shelter->id, 'is_active' => true,
+            'phone_number' => '6281398765432',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('+6281398765432', $volunteer->fresh()->phone_number);
+        $this->put("/admin/volunteers/{$volunteer->id}", [
+            'name' => $volunteer->name, 'email' => $volunteer->email,
+            'shelter_id' => $shelter->id, 'is_active' => true,
+            'phone_number' => 'not-a-phone',
+        ])->assertSessionHasErrors('phone_number');
+        $this->assertSame('+6281398765432', $volunteer->fresh()->phone_number);
     }
 
     public function test_dedicated_healthcare_provisioning_reassignment_and_login(): void
@@ -185,7 +216,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
             ->where('currentInactiveAssignment', null)
             ->has('assignments', 0)
             ->etc());
-        $volunteer = ['name' => 'Relawan', 'email' => 'r@example.test', 'password' => 'rahasia123', 'password_confirmation' => 'rahasia123', 'is_active' => true];
+        $volunteer = ['phone_number' => '081234567890', 'name' => 'Relawan', 'email' => 'r@example.test', 'password' => 'rahasia123', 'password_confirmation' => 'rahasia123', 'is_active' => true];
         $healthcare = ['name' => 'Nakes', 'email' => 'h@example.test', 'password' => 'rahasia123', 'password_confirmation' => 'rahasia123', 'is_active' => true];
         $this->post('/admin/volunteers', $volunteer)->assertSessionHasErrors('shelter_id');
         $this->post('/admin/volunteers', $volunteer + ['shelter_id' => $shelter->id])->assertSessionHasErrors('shelter_id');
@@ -206,6 +237,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'facility_id' => $activeFacility->id]);
 
         $this->put("/admin/volunteers/{$volunteer->id}", [
+            'phone_number' => '081234567890',
             'name' => $volunteer->name, 'email' => $volunteer->email,
             'shelter_id' => $inactiveShelter->id, 'is_active' => true,
         ])->assertSessionHasErrors('shelter_id');
@@ -214,6 +246,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
             'facility_id' => $inactiveFacility->id, 'is_active' => true,
         ])->assertSessionHasErrors('facility_id');
         $this->put("/admin/volunteers/{$volunteer->id}", [
+            'phone_number' => '081234567890',
             'name' => $volunteer->name, 'email' => $healthcare->email,
             'shelter_id' => $activeShelter->id, 'is_active' => true,
         ])->assertSessionHasErrors('email');
@@ -243,6 +276,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
             ->etc());
 
         $this->put("/admin/volunteers/{$volunteer->id}", [
+            'phone_number' => '081234567890',
             'name' => 'Nama Diperbarui', 'email' => 'relawan-retained@example.test',
             'shelter_id' => $current->id, 'is_active' => false,
         ])->assertSessionHasNoErrors();
@@ -251,7 +285,7 @@ final class AdminBootstrapProvisioningTest extends TestCase
             'email' => 'relawan-retained@example.test', 'shelter_id' => $current->id, 'is_active' => false,
         ]);
 
-        $payload = ['name' => 'Nama Diperbarui', 'email' => 'relawan-retained@example.test'];
+        $payload = ['phone_number' => '081234567890', 'name' => 'Nama Diperbarui', 'email' => 'relawan-retained@example.test'];
         $this->put("/admin/volunteers/{$volunteer->id}", $payload + [
             'shelter_id' => $current->id, 'is_active' => true,
         ])->assertSessionHasErrors('shelter_id');

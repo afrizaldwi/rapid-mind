@@ -27,6 +27,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Throwable;
 
 final class HealthcareController extends Controller
 {
@@ -49,7 +50,7 @@ final class HealthcareController extends Controller
     {
         $user = Auth::user();
 
-        $emergencies = EmergencyEvent::with(['patient', 'shelter', 'user', 'verifications.verifier'])
+        $emergencies = EmergencyEvent::with(['patient', 'shelter', 'user:id,name', 'verifications.verifier'])
             ->latest('created_at')
             ->get();
 
@@ -66,7 +67,7 @@ final class HealthcareController extends Controller
         $emergency = EmergencyEvent::with([
             'patient.assessments.triageResult',
             'shelter',
-            'user',
+            'user:id,name,phone_number',
             'verifications.verifier',
             'referrals.facility',
             'referrals.statusHistory.changer',
@@ -217,73 +218,129 @@ final class HealthcareController extends Controller
 
     public function validations(): InertiaResponse
     {
-        $assessments = Assessment::with(['patient', 'user.shelter', 'triageResult', 'clinicalValidation.validator'])
+        $assessments = Assessment::with(['patient', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'clinicalValidation.validator'])
             ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
-            ->latest('completed_at')
-            ->get();
+            ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+            ->get()
+            ->sortBy(fn (Assessment $assessment) => sprintf(
+                '%d-%s-%s',
+                $assessment->triageResult->system_recommendation === TriageCategory::T1 ? 1 : 2,
+                $assessment->completed_at?->format('YmdHis.u') ?? $assessment->created_at->format('YmdHis.u'),
+                $assessment->id,
+            ))->values();
 
         return Inertia::render('Healthcare/Validations/Index', [
-            'assessments' => $assessments,
+            'pendingAssessments' => $assessments->filter(fn (Assessment $a) => $a->clinicalValidation === null)->values(),
+            'completedAssessments' => $assessments->filter(fn (Assessment $a) => $a->clinicalValidation !== null)->values(),
+        ]);
+    }
+
+    public function validationDetail(string $assessmentId): InertiaResponse
+    {
+        $assessment = Assessment::with([
+            'patient.shelter', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'srqResponses',
+            'riskAssessment', 'functionAssessment', 'clinicalValidation.validator',
+            'clinicalValidation.referral.facility',
+        ])->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+            ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+            ->findOrFail($assessmentId);
+
+        $previousAssessments = Assessment::with(['triageResult', 'clinicalValidation.validator'])
+            ->where('patient_id', $assessment->patient_id)
+            ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+            ->where('completed_at', '<', $assessment->completed_at)
+            ->orderByDesc('completed_at')->orderByDesc('id')->limit(5)->get();
+
+        return Inertia::render('Healthcare/Validations/Show', [
+            'assessment' => $assessment,
+            'previousAssessments' => $previousAssessments,
+            'facilities' => HealthcareFacility::where('is_active', true)->orderBy('name')->get(['id', 'name', 'type']),
         ]);
     }
 
     public function validateAssessment(Request $request, string $assessmentId): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = Assessment::where('status', \App\Enums\AssessmentStatus::COMPLETED)
+            ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+            ->findOrFail($assessmentId);
+
+        // Completed decisions are immutable in this MVP; a replay is a successful no-op.
+        if ($assessment->clinicalValidation()->exists()) {
+            return $this->validationSavedResponse($request);
+        }
 
         $validated = $request->validate([
             'clinical_result' => ['required', 'string', 'in:T1,T2,T3'],
             'diagnosis_notes' => ['nullable', 'string', 'max:2000'],
             'intervention_plan' => ['nullable', 'string', 'max:2000'],
             'referral_required' => ['nullable', 'boolean'],
-            'facility_id' => ['nullable', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
+            'facility_id' => [Rule::requiredIf($request->boolean('referral_required')), 'nullable', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
         ]);
 
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
 
-        DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
-            $assessment = Assessment::whereKey($assessment->id)->lockForUpdate()->firstOrFail();
-            $validation = ClinicalValidation::updateOrCreate(
-                ['assessment_id' => $assessment->id],
-                [
-                    'validated_by' => $user->id,
-                    'clinical_result' => $clinicalResult,
-                    'diagnosis_notes' => $validated['diagnosis_notes'] ?? null,
-                    'intervention_plan' => $validated['intervention_plan'] ?? null,
-                    'referral_required' => (bool)($validated['referral_required'] ?? false),
-                ]
-            );
+        try {
+            DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
+                $assessment = Assessment::whereKey($assessment->id)
+                    ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+                    ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+                    ->lockForUpdate()->firstOrFail();
+                if ($assessment->clinicalValidation()->exists()) {
+                    return;
+                }
+                $validation = ClinicalValidation::create(
+                    [
+                        'assessment_id' => $assessment->id,
+                        'validated_by' => $user->id,
+                        'clinical_result' => $clinicalResult,
+                        'diagnosis_notes' => $validated['diagnosis_notes'] ?? null,
+                        'intervention_plan' => $validated['intervention_plan'] ?? null,
+                        'referral_required' => (bool)($validated['referral_required'] ?? false),
+                    ]
+                );
 
-            if (($validated['referral_required'] ?? false) && ! $validation->referral()->exists()) {
-                $facilityId = $this->activeReferralFacility($validated['facility_id'] ?? null, $user->facility_id);
-                $referral = $validation->referral()->create([
-                    'patient_id' => $assessment->patient_id,
-                    'referred_by' => $user->id,
-                    'facility_id' => $facilityId,
-                    'status' => ReferralStatus::ACTIVE,
-                    'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
+                if (($validated['referral_required'] ?? false) && ! $validation->referral()->exists()) {
+                    $facilityId = (int) $validated['facility_id'];
+                    $referral = $validation->referral()->create([
+                        'patient_id' => $assessment->patient_id,
+                        'referred_by' => $user->id,
+                        'facility_id' => $facilityId,
+                        'status' => ReferralStatus::ACTIVE,
+                        'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
+                    ]);
+                    ReferralStatusHistory::create([
+                        'referral_id' => $referral->id,
+                        'status' => ReferralStatus::ACTIVE,
+                        'changed_by' => $user->id,
+                        'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
+                    ]);
+                }
+
+                AuditLog::create([
+                    'actor_id' => $user->id,
+                    'action' => 'ASSESSMENT_VALIDATED',
+                    'entity_type' => 'Assessment',
+                    'entity_id' => $assessment->id,
+                    'new_values' => [
+                        'clinical_result' => $clinicalResult->value,
+                        'referral_required' => $validated['referral_required'] ?? false,
+                    ],
                 ]);
-                ReferralStatusHistory::create([
-                    'referral_id' => $referral->id,
-                    'status' => ReferralStatus::ACTIVE,
-                    'changed_by' => $user->id,
-                    'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
-                ]);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+            if ($request->wantsJson()) {
+                throw $exception;
             }
+            return back()->withErrors(['form' => 'Validasi belum tersimpan karena gangguan server. Coba lagi.']);
+        }
 
-            AuditLog::create([
-                'actor_id' => $user->id,
-                'action' => 'ASSESSMENT_VALIDATED',
-                'entity_type' => 'Assessment',
-                'entity_id' => $assessment->id,
-                'new_values' => [
-                    'clinical_result' => $clinicalResult->value,
-                    'referral_required' => $validated['referral_required'] ?? false,
-                ],
-            ]);
-        });
+        return $this->validationSavedResponse($request);
+    }
 
+    private function validationSavedResponse(Request $request): JsonResponse|RedirectResponse
+    {
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Validasi klinis berhasil disimpan.']);
         }
@@ -356,6 +413,12 @@ final class HealthcareController extends Controller
             'assessments.clinicalValidation.validator',
             'emergencyEvents.verifications.verifier',
             'emergencyEvents.referrals.facility',
+            'referrals' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'referrals.facility',
+            'referrals.referrer',
+            'referrals.statusHistory.changer',
+            'referrals.emergencyEvent',
+            'referrals.clinicalValidation.assessment.triageResult',
         ])->findOrFail($patientId);
 
         return Inertia::render('Healthcare/Patients/Show', [

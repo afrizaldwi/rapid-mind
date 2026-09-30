@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\HealthcareFacility;
 use App\Models\Shelter;
 use App\Models\User;
+use App\Support\IndonesianPhone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +75,7 @@ final class ProvisioningController extends Controller
                 $field => $data[$field],
                 'is_active' => $data['is_active'],
                 'token_version' => 1,
+                'phone_number' => $data['phone_number'] ?? null,
             ]);
         });
 
@@ -98,6 +100,7 @@ final class ProvisioningController extends Controller
                 'email' => $data['email'],
                 $field => $data[$field],
                 'is_active' => $data['is_active'],
+                ...($role === UserRole::RELAWAN ? ['phone_number' => $data['phone_number']] : []),
             ]);
             if ((int) $oldAssignment !== (int) $data[$field]) {
                 AuditLog::create([
@@ -127,7 +130,18 @@ final class ProvisioningController extends Controller
         if (!$user) {
             $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
         }
-        return $request->validate($rules);
+        if ($role === UserRole::RELAWAN) {
+            $rules['phone_number'] = ['required', 'string', 'max:24', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (IndonesianPhone::normalize((string) $value) === null) {
+                    $fail('Masukkan nomor telepon Relawan Indonesia yang valid.');
+                }
+            }];
+        }
+        $data = $request->validate($rules);
+        if ($role === UserRole::RELAWAN) {
+            $data['phone_number'] = IndonesianPhone::normalize($data['phone_number']);
+        }
+        return $data;
     }
 
     private function assertActiveAssignment(UserRole $role, int $id): void

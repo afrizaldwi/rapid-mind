@@ -6,7 +6,7 @@
 
 ## 1. Purpose and Scope
 
-This ledger records runtime and browser verification evidence for the current `demo` implementation. It is intended to support demo workflow confidence, implementation handoff, and regression reference before the next implementation phase: **Admin Bootstrap & Provisioning MVP**.
+This ledger records runtime and browser verification evidence for the current `demo` implementation. It is intended to support demo workflow confidence, implementation handoff, and regression reference with historical checkpoints preserved and the latest source/automated checkpoint recorded below.
 
 This document is not a replacement for product requirements or design specifications. It does not claim production readiness, security certification, clinical validation, full end-to-end automation, or complete offline/PWA readiness.
 
@@ -683,7 +683,7 @@ Normal clinical referral:
 
 These are synthetic test records, not production identities.
 
-## 13. Current Overall Status
+## 13. Historical Overall Status (Before Admin Bootstrap)
 
 ```text
 ONLINE OPERATIONAL WORKFLOW:
@@ -719,7 +719,7 @@ PASS
 ADMIN BOOTSTRAP / PROVISIONING:
 INCOMPLETE
 
-Next implementation priority:
+Next implementation priority at that checkpoint:
 Admin Bootstrap & Provisioning MVP
 ```
 
@@ -855,3 +855,35 @@ The project owner still intends to manually retest the application before final 
 10. **Inactive Posko/Faskes excluded from new provisioning** (verify create pages `/admin/volunteers/create` and `/admin/facilities/users/create` exclude inactive master data).
 11. **New referral UI excludes inactive Faskes** (log in as Healthcare, check referral dropdown in emergency/validation UI, verify inactive Faskes do not appear). *Note: Historical referral pointing to an inactive Faskes was `NOT DIRECTLY TESTED IN BROWSER` by Antigravity (covered by automated test).*
 12. **Final Admin Summary/Map/Analytics smoke** (verify Summary KPIs, Map with markers and popups, Analytics charts, Logistics page).
+
+---
+
+## Healthcare Operational Completion MVP — Source and Automated Checkpoint (30 September 2026)
+
+The earlier overall-status and Admin checkpoint entries above are historical evidence. This is the initial implementation checkpoint for the Healthcare operational phase; the focused correction checkpoint below is current.
+
+- **SOURCE-INSPECTED:** Branch `demo` at starting head `ce4ee0a134977d1dfc23248f73eadbfda1a867cf`; inspected routes, domain models, controllers, Vue pages, migrations, tests, and the applicable specifications. The source now includes Relawan phone normalization and native `tel:` action in selected T0 detail; T1/T2 validation worklist and route-backed review; explicit active Faskes selection for new non-T0 referrals; and patient referral history from existing provenance relationships.
+- **AUTOMATED TESTED:** The full Laravel suite passed **86 tests, 991 assertions** after adapting prior worklist assertions to the new T1/T2 contract. The new feature tests cover contact exposure and missing phone, worklist ordering and T3 exclusion, selected assessment evidence, explicit referral destination, transactional failure rollback and retry, and T0/non-T0 patient referral provenance. Provisioning and DemoSeeder tests cover canonical phone persistence and preservation of a non-empty number.
+- **DATABASE/MIGRATION:** `2026_09_30_000001_add_phone_number_to_users_table` ran successfully; `migrate:status` reported it as Ran. The schema adds nullable `users.phone_number` only. `DemoSeeder` completed on the local demo database, and a Docker read-back confirmed the canonical demo Relawan phone as `+6281234567890`. No dependency was installed.
+- **ROUTES/FRONTEND:** Healthcare route listing included `GET /healthcare/validations/{assessmentId}`. Vue TypeScript check and production build passed; build retained the large-chunk advisory warning. `git diff --check` passed.
+- **BROWSER VERIFIED — ANTIGRAVITY:** NOT YET PERFORMED for this phase.
+- **USER MANUAL RETEST:** NOT YET PERFORMED for this phase.
+
+The selected T0 call link opens the device's telephone handler; it does not confirm a completed call or save the `PHONE` verification method. Non-T0 `Sedang Ditinjau` remains deferred because there is no persistent review/ownership state. T0 confirmation still automatically creates a referral in the prototype, even though the later UX direction separates confirmation from referral. The existing referral/dispatch progression and T0 critical path remain unchanged. Browser behavior, mobile telephone handling, offline behavior, realtime effects, clinical validity, and production security are not established by these source and automated checks.
+
+**Next verification priority:** Antigravity browser verification of the Healthcare flow, followed by user manual retest.
+
+---
+
+## Healthcare Operational Completion MVP — Focused Correction Checkpoint (1 October 2026)
+
+The 30 September checkpoint above remains historical evidence. This correction pass is **SOURCE-INSPECTED** and **AUTOMATED TESTED**; it does not add browser evidence.
+
+- The non-T0 validation POST now accepts only completed source assessments with a T1/T2 system recommendation, matching the selected GET route. Healthcare may still save a T1, T2, or T3 clinical result for an eligible source. A previously saved validation is immutable in this MVP: replay returns success without changing the clinical decision or creating another referral, history event, or validation audit entry.
+- `previousAssessments` now includes only assessments completed before the selected assessment, capped at five. The Validasi worklist and selected detail serialize only the reporting user's id, name, shelter_id, and shelter relation; they omit the Relawan phone and email. The selected T0 detail still receives the phone number.
+- Patient referral history is explicitly newest first (`created_at`, then id), and current status plus status-history entries use the existing Indonesian terminology from the Healthcare Rujukan view. Referral records and state transitions were not changed.
+- **AUTOMATED TESTED:** `docker compose exec -T app php artisan test` passed **90 tests, 1,052 assertions**. Focused tests cover ineligible T3/T0/incomplete/missing-triage POST sources, allowed T3 clinical result from an eligible source, immutable replay, true prior history, omitted phone/email props, and deterministic patient referral order. `route:list` passed with 68 routes; `vue-tsc --noEmit`, `npm run build`, and `git diff --check` passed. The build transformed 1,243 modules and retained the large-chunk advisory warning. Dependencies installed: **NONE**.
+- **BROWSER VERIFIED — ANTIGRAVITY:** NOT YET PERFORMED for the Healthcare phase.
+- **USER MANUAL RETEST:** NOT YET PERFORMED for the Healthcare phase.
+
+The retained prototype limits in the 30 September checkpoint still apply, including no persistent non-T0 `Sedang Ditinjau` state and the existing automatic T0 referral behavior. The next verification step is the separate Antigravity browser pass.

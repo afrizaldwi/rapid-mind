@@ -263,3 +263,27 @@ Database/schema: **No migration**. Existing regions, shelters, healthcare_facili
   - Pre-existing import defect on `/admin/map` was resolved and verified through focused browser retest without regressions.
 - **USER MANUAL RETEST — NOT YET PERFORMED**: A full manual retest checklist remains documented for the project owner in `docs/workflow-verification.md`. Antigravity browser verification does not substitute for the owner's manual retest.
 - Production readiness, production security, full E2E coverage, mobile verification, offline/PWA, realtime beyond tested scope, clinical validation, and deployment readiness remain unproven and out of scope.
+
+---
+
+## Healthcare Operational Completion MVP — 30 September 2026
+
+**SOURCE-INSPECTED / AUTOMATED TESTED.** Added nullable `users.phone_number`, focused Indonesian normalization to `+62...`, a required field in the dedicated Admin Relawan create/edit form, and an idempotent DemoSeeder backfill for the canonical Relawan when its number is blank. Healthcare T0 queue loads the reporting Relawan's name without their phone; the selected incident displays the number and a native `tel:` contact action when available. Opening that link does not record verification or advance emergency status.
+
+Healthcare Validasi now lists completed T1/T2 assessments as separate `Perlu Divalidasi` and `Selesai` areas, prioritizing T1 then T2 and oldest pending work within each category. T3 remains in patient history. The new selected validation route shows patient identity, stored SRQ/risk/function answers, recommendation score breakdown, prior assessments, and any existing Healthcare validation. New non-T0 referrals require an explicit active Admin-managed Faskes; no implicit destination fallback is used for that path. The Inertia form retains input and shows field or form errors on failed save; transactional server failures roll back and return to the selected review. The patient detail now shows read-only T0 and assessment referral history, original destination (including inactive historical facilities), status, source, referrer, and status events.
+
+The migration ran; `migrate:status` showed it as Ran. The idempotent `DemoSeeder` was run on the local demo database; a Docker read-back confirmed the canonical Relawan phone as `+6281234567890`. Full Laravel suite: **86 passed, 991 assertions**. Healthcare route listing, Vue TypeScript check, frontend production build, and `git diff --check` passed. The build reported its existing large-chunk advisory warning. Dependencies installed: **NONE**.
+
+**BROWSER VERIFIED — ANTIGRAVITY: NOT YET PERFORMED.** **USER MANUAL RETEST: NOT YET PERFORMED.** `Sedang Ditinjau` has no persistent non-T0 owner/review state in this prototype. T0 confirmation still automatically creates a referral; this phase preserved that existing emergency path. Click-to-call relies on the device/browser telephone handler and gives no call-success confirmation. No browser, mobile, realtime, offline, clinical, or production-security claim is made for this phase.
+
+---
+
+## Healthcare Operational Completion MVP — Focused Correction Pass (1 October 2026)
+
+The non-T0 validation POST now enforces the same completed T1/T2 source-assessment rule as the selected GET route. Existing clinical validations are immutable: a replay succeeds without overwriting the saved clinical decision, referral, status history, or validation audit. An eligible T1/T2 system recommendation can still receive a Healthcare T3 clinical result.
+
+The selected review's prior-assessment list now excludes newer records. Validasi props omit the reporting Relawan's phone and email, while selected T0 contact remains available. Patient referral history is explicitly newest first and uses the existing Healthcare Rujukan Indonesian status labels for both current status and status history. No referral state transitions or T0 behavior changed.
+
+**SOURCE-INSPECTED / AUTOMATED TESTED:** Full Laravel suite **90 passed, 1,052 assertions**; route list **68 routes**; Vue TypeScript check, production build, and `git diff --check` passed. The build transformed 1,243 modules and retained its large-chunk advisory warning. Dependencies installed: **NONE**.
+
+**BROWSER VERIFIED — ANTIGRAVITY: NOT YET PERFORMED. USER MANUAL RETEST: NOT YET PERFORMED.** The previous prototype limitations remain; this correction pass did not perform browser, mobile, realtime, offline, or clinical verification.

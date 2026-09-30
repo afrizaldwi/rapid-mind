@@ -95,12 +95,15 @@ final class WorkspaceRelationshipTest extends TestCase
     public function test_healthcare_validation_listing_includes_validation_and_validator(): void
     {
         [, $assessment, $validation, $validator] = $this->validatedAssessment();
+        TriageResult::create([
+            'assessment_id' => $assessment->id, 'system_recommendation' => TriageCategory::T2,
+        ]);
 
         $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Validations/Index', false)
-            ->where('assessments.0.id', $assessment->id)
-            ->where('assessments.0.clinical_validation.id', $validation->id)
-            ->where('assessments.0.clinical_validation.validator.id', $validator->id)
+            ->where('completedAssessments.0.id', $assessment->id)
+            ->where('completedAssessments.0.clinical_validation.id', $validation->id)
+            ->where('completedAssessments.0.clinical_validation.validator.id', $validator->id)
             ->etc());
     }
 
@@ -118,9 +121,9 @@ final class WorkspaceRelationshipTest extends TestCase
 
         $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Validations/Index', false)
-            ->where('assessments.0.triage_result.system_recommendation', TriageCategory::T2->value)
-            ->where('assessments.0.triage_result.total_score', 11)
-            ->missing('assessments.0.triageResult')
+            ->where('completedAssessments.0.triage_result.system_recommendation', TriageCategory::T2->value)
+            ->where('completedAssessments.0.triage_result.total_score', 11)
+            ->missing('completedAssessments.0.triageResult')
             ->etc());
     }
 

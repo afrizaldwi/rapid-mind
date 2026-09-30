@@ -9,4 +9,5 @@ class Patient extends Model {
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
     public function assessments() { return $this->hasMany(Assessment::class); }
     public function emergencyEvents() { return $this->hasMany(EmergencyEvent::class); }
+    public function referrals() { return $this->hasMany(Referral::class); }
 }

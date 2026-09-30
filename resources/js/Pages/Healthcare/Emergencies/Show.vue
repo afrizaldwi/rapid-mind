@@ -58,6 +58,17 @@
           </div>
         </div>
 
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+          <p class="font-bold text-slate-900">Kontak Relawan Pelapor</p>
+          <p class="text-slate-600">{{ emergency.user?.name || 'Relawan tidak tercatat' }}</p>
+          <template v-if="emergency.user?.phone_number">
+            <p class="mt-1 text-slate-700">{{ emergency.user.phone_number }}</p>
+            <a :href="`tel:${emergency.user.phone_number}`" class="mt-2 inline-block rounded-xl bg-teal-800 px-4 py-2 font-bold text-white">Hubungi Relawan</a>
+            <p class="mt-2 text-xs text-slate-500">Panggilan dibuka melalui perangkat Anda. Simpan metode verifikasi secara terpisah setelah menghubungi Relawan.</p>
+          </template>
+          <p v-else class="mt-1 text-slate-500">Nomor telepon Relawan belum tersedia. Gunakan jalur koordinasi operasional lain.</p>
+        </div>
+
         <div v-if="emergency.notes" class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1">
           <span class="font-bold text-slate-900 block">Catatan Observasi Lapangan:</span>
           <p class="italic">"{{ emergency.notes }}"</p>

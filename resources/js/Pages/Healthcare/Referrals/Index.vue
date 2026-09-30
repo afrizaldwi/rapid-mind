@@ -26,7 +26,7 @@
                   {{ r.patient?.name }}
                 </h3>
                 <Badge :variant="r.status === 'COMPLETED' ? 'success' : 'warning'">
-                  {{ formatStatus(r.status) }}
+                  {{ formatReferralStatus(r.status) }}
                 </Badge>
               </div>
               <p class="text-xs text-slate-500 mt-1">
@@ -70,6 +70,7 @@
 import { router } from '@inertiajs/vue3';
 import HealthcareLayout from '@/layouts/HealthcareLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
+import { formatReferralStatus } from '@/lib/referralStatus';
 
 defineProps<{
   referrals: any[];
@@ -82,17 +83,6 @@ const referralSteps = [
   { key: 'TRANSPORT', label: '4. Transportasi ke RS' },
   { key: 'COMPLETED', label: '5. Selesai Diterima' },
 ];
-
-function formatStatus(status: string) {
-  switch (status) {
-    case 'ACTIVE': return 'Aktif Terbit';
-    case 'EN_ROUTE': return 'Ambulans Menuju Posko';
-    case 'ON_SITE': return 'Tiba di Posko';
-    case 'TRANSPORT': return 'Perjalanan ke RS';
-    case 'COMPLETED': return 'Selesai di RS';
-    default: return status;
-  }
-}
 
 function updateStatus(referralId: string, newStatus: string) {
   router.post(`/healthcare/referrals/${referralId}/status`, {

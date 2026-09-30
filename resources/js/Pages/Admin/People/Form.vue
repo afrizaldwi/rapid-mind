@@ -7,6 +7,11 @@
       <form class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4" @submit.prevent="submit">
         <div><label class="block text-sm font-bold mb-1">Nama *</label><input v-model="form.name" required class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.name" class="text-sm text-red-800 mt-1">{{ form.errors.name }}</p></div>
         <div><label class="block text-sm font-bold mb-1">Email *</label><input v-model="form.email" type="email" required autocomplete="email" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.email" class="text-sm text-red-800 mt-1">{{ form.errors.email }}</p></div>
+        <div v-if="kind === 'relawan'">
+          <label class="block text-sm font-bold mb-1" for="phone_number">Nomor telepon *</label>
+          <input id="phone_number" v-model="form.phone_number" type="tel" required autocomplete="tel" placeholder="081234567890" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" />
+          <p v-if="form.errors.phone_number" class="text-sm text-red-800 mt-1">{{ form.errors.phone_number }}</p>
+        </div>
         <template v-if="!user">
           <div><label class="block text-sm font-bold mb-1">Kata sandi awal *</label><input v-model="form.password" type="password" minlength="8" required autocomplete="new-password" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.password" class="text-sm text-red-800 mt-1">{{ form.errors.password }}</p></div>
           <div><label class="block text-sm font-bold mb-1">Konfirmasi kata sandi *</label><input v-model="form.password_confirmation" type="password" minlength="8" required autocomplete="new-password" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /></div>
@@ -42,6 +47,7 @@ const retainingInactiveAssignment = computed(() => props.currentInactiveAssignme
 const form = useForm({
   name: props.user?.name ?? '',
   email: props.user?.email ?? '',
+  phone_number: props.user?.phone_number ?? '',
   password: '',
   password_confirmation: '',
   assignment_id: initialAssignment ?? null as number | null,
@@ -50,7 +56,7 @@ const form = useForm({
 const assignmentError = computed(() => props.kind === 'relawan' ? (form.errors as Record<string, string>).shelter_id : (form.errors as Record<string, string>).facility_id);
 function submit() {
   const payload = { name: form.name, email: form.email, is_active: form.is_active,
-    ...(props.kind === 'relawan' ? { shelter_id: form.assignment_id } : { facility_id: form.assignment_id }),
+    ...(props.kind === 'relawan' ? { shelter_id: form.assignment_id, phone_number: form.phone_number } : { facility_id: form.assignment_id }),
     ...(!props.user ? { password: form.password, password_confirmation: form.password_confirmation } : {}) };
   form.transform(() => payload);
   if (props.user) form.put(base.value + '/' + props.user.id, { preserveScroll: true });

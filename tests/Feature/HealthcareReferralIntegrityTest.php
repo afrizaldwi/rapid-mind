@@ -20,6 +20,7 @@ use App\Models\HealthcareFacility;
 use App\Models\Patient;
 use App\Models\Referral;
 use App\Models\ReferralStatusHistory;
+use App\Models\TriageResult;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
@@ -59,13 +60,20 @@ final class HealthcareReferralIntegrityTest extends TestCase
 
     private function assessment(): Assessment
     {
-        return Assessment::create([
+        $assessment = Assessment::create([
             'patient_id' => $this->patient->id,
             'user_id' => $this->healthcare->id,
             'status' => AssessmentStatus::COMPLETED,
             'mode' => AssessmentMode::VERBAL,
             'completed_at' => now(),
         ]);
+        TriageResult::create([
+            'assessment_id' => $assessment->id,
+            'total_score' => 15,
+            'system_recommendation' => TriageCategory::T1,
+        ]);
+
+        return $assessment;
     }
 
     public function test_history_uses_the_migrated_table(): void
@@ -288,6 +296,8 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame(ReferralStatus::COMPLETED, $referral->fresh()->status);
         $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
         $this->assertSame('Initial plan', $referral->fresh()->notes);
+        $this->assertSame('Initial plan', $validation->fresh()->intervention_plan);
+        $this->assertSame(1, AuditLog::where('action', 'ASSESSMENT_VALIDATED')->count());
         $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::ACTIVE)->count());
         $this->assertSame(2, $referral->statusHistory()->count());
     }

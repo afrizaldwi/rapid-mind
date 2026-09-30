@@ -83,6 +83,7 @@ final class DemoSeederRepeatabilityTest extends TestCase
         // Rerunning seed data must not overwrite subsequent clinical or demographic edits.
         $emergency->update(['status' => EmergencyStatus::ACKNOWLEDGED]);
         $siti->update(['name' => 'Nama Siti Diperbarui']);
+        $relawan->update(['phone_number' => '+6281398765432']);
         $this->seed(DemoSeeder::class);
 
         foreach ($tables as $table) {
@@ -92,6 +93,7 @@ final class DemoSeederRepeatabilityTest extends TestCase
         $this->assertSame($region->id, $candi->fresh()->region_id);
         $this->assertSame($region->id, $pakem->fresh()->region_id);
         $this->assertSame($candi->id, $relawan->fresh()->shelter_id);
+        $this->assertSame('+6281398765432', $relawan->fresh()->phone_number);
         $this->assertSame($rsud->id, $healthcare->fresh()->facility_id);
         $this->assertSame($candi->id, $siti->fresh()->shelter_id);
         $this->assertSame($candi->id, $bambang->fresh()->shelter_id);
@@ -179,6 +181,7 @@ final class DemoSeederRepeatabilityTest extends TestCase
         $this->assertSame(1, Shelter::where('region_id', $region->id)->where('name', 'Posko Candi')->count());
         $this->assertSame(1, HealthcareFacility::where('name', 'RSUD Candi')->count());
         $this->assertSame($shelter->id, $relawan->fresh()->shelter_id);
+        $this->assertSame('+6281234567890', $relawan->fresh()->phone_number);
         $this->assertSame($facility->id, $healthcare->fresh()->facility_id);
         $this->assertSame(1, Patient::where('nik', $siti->nik)->count());
         $this->assertSame(1, Patient::where('nik', $bambang->nik)->count());

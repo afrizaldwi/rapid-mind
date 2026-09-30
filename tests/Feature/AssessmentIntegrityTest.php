@@ -42,7 +42,7 @@ final class AssessmentIntegrityTest extends TestCase
 
     private function srq(): array
     {
-        return array_map(fn ($number) => ['question_number' => $number, 'answer' => false], range(1, 20));
+        return array_map(fn($number) => ['question_number' => $number, 'answer' => false], range(1, 20));
     }
 
     private function risk(): array

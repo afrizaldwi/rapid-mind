@@ -142,6 +142,9 @@ final class DemoSeeder extends Seeder
         if ($relawan->shelter_id === null) {
             $relawan->update(['shelter_id' => $shelterCandi->id]);
         }
+        if (blank($relawan->phone_number)) {
+            $relawan->update(['phone_number' => '+6281234567890']);
+        }
         if ($healthcare->facility_id === null) {
             $healthcare->update(['facility_id' => $rsud->id]);
         }
