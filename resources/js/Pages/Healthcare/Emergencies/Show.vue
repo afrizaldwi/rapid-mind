@@ -299,7 +299,7 @@ const verificationForm = ref({
 const decisionForm = ref({
   clinical_result: 'T0_CONFIRMED',
   notes: '',
-  facility_id: props.facilities?.[0]?.id || 1,
+  facility_id: props.facilities?.[0]?.id ?? null,
 });
 
 function acknowledgeCase() {

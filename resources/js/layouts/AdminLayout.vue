@@ -66,22 +66,14 @@
           <span class="text-sm">Kebutuhan Logistik</span>
         </Link>
 
-        <Link
-          href="/admin/facilities"
-          class="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl transition"
-          :class="isRoute('/admin/facilities') ? 'bg-teal-800 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-850'"
-        >
-          <span class="text-base">🏥</span>
-          <span class="text-sm">Organisasi Faskes</span>
+        <Link href="/admin/operations/posko" class="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl transition" :class="isRoute('/admin/operations/posko') ? 'bg-teal-800 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-850'">
+          <span class="text-base">🏕️</span><span class="text-sm">Manajemen Posko</span>
         </Link>
-
-        <Link
-          href="/admin/accounts"
-          class="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl transition"
-          :class="isRoute('/admin/accounts') ? 'bg-teal-800 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-850'"
-        >
-          <span class="text-base">⚙️</span>
-          <span class="text-sm">Kelola Akun</span>
+        <Link href="/admin/facilities/organizations" class="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl transition" :class="isRoute('/admin/facilities/organizations') ? 'bg-teal-800 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-850'">
+          <span class="text-base">🏥</span><span class="text-sm">Organisasi Faskes</span>
+        </Link>
+        <Link href="/admin/facilities/users" class="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl transition" :class="isRoute('/admin/facilities/users') ? 'bg-teal-800 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-850'">
+          <span class="text-base">👩‍⚕️</span><span class="text-sm">Akun Healthcare</span>
         </Link>
       </nav>
 

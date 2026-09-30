@@ -724,3 +724,11 @@ Admin Bootstrap & Provisioning MVP
 ```
 
 This checkpoint does not claim that RAPID-MIND is production ready, fully complete, clinically validated, or secure. It records the verified online demo scope and the remaining implementation boundary.
+
+---
+
+## Admin Bootstrap & Provisioning MVP — source checkpoint (30 September 2026)
+
+The earlier ADMIN BOOTSTRAP / PROVISIONING: INCOMPLETE entry above describes the prior browser checkpoint and remains historical evidence. The new implementation has been **SOURCE-INSPECTED** and **AUTOMATED TESTED**: the Laravel suite passed 77 tests and 749 assertions; Admin route registration, Vue type checking, frontend build, and git diff --check passed. The build reported large-chunk advisory warnings.
+
+**BROWSER VERIFIED: NOT YET VERIFIED** for this milestone. The earlier Admin monitoring smoke does not verify Posko/Faskes lifecycle, account provisioning, reassignment, deactivation, or inactive-Faskes referral behavior. Browser verification and its evidence belong in a later checkpoint.

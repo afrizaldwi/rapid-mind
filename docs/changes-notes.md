@@ -192,3 +192,68 @@ Implemented canonical PHP server-side calculators in `app/Domain/Triage/` and cl
    - **Result**: All 17 domain migrations executed successfully against PostgreSQL.
 5. **Route Registration (`docker compose exec -T app php artisan route:list`)**:
    - **Result**: All 51 application routes correctly registered and bound to role middlewares.
+
+---
+
+## Admin Bootstrap & Provisioning MVP — 30 September 2026
+
+### Scope and status
+
+Source implementation of the combined Admin bootstrap journey is complete for the competition MVP. The existing deployment/root Admin can create Posko and Faskes, provision assigned Relawan and Healthcare accounts, edit profiles, change current assignments, and activate or deactivate records. Status: SOURCE-INSPECTED and AUTOMATED TESTED. BROWSER VERIFIED: NOT YET VERIFIED. This is not a production security claim or complete final-screen parity.
+
+### Files and routes
+
+Added:
+
+- app/Http/Controllers/Admin/ShelterManagementController.php
+- app/Http/Controllers/Admin/FacilityManagementController.php
+- app/Http/Controllers/Admin/ProvisioningController.php
+- resources/js/Pages/Admin/MasterData/Index.vue and Form.vue
+- resources/js/Pages/Admin/People/Index.vue and Form.vue
+- tests/Feature/AdminBootstrapProvisioningTest.php
+
+Modified:
+
+- routes/web.php
+- app/Http/Controllers/Admin/AdminController.php
+- app/Http/Controllers/Healthcare/HealthcareController.php
+- resources/js/layouts/AdminLayout.vue
+- resources/js/Pages/Admin/Summary.vue
+- resources/js/Pages/Healthcare/Emergencies/Show.vue
+- tests/Feature/HealthcareReferralIntegrityTest.php
+- docs/changes-notes.md
+- docs/workflow-verification.md
+
+Admin routes added: GET/POST /admin/operations/posko, GET /admin/operations/posko/create, GET/PUT /admin/operations/posko/{shelter}; matching organization routes under /admin/facilities/organizations; GET/POST /admin/volunteers, GET /admin/volunteers/create, GET/PUT /admin/volunteers/{userId}; and matching Healthcare account routes under /admin/facilities/users. GET /admin/facilities redirects to the organization list. GET/POST /admin/accounts and the old volunteer assignment POST route were removed. Root Admin creation remains deployment-controlled.
+
+### Data and lifecycle behavior
+
+Database/schema: **No migration**. Existing regions, shelters, healthcare_facilities, users, and audit_logs support this milestone.
+
+- Posko list shows Region, address, actual active status, and assigned Relawan count. Create/edit use the existing PostGIS shelter location with latitude/longitude pair validation. A Posko with an active assigned Relawan cannot be deactivated; inactive Posko cannot receive a new Relawan assignment.
+- Faskes list shows name, type, address, actual active status, and actual Healthcare user count, including zero. A Faskes with an active assigned Healthcare user cannot be deactivated.
+- Dedicated Relawan and Healthcare forms fix the role server-side. New provisioning requires a currently active Posko/Faskes respectively, unique email, Admin-entered initial password with confirmation, and an explicit active state. An inactive existing account may retain its current inactive assignment while editing basic data; reactivation still requires an active assignment. Passwords use the existing Laravel hashed model cast.
+- The account edit page receives only active choices plus its own current inactive assignment as a separate retained option, labelled Nonaktif. That option is never offered on create pages or to other accounts. The save action is disabled if Admin selects reactivation while retaining it; the backend also rejects that transition and any reassignment to another inactive target.
+- Account deactivation continues to block login and authenticated route access through existing auth checks. Reassignment updates only users.shelter_id or users.facility_id; existing patient, assessment, emergency, clinical, and referral records are not rewritten. Administrative reassignment records an audit_logs entry.
+- New emergency and assessment referrals reject an explicitly inactive Faskes. If no target is supplied, fallback considers the Healthcare user's assigned Faskes only when active, then an active Faskes. If none is active, creation fails with a validation error and the transaction rolls back. Historical referrals remain readable and unchanged after Faskes deactivation.
+- Admin navigation now points to distinct Posko, Faskes organization, Relawan, and Healthcare account areas. The Admin summary shows actual Posko lifecycle status. The old generic account form and old Faskes/Relawan Vue pages remain unused source files and technical debt.
+
+### Automated verification observed
+
+- docker compose exec -T app php artisan test --compact: **79 passed, 835 assertions**. The new Admin tests cover master-data lifecycle guards, fixed-role provisioning, password/login state, current assignment, historical patient/assessment preservation, inactive target rejection, retention of an inactive current assignment for inactive accounts, edit-page props, email uniqueness, and removal of generic Admin creation. Referral tests cover inactive destinations, active fallback, and historical readability.
+- docker compose exec -T app php artisan route:list --path=admin: exit 0; 25 Admin routes registered.
+- docker compose exec -T app php artisan route:list --json: exit 0; full route registry loaded.
+- ./node_modules/.bin/vue-tsc --noEmit: exit 0.
+- npm run build: exit 0; 1,240 modules transformed, build completed in 792 ms. Vite reported large-chunk advisory warnings for map/analytics assets.
+- git diff --check: exit 0.
+- Dependencies installed: **NONE**.
+
+### Prototype shortcuts, deferred work, and verification limits
+
+- Region CRUD remains deferred. An initial Region must come from deployment/bootstrap data before Admin can create a Posko.
+- users.shelter_id is the current Relawan → Posko pointer. Dedicated Relawan assignment-history domain model: **DEFERRED**. Existing audit logs record reassignment events but do not replace that domain model.
+- users.facility_id is the primary Healthcare → Faskes relationship. Multi-Faskes membership is deferred.
+- Faskes Region and geospatial expansion are deferred.
+- Admin-set initial passwords are accepted for this competition prototype. Forced first-login password change, password recovery, and advanced credential/session management are deferred.
+- Production security hardening is deferred. Existing demo authentication and role middleware were retained.
+- Browser, end-to-end, offline/PWA, realtime, mobile, deployed environment, and production authorization behavior were **not verified in this milestone**. No browser PASS is claimed for the new Admin workflow.

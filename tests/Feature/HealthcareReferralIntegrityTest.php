@@ -122,6 +122,57 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'ASSESSMENT_VALIDATED', 'entity_id' => $assessment->id]);
     }
 
+    public function test_inactive_facility_is_rejected_for_new_emergency_and_assessment_referrals(): void
+    {
+        $emergency = $this->emergency();
+        $assessment = $this->assessment();
+        $this->facility->update(['is_active' => false]);
+
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
+            'clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
+        $this->assertSame(EmergencyStatus::REVIEWING, $emergency->fresh()->status);
+
+        $this->postJson("/healthcare/validations/{$assessment->id}", [
+            'clinical_result' => 'T1', 'referral_required' => true, 'facility_id' => $this->facility->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
+        $this->postJson("/healthcare/validations/{$assessment->id}", [
+            'clinical_result' => 'T1', 'referral_required' => true,
+        ])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
+        $this->assertSame(0, Referral::count());
+        $this->assertSame(0, ClinicalValidation::count());
+    }
+
+    public function test_inactive_assigned_facility_falls_back_only_to_an_active_facility(): void
+    {
+        $active = HealthcareFacility::create(['name' => 'Faskes Aktif', 'type' => 'RS', 'is_active' => true]);
+        $this->facility->update(['is_active' => false]);
+        $emergency = $this->emergency();
+
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
+            'clinical_result' => 'T0_CONFIRMED',
+        ])->assertOk();
+
+        $this->assertSame($active->id, $emergency->referrals()->firstOrFail()->facility_id);
+    }
+
+    public function test_historical_referral_remains_readable_after_facility_becomes_inactive(): void
+    {
+        $emergency = $this->emergency();
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
+            'clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id,
+        ])->assertOk();
+        $referral = $emergency->referrals()->firstOrFail();
+        $this->facility->update(['is_active' => false]);
+
+        $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
+        $this->get('/healthcare/referrals')->assertOk()->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('Healthcare/Referrals/Index', false)
+            ->where('referrals.0.facility.id', $this->facility->id)
+            ->where('referrals.0.facility.is_active', false)
+            ->etc());
+    }
+
     public function test_referral_status_and_history_change_together(): void
     {
         $referral = Referral::create([

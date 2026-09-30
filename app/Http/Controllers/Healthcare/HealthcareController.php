@@ -23,11 +23,28 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 final class HealthcareController extends Controller
 {
+    private function activeReferralFacility(int|string|null $requestedId, int|string|null $assignedId): int
+    {
+        $facilityId = $requestedId
+            ?? HealthcareFacility::whereKey($assignedId)->where('is_active', true)->value('id')
+            ?? HealthcareFacility::where('is_active', true)->orderBy('id')->value('id');
+
+        if (!$facilityId || !HealthcareFacility::whereKey($facilityId)->where('is_active', true)->exists()) {
+            throw ValidationException::withMessages([
+                'facility_id' => 'Pilih Faskes aktif untuk rujukan baru.',
+            ]);
+        }
+
+        return (int) $facilityId;
+    }
+
     public function emergencies(): InertiaResponse
     {
         $user = Auth::user();
@@ -135,7 +152,7 @@ final class HealthcareController extends Controller
             'clinical_result' => ['required', 'string', 'in:T0_CONFIRMED,T1,T2'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'create_referral' => ['nullable', 'boolean'],
-            'facility_id' => ['nullable', 'integer', 'exists:healthcare_facilities,id'],
+            'facility_id' => ['nullable', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
         ]);
 
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
@@ -160,28 +177,23 @@ final class HealthcareController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // If referral requested or confirmed T0, create referral
-            if (($validated['create_referral'] ?? false) || $clinicalResult === TriageCategory::T0_CONFIRMED) {
-                $facilityId = $validated['facility_id'] ?? $user->facility_id ?? HealthcareFacility::first()?->id;
-
-                if ($emergency->patient_id && $facilityId) {
-                    if (! $emergency->referrals()->exists()) {
-                        $referral = $emergency->referrals()->create([
-                            'patient_id' => $emergency->patient_id,
-                            'referred_by' => $user->id,
-                            'facility_id' => $facilityId,
-                            'status' => ReferralStatus::ACTIVE,
-                            'notes' => $validated['notes'] ?? 'Rujukan darurat T0 dikonfirmasi.',
-                        ]);
-
-                        ReferralStatusHistory::create([
-                            'referral_id' => $referral->id,
-                            'status' => ReferralStatus::ACTIVE,
-                            'changed_by' => $user->id,
-                            'notes' => 'Rujukan darurat diterbitkan.',
-                        ]);
-                    }
-                }
+            // Historical referrals remain unchanged on a replay.
+            if ((($validated['create_referral'] ?? false) || $clinicalResult === TriageCategory::T0_CONFIRMED)
+                && $emergency->patient_id && ! $emergency->referrals()->exists()) {
+                $facilityId = $this->activeReferralFacility($validated['facility_id'] ?? null, $user->facility_id);
+                $referral = $emergency->referrals()->create([
+                    'patient_id' => $emergency->patient_id,
+                    'referred_by' => $user->id,
+                    'facility_id' => $facilityId,
+                    'status' => ReferralStatus::ACTIVE,
+                    'notes' => $validated['notes'] ?? 'Rujukan darurat T0 dikonfirmasi.',
+                ]);
+                ReferralStatusHistory::create([
+                    'referral_id' => $referral->id,
+                    'status' => ReferralStatus::ACTIVE,
+                    'changed_by' => $user->id,
+                    'notes' => 'Rujukan darurat diterbitkan.',
+                ]);
             }
 
             AuditLog::create([
@@ -225,7 +237,7 @@ final class HealthcareController extends Controller
             'diagnosis_notes' => ['nullable', 'string', 'max:2000'],
             'intervention_plan' => ['nullable', 'string', 'max:2000'],
             'referral_required' => ['nullable', 'boolean'],
-            'facility_id' => ['nullable', 'integer', 'exists:healthcare_facilities,id'],
+            'facility_id' => ['nullable', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
         ]);
 
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
@@ -243,26 +255,21 @@ final class HealthcareController extends Controller
                 ]
             );
 
-            if ($validated['referral_required'] ?? false) {
-                $facilityId = $validated['facility_id'] ?? $user->facility_id ?? HealthcareFacility::first()?->id;
-                if ($facilityId) {
-                    if (! $validation->referral()->exists()) {
-                        $referral = $validation->referral()->create([
-                            'patient_id' => $assessment->patient_id,
-                            'referred_by' => $user->id,
-                            'facility_id' => $facilityId,
-                            'status' => ReferralStatus::ACTIVE,
-                            'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
-                        ]);
-
-                        ReferralStatusHistory::create([
-                            'referral_id' => $referral->id,
-                            'status' => ReferralStatus::ACTIVE,
-                            'changed_by' => $user->id,
-                            'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
-                        ]);
-                    }
-                }
+            if (($validated['referral_required'] ?? false) && ! $validation->referral()->exists()) {
+                $facilityId = $this->activeReferralFacility($validated['facility_id'] ?? null, $user->facility_id);
+                $referral = $validation->referral()->create([
+                    'patient_id' => $assessment->patient_id,
+                    'referred_by' => $user->id,
+                    'facility_id' => $facilityId,
+                    'status' => ReferralStatus::ACTIVE,
+                    'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
+                ]);
+                ReferralStatusHistory::create([
+                    'referral_id' => $referral->id,
+                    'status' => ReferralStatus::ACTIVE,
+                    'changed_by' => $user->id,
+                    'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
+                ]);
             }
 
             AuditLog::create([

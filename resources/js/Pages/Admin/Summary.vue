@@ -52,7 +52,7 @@
       <div class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 class="font-extrabold text-slate-900 text-sm">
-            Status Posko Pengungsian Aktif
+            Status Posko Pengungsian
           </h3>
           <span class="text-xs font-bold text-slate-500">
             {{ shelters?.length || 0 }} Posko Terdaftar
@@ -84,8 +84,8 @@
                 {{ s.volunteers_count }} personel
               </td>
               <td class="py-4 px-6">
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  ● Aktif Melayani
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold" :class="s.is_active ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-600'">
+                  {{ s.is_active ? 'Aktif' : 'Nonaktif' }}
                 </span>
               </td>
             </tr>
