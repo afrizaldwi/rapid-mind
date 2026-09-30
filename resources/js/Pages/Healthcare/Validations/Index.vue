@@ -24,12 +24,12 @@
                 <h3 class="text-base font-extrabold text-slate-900">
                   {{ a.patient?.name }}
                 </h3>
-                <Badge :variant="badgeVariant(a.triageResult?.system_recommendation)">
-                  Rekomendasi: {{ a.triageResult?.system_recommendation }}
+                <Badge :variant="badgeVariant(a.triage_result?.system_recommendation)">
+                  Rekomendasi: {{ a.triage_result?.system_recommendation }}
                 </Badge>
               </div>
               <p class="text-xs text-slate-500 mt-1">
-                NIK: {{ a.patient?.nik || 'Tanpa NIK' }} • Posko: {{ a.user?.shelter?.name || 'Posko Candi' }} • Skor: {{ a.triageResult?.total_score }}/37
+                NIK: {{ a.patient?.nik || 'Tanpa NIK' }} • Posko: {{ a.user?.shelter?.name || 'Posko Candi' }} • Skor: {{ a.triage_result?.total_score }}/37
               </p>
             </div>
 
@@ -159,11 +159,24 @@ import { router } from '@inertiajs/vue3';
 import HealthcareLayout from '@/layouts/HealthcareLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
 
+interface ValidationAssessment {
+  id: string;
+  patient?: { name: string; nik?: string | null } | null;
+  user?: { shelter?: { name: string } | null } | null;
+  triage_result?: { system_recommendation: string; total_score: number } | null;
+  clinical_validation?: {
+    clinical_result: string;
+    diagnosis_notes?: string | null;
+    intervention_plan?: string | null;
+    referral_required: boolean;
+  } | null;
+}
+
 defineProps<{
-  assessments: any[];
+  assessments: ValidationAssessment[];
 }>();
 
-const selectedAssessment = ref<any>(null);
+const selectedAssessment = ref<ValidationAssessment | null>(null);
 const valForm = ref({
   clinical_result: 'T1',
   diagnosis_notes: '',
@@ -171,9 +184,9 @@ const valForm = ref({
   referral_required: false,
 });
 
-function openValidationForm(a: any) {
+function openValidationForm(a: ValidationAssessment) {
   selectedAssessment.value = a;
-  valForm.value.clinical_result = a.triageResult?.system_recommendation || 'T1';
+  valForm.value.clinical_result = a.triage_result?.system_recommendation || 'T1';
   valForm.value.diagnosis_notes = '';
   valForm.value.intervention_plan = '';
   valForm.value.referral_required = false;

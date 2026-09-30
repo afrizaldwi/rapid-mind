@@ -6,13 +6,17 @@ namespace Tests\Feature;
 
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
+use App\Enums\EmergencyStatus;
+use App\Enums\RedFlagType;
 use App\Enums\TriageCategory;
 use App\Enums\UserRole;
 use App\Models\Assessment;
 use App\Models\ClinicalValidation;
+use App\Models\EmergencyEvent;
 use App\Models\Patient;
 use App\Models\Region;
 use App\Models\Shelter;
+use App\Models\TriageResult;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -49,6 +53,7 @@ final class WorkspaceRelationshipTest extends TestCase
             ->where('shelters.0.id', $shelter->id)
             ->where('shelters.0.patients_count', 1)
             ->where('shelters.0.volunteers_count', 2)
+            ->missing('pendingT0Count')
             ->etc());
     }
 
@@ -96,6 +101,59 @@ final class WorkspaceRelationshipTest extends TestCase
             ->where('assessments.0.id', $assessment->id)
             ->where('assessments.0.clinical_validation.id', $validation->id)
             ->where('assessments.0.clinical_validation.validator.id', $validator->id)
+            ->etc());
+    }
+
+    public function test_healthcare_validation_payload_serializes_triage_result_and_score(): void
+    {
+        [, $assessment] = $this->validatedAssessment();
+        TriageResult::create([
+            'assessment_id' => $assessment->id,
+            'srq_score' => 6,
+            'risk_score' => 3,
+            'function_score' => 2,
+            'total_score' => 11,
+            'system_recommendation' => TriageCategory::T2,
+        ]);
+
+        $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Healthcare/Validations/Index', false)
+            ->where('assessments.0.triage_result.system_recommendation', TriageCategory::T2->value)
+            ->where('assessments.0.triage_result.total_score', 11)
+            ->missing('assessments.0.triageResult')
+            ->etc());
+    }
+
+    public function test_healthcare_pending_badge_counts_only_unacknowledged_emergencies(): void
+    {
+        $relawan = User::factory()->create(['role' => UserRole::RELAWAN]);
+        $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+
+        foreach ([EmergencyStatus::PENDING, EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED,
+            EmergencyStatus::REVIEWING, EmergencyStatus::CONFIRMED, EmergencyStatus::DOWNGRADED] as $status) {
+            EmergencyEvent::create([
+                'user_id' => $relawan->id,
+                'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+                'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($healthcare)->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Healthcare/Emergencies/Index', false)
+            ->where('pendingT0Count', 2)
+            ->has('emergencies', 6)
+            ->etc());
+
+        $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Healthcare/Validations/Index', false)
+            ->where('pendingT0Count', 2)
+            ->etc());
+
+        $pending = EmergencyEvent::where('status', EmergencyStatus::PENDING)->firstOrFail();
+        $this->postJson("/healthcare/emergencies/{$pending->id}/acknowledge")->assertOk();
+        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Healthcare/Emergencies/Index', false)
+            ->where('pendingT0Count', 1)
             ->etc());
     }
 

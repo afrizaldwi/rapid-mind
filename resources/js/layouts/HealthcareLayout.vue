@@ -36,7 +36,7 @@
           </div>
           <span
             v-if="pendingT0Count > 0"
-            class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white animate-pulse"
+            class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white"
           >
             {{ pendingT0Count }}
           </span>
@@ -73,8 +73,10 @@
       <!-- Connection & Logout Footer -->
       <div class="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
         <div class="flex items-center space-x-1.5">
-          <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
-          <span class="text-[11px] text-teal-300 font-medium">Reverb Siaga</span>
+          <span class="w-2 h-2 rounded-full" :class="realtimeConnected ? 'bg-teal-400' : 'bg-slate-500'"></span>
+          <span class="text-[11px] font-medium" :class="realtimeConnected ? 'text-teal-300' : 'text-slate-400'">
+            {{ realtimeConnected ? 'Reverb Terhubung' : 'Reverb Belum Terhubung' }}
+          </span>
         </div>
         <button
           type="button"
@@ -95,7 +97,7 @@
             Dashboard Respons Cepat Medis (Emergency First)
           </h2>
           <p class="text-xs text-slate-500">
-            Terhubung langsung dengan posko pengungsian lapangan secara realtime.
+            Pantau laporan darurat dan tindak lanjut dari posko pengungsian.
           </p>
         </div>
 
@@ -119,12 +121,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
+import { echo, useConnectionStatus } from '@laravel/echo-vue';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const pendingT0Count = ref(1);
+const pendingT0Count = computed(() => Number(page.props.pendingT0Count ?? 0));
+const connectionStatus = useConnectionStatus();
+const realtimeConnected = computed(() => connectionStatus.value === 'connected');
 
 function isRoute(path: string) {
   return page.url.startsWith(path);
@@ -134,16 +139,22 @@ function logout() {
   router.post('/logout');
 }
 
+function onEmergencyCreated() {
+  playAudioNotification();
+  router.reload({
+    only: page.component === 'Healthcare/Emergencies/Index'
+      ? ['pendingT0Count', 'emergencies']
+      : ['pendingT0Count'],
+  });
+}
+
 onMounted(() => {
-  // Listen for realtime emergencies via Laravel Echo
-  if ((window as any).Echo) {
-    (window as any).Echo.private('emergencies')
-      .listen('EmergencyCreated', (e: any) => {
-        pendingT0Count.value++;
-        playAudioNotification();
-        router.reload({ only: ['emergencies'] });
-      });
-  }
+  echo().private('emergencies').listen('EmergencyCreated', onEmergencyCreated);
+});
+
+onUnmounted(() => {
+  echo().private('emergencies').stopListening('EmergencyCreated', onEmergencyCreated);
+  echo().leave('emergencies');
 });
 
 function playAudioNotification() {
