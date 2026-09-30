@@ -4,7 +4,324 @@
 **Document type:** Technical architecture + implementation plan  
 **Status:** Working baseline for development  
 **Primary source:** `workflow.md`  
-**Last updated:** 2026-09-29
+**Last updated:** 2026-10-01
+
+---
+
+# Current Demo Sprint Execution Anchor — 1 October 2026
+
+This section defines the **authoritative implementation sequence for the `demo` branch**. It takes precedence over the older broad development-phase ordering (Section 20 below) for day-to-day implementation sequencing. It does NOT replace the permanent architecture, clinical decision-support rules, or UX specifications.
+
+---
+
+## 1. Current Repository Checkpoint
+
+- **Branch:** `demo`
+- **Current Repository Checkpoint:** `953c5fc230400ff18d42b625fd0ad13dd7c5b2b8` (`docs(healthcare): record browser verification checkpoint`)
+- **Healthcare Implementation Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
+
+### Verification Baseline
+- **Laravel Test Suite:** `90 passed, 1,052 assertions` (`docker compose exec -T app php artisan test`)
+- **Vue TypeScript Check:** `vue-tsc --noEmit` PASS (0 errors)
+- **Frontend Production Build:** `npm run build` PASS (clean asset manifest, standard large-chunk advisory warning for Map/Analytics assets)
+- **Git Formatting / Diff Check:** `git diff --check` PASS (clean, no trailing whitespace or EOF issues)
+- **Healthcare Antigravity Browser Verification:** **PASS** for directly testable selected prototype scope (Gates A, B1–B7, C1–C3, C6, D, E, F, G, I)
+- **User Manual Final Retest:** **NOT YET PERFORMED** (pending project owner verification prior to final team demo)
+
+### Explicit Browser NDVs (Preserved as Not Directly Verified, Not Failures)
+- **B8 — Missing-phone T0 fallback:** NDV (all existing demo T0 emergencies were reported by a volunteer with a provisioned phone number; covered by automated test `selected emergency exposes contact but queue does not and missing phone renders fallback`).
+- **C4 — T1-before-T2 priority ordering:** NDV (initial demo worklist contained only one unvalidated assessment; covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`).
+- **C5 — Same-category FIFO ordering:** NDV (single unvalidated assessment in initial demo worklist; covered by automated test `worklist prioritizes oldest t1 then t2 and keeps t3 in patient history`).
+- **H — Historical referral to inactive Faskes:** NDV (all historical demo referrals point to active `RSUD Candi`; covered by automated test `historical referral remains readable after facility becomes inactive`).
+
+---
+
+## 2. Completed & Stable Functional Areas
+
+The following areas represent the current implemented functional baseline. Verification depth varies by area; known incomplete capabilities remain explicitly assigned to Phases A–D below. Do not broadly redesign these areas unless the active phase requires a focused integration change or a concrete defect is found:
+
+### Foundation
+- Laravel 13 + Vue 3 + Inertia.js + TypeScript application structure.
+- PostgreSQL + PostGIS spatial infrastructure in Docker Compose.
+- Docker Compose service topology (`app`, `queue`, `scheduler`, `reverb`, `nginx`, `postgres`).
+- Role-based session authentication with strict `ADMIN`, `RELAWAN`, and `HEALTHCARE` boundary enforcement.
+
+### Relawan Functional Baseline
+- Mobile-first Relawan shell, responsive navigation, and header status.
+- Psychological First Aid (PFA) Look, Listen, Link guidebook and 5-4-3-2-1 grounding exercises.
+- Patient demographic intake and structured assessment session lifecycle.
+- SRQ-20 questionnaire (20 binary items with individual question review).
+- 5 weighted vulnerability risk factors (R1–R5).
+- 3 daily functioning domains (F1–F3, scored 0/1/3).
+- Deterministic system triage recommendation engine with auditable component score breakdown and clinical disclaimer.
+- Persistent floating T0 Red Flag emergency shortcut and 3-step confirmation/verification modal.
+- Client-side IndexedDB/Dexie schema, draft persistence, outbox abstraction, and sync manager baseline.
+- Web Speech API speech-to-text (STT) voice assistance baseline.
+*(Note: Offline/PWA sync, local-first T0 outbox persistence, and clinical STT safety hardening are NOT complete and are explicitly addressed in Phases B and C below).*
+
+### Healthcare Functional Baseline
+- Emergency-first desktop workspace with T0 queue and incident detail view.
+- 2-step T0 acknowledgement and secondary tele-verification logging (Phone, Video, Field Team).
+- Clinical classification: T0 confirmation or supported clinical downgrade to T1/T2 with free-text diagnosis notes.
+- Reporting Relawan contact on selected T0 incident detail via native `tel:` protocol link (with queue privacy).
+- Dedicated Validasi Asesmen worklist with segregated `Perlu Divalidasi` and `Selesai` sections.
+- Selected validation review displaying full clinical evidence, score breakdown, prior assessments, and clinical disclaimer.
+- Immutable stored clinical validation decisions.
+- Explicit active-Faskes selection for new non-T0 clinical referrals (rejection of unselected or inactive destinations).
+- Patient longitudinal referral history with distinct provenance: `Sumber: Darurat T0` vs `Sumber: Validasi Asesmen`.
+- Multi-stage referral dispatch lifecycle tracking and append-only status history.
+
+### Admin Functional Baseline
+- Regional command center summary with macro KPI cards and dynamic operational shelter table.
+- Interactive MapLibre GL JS geospatial map with shelter/facility markers and detail popups.
+- Longitudinal ECharts analytical charts and 30-day mental health trend lines.
+- Dedicated master data management for Posko (Shelters) with PostGIS coordinate pair validation.
+- Dedicated master data management for Healthcare Organizations (Faskes) with zero-count accuracy.
+- Dedicated account provisioning for Relawan (with required Indonesian phone normalization) and Healthcare users (no role selector).
+- Strict active-assignment deactivation guards preventing deactivation of Posko/Faskes with active personnel.
+- Reassignment audit logs and retained inactive current assignment edge-case handling.
+
+---
+
+## 3. Remaining Execution Sequence
+
+To complete the end-to-end competition prototype safely without scope creep, remaining work is organized into **four sequential implementation phases (Phases A–D)** followed by a final end-to-end verification sequence.
+
+```mermaid
+flowchart TD
+    PhaseA["Phase A: Healthcare Realtime & Referral/Dispatch Completion"]
+    PhaseB["Phase B: Relawan Offline / PWA Completion"]
+    PhaseC["Phase C: STT Safety & Interaction Hardening"]
+    PhaseD["Phase D: Cross-Role Integration Hardening"]
+    FinalVerif["Final Verification & End-to-End Rehearsal"]
+
+    PhaseA --> PhaseB --> PhaseC --> PhaseD --> FinalVerif
+```
+
+---
+
+### Phase A — Healthcare Realtime + Referral/Dispatch Completion
+
+#### Goal
+Verify and harden the existing realtime reception path and complete referral/dispatch handling from a newly triggered T0 emergency through Healthcare operational response without requiring manual page reloads.
+
+#### Existing Foundation
+- Reverb WebSocket service running in Docker Compose (`rapid-mind-reverb-1`).
+- `@laravel/echo-vue` configured via `configureEcho({ broadcaster: 'reverb' })` in `resources/js/app.ts`.
+- Private `emergencies` broadcast channel authorized for `HEALTHCARE` and `ADMIN` in `routes/channels.php`.
+- `App\Events\EmergencyCreated` event dispatched upon Relawan T0 submission.
+- `resources/js/layouts/HealthcareLayout.vue` already imports `echo` and `useConnectionStatus` from `@laravel/echo-vue`, subscribes to the private `emergencies` channel, listens for `EmergencyCreated`, plays a finite ~0.3-second audio notification, calls `router.reload()` for `pendingT0Count`, and when the current component is `Healthcare/Emergencies/Index`, also reloads `emergencies`, while displaying basic Reverb connected/not-connected state.
+
+#### Current Gaps to Address
+- The Healthcare layout already consumes `EmergencyCreated` and refreshes the authoritative Inertia queue automatically when the emergency page is open. However, this behavior has not yet been directly multi-browser verified as a complete realtime arrival path.
+- Reconnect reconciliation is incomplete: a period of disconnected Reverb can miss events, and there is no explicit authoritative reconciliation triggered specifically when the WebSocket reconnects.
+- The current connection UI is basic connected/not-connected state and does not yet clearly distinguish connected, reconnecting/stale realtime, and broader server availability.
+
+#### Required Implementation
+1. **Realtime Emergency Reception Verification & Hardening:**
+   - Verify and harden the existing layout-level `emergencies` subscription and reload behavior rather than introducing a redundant second subscription in `Healthcare/Emergencies/Index.vue` (prefer one subscription owner to avoid duplicate audio alerts, duplicate reloads, or duplicate event handling).
+   - Ensure newly created T0 incidents update the open Healthcare queue in real time without a user-initiated browser refresh.
+   - Deduplicate incoming emergencies and guard against race conditions.
+   - Newly arrived T0 appears in the correct `PENDING` urgent queue state.
+   - Retain the finite (~0.3s) audio notification and non-continuous visual attention indicator (strictly no infinite pulsing or disruptive loops).
+2. **Connection State & Reconnect Reconciliation:**
+   - Enhance the connection state UI to clearly distinguish connected, reconnecting/stale realtime, and broader server availability.
+   - Graceful fallback when Reverb is disconnected without representing WebSocket disconnection as total server failure.
+   - On WebSocket reconnect, perform explicit reconciliation against authoritative server state to catch events missed during disconnection.
+3. **Privacy & Domain Integrity:**
+   - Maintain privacy boundaries: queue list conceals volunteer contact; only selected emergency detail renders contact.
+   - Preserve existing 2-step acknowledgement, tele-verification, and classification behavior.
+4. **Referral / Dispatch Progression Completion:**
+   - Inspect and enforce the existing referral status lifecycle:
+     ```text
+     ACTIVE
+     → EN_ROUTE
+     → ON_SITE
+     → TRANSPORT
+     → COMPLETED
+     ```
+     corresponding to Indonesian presentation (`Aktif Terbit`, `Ambulans Menuju Posko`, `Tiba di Posko`, `Perjalanan ke RS`, `Selesai di RS`).
+   - Enforce valid forward state transitions; prevent backward or illegal status jumps.
+   - Preserve append-only `referral_status_history` and immutable audit logs.
+   - Preserve idempotency and replay protection.
+   - Do not add `CANCELLED` or another state merely because it appears useful; a new state may only be introduced if an approved project specification explicitly requires it and the user agrees to the domain change.
+   - Add response-team assignment only if supported by concrete existing model semantics; do not invent speculative ambulance dispatch policies.
+   - Do not redesign the Healthcare workspace.
+
+#### Verification Gate
+- **Multi-Browser Test:**
+  - Browser A: Logged in as Healthcare with queue already open on `/healthcare/emergencies`.
+  - Browser B: Logged in as Relawan, submits a new T0 emergency.
+  - Expected: Browser A updates automatically without user-initiated refresh.
+- **Resilience:** Disconnect/reconnect WebSocket and verify reconciliation; verify duplicate events do not create multiple rows.
+
+---
+
+### Phase B — Relawan Offline/PWA Completion
+
+#### Goal
+Finish the required field-operational local-first behavior for frontline volunteers using the existing Dexie/IndexedDB outbox architecture.
+
+#### Existing Foundation
+- `resources/js/offline/db.ts` (IndexedDB schema via Dexie).
+- `resources/js/offline/assessmentDraft.ts` (local draft persistence).
+- `resources/js/offline/syncManager.ts` (outbox queue and synchronization manager).
+- Data workspace (`/relawan/data`) with server-backed in-progress assessments, completed assessments, and a manual `Sinkronkan` action through `syncManager`.
+
+#### Current Gaps to Address
+- Relawan shell header does not dynamically reflect real sync-manager queue counts.
+- T0 emergency creation is not fully local-first (must be guaranteed persisted locally before server sync).
+- Priority-capable outbox infrastructure already exists and sorts lower numeric priority first, but the T0 submission flow is not currently wired through the local-first emergency outbox path. Therefore emergency priority exists as infrastructure but is not yet exercised by actual T0 creation (assessment server mutations also need source inspection during Phase B before claiming complete outbox integration).
+- A production PWA/service-worker offline shell is not currently configured in Vite. Phase B must determine and implement the minimum approved PWA/offline-shell solution required by the final handoff, then verify it directly.
+
+#### Required Implementation
+1. **Local-First T0 & Assessment Persistence:**
+   - T0 emergency submission must persist locally to IndexedDB before server transmission is attempted.
+   - Routine assessment sessions must save complete responses locally to outbox, with source inspection of assessment server mutations to ensure full outbox coverage.
+   - Interrupted assessments must support deterministic recovery on page reload or device restart.
+   - Client-generated UUIDs ensure idempotency and prevent duplicate records upon server replay.
+2. **Prioritized Outbox Synchronization:**
+   - Wire actual T0 creation through the local-first emergency outbox path to exercise existing priority queueing (priority 1 emergencies synchronized before priority 2 routine assessments).
+   - Distinct, explicit status states: `Local Saved` ≠ `Syncing` ≠ `Server Confirmed`.
+   - Never display "Tersinkron" when records remain in local outbox.
+3. **UI & Shell Integration:**
+   - Relawan layout header consumes real sync-manager state (`Tersinkron` vs `Pending Sync (N)` vs `Offline`).
+   - Extend `/relawan/data` so it truthfully exposes local pending records, actual outbox counts/items where appropriate, and synchronization state (do not claim an outbox listing exists before it is implemented).
+   - Native SMS fallback remains available as a manual device handoff only; do not invent automated SMS background sending.
+   - Do NOT claim fresh-login offline authentication unless an explicit local credentials cache is implemented and verified.
+4. **PWA Offline Shell:**
+   - Determine and implement the minimum approved PWA/service-worker solution in Vite.
+   - Verify Service Worker registers and caches essential PWA app shell assets for offline startup.
+   - Offline form interactions must survive browser reload/restart without data loss.
+
+#### Verification Gate
+- **Actual Browser Offline Test:**
+  - Online → switch network to Offline in DevTools.
+  - Create/edit assessment and create T0 emergency.
+  - Reload browser while offline: verify data survives.
+  - Switch network to Online → trigger sync.
+  - Verify authoritative server records created without duplicates.
+  - Confirm T0 emergency is synchronized ahead of normal assessments.
+
+---
+
+### Phase C — STT Safety & Interaction Hardening
+
+#### Goal
+Retain Web Speech API speech-to-text as an assistive frontline accelerator while strictly enforcing the clinical-safety decision-support contract.
+
+#### Existing Foundation
+- `resources/js/Pages/Relawan/Assessment/Srq.vue` integrates browser Web Speech API (`webkitSpeechRecognition` / `SpeechRecognition`) with `continuous = true`, `interimResults = true`, `lang = 'id-ID'`.
+- Indonesian keyword dictionary matching positive symptom indicators.
+
+#### Current Gaps to Address
+- Current keyword matcher can directly mutate SRQ answers to `true` without explicit volunteer review.
+- Spoken indications of suicide/danger (Q17) must not autonomously finalize answers or trigger T0 without volunteer agency.
+
+#### Required Implementation
+1. **Assistive Separation & Explicit Review:**
+   - Realtime transcript and keyword detection must remain visual suggestions/hints; they must NEVER silently mutate confirmed SRQ answers.
+   - Confirmed SRQ radio buttons (`YA` / `TIDAK`) remain strictly under manual volunteer control.
+   - Manual Relawan selection is always authoritative over STT suggestions.
+   - Uncertain or ambiguous STT interpretations must be visibly flagged as tentative suggestions.
+2. **Q17 & Emergency Safety Contract:**
+   - Spoken danger or suicidal ideation (Q17) detected by STT must present a prominent safety warning and offer a shortcut to the T0 Red Flag workflow.
+   - STT must NEVER autonomously set Q17 to `YA`, finalize an assessment, or dispatch an emergency event on its own.
+3. **Robustness & Degradation:**
+   - Explicit listening state indicators (Idle vs Listening vs Processing).
+   - Avoid permanent pulsing animations outside active microphone capture.
+   - Safe degradation for unsupported browsers: hide or disable microphone button with clear explanation; manual form completion must remain 100% functional.
+   - Recognition errors (network, permission denied, no speech) must show transient non-blocking alerts and never prevent manual completion.
+   - Preserve local answer drafts regardless of STT state.
+   - Do not introduce external third-party STT cloud APIs without explicit approval.
+
+#### Verification Gate
+- **Browser Verbal & Manual Tests:**
+  - Verify spoken "Ya" produces suggestion without silently overwriting confirmed "Tidak".
+  - Verify manual click overrides STT suggestion.
+  - Verify Q17 spoken danger produces safety prompt without autonomous T0 dispatch.
+  - Simulate microphone error / unsupported API and verify manual completion succeeds.
+
+---
+
+### Phase D — Cross-Role Integration Hardening
+
+#### Goal
+Execute targeted integration and stability hardening across all three role experiences, resolving edge cases rather than adding new features.
+
+#### Key Areas to Harden
+1. **Idempotency & Replay:** Verify duplicate POST submissions for assessments, T0 emergencies, clinical validations, and referrals are rejected or safely deduplicated by stable IDs.
+2. **Lifecycle State Integrity:** Prevent illegal transitions (e.g. validating an incomplete assessment, confirming an already downgraded emergency, or dispatching a completed referral).
+3. **Concurrency & Realtime Resilience:** Verify graceful behavior during concurrent triage reviews, stale WebSocket sessions, and rapid role switching.
+4. **Form Factor & Responsive Usability:** Verify Relawan PWA displays cleanly on mobile viewports (390px width); verify Healthcare and Admin cockpits display cleanly on desktop viewports (1280px+).
+5. **Accessibility & Usability:** Basic keyboard navigation, visible focus indicators, valid form labels, and appropriate contrast across operational states.
+6. **Error & Empty States:** Verify clear Indonesian messaging for empty worklists, network dropouts, and invalid deep links.
+7. **No Scope Creep:** Do not turn this phase into a broad architecture refactor or full visual redesign.
+
+---
+
+## 4. Final Verification Sequence
+
+Once Phases A through D are completed, the final verification sequence will be executed in this exact order:
+
+```text
+Phase A: Automated tests + Antigravity multi-browser realtime verification
+→ Phase B: Automated tests + Antigravity offline / outbox sync verification
+→ Phase C: Automated tests + Antigravity STT safety & manual override verification
+→ Phase D: Automated tests + Cross-role integration verification
+→ Final Antigravity cross-role end-to-end rehearsal
+→ Project-owner manual retest
+→ Final demo polish (only if concrete defects remain)
+```
+
+### Final Cross-Role Golden Demo Path:
+```text
+1. Login as Relawan
+2. PFA reference & review
+3. Patient demographic intake
+4. Structured SRQ-20 assessment (with assistive STT)
+5. Vulnerability risk factor checklist
+6. Daily functioning evaluation
+7. System triage recommendation generation (T1 / T2)
+8. Emergency escalation: T0-Suspect creation via Red Flag shortcut
+9. Realtime broadcast: Server dispatches EmergencyCreated over Reverb
+10. Healthcare reception: Open emergency queue receives T0 without reload
+11. Healthcare response: Review volunteer contact (tel:), 2-step acknowledgement, secondary tele-verification
+12. Healthcare classification: T0 clinical confirmation or supported downgrade
+13. Referral progression: Active facility dispatch tracking and status progression
+14. Healthcare validation: Validasi worklist review of completed assessment, clinical decision, referral creation
+15. Patient longitudinal profile: Verification of dual-provenance referral history (Darurat T0 vs Validasi Asesmen)
+16. Admin visibility: Regional Command Center aggregates live KPIs, geospatial map, and longitudinal analytics
+```
+
+---
+
+## 5. Scope Guardrails & Non-Negotiable Rules
+
+All remaining implementation work must adhere strictly to these principles:
+- **No Broad Redesigns:** Do not reopen completed Admin, Healthcare, or Relawan screens for aesthetic or architectural overhaul during Phases A–D.
+- **Clinical Safety Boundaries:** System triage is a decision recommendation (*"Rekomendasi Sistem"*), NOT a medical diagnosis. Never represent automated scores as diagnoses.
+- **No Diagnostic Taxonomy Invention:** Do not invent clinical thresholds, Red Flag rules, scoring formulas, or psychiatric diagnostic categories not supported by existing project sources.
+- **Technology Preservation:** Do not replace Laravel Reverb + Echo with Pusher or external services. Do not replace Dexie + IndexedDB. Do not introduce Redis or external databases unless mandated.
+- **Status Truthfulness:** Never claim "Tersinkron" when data is only saved locally. Never claim realtime delivery when WebSockets are disconnected. Never claim phone calls connected when only a `tel:` URI was rendered.
+- **Git Rules:** The user performs all Git mutations. Never run `git add`, `git commit`, `git push`, `git checkout`, or any mutating Git command.
+- **Dependency Rules:** Do not install dependencies without explicit user instruction. All PHP dependencies must run inside Docker; frontend dependencies run on the host.
+
+---
+
+## 6. Decision Rule for Remaining Tasks
+
+Before starting any task in the remaining demo sprint:
+1. **Read this Current Demo Sprint Execution Anchor.**
+2. **Inspect the current `demo` branch codebase.**
+3. **Read the applicable dedicated UX specification.**
+4. **Confirm the requested task belongs to the active phase (Phase A, B, C, or D).**
+5. **Implement the smallest coherent, working slice.**
+6. **Run automated verification (`docker compose exec -T app php artisan test`, frontend build/lint).**
+7. **Perform focused browser verification where required.**
+8. **Update verification documentation only after concrete runtime evidence exists.**
+
+If an issue belongs to a later phase and does not block the active phase, record it in documentation rather than expanding scope.
 
 ---
 
@@ -1316,6 +1633,8 @@ Admin login
 ---
 
 # 20. Development Phases
+
+> The phase structure below remains the architectural/historical development plan. For the current `demo` sprint execution order, use the **Current Demo Sprint Execution Anchor — 1 October 2026** near the top of this document.
 
 The order below is intentionally risk-first rather than screen-first.
 
