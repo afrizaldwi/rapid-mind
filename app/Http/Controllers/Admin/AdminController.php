@@ -9,6 +9,7 @@ use App\Enums\TriageCategory;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\EmergencyEvent;
+use App\Models\HealthcareFacility;
 use App\Models\Patient;
 use App\Models\Shelter;
 use App\Models\TriageResult;

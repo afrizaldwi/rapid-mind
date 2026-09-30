@@ -199,7 +199,7 @@ Implemented canonical PHP server-side calculators in `app/Domain/Triage/` and cl
 
 ### Scope and status
 
-Source implementation of the combined Admin bootstrap journey is complete for the competition MVP. The existing deployment/root Admin can create Posko and Faskes, provision assigned Relawan and Healthcare accounts, edit profiles, change current assignments, and activate or deactivate records. Status: SOURCE-INSPECTED and AUTOMATED TESTED. BROWSER VERIFIED: NOT YET VERIFIED. This is not a production security claim or complete final-screen parity.
+Source implementation of the combined Admin bootstrap journey is complete for the competition MVP. The existing deployment/root Admin can create Posko and Faskes, provision assigned Relawan and Healthcare accounts, edit profiles, change current assignments, and activate or deactivate records. Status: **SOURCE-INSPECTED**, **AUTOMATED TESTED** (79 tests, 835 assertions), and **BROWSER VERIFIED — ANTIGRAVITY / Chrome-CDP** (30 September 2026; Gates A–J and L PASS; Gate K passes its directly tested browser checks (K1–K2), while K3 remains NOT DIRECTLY TESTED IN BROWSER. Overall browser matrix: 77 verification items PASS, 1 item NOT DIRECTLY TESTED IN BROWSER.; post-fix verification confirmed `/admin/map` resolution). **USER MANUAL RETEST: NOT YET PERFORMED**. This is not a production security claim or complete final-screen parity.
 
 ### Files and routes
 
@@ -256,4 +256,10 @@ Database/schema: **No migration**. Existing regions, shelters, healthcare_facili
 - Faskes Region and geospatial expansion are deferred.
 - Admin-set initial passwords are accepted for this competition prototype. Forced first-login password change, password recovery, and advanced credential/session management are deferred.
 - Production security hardening is deferred. Existing demo authentication and role middleware were retained.
-- Browser, end-to-end, offline/PWA, realtime, mobile, deployed environment, and production authorization behavior were **not verified in this milestone**. No browser PASS is claimed for the new Admin workflow.
+- Browser runtime verification of the Admin Bootstrap & Provisioning workflow was performed on 30 September 2026 using Google Chrome (CDP automation) on `http://localhost:8080`:
+  - **Gates A through J (A1–J2)**: All **PASS** (Admin login, dedicated navigation, 404 on `/admin/accounts`, Posko create/edit with PostGIS coordinates, Faskes create/edit with zero-count, dedicated Relawan provisioning & login, dedicated Healthcare provisioning & login, Posko/Faskes active-assignment deactivation guards, account deactivation/login rejection/reactivation, retained inactive assignment edge case, exclusion of inactive master data from new provisioning).
+  - **Gate K**: K1, K2 **PASS** (inactive Faskes excluded from referral dropdown; active Faskes selectable). K3 **NOT DIRECTLY TESTED IN BROWSER** (no pre-existing historical referral to inactive facility in current test dataset; verified by automated tests).
+  - **Gate L**: L1–L6, L8–L9 **PASS**. **L7: PASS** (Admin Map `/admin/map` returns HTTP 200 OK with full MapLibre canvas, markers, popups, and legend; post-fix verified after adding `use App\Models\HealthcareFacility;` import to `AdminController.php`). **L10: PASS** (all Admin workflows functional with 0 fatal console/runtime errors).
+  - Pre-existing import defect on `/admin/map` was resolved and verified through focused browser retest without regressions.
+- **USER MANUAL RETEST — NOT YET PERFORMED**: A full manual retest checklist remains documented for the project owner in `docs/workflow-verification.md`. Antigravity browser verification does not substitute for the owner's manual retest.
+- Production readiness, production security, full E2E coverage, mobile verification, offline/PWA, realtime beyond tested scope, clinical validation, and deployment readiness remain unproven and out of scope.

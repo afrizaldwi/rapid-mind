@@ -727,8 +727,131 @@ This checkpoint does not claim that RAPID-MIND is production ready, fully comple
 
 ---
 
-## Admin Bootstrap & Provisioning MVP — source checkpoint (30 September 2026)
+## Admin Bootstrap & Provisioning MVP — Source & Automated Checkpoint (30 September 2026)
 
-The earlier ADMIN BOOTSTRAP / PROVISIONING: INCOMPLETE entry above describes the prior browser checkpoint and remains historical evidence. The new implementation has been **SOURCE-INSPECTED** and **AUTOMATED TESTED**: the Laravel suite passed 77 tests and 749 assertions; Admin route registration, Vue type checking, frontend build, and git diff --check passed. The build reported large-chunk advisory warnings.
+The earlier ADMIN BOOTSTRAP / PROVISIONING: INCOMPLETE entry above describes the prior browser checkpoint and remains historical evidence. The implementation has been **SOURCE-INSPECTED** and **AUTOMATED TESTED**: the Laravel suite passed **79 tests and 835 assertions** (`docker compose exec -T app php artisan test`); Admin route registration, Vue type checking, frontend build, and git diff --check passed. The build reported large-chunk advisory warnings.
 
-**BROWSER VERIFIED: NOT YET VERIFIED** for this milestone. The earlier Admin monitoring smoke does not verify Posko/Faskes lifecycle, account provisioning, reassignment, deactivation, or inactive-Faskes referral behavior. Browser verification and its evidence belong in a later checkpoint.
+---
+
+## Admin Bootstrap & Provisioning MVP — Browser Verification (30 September 2026)
+
+Status: **BROWSER VERIFIED — ANTIGRAVITY / Chrome-CDP** (Gates A–J and L PASS; Gate K passes its directly tested browser checks (K1–K2), while K3 remains NOT DIRECTLY TESTED IN BROWSER. Overall browser matrix: 77 verification items PASS, 1 item NOT DIRECTLY TESTED IN BROWSER.; post-fix verification confirmed `/admin/map` resolution).
+
+External browser runtime verification was executed on `http://localhost:8080` using Google Chrome with DevTools/CDP automation. Synthetic records were provisioned and manipulated via the application interface without destructive database mutations.
+
+### Verification Matrix (Gates A through L)
+
+| Gate | Item | Status | Verification & Evidence |
+|---|---|---|---|
+| **Gate A: Admin Navigation & Baseline** | A1 | **PASS** | Root Admin login (`admin@rapidmind.id` / `password`) succeeded and redirected to `/admin/summary`. |
+| | A2 | **PASS** | Dedicated sidebar navigation links verified: Manajemen Relawan (`/admin/volunteers`), Manajemen Posko (`/admin/operations/posko`), Organisasi Faskes (`/admin/facilities/organizations`), Akun Healthcare (`/admin/facilities/users`). |
+| | A3 | **PASS** | Generic `Kelola Akun` link is completely absent from navigation. |
+| | A4 | **PASS** | Direct browser navigation to `/admin/accounts` returned HTTP 404 Not Found (no generic role-selector account creation UI accessible). |
+| **Gate B: Posko Creation & Editing** | B1 | **PASS** | Posko creation (`Posko Browser Test`, Region Merapi, `Jl. Browser Test`, lat `-7.7`, lng `110.4`, Aktif) succeeded. |
+| | B2 | **PASS** | Redirected to `/admin/operations/posko/{id}` with flash message: `"Posko berhasil dibuat."` |
+| | B3 | **PASS** | Name, Region, and Address correctly restored and preserved in form fields. |
+| | B4 | **PASS** | Latitude (`-7.7`) and Longitude (`110.4`) restored accurately from PostGIS coordinates. |
+| | B5 | **PASS** | Posko list displays real state `Aktif` and volunteers count `0`. |
+| | B6 | **PASS** | Address updated to `Jl. Browser Test Updated`; edit persisted upon save and page reload. |
+| | B7 | **PASS** | `/admin/summary` shows `Posko Browser Test` in shelter operational table with dynamic state `Aktif`. |
+| **Gate C: Faskes Creation & Zero-Count** | C1 | **PASS** | Faskes creation (`Faskes Browser Test`, Puskesmas, `Jl. Faskes Browser`, Aktif) succeeded. |
+| | C2 | **PASS** | Redirected to `/admin/facilities/organizations/{id}` with flash message: `"Faskes berhasil dibuat."` |
+| | C3 | **PASS** | Faskes list `/admin/facilities/organizations` displays real status `Aktif`. |
+| | C4 | **PASS** | Healthcare account count for `Faskes Browser Test` is exactly `0` (not incorrectly `1`). |
+| | C5 | **PASS** | Address edited to `Jl. Faskes Browser Updated`; persisted upon save and page reload. |
+| **Gate D: Dedicated Relawan Provisioning** | D1 | **PASS** | Provisioning `Relawan Browser Test` (`relawan.browser@example.test`, password `password123`, assigned to `Posko Browser Test`) succeeded. Confirmed form contains NO role selector. |
+| | D2 | **PASS** | Account appears in Manajemen Relawan list (`/admin/volunteers`). |
+| | D3 | **PASS** | Status displayed as `Aktif`. |
+| | D4 | **PASS** | Current Posko displayed as `Posko Browser Test`. |
+| | D5 | **PASS** | Edit page (`/admin/volunteers/{id}`) displays correct assignment. |
+| | D6 | **PASS** | Admin logged out cleanly. |
+| | D7 | **PASS** | Logged in with provisioned credentials (`relawan.browser@example.test` / `password123`). |
+| | D8 | **PASS** | Relawan session reached `/relawan/home` with header showing "Relawan Browser Test" and "Posko Browser Test". |
+| | D9 | **PASS** | Relawan bottom navigation rendered normally (Beranda, PFA, Asesmen, Data). Logged out cleanly. |
+| **Gate E: Dedicated Healthcare Provisioning** | E1 | **PASS** | Provisioning `Healthcare Browser Test` (`nakes.browser@example.test`, password `password123`, assigned to `Faskes Browser Test`) succeeded. Confirmed form contains NO role selector. |
+| | E2 | **PASS** | Account appears in Healthcare list (`/admin/facilities/users`). |
+| | E3 | **PASS** | Status displayed as `Aktif`. |
+| | E4 | **PASS** | Current Faskes displayed as `Faskes Browser Test`. |
+| | E5 | **PASS** | Admin logged out cleanly. |
+| | E6 | **PASS** | Logged in with Healthcare credentials (`nakes.browser@example.test` / `password123`). |
+| | E7 | **PASS** | Login reached `/healthcare/emergencies`. |
+| | E8 | **PASS** | Healthcare workspace rendered normally (WORKSPACE MEDIS, Faskes: `Faskes Browser Test`, navigation to Darurat, Validasi, Rujukan, Pasien). Logged out cleanly. |
+| **Gate F: Posko Lifecycle Guard** | F1 | **PASS** | Deactivation of `Posko Browser Test` while assigned active Relawan was rejected. |
+| | F2 | **PASS** | Validation message displayed: `"Posko masih memiliki Relawan aktif. Pindahkan atau nonaktifkan Relawan terlebih dahulu."` |
+| | F3 | **PASS** | Posko remained active upon reload. |
+| | F4 | **PASS** | Created `Posko Browser Test 2` and reassigned `Relawan Browser Test` to it; reassignment succeeded. |
+| | F5 | **PASS** | Relawan list & edit page updated to show `Posko Browser Test 2`. |
+| | F6 | **PASS** | Original `Posko Browser Test` can now be deactivated (0 active volunteers assigned). |
+| | F7 | **PASS** | Posko list and `/admin/summary` show `Posko Browser Test` as `Nonaktif`. |
+| **Gate G: Faskes Lifecycle Guard** | G1 | **PASS** | Deactivation of `Faskes Browser Test` while assigned active Healthcare user was rejected. |
+| | G2 | **PASS** | Validation message displayed: `"Faskes masih memiliki akun Healthcare aktif. Pindahkan atau nonaktifkan akun terlebih dahulu."` |
+| | G3 | **PASS** | Faskes remained active upon reload. |
+| | G4 | **PASS** | Created `Faskes Browser Test 2` and reassigned `Healthcare Browser Test` to it; reassignment succeeded. |
+| | G5 | **PASS** | Healthcare list & edit page updated to show `Faskes Browser Test 2`. |
+| | G6 | **PASS** | Original `Faskes Browser Test` can now be deactivated (0 active healthcare accounts assigned). |
+| | G7 | **PASS** | Original Faskes list status updated to `Nonaktif`. |
+| **Gate H: Account Deactivation & Auth** | H1 | **PASS** | Deactivated `Relawan Browser Test`; list displays `Nonaktif`. |
+| | H2 | **PASS** | Login attempt rejected with notice: `"⚠️ Akun Anda sedang nonaktif. Hubungi Admin."` |
+| | H3 | **PASS** | Reactivated Relawan with active Posko; save succeeded. |
+| | H4 | **PASS** | Relawan login succeeded again, reaching `/relawan/home`. Logged out. |
+| | H5 | **PASS** | Deactivated `Healthcare Browser Test`; list displays `Nonaktif`. |
+| | H6 | **PASS** | Login attempt rejected with notice: `"⚠️ Akun Anda sedang nonaktif. Hubungi Admin."` |
+| | H7 | **PASS** | Reactivated Healthcare user with active Faskes; save succeeded. |
+| | H8 | **PASS** | Healthcare login succeeded again, reaching `/healthcare/emergencies`. Logged out. |
+| **Gate I: Retained Inactive Assignment Edge Case** | I1 | **PASS** | Retained inactive Posko appears in dropdown labelled `Posko Browser Test 2 — Nonaktif (penugasan saat ini)`. |
+| | I2 | **PASS** | Renamed Relawan to `Relawan Browser Test Renamed` while inactive; save succeeded. |
+| | I3 | **PASS** | Checking `Akun aktif` while retaining inactive Posko automatically disables the `Simpan` button (`disabled`), preventing activation. |
+| | I4 | **PASS** | Selected active Posko `Posko Candi`, checked `Akun aktif`, and saved; activation succeeded. |
+| | I5 | **PASS** | Retained inactive Faskes appears in dropdown labelled `Faskes Browser Test 2 — Nonaktif (penugasan saat ini)`. |
+| | I6 | **PASS** | Renamed Healthcare user to `Healthcare Browser Test Renamed` while inactive; save succeeded. |
+| | I7 | **PASS** | Checking `Akun aktif` while retaining inactive Faskes automatically disables the `Simpan` button (`disabled`), blocking save. |
+| | I8 | **PASS** | Selected active Faskes `RSUD Candi`, checked `Akun aktif`, and saved; activation succeeded. |
+| **Gate J: New Provisioning Excludes Inactive Master Data** | J1 | **PASS** | `/admin/volunteers/create` excludes inactive Posko (`Posko Browser Test`, `Posko Browser Test 2`). Only active Posko are selectable. |
+| | J2 | **PASS** | `/admin/facilities/users/create` excludes inactive Faskes (`Faskes Browser Test`, `Faskes Browser Test 2`). Only active Faskes are selectable. |
+| **Gate K: Referral/Faskes Lifecycle Evidence** | K1 | **PASS** | In Healthcare emergency referral selection UI (`/healthcare/emergencies/01a0f1dc-2853-72f8-936f-4d82ed69aaf9`), inactive Faskes do NOT appear in the dropdown. |
+| | K2 | **PASS** | Active Faskes (`RSUD Candi`, `Puskesmas Pakem`, `PSC 119 Sleman`) remain selectable. |
+| | K3 | **NOT DIRECTLY TESTED IN BROWSER** | No pre-existing historical referral points to an inactive facility in the current synthetic test dataset (all historical referrals point to active `RSUD Candi`). Covered separately by automated test `historical referral remains readable after facility becomes inactive`. |
+| **Gate L: Status/Count Consistency & Smoke Regression** | L1 | **PASS** | Posko list accurately reflects real `Aktif` / `Nonaktif` states and volunteer counts. |
+| | L2 | **PASS** | Faskes list accurately reflects real `Aktif` / `Nonaktif` states. |
+| | L3 | **PASS** | Relawan list accurately reflects real account state (`Aktif`, assigned to `Posko Candi`). |
+| | L4 | **PASS** | Healthcare list accurately reflects real account state (`Aktif`, assigned to `RSUD Candi`). |
+| | L5 | **PASS** | Faskes Healthcare counts are exact (`0` for unassigned/inactive, `2` for `RSUD Candi`). |
+| | L6 | **PASS** | Admin Summary `/admin/summary` loads normally and displays consistent metrics. |
+| | L7 | **PASS** | Admin Map `/admin/map` returns HTTP 200 OK (post-fix verified after adding `use App\Models\HealthcareFacility;` import). MapLibre GL JS canvas (1192×638) renders raster tiles, zoom/attribution controls, 5 interactive markers with detail popups, map legend, and shelter cards list. 0 fatal console errors. |
+| | L8 | **PASS** | Admin Analytics `/admin/analytics` loads normally with ECharts longitudinal trends. |
+| | L9 | **PASS** | Admin Logistics `/admin/logistics` loads normally. |
+| | L10 | **PASS** | Complete Admin workflow exercises cleanly across all tabs (`/admin/summary`, `/admin/map`, `/admin/analytics`, `/admin/volunteers`, `/admin/logistics`, `/admin/operations/posko`, `/admin/facilities/organizations`, `/admin/facilities/users`) with 0 console/runtime errors preventing operations. |
+
+### Functional Defect Discovered & Resolved
+
+- **Route:** `GET /admin/map`
+- **Observed Behavior (Initial Run):** HTTP 500 Internal Server Error when loading the Geospatial Map page.
+- **Error Detail:** `Class "App\Http\Controllers\Admin\HealthcareFacility" not found` in `app/Http/Controllers/Admin/AdminController.php:57`.
+- **Root Cause:** Missing `use App\Models\HealthcareFacility;` import at the top of `app/Http/Controllers/Admin/AdminController.php`. Line 57 attempts to execute `HealthcareFacility::where('is_active', true)->get();` within the `App\Http\Controllers\Admin` namespace without an import or FQCN.
+- **Resolution & Post-Fix Retest:**
+  - Added `use App\Models\HealthcareFacility;` to `app/Http/Controllers/Admin/AdminController.php`.
+  - Focused browser retest confirmed: HTTP 200 OK, full MapLibre canvas render (1192×638), tile layer, zoom/attribution controls, 5 interactive shelter markers with popup cards, map legend, and 0 fatal console errors.
+  - Full automated suite re-verified: **79 tests, 835 assertions passed**.
+
+---
+
+## USER MANUAL RETEST — NOT YET PERFORMED
+
+The browser verification above was conducted autonomously by **Antigravity (Chrome-CDP)**. It provides external browser-level evidence, but **MUST NOT** be represented as user manual verification.
+
+The project owner still intends to manually retest the application before final demonstration.
+
+### Checklist for Owner Manual Retest:
+
+1. **Root Admin login and Admin navigation** (`admin@rapidmind.id` / `password` → `/admin/summary`, verify 4 dedicated links, confirm absence of `Kelola Akun`, verify `/admin/accounts` returns 404).
+2. **Posko create/edit/status behavior** (create Posko with coordinates, verify PostGIS lat/long restoration, verify `Aktif` status on list and Summary, verify edit persistence).
+3. **Faskes create/edit/status and zero-count behavior** (create Puskesmas, verify `0` healthcare accounts displayed, edit and verify persistence).
+4. **Dedicated Relawan provisioning and login** (confirm no role selector, provision Relawan, verify list status and Posko assignment, log out Admin, log in as Relawan → `/relawan/home`, verify PWA navigation).
+5. **Dedicated Healthcare provisioning and login** (confirm no role selector, provision Healthcare, verify list status and Faskes assignment, log out Admin, log in as Healthcare → `/healthcare/emergencies`, verify desktop medical workspace).
+6. **Posko/Faskes active-assignment deactivation guards** (attempt deactivation with assigned active users, verify rejection and validation feedback, verify master data remains active).
+7. **Relawan/Healthcare reassignment** (reassign Relawan/Healthcare to second Posko/Faskes, verify list and detail reflect new assignment, confirm original Posko/Faskes can now be deactivated).
+8. **Account deactivation → login rejection → reactivation** (deactivate account, confirm login rejection with Indonesian notice, reactivate with active assignment, confirm login succeeds).
+9. **Retained inactive current assignment edge case** (deactivate account, deactivate its assigned Posko/Faskes, verify retained inactive option labelled `Nonaktif (penugasan saat ini)`, verify basic edit succeeds while inactive, verify activation while retaining inactive assignment is blocked by UI/backend, verify activation succeeds when selecting active location).
+10. **Inactive Posko/Faskes excluded from new provisioning** (verify create pages `/admin/volunteers/create` and `/admin/facilities/users/create` exclude inactive master data).
+11. **New referral UI excludes inactive Faskes** (log in as Healthcare, check referral dropdown in emergency/validation UI, verify inactive Faskes do not appear). *Note: Historical referral pointing to an inactive Faskes was `NOT DIRECTLY TESTED IN BROWSER` by Antigravity (covered by automated test).*
+12. **Final Admin Summary/Map/Analytics smoke** (verify Summary KPIs, Map with markers and popups, Analytics charts, Logistics page).
