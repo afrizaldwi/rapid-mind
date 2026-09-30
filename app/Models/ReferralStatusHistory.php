@@ -2,6 +2,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 class ReferralStatusHistory extends Model {
+    protected $table = 'referral_status_history';
     protected $fillable = ['referral_id', 'status', 'changed_by', 'notes'];
     protected function casts(): array {
         return [
