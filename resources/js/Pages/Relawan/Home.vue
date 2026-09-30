@@ -66,14 +66,14 @@
             {{ activeDraft.patient?.name || 'Penyintas Baru' }}
           </h3>
           <p class="text-xs text-slate-600 mt-0.5">
-            Asesmen tersimpan aman di perangkat.
+            Tahap berikutnya mengikuti jawaban yang tersimpan di server.
           </p>
         </div>
         <Link
-          :href="`/relawan/assessment/${activeDraft.id}/srq`"
+          :href="activeDraft.resume_url"
           class="inline-flex items-center justify-center w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-xs transition"
         >
-          Lanjutkan Wawancara SRQ-20 →
+          {{ activeDraft.resume_label }} →
         </Link>
       </div>
 

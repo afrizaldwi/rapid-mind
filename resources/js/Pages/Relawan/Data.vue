@@ -42,10 +42,10 @@
               </p>
             </div>
             <Link
-              :href="`/relawan/assessment/${item.id}/srq`"
+              :href="item.resume_url"
               class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition"
             >
-              Lanjutkan →
+              {{ item.resume_label }} →
             </Link>
           </div>
         </div>
@@ -69,12 +69,12 @@
                 <h4 class="font-bold text-sm text-slate-900">
                   {{ item.patient?.name }}
                 </h4>
-                <Badge :variant="badgeVariant(item.triageResult?.system_recommendation)">
-                  {{ item.triageResult?.system_recommendation || 'T3' }}
+                <Badge :variant="badgeVariant(item.triage_result?.system_recommendation)">
+                  {{ item.triage_result?.system_recommendation || 'T3' }}
                 </Badge>
               </div>
               <p class="text-xs text-slate-500">
-                Total Skor: {{ item.triageResult?.total_score || 0 }}/37 • {{ formatDate(item.completed_at) }}
+                Total Skor: {{ item.triage_result?.total_score || 0 }}/37 • {{ formatDate(item.completed_at) }}
               </p>
             </div>
 

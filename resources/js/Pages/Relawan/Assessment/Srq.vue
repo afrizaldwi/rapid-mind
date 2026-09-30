@@ -1,6 +1,6 @@
 <template>
   <RelawanLayout>
-    <div class="space-y-6 pb-24">
+    <div class="space-y-6 pb-64">
       <!-- Top Patient & Progress Sticky Bar -->
       <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 sticky top-16 z-20 space-y-3">
         <div class="flex items-center justify-between">
@@ -91,7 +91,7 @@
           <div class="grid grid-cols-2 gap-3 mt-4">
             <button
               type="button"
-              @click="setAnswer(q.number, true)"
+              @click="setManualAnswer(q.number, true)"
               class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
               :class="answers[q.number] === true
                 ? (q.number === 17 ? 'border-red-600 bg-red-600 text-white shadow-md' : 'border-teal-700 bg-teal-700 text-white shadow-md')
@@ -103,7 +103,7 @@
 
             <button
               type="button"
-              @click="setAnswer(q.number, false)"
+              @click="setManualAnswer(q.number, false)"
               class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
               :class="answers[q.number] === false
                 ? 'border-slate-700 bg-slate-700 text-white shadow-md'
@@ -117,7 +117,7 @@
       </div>
 
       <!-- Sticky Bottom Navigation: Next to Risk Factors -->
-      <div class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 p-4 shadow-xl z-20 max-w-lg mx-auto">
+      <div data-assessment-action-bar class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
         <div class="flex items-center justify-between space-x-3">
           <Link
             href="/relawan/assessment"
@@ -128,11 +128,15 @@
           <button
             type="button"
             @click="saveAndNext"
-            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition"
+            :disabled="isSaving || !draftReady || answeredCount !== 20"
+            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
           >
             Lanjut: Faktor Risiko ({{ answeredCount }}/20) →
           </button>
         </div>
+        <p v-if="answeredCount !== 20" class="mt-2 text-xs text-slate-600">Lengkapi semua jawaban sebelum melanjutkan ({{ answeredCount }}/20).</p>
+        <p v-if="draftWarning" role="alert" class="mt-2 text-xs font-semibold text-amber-900">{{ draftWarning }}</p>
+        <p v-if="saveError" role="alert" class="mt-2 text-xs font-semibold text-red-800">{{ saveError }}</p>
       </div>
     </div>
 
@@ -155,9 +159,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft, clearSavedAssessmentDraft } from '@/offline/assessmentDraft';
 import PotentialRedFlag from '@/components/Relawan/PotentialRedFlag.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
 
@@ -167,7 +172,12 @@ const props = defineProps<{
   responses?: Record<number, boolean>;
 }>();
 
-const answers = ref<Record<number, boolean>>({ ...(props.responses || {}) });
+const answers = ref<Record<number, boolean>>(mergeAssessmentDraft('srq_answers', props.responses, {}));
+const isSaving = ref(false);
+const saveError = ref('');
+const draftWarning = ref('');
+const draftReady = ref(false);
+const editedKeys = new Set<string>();
 const isVerbal = ref(props.assessment?.mode === 'VERBAL');
 const isListening = ref(false);
 const transcriptSnippet = ref('');
@@ -175,7 +185,7 @@ const showRedFlagModal = ref(false);
 const showEmergencyVerification = ref(false);
 
 const answeredCount = computed(() => {
-  return Object.keys(answers.value).length;
+  return Array.from({ length: 20 }, (_, index) => answers.value[index + 1]).filter(value => typeof value === 'boolean').length;
 });
 
 const srqQuestions = [
@@ -208,6 +218,12 @@ function setAnswer(qNum: number, value: boolean) {
   if (qNum === 17 && value === true) {
     showRedFlagModal.value = true;
   }
+}
+
+function setManualAnswer(qNum: number, value: boolean) {
+  setAnswer(qNum, value);
+  editedKeys.add(String(qNum));
+  void persistDraft();
 }
 
 function handleEscalate() {
@@ -276,24 +292,61 @@ function toggleSpeechRecognition() {
   recognition.start();
 }
 
-function saveAndNext() {
-  const payload = Object.entries(answers.value).map(([qNum, ans]) => ({
-    question_number: Number(qNum),
-    answer: ans,
-  }));
 
-  fetch(`/relawan/assessment/${props.assessment.id}/srq`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-    },
-    body: JSON.stringify({
-      responses: payload,
-      mode: isVerbal.value ? 'VERBAL' : 'NON_VERBAL',
-    }),
-  }).finally(() => {
+async function persistDraft() {
+  try {
+    await saveAssessmentDraft(props.assessment, 'srq_answers', answers.value);
+    draftWarning.value = '';
+  } catch {
+    draftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
+  }
+}
+
+onMounted(async () => {
+  try {
+    const local = await readAssessmentDraft(props.assessment.id, 'srq_answers');
+    const merged = mergeAssessmentDraft('srq_answers', answers.value, local);
+    for (const [key, value] of Object.entries(merged)) {
+      if (!editedKeys.has(key)) (answers.value as Record<string, typeof value>)[key] = value;
+    }
+  } catch {
+    draftWarning.value = 'Draf lokal tidak dapat dibaca. Jawaban yang sudah tersimpan di server tetap ditampilkan.';
+  } finally {
+    draftReady.value = true;
+  }
+});
+
+async function saveAndNext() {
+  if (isSaving.value || !draftReady.value) return;
+  if (answeredCount.value !== 20) {
+    saveError.value = 'Lengkapi semua jawaban sebelum melanjutkan.';
+    return;
+  }
+  isSaving.value = true;
+  saveError.value = '';
+  const savedAnswers = { ...answers.value };
+  const payload = Array.from({ length: 20 }, (_, index) => ({ question_number: index + 1, answer: savedAnswers[index + 1] }));
+  try {
+    const response = await fetch(`/relawan/assessment/${props.assessment.id}/srq`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+      },
+      body: JSON.stringify({ responses: payload, mode: isVerbal.value ? 'VERBAL' : 'NON_VERBAL' }),
+    });
+    if (!response.ok) throw new Error('Simpan gagal');
+    try {
+      await clearSavedAssessmentDraft(props.assessment.id, 'srq_answers', savedAnswers);
+    } catch {
+      draftWarning.value = 'Jawaban tersimpan di server, tetapi draf lokal belum dapat dibersihkan.';
+    }
     router.visit(`/relawan/assessment/${props.assessment.id}/risk`);
-  });
+  } catch {
+    saveError.value = 'Jawaban SRQ belum tersimpan di server. Periksa koneksi atau jawaban, lalu coba lagi.';
+  } finally {
+    isSaving.value = false;
+  }
 }
 </script>

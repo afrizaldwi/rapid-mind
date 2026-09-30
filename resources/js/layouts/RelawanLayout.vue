@@ -1,5 +1,6 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 font-sans selection:bg-teal-500 selection:text-white">
+  <div class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
+    :class="isFocusedAssessment ? 'pb-0' : 'pb-20'">
     <!-- Top Application Bar -->
     <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
       <div class="flex items-center space-x-3">
@@ -35,7 +36,7 @@
     </main>
 
     <!-- Persistent Floating Red Flag Button -->
-    <T0Button @trigger="showEmergencyModal = true" />
+    <T0Button :focused="isFocusedAssessment" @trigger="showEmergencyModal = true" />
 
     <!-- T0 Verification Task Sheet Modal -->
     <T0Verification
@@ -44,7 +45,7 @@
     />
 
     <!-- Bottom Navigation Bar (4 items) -->
-    <nav class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-md mx-auto sm:max-w-lg">
+    <nav v-if="!isFocusedAssessment" class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-md mx-auto sm:max-w-lg">
       <div class="grid grid-cols-4 h-16">
         <Link
           href="/relawan/home"
@@ -101,6 +102,7 @@ import T0Verification from '@/components/Relawan/T0Verification.vue';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
+const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(page.url.split('?')[0]));
 
 const showEmergencyModal = ref(false);
 const isOnline = ref(true);

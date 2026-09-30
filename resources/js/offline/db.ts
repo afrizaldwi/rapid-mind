@@ -31,6 +31,7 @@ export interface LocalAssessment {
   };
   synced: boolean;
   updated_at: string;
+  local_draft_only?: boolean;
 }
 
 export interface LocalEmergency {

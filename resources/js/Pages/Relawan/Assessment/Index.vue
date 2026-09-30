@@ -33,10 +33,10 @@
               </p>
             </div>
             <Link
-              :href="`/relawan/assessment/${a.id}/srq`"
+              :href="a.resume_url"
               class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
             >
-              Lanjutkan →
+              {{ a.resume_label }} →
             </Link>
           </div>
         </div>

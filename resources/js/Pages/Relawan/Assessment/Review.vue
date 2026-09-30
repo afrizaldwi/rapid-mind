@@ -1,6 +1,6 @@
 <template>
   <RelawanLayout>
-    <div class="space-y-6 pb-24">
+    <div class="space-y-6 pb-56">
       <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
           Tinjau Sebelum Finalisasi
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Estimation Card -->
-      <div class="bg-teal-50 border border-teal-200 rounded-2xl p-5 space-y-2">
+      <div v-if="assessmentComplete" class="bg-teal-50 border border-teal-200 rounded-2xl p-5 space-y-2">
         <div class="flex items-center space-x-2 text-teal-900 font-bold text-sm">
           <span>⚙️</span>
           <h4>Kalkulasi Deterministik Sistem</h4>
@@ -58,8 +58,10 @@
         </p>
       </div>
 
+      <p v-if="!assessmentComplete" role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-semibold text-amber-900">Asesmen belum lengkap. Periksa kembali jawaban SRQ-20, faktor risiko, dan fungsi harian.</p>
+
       <!-- Sticky Action Bar -->
-      <div class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 p-4 shadow-xl z-20 max-w-lg mx-auto">
+      <div data-assessment-action-bar class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
         <div class="flex items-center justify-between space-x-3">
           <Link
             :href="`/relawan/assessment/${assessment.id}/function`"
@@ -69,7 +71,7 @@
           </Link>
           <button
             type="button"
-            :disabled="isSubmitting"
+            :disabled="isSubmitting || !assessmentComplete"
             @click="finalizeAssessment"
             class="flex-1 py-3.5 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
           >
@@ -77,6 +79,7 @@
             <span v-else>SELESAIKAN & LIHAT REKOMENDASI TRIASE →</span>
           </button>
         </div>
+        <p v-if="completionError" role="alert" class="mt-2 text-xs font-semibold text-red-800">{{ completionError }}</p>
       </div>
     </div>
   </RelawanLayout>
@@ -96,6 +99,16 @@ const props = defineProps<{
 }>();
 
 const isSubmitting = ref(false);
+const completionError = ref('');
+const assessmentComplete = computed(() =>
+  Object.keys(props.srqResponses || {}).length === 20 &&
+  Object.keys(props.riskResponses || {}).length === 5 &&
+  Object.keys(props.functionResponses || {}).length === 3 &&
+  Array.from({ length: 20 }, (_, index) => typeof props.srqResponses?.[index + 1] === 'boolean').every(Boolean) &&
+  ['R1', 'R2', 'R3', 'R4', 'R5'].every(code => typeof props.riskResponses?.[code] === 'boolean') &&
+  ['F1', 'F2', 'F3'].every(code => [0, 1, 3].includes(props.functionResponses?.[code] as number))
+);
+
 
 const srqYesCount = computed(() => {
   if (!props.srqResponses) return 0;
@@ -123,8 +136,13 @@ const totalScore = computed(() => {
 });
 
 function finalizeAssessment() {
+  if (isSubmitting.value || !assessmentComplete.value) return;
   isSubmitting.value = true;
+  completionError.value = '';
   router.post(`/relawan/assessment/${props.assessment.id}/complete`, {}, {
+    onError: (errors) => {
+      completionError.value = errors.assessment || 'Asesmen belum dapat diselesaikan. Periksa semua jawaban, lalu coba lagi.';
+    },
     onFinish: () => {
       isSubmitting.value = false;
     },
