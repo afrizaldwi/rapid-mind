@@ -53,7 +53,7 @@
               v-for="rf in redFlagOptions"
               :key="rf.type"
               type="button"
-              @click="selectedRedFlag = rf.type"
+              @click="selectRedFlag(rf.type)"
               class="text-left p-3.5 rounded-xl border text-sm font-medium transition"
               :class="selectedRedFlag === rf.type ? 'border-red-600 bg-red-50 text-red-950 font-bold ring-2 ring-red-500/20' : 'border-slate-200 hover:border-slate-300 text-slate-700'"
             >
@@ -97,6 +97,10 @@
         </div>
       </div>
 
+      <div v-if="submissionError" role="alert" class="mx-4 mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+        {{ submissionError }}
+      </div>
+
       <!-- Action Footer -->
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row gap-3">
         <button
@@ -138,6 +142,7 @@ const emit = defineEmits<{
 const selectedRedFlag = ref('SUICIDAL_IDEATION');
 const notes = ref('');
 const isSubmitting = ref(false);
+const submissionError = ref('');
 const coordinates = ref<{ lat: number; lng: number } | null>(null);
 
 const redFlagOptions = [
@@ -184,7 +189,14 @@ onMounted(() => {
   acquireGps();
 });
 
+function selectRedFlag(type: string) {
+  selectedRedFlag.value = type;
+  submissionError.value = '';
+}
+
 function submitEmergency() {
+  if (isSubmitting.value) return;
+  submissionError.value = '';
   isSubmitting.value = true;
 
   router.post(
@@ -198,10 +210,21 @@ function submitEmergency() {
       longitude: coordinates.value?.lng || null,
     },
     {
-      onFinish: () => {
-        isSubmitting.value = false;
-        emit('close');
+      onSuccess: () => emit('close'),
+      onError: (errors) => {
+        submissionError.value = errors.red_flag_type
+          ? 'Indikator Red Flag tidak valid. Pilih ulang indikator, lalu coba kirim kembali.'
+          : 'Insiden T0 belum berhasil disimpan. Periksa data dan coba kirim kembali.';
       },
+      onHttpException: () => {
+        submissionError.value = 'Insiden T0 belum dapat dikonfirmasi. Periksa status insiden sebelum mencoba lagi.';
+        return false;
+      },
+      onNetworkError: () => {
+        submissionError.value = 'Koneksi terputus. Periksa status insiden sebelum mencoba lagi.';
+        return false;
+      },
+      onFinish: () => { isSubmitting.value = false; },
     }
   );
 }

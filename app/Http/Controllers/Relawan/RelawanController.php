@@ -25,6 +25,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -383,7 +384,7 @@ final class RelawanController extends Controller
 
         $validated = $request->validate([
             'patient_id' => ['nullable', 'uuid', 'exists:patients,id'],
-            'red_flag_type' => ['required', 'string'],
+            'red_flag_type' => ['required', Rule::enum(RedFlagType::class)],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -404,19 +405,29 @@ final class RelawanController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        // Broadcast realtime alert to Healthcare facilities
+        $realtimeDelivered = true;
         try {
             event(new \App\Events\EmergencyCreated($emergency));
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
+            $realtimeDelivered = false;
+            report($exception);
         }
+
+        $warning = 'Insiden T0 telah tersimpan di server, tetapi notifikasi realtime ke Healthcare belum dapat dikonfirmasi. Gunakan kanal komunikasi darurat cadangan bila diperlukan.';
 
         if ($request->wantsJson()) {
             return response()->json([
-                'message' => 'Sinyal darurat T0 berhasil dikirim.',
+                'message' => $realtimeDelivered
+                    ? 'Insiden T0 tersimpan di server dan notifikasi realtime berhasil dikirim.'
+                    : 'Insiden T0 tersimpan di server.',
                 'emergency_id' => $emergency->id,
+                'realtime_delivered' => $realtimeDelivered,
+                ...($realtimeDelivered ? [] : ['warning' => $warning]),
             ], 201);
         }
 
-        return redirect("/relawan/emergencies/{$emergency->id}");
+        $response = redirect("/relawan/emergencies/{$emergency->id}");
+
+        return $realtimeDelivered ? $response : $response->with('error', $warning);
     }
 }

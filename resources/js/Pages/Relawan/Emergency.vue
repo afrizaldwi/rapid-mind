@@ -1,6 +1,10 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6 pb-20">
+      <div v-if="broadcastWarning" role="alert" class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+        {{ broadcastWarning }}
+      </div>
+
       <!-- Incident Header Banner -->
       <div class="bg-red-800 text-white rounded-3xl p-6 shadow-xl border border-red-700 space-y-4">
         <div class="flex items-center justify-between">
@@ -105,12 +109,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
 
 const props = defineProps<{
   emergency: any;
 }>();
+
+const page = usePage();
+const broadcastWarning = computed(() => (page.props.flash as { error?: string } | undefined)?.error);
 
 function formatRedFlag(rf?: string) {
   switch (rf) {
