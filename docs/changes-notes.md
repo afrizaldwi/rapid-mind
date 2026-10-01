@@ -669,3 +669,39 @@ All of these routes passed with the normal shell and expected rendered content: 
 Installed standalone-PWA behavior remains **NOT DIRECTLY VERIFIED** because headless Linux Chrome/CDP could verify manifest support and `beforeinstallprompt` but could not launch an OS-installed standalone desktop/mobile shell. This does not invalidate Phase B for the selected prototype scope.
 
 Phase B closure does not claim production security, production concurrency/load, all-browser PWA, installed standalone-PWA, complete offline authentication, clinical, or full automated browser E2E certification. `docs/workflow.md` was unchanged, and no Phase C code was implemented.
+
+---
+
+## Phase C1/C1B — Local Indonesian STT Foundation and Accuracy Selection (2 October 2026)
+
+Phase C is now **IN PROGRESS**. C1 is **IMPLEMENTED / BROWSER VERIFIED** for its selected online preparation and transcription scope. C1B is **BROWSER VERIFIED / PASS WITH KNOWN PERFORMANCE LIMITATION**. C2 transcript interpretation and SRQ auto-answer, continuous/chunked one-session recording, complete offline ONNX runtime verification, and WebGPU performance optimization remain pending or deferred.
+
+### Implemented source scope
+
+The current C1/C1B working-tree implementation scope includes `package.json`, `package-lock.json`, `nginx/default.conf`, `resources/js/Pages/Relawan/Assessment/Srq.vue`, `resources/js/stt/types.ts`, `resources/js/stt/audioCapture.ts`, `resources/js/stt/whisperClient.ts`, `resources/js/stt/whisper.worker.ts`, and `resources/js/pwa/serviceWorker.ts`.
+
+- `@huggingface/transformers@3.8.1` runs inference in a dedicated module Web Worker.
+- Browser audio uses `getUserMedia()` and `MediaRecorder`; recorded audio is decoded, mixed to mono, resampled to 16 kHz, and transferred to the worker as `Float32Array`.
+- The worker attempts WebGPU first and starts a clean worker for the WASM/CPU fallback if WebGPU initialization fails.
+- Manual SRQ operation remains usable on STT failure. C1 transcripts are display-only: they do not mutate SRQ answers, create/send T0, or activate the retained SRQ keyword dictionaries. Those dictionaries remain available for later C2 work.
+
+### Model evolution and observed browser evidence
+
+The initial runtime proof used `onnx-community/whisper-tiny`, but its Indonesian quality was unacceptable. For spoken `Saya sering sakit kepala.`, the observed Tiny transcript was `saya saya rasa kita pahamlah`; a longer SRQ-style utterance also had substantial errors.
+
+The selected C1B model is `cmaree/Bagus-whisper-small-id-onnx` with `encoder_model = q4f16` and `decoder_model_merged = q4f16`; inference continues to request Indonesian transcription. Direct browser observations were:
+
+| Spoken | Observed transcript | Result |
+|---|---|---|
+| `Saya sering sakit kepala.` | `Saya sering sakit kepala.` | PASS for the tested sentence |
+| `Saya sering sakit kepala, saya susah tidur, saya merasa takut dan khawatir, saya sering menangis, saya tidak berguna, saya tidak ingin mati.` | `saya sering sakit kepala, saya susah tidur, saya merasa takut dan khawatir saya sering menangis, saya tidak berguna, saya tidak ingin mati.` | PASS for the tested utterance |
+
+Punctuation and capitalization differences are formatting differences, not semantic failures. The safety-relevant phrase `saya tidak ingin mati` was preserved. These observations are not a formal WER or production-accuracy claim.
+
+### Runtime MIME and performance boundary
+
+Generated ONNX runtime `.mjs` was initially served as `application/octet-stream`, causing strict module MIME rejection. A narrow Nginx `.mjs` mapping was added. After Nginx validation/reload, curl observed `HTTP/1.1 200 OK` and `Content-Type: application/javascript; charset=utf-8` for the generated asset. Chrome initially retained the previous MIME result in normal HTTP cache; Empty Cache and Hard Reload used the corrected response. This was a server MIME configuration issue, not an application-model defect.
+
+The verified inference backend was `WASM / CPU`. The longer utterance took approximately **30–60 seconds** in the current environment: a user-observed estimate, not a formal benchmark or RTF measurement. Accuracy is sufficient to continue MVP work, but latency is too slow for the intended final near-realtime/continuous experience. Performance and WebGPU-adapter investigation are deferred until after the 4 October MVP deadline.
+
+No dependency was installed or updated during this documentation-only pass. C1 introduced the exact frontend dependency `@huggingface/transformers@3.8.1`. `docs/workflow.md` remains unchanged.

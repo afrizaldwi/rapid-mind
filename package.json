@@ -28,6 +28,7 @@
         "@laravel/multiplex": "^0.4.1"
     },
     "dependencies": {
+        "@huggingface/transformers": "3.8.1",
         "@inertiajs/vue3": "^3.7.1",
         "dexie": "^4.4.6",
         "echarts": "^6.1.0",

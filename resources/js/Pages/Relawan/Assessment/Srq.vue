@@ -25,7 +25,7 @@
             :style="{ width: `${(answeredCount / 20) * 100}%` }"></div>
         </div>
 
-        <!-- Verbal / Non-Verbal Mode & Speech Recognition -->
+        <!-- Verbal / Non-Verbal Mode & Local Whisper STT -->
         <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
           <div class="flex items-center space-x-2">
             <span class="font-semibold text-slate-600">Mode:</span>
@@ -35,19 +35,42 @@
             </button>
           </div>
 
-          <!-- Web Speech API Assistive Recognition Button -->
-          <div v-if="isVerbal">
-            <button type="button" :disabled="!draftReady" @click="toggleSpeechRecognition"
-              class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
-              :class="isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'">
-              <span>{{ isListening ? '🔴 Mendengarkan…' : '🎤 Bantuan Suara (STT)' }}</span>
+          <div v-if="isVerbal" class="flex items-center gap-2">
+            <button type="button" :disabled="sttButtonDisabled" @click="handleSttAction"
+              class="px-3 py-1 rounded-lg text-xs font-bold transition border disabled:opacity-60"
+              :class="sttStatus === 'recording'
+                ? 'bg-red-700 text-white border-red-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'">
+              {{ sttButtonLabel }}
+            </button>
+            <button v-if="sttStatus === 'recording'" type="button" @click="cancelRecording"
+              class="px-3 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-100">
+              Batalkan
             </button>
           </div>
         </div>
 
-        <!-- Voice Live Transcript snippet if listening -->
-        <div v-if="isListening && transcriptSnippet" class="p-2 rounded-lg bg-teal-50 text-teal-900 text-xs italic">
-          "{{ transcriptSnippet }}"
+        <div v-if="isVerbal" class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"
+          aria-live="polite">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-bold text-slate-800">{{ sttStatusLabel }}</span>
+            <span v-if="sttBackend" class="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 font-bold text-teal-800">
+              Backend: {{ sttBackend === 'webgpu' ? 'WebGPU' : 'WASM / CPU' }}
+            </span>
+          </div>
+          <p v-if="sttStatus === 'preparing' && sttProgress !== null" class="mt-1">
+            Progres berkas model: {{ sttProgress }}%
+          </p>
+          <p v-if="sttMessage" :class="sttStatus === 'error' ? 'mt-1 font-semibold text-red-800' : 'mt-1 text-slate-600'">
+            {{ sttMessage }}
+          </p>
+          <div v-if="transcriptSnippet" class="mt-2 rounded-lg bg-white p-2 text-sm text-slate-900 border border-slate-200">
+            <span class="block text-[11px] font-bold uppercase tracking-wide text-slate-500">Transkrip sementara</span>
+            <p class="mt-1">“{{ transcriptSnippet }}”</p>
+          </div>
+          <p class="mt-2 text-[11px] text-slate-500">
+            Audio diproses di perangkat dan tidak mengubah jawaban SRQ pada tahap ini.
+          </p>
         </div>
       </div>
 
@@ -128,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
@@ -139,6 +162,9 @@ import { assessmentRepository } from '@/offline/assessmentRepository';
 import { localPersistenceHealth } from '@/offline/localPersistenceHealth';
 import PotentialRedFlag from '@/components/Relawan/PotentialRedFlag.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
+import { LocalAudioCapture } from '@/stt/audioCapture';
+import { WhisperClient } from '@/stt/whisperClient';
+import type { WhisperBackend, WhisperStatus, WhisperWorkerEvent } from '@/stt/types';
 
 const props = defineProps<{
   assessment: any;
@@ -157,13 +183,41 @@ const draftWarning = ref('');
 const draftReady = ref(false);
 const editedKeys = new Set<string>();
 const isVerbal = ref(props.assessment?.mode !== 'NON_VERBAL');
-const isListening = ref(false);
+const sttStatus = ref<WhisperStatus>('idle');
+const sttBackend = ref<WhisperBackend | null>(null);
+const sttProgress = ref<number | null>(null);
+const sttMessage = ref('Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.');
 const transcriptSnippet = ref('');
 const showRedFlagModal = ref(false);
 const showEmergencyVerification = ref(false);
+let whisperClient: WhisperClient | null = null;
+let audioCapture: LocalAudioCapture | null = null;
+let sttSession = 0;
 
 const answeredCount = computed(() => {
   return Array.from({ length: 20 }, (_, index) => answers.value[index + 1]).filter(value => typeof value === 'boolean').length;
+});
+
+const sttButtonDisabled = computed(() => ['preparing', 'processing'].includes(sttStatus.value));
+const sttButtonLabel = computed(() => {
+  switch (sttStatus.value) {
+    case 'preparing': return 'Menyiapkan STT…';
+    case 'ready': return '🎤 Mulai Rekam';
+    case 'recording': return 'Selesai & Transkripsikan';
+    case 'processing': return 'Memproses di Perangkat…';
+    case 'error': return 'Coba Siapkan Lagi';
+    default: return 'Siapkan STT Offline';
+  }
+});
+const sttStatusLabel = computed(() => {
+  switch (sttStatus.value) {
+    case 'preparing': return 'STT sedang disiapkan';
+    case 'ready': return 'STT siap';
+    case 'recording': return 'Perekaman aktif';
+    case 'processing': return 'Transkripsi lokal diproses';
+    case 'error': return 'STT tidak tersedia';
+    default: return 'STT lokal belum siap';
+  }
 });
 
 const srqQuestions = [
@@ -216,70 +270,144 @@ async function toggleMode() {
     await localPersistenceHealth.recordWrite(owner, () => assessmentRepository.update(owner, props.assessment.id, { mode: nextMode, sync_state: 'LOCAL_SAVED' }));
     localAssessment.value.mode = nextMode;
     isVerbal.value = nextMode === 'VERBAL';
+    if (!isVerbal.value) cleanupStt();
     draftWarning.value = '';
   } catch { draftWarning.value = 'Mode belum tersimpan di perangkat ini.'; }
 }
 
-// Browser Web Speech API for assistive voice detection
-let recognition: any = null;
-
-function toggleSpeechRecognition() {
-  if (runtime.mode === 'OFFLINE_FIELD_MODE' || !navigator.onLine) {
-    alert('Pengenalan suara belum tersedia offline. Jawaban manual tetap dapat diisi.');
-    return;
+function handleWorkerEvent(event: WhisperWorkerEvent) {
+  switch (event.type) {
+    case 'MODEL_PROGRESS':
+      sttStatus.value = 'preparing';
+      sttBackend.value = event.backend;
+      if (typeof event.progress === 'number') sttProgress.value = event.progress;
+      sttMessage.value = event.backend === 'webgpu'
+        ? 'Mencoba menyiapkan Whisper dengan WebGPU.'
+        : 'Menyiapkan Whisper dengan WASM / CPU.';
+      break;
+    case 'READY':
+      sttStatus.value = 'ready';
+      sttBackend.value = event.backend;
+      sttProgress.value = 100;
+      sttMessage.value = 'Model siap. Rekam satu ujaran pendek untuk transkripsi Bahasa Indonesia.';
+      break;
+    case 'BACKEND_FALLBACK':
+      sttStatus.value = 'preparing';
+      sttBackend.value = 'wasm';
+      sttProgress.value = null;
+      sttMessage.value = 'WebGPU tidak dapat dimulai. Mencoba backend WASM / CPU.';
+      break;
+    case 'PROCESSING':
+      sttStatus.value = 'processing';
+      sttBackend.value = event.backend;
+      sttMessage.value = 'Audio sedang ditranskripsikan secara lokal.';
+      break;
+    case 'RESULT':
+      sttStatus.value = 'ready';
+      sttBackend.value = event.backend;
+      transcriptSnippet.value = event.transcript;
+      sttMessage.value = event.transcript
+        ? 'Transkripsi selesai. Transkrip belum mengubah jawaban SRQ.'
+        : 'Tidak ada ucapan yang dikenali. Coba rekam lagi di tempat yang lebih tenang.';
+      break;
+    case 'ERROR':
+      sttStatus.value = event.stage === 'transcribe' && sttBackend.value ? 'ready' : 'error';
+      sttMessage.value = event.stage === 'prepare'
+        ? 'Whisper tidak dapat disiapkan di perangkat ini. Jawaban manual tetap dapat digunakan.'
+        : 'Transkripsi gagal. Coba rekam ulang; jawaban manual tetap dapat digunakan.';
+      break;
   }
-  if (isListening.value) {
-    recognition?.stop();
-    isListening.value = false;
-    return;
+}
+
+function prepareStt() {
+  if (whisperClient && sttStatus.value === 'error') {
+    whisperClient.dispose();
+    whisperClient = null;
   }
-
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert('Browser tidak mendukung Web Speech API. Silakan input jawaban secara manual.');
-    return;
+  if (!whisperClient) {
+    const client = new WhisperClient((event) => {
+      if (whisperClient === client) handleWorkerEvent(event);
+    });
+    whisperClient = client;
   }
+  sttStatus.value = 'preparing';
+  sttProgress.value = null;
+  sttMessage.value = navigator.onLine
+    ? 'Mengunduh atau membuka model yang sudah tersimpan di cache perangkat.'
+    : 'Mencoba membuka model yang sebelumnya sudah disiapkan di perangkat.';
+  whisperClient.prepare();
+}
 
-  recognition = new SpeechRecognition();
-  recognition.lang = 'id-ID';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onstart = () => {
-    isListening.value = true;
-  };
-
-  recognition.onresult = (event: any) => {
-    let interim = '';
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      const transcript = event.results[i][0].transcript.toLowerCase();
-      if (event.results[i].isFinal) {
-        // Simple NLP keyword mapping to suggest answers
-        for (const q of srqQuestions) {
-          for (const kw of q.keywords) {
-            if (transcript.includes(kw)) {
-              setAnswer(q.number, true);
-              void persistDraft();
-              break;
-            }
-          }
-        }
-      } else {
-        interim += transcript;
-      }
+async function startRecording() {
+  const session = sttSession;
+  const capture = new LocalAudioCapture();
+  audioCapture = capture;
+  transcriptSnippet.value = '';
+  try {
+    await capture.start();
+    if (sttSession !== session || audioCapture !== capture) {
+      capture.cancel();
+      return;
     }
-    transcriptSnippet.value = interim;
-  };
+    sttStatus.value = 'recording';
+    sttMessage.value = 'Mikrofon aktif. Ucapkan satu jawaban, lalu selesaikan rekaman.';
+  } catch (error) {
+    if (sttSession !== session || audioCapture !== capture) return;
+    audioCapture = null;
+    sttStatus.value = 'ready';
+    if (error instanceof DOMException && error.name === 'NotAllowedError') {
+      sttMessage.value = 'Izin mikrofon ditolak. Izinkan mikrofon atau gunakan jawaban manual.';
+    } else if (error instanceof DOMException && error.name === 'NotFoundError') {
+      sttMessage.value = 'Mikrofon tidak ditemukan. Jawaban manual tetap dapat digunakan.';
+    } else {
+      sttMessage.value = 'Mikrofon tidak dapat dimulai. Jawaban manual tetap dapat digunakan.';
+    }
+  }
+}
 
-  recognition.onerror = () => {
-    isListening.value = false;
-  };
+async function stopAndTranscribe() {
+  const capture = audioCapture;
+  const client = whisperClient;
+  const session = sttSession;
+  if (!capture || !client) return;
+  audioCapture = null;
+  sttStatus.value = 'processing';
+  sttMessage.value = 'Menyiapkan audio untuk Whisper di perangkat.';
+  try {
+    const audio = await capture.stop();
+    if (sttSession !== session || whisperClient !== client) return;
+    client.transcribe(audio);
+  } catch {
+    if (sttSession !== session || whisperClient !== client) return;
+    sttStatus.value = 'ready';
+    sttMessage.value = 'Rekaman tidak dapat diproses. Coba rekam ulang.';
+  }
+}
 
-  recognition.onend = () => {
-    isListening.value = false;
-  };
+function cancelRecording() {
+  audioCapture?.cancel();
+  audioCapture = null;
+  sttStatus.value = 'ready';
+  sttMessage.value = 'Rekaman dibatalkan. Mikrofon sudah dimatikan.';
+}
 
-  recognition.start();
+function handleSttAction() {
+  if (sttStatus.value === 'idle' || sttStatus.value === 'error') prepareStt();
+  else if (sttStatus.value === 'ready') void startRecording();
+  else if (sttStatus.value === 'recording') void stopAndTranscribe();
+}
+
+function cleanupStt() {
+  sttSession += 1;
+  audioCapture?.cancel();
+  audioCapture = null;
+  whisperClient?.dispose();
+  whisperClient = null;
+  sttStatus.value = 'idle';
+  sttBackend.value = null;
+  sttProgress.value = null;
+  sttMessage.value = 'Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.';
+  transcriptSnippet.value = '';
 }
 
 
@@ -309,6 +437,8 @@ onMounted(async () => {
     draftWarning.value = error instanceof Error ? error.message : 'Asesmen lokal tidak dapat dibaca.';
   }
 });
+
+onUnmounted(cleanupStt);
 
 async function saveAndNext() {
   if (isSaving.value || !draftReady.value) return;

@@ -67,8 +67,8 @@ The following areas represent the current implemented functional baseline. Verif
 - Deterministic system triage recommendation engine with auditable component score breakdown and clinical disclaimer.
 - Persistent floating T0 Red Flag emergency shortcut and 3-step confirmation/verification modal.
 - Client-side IndexedDB/Dexie schema, draft persistence, outbox abstraction, and sync manager baseline.
-- Web Speech API speech-to-text (STT) voice assistance baseline.
-*(Current boundary: B2A, B2B, B2C, and B3A–B3E are complete for the selected prototype scope. Phase C STT safety hardening remains not started.)*
+- Local browser STT foundation using `@huggingface/transformers` 3.8.1, a dedicated Web Worker, and Indonesian Whisper inference with manual SRQ completion always available.
+*(Current boundary: B2A, B2B, B2C, and B3A–B3E are complete for the selected prototype scope. Phase C is **IN PROGRESS**: C1/C1B are browser-verified for their selected online scope; C2 and complete offline Whisper runtime verification remain pending.)*
 
 ### Healthcare Functional Baseline
 - Emergency-first desktop workspace with T0 queue and incident detail view.
@@ -102,7 +102,7 @@ To complete the end-to-end competition prototype safely without scope creep, rem
 flowchart TD
     PhaseA["Phase A: Healthcare Realtime & Referral Lifecycle (COMPLETE)"]
    PhaseB["Phase B: Relawan Offline / PWA Completion (COMPLETE / PASS)"]
-    PhaseC["Phase C: STT Safety & Interaction Hardening"]
+    PhaseC["Phase C: STT Safety & Interaction Hardening (IN PROGRESS)"]
     PhaseD["Phase D: Cross-Role Integration Hardening"]
     FinalVerif["Final Verification & End-to-End Rehearsal"]
 
@@ -1278,40 +1278,78 @@ Phase B completion does not constitute production security certification, produc
 
 ### Phase C — STT Safety & Interaction Hardening
 
-#### Goal
-Retain Web Speech API speech-to-text as an assistive frontline accelerator while strictly enforcing the clinical-safety decision-support contract.
+#### Current Status
 
-#### Existing Foundation
-- `resources/js/Pages/Relawan/Assessment/Srq.vue` integrates browser Web Speech API (`webkitSpeechRecognition` / `SpeechRecognition`) with `continuous = true`, `interimResults = true`, `lang = 'id-ID'`.
-- Indonesian keyword dictionary matching positive symptom indicators.
+```text
+Phase C — IN PROGRESS
 
-#### Current Gaps to Address
-- Current keyword matcher can directly mutate SRQ answers to `true` without explicit volunteer review.
-- Spoken indications of suicide/danger (Q17) must not autonomously finalize answers or trigger T0 without volunteer agency.
+C1 — Local Whisper STT foundation:
+IMPLEMENTED / BROWSER VERIFIED for selected online preparation + transcription scope
 
-#### Required Implementation
-1. **Assistive Separation & Explicit Review:**
-   - Realtime transcript and keyword detection must remain visual suggestions/hints; they must NEVER silently mutate confirmed SRQ answers.
-   - Confirmed SRQ radio buttons (`YA` / `TIDAK`) remain strictly under manual volunteer control.
-   - Manual Relawan selection is always authoritative over STT suggestions.
-   - Uncertain or ambiguous STT interpretations must be visibly flagged as tentative suggestions.
-2. **Q17 & Emergency Safety Contract:**
-   - Spoken danger or suicidal ideation (Q17) detected by STT must present a prominent safety warning and offer a shortcut to the T0 Red Flag workflow.
-   - STT must NEVER autonomously set Q17 to `YA`, finalize an assessment, or dispatch an emergency event on its own.
-3. **Robustness & Degradation:**
-   - Explicit listening state indicators (Idle vs Listening vs Processing).
-   - Avoid permanent pulsing animations outside active microphone capture.
-   - Safe degradation for unsupported browsers: hide or disable microphone button with clear explanation; manual form completion must remain 100% functional.
-   - Recognition errors (network, permission denied, no speech) must show transient non-blocking alerts and never prevent manual completion.
-   - Preserve local answer drafts regardless of STT state.
-   - Do not introduce external third-party STT cloud APIs without explicit approval.
+C1B — Indonesian model accuracy selection:
+BROWSER VERIFIED / PASS WITH KNOWN PERFORMANCE LIMITATION
 
-#### Verification Gate
-- **Browser Verbal & Manual Tests:**
-  - Verify spoken "Ya" produces suggestion without silently overwriting confirmed "Tidak".
-  - Verify manual click overrides STT suggestion.
-  - Verify Q17 spoken danger produces safety prompt without autonomous T0 dispatch.
-  - Simulate microphone error / unsupported API and verify manual completion succeeds.
+C2 — Transcript interpretation and SRQ auto-answer:
+NOT STARTED
+
+Continuous/chunked one-session recording:
+NOT STARTED
+
+Complete offline ONNX runtime verification:
+NOT VERIFIED / DEFERRED
+
+WebGPU performance optimization:
+DEFERRED
+```
+
+#### Current Technical Direction
+
+```text
+Local browser STT
+→ @huggingface/transformers 3.8.1
+→ dedicated Web Worker
+→ Indonesian Whisper model
+→ WebGPU preferred
+→ WASM / CPU fallback
+→ browser model caching
+→ manual SRQ always remains available
+```
+
+The selected model is `cmaree/Bagus-whisper-small-id-onnx` with:
+
+```ts
+{
+    encoder_model: "q4f16",
+    decoder_model_merged: "q4f16",
+}
+```
+
+Inference requests `language = Indonesian` and `task = transcribe`. C1 remains push-to-talk:
+
+```text
+Siapkan STT
+→ Mulai Rekam
+→ Selesai & Transkripsikan
+→ transcript displayed
+```
+
+The transcript is display-only in C1. It does not mutate SRQ answers, trigger Q17 handling, create a T0 event, or submit/transmit a T0. Manual SRQ completion remains available if STT preparation, microphone access, or transcription fails.
+
+#### Current Browser Evidence and Performance Boundary
+
+The tested backend is `WASM / CPU`. Indonesian Whisper Small produced substantially better observed Indonesian transcription than the initial generic multilingual Whisper Tiny runtime proof. A longer SRQ-style utterance took approximately **30 seconds to 1 minute** to produce a transcript in the current test environment. This is a user-observed estimate, not a formal benchmark or RTF measurement; realtime STT is not claimed.
+
+The latency is a known prototype performance limitation. It is deferred until after the 4 October MVP deadline so the current work can prioritize MVP completion.
+
+`navigator.gpu` existed in both Brave and Google Chrome on the current Kubuntu/Linux test environment, and `brave://gpu` reported WebGPU and WebGPU interop as hardware accelerated. However, `navigator.gpu.requestAdapter()` returned no usable adapter for default, `low-power`, or `high-performance` requests in both browsers. Application inference therefore used `WASM / CPU`. This does not claim WebGPU is universally unavailable; WebGPU/Linux/browser/driver optimization is deliberately deferred.
+
+#### Approved Later C2 Direction
+
+- The eventual Relawan experience should use one efficient microphone session, rather than a microphone press for every SRQ question. Internal chunking/background processing may support this without exposing repeated microphone interactions.
+- C2 may interpret transcripts and update relevant SRQ answers, but manual Relawan corrections remain authoritative.
+- Interpretation must account for polarity and negation, not raw keyword substring matching: `saya ingin mati` and `saya tidak ingin mati` must remain distinct.
+- An affirmative Q17 interpretation may set Q17 and surface the existing Potential Red Flag workflow in C2.
+- STT must never autonomously create, submit, or transmit a T0 emergency. Explicit Relawan verification and final submission remain mandatory.
 
 ---
 
@@ -1340,7 +1378,7 @@ Phase A — COMPLETE / PASS for selected prototype scope
 ↓
 Phase B — Relawan Offline / PWA Completion (COMPLETE / PASS for selected prototype scope; B1–B3E complete)
 ↓
-Phase C — STT Safety & Interaction Hardening
+Phase C — STT Safety & Interaction Hardening (IN PROGRESS; C1/C1B checkpointed)
 ↓
 Phase D — Cross-Role Integration Hardening
 ↓

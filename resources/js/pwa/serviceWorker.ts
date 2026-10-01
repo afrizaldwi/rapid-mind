@@ -5,6 +5,7 @@ import {
     matchPrecache,
 } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
+import { CacheFirst } from "workbox-strategies";
 
 declare const self: ServiceWorkerGlobalScope & {
     __WB_MANIFEST: Array<{ url: string; revision?: string | null }>;
@@ -12,6 +13,17 @@ declare const self: ServiceWorkerGlobalScope & {
 
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
+
+// The ONNX runtime is emitted as same-origin Vite assets. Cache these large,
+// stable hashed files on first use without raising the global precache limit.
+registerRoute(
+    ({ url }) =>
+        url.origin === self.location.origin &&
+        /\/build\/assets\/ort-wasm-simd-threaded\.jsep(?:-[^/]+)?\.(?:mjs|wasm)$/.test(
+            url.pathname,
+        ),
+    new CacheFirst({ cacheName: "rapid-mind-onnx-runtime-v1" }),
+);
 
 registerRoute(
     ({ request, url }) =>

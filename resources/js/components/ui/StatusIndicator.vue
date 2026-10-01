@@ -1,5 +1,6 @@
 <template>
-  <button type="button" class="inline-flex max-w-[13rem] items-center rounded-full border px-2.5 py-1 text-left text-xs font-medium transition"
+  <button type="button"
+    class="inline-flex max-w-[13rem] items-center rounded-full border px-2.5 py-1 text-left text-xs font-medium transition"
     :class="statusStyle" aria-label="Buka Status Data" @click="$emit('open')">
     <span class="mr-1.5 h-2 w-2 shrink-0 rounded-full" :class="dotStyle"></span>
     <span class="truncate">{{ label }}</span>

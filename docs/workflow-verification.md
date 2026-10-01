@@ -1245,3 +1245,39 @@ All routes passed: `/admin/summary`, `/admin/map`, `/admin/analytics`, `/admin/v
 Installed standalone-PWA behavior remains **NOT DIRECTLY VERIFIED** because headless Linux Chrome/CDP could verify manifest support and `beforeinstallprompt` but could not launch an OS-installed standalone desktop/mobile shell. This limitation does not invalidate Phase B for the selected prototype scope.
 
 This closure does not claim production security, production concurrency/load, all-browser PWA, installed standalone-PWA, complete offline authentication, clinical, or full automated browser E2E certification. No Phase C code was implemented, `docs/workflow.md` was unchanged, and no application source, tests, or dependencies changed.
+
+---
+
+## 16. Phase C1/C1B — Local Indonesian STT Foundation and Accuracy Selection
+
+**Checkpoint:** 2 October 2026. **Status:** Phase C is **IN PROGRESS**. C1 is **IMPLEMENTED / BROWSER VERIFIED** for selected online preparation and transcription. C1B is **BROWSER VERIFIED / PASS WITH KNOWN PERFORMANCE LIMITATION**. This is not a claim that all of Phase C, C2, continuous recording, WebGPU inference, or complete offline Whisper execution is complete.
+
+### Source/build and direct browser evidence
+
+| Evidence | Result | Scope |
+|---|---|---|
+| Local Transformers.js worker foundation | **PASS — SOURCE/BUILD VERIFIED** | `@huggingface/transformers@3.8.1`, dedicated module worker, typed messaging, 16 kHz mono `Float32Array` audio path, WebGPU-first and clean-worker WASM fallback. |
+| Indonesian Whisper Small model preparation | **PASS — BROWSER VERIFIED** | `cmaree/Bagus-whisper-small-id-onnx`, `encoder_model=q4f16`, `decoder_model_merged=q4f16`, online preparation completed on the tested backend. |
+| Short Indonesian transcription | **PASS — BROWSER VERIFIED** | Spoken `Saya sering sakit kepala.` transcribed as `Saya sering sakit kepala.`. |
+| Long SRQ-style Indonesian transcription | **PASS — BROWSER VERIFIED for tested utterance** | The tested transcript retained the intended symptom statements and `saya tidak ingin mati`; punctuation/capitalization variation was formatting only. |
+| Transcript preserves `tidak ingin mati` | **PASS — BROWSER VERIFIED for tested utterance** | The negative phrase was retained and not converted to an affirmative phrase. |
+| Manual SRQ remains unchanged by transcript | **PASS — BROWSER VERIFIED for C1 scope** | C1 transcript is display-only; manual answers remain authoritative. |
+| Automatic SRQ answer mutation | **NOT IMPLEMENTED — C2** | No transcript-to-answer logic. |
+| Automatic Q17 interpretation | **NOT IMPLEMENTED — C2** | No transcript-triggered Q17 flow. |
+| Automatic T0 creation from STT | **NOT IMPLEMENTED / PROHIBITED** | STT must never autonomously create, submit, or transmit a T0 emergency. |
+| WASM/CPU inference | **PASS — BROWSER VERIFIED WITH PERFORMANCE LIMITATION** | Selected browser runtime backend. |
+| WebGPU inference | **NOT VERIFIED — unavailable in tested environment** | `navigator.gpu` existed, but no usable adapter was acquired. |
+| Continuous one-session chunked STT | **NOT IMPLEMENTED** | Push-to-talk C1 remains in place. |
+| Complete offline model plus ONNX runtime execution | **NOT VERIFIED** | Browser model caching alone does not prove disconnected initialization. |
+
+### Browser/runtime details and limitations
+
+The directly observed C1B browser comparison replaced the initial `onnx-community/whisper-tiny` proof, which transcribed spoken `Saya sering sakit kepala.` as `saya saya rasa kita pahamlah`, with the Indonesian Small model. The two recorded observations are not a formal WER or production-accuracy benchmark.
+
+The selected backend was `WASM / CPU`. The longer SRQ-style utterance took approximately **30 seconds to 1 minute**: a user-observed estimate, not a formal benchmark or RTF measurement. It is acceptable for the current MVP accuracy checkpoint but too slow for the intended final near-realtime/continuous workflow. Performance optimization is deferred until after the 4 October MVP deadline.
+
+Both Brave and Google Chrome on the current Kubuntu/Linux environment exposed `navigator.gpu`. `navigator.gpu.requestAdapter()` returned no usable adapter for default, `low-power`, and `high-performance` requests in both browsers. `brave://gpu` reported WebGPU and WebGPU interop as hardware accelerated, but the page runtime could not acquire an adapter. This is evidence for the tested environment only, not a claim that WebGPU is universally unsupported; Linux/browser/driver optimization is deferred.
+
+Whisper model files were observed in the Transformers browser cache. The Relawan Service Worker remains scoped to `/relawan/`, while generated Whisper/ONNX worker and runtime assets live under `/build/assets/`. The intended `rapid-mind-onnx-runtime-v1` Workbox runtime cache was not observed during testing. Complete disconnected/offline Whisper initialization is therefore **NOT VERIFIED** and is deferred until after core C2 MVP behavior or as the next required MVP hardening step.
+
+`docs/workflow.md` was not modified by this checkpoint.
