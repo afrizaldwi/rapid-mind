@@ -8,6 +8,8 @@
 
     <title inertia>{{ config('app.name', 'RAPID-MIND') }}</title>
 
+    <link rel="manifest" href="/build/manifest.webmanifest">
+    <meta name="theme-color" content="#0F766E">
     @vite('resources/js/app.ts')
     @inertiaHead
 </head>

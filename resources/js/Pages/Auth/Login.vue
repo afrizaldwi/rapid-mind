@@ -118,6 +118,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { lockRelawanContinuity, recordVerifiedRelawan, type VerifiedRelawan } from '@/offline/relawanContinuity';
 
 const form = ref({
   email: '',
@@ -139,6 +140,13 @@ function submit() {
   errorMessage.value = '';
 
   router.post('/login', form.value, {
+    onSuccess: (page) => {
+      const user = (page.props.auth as { user?: VerifiedRelawan | null } | undefined)?.user;
+      if (user?.role === 'RELAWAN') void recordVerifiedRelawan(user, true)
+        .then(() => window.dispatchEvent(new Event('rapid-mind:verified-login')))
+        .catch(() => {});
+      else if (user) void lockRelawanContinuity().catch(() => {});
+    },
     onError: (errors) => {
       errorMessage.value = errors.email || errors.auth || errors.access || 'Gagal masuk. Periksa kembali koneksi atau kredensial Anda.';
       loading.value = false;

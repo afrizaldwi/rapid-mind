@@ -1,5 +1,13 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
+  <div v-if="loggedOutLocally || checkingContinuity" class="min-h-screen bg-slate-100 p-6 text-slate-900">
+    <div class="mx-auto mt-16 max-w-md rounded-xl bg-white p-6 shadow">
+      <h1 class="text-lg font-bold">{{ checkingContinuity ? 'Memeriksa akses perangkat…' : 'Akses lokal dikunci' }}</h1>
+      <p v-if="!checkingContinuity" class="mt-3">Data di perangkat tetap tersimpan. Masuk kembali untuk mengaksesnya.</p>
+      <p v-if="logoutError" class="mt-3 text-sm text-amber-800">{{ logoutError }}</p>
+      <button v-if="!checkingContinuity" type="button" class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-white" @click="retryServerLogout">Selesaikan keluar</button>
+    </div>
+  </div>
+  <div v-else class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
     :class="isFocusedAssessment ? 'pb-0' : 'pb-20'">
     <!-- Top Application Bar -->
     <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -32,6 +40,7 @@
 
     <!-- Main Content Area -->
     <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
+      <p v-if="logoutError" role="alert" class="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{{ logoutError }}</p>
       <LocalEmergencyActive v-if="activeLocalId && currentOwner && !isDataRoute" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
       <slot v-else />
     </main>
@@ -124,12 +133,18 @@ import LocalEmergencyActive from '@/components/Relawan/LocalEmergencyActive.vue'
 import { emergencyRepository } from '@/offline/emergencyRepository';
 import RelawanStatusDataSheet from '@/components/Relawan/RelawanStatusDataSheet.vue';
 import { useRelawanOperationalStatus } from '@/composables/useRelawanOperationalStatus';
+import { lockRelawanContinuity, recordVerifiedRelawan, resolveRelawanContinuity } from '@/offline/relawanContinuity';
+import { registerRelawanServiceWorker } from '@/pwa/register';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const currentOwner = computed(() => user.value?.role === 'RELAWAN' ? Number(user.value.id) || null : null);
+const currentOwner = computed(() => !loggedOutLocally.value && !checkingContinuity.value && user.value?.role === 'RELAWAN' ? Number(user.value.id) || null : null);
 const activeLocalId = ref<string | null>(null);
 const showStatusSheet = ref(false);
+const loggedOutLocally = ref(false);
+const checkingContinuity = ref(true);
+const logoutError = ref('');
+let continuityCheck = 0;
 const status = useRelawanOperationalStatus(currentOwner);
 const isDataRoute = computed(() => page.url.split('?')[0] === '/relawan/data');
 const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(page.url.split('?')[0]));
@@ -156,8 +171,35 @@ function isRoute(path: string) {
   return page.url.startsWith(path);
 }
 
-function logout() {
-  router.post('/logout');
+function retryServerLogout() {
+  if (!navigator.onLine) {
+    logoutError.value = 'Hubungkan perangkat untuk menyelesaikan logout server.';
+    return;
+  }
+  router.post('/logout', {}, {
+    onError: () => { logoutError.value = 'Logout server belum berhasil. Akses lokal tetap dikunci.'; },
+  });
+}
+
+async function logout() {
+  const check = ++continuityCheck;
+  checkingContinuity.value = true;
+  try {
+    await lockRelawanContinuity(user.value);
+  } catch {
+    if (check === continuityCheck) {
+      checkingContinuity.value = false;
+      logoutError.value = 'Perangkat belum dapat mencatat permintaan keluar. Coba lagi.';
+    }
+    return;
+  }
+  loggedOutLocally.value = true;
+  checkingContinuity.value = false;
+  if (navigator.onLine) {
+    retryServerLogout();
+  } else {
+    logoutError.value = 'Logout server tertunda hingga perangkat terhubung kembali.';
+  }
 }
 
 function onEmergencyCreated(event: Event) {
@@ -176,6 +218,37 @@ watch(currentOwner, owner => {
     activeLocalId.value = pending[0]?.id ?? null;
   }).catch(() => { /* T0 submission surfaces local storage failures. */ });
 }, { immediate: true });
-onMounted(() => window.addEventListener('rapid-mind:emergency-created', onEmergencyCreated));
-onUnmounted(() => window.removeEventListener('rapid-mind:emergency-created', onEmergencyCreated));
+async function checkContinuity() {
+  const check = ++continuityCheck;
+  try {
+    // The server-authenticated owner refreshes continuity before this layout reads it.
+    // recordVerifiedRelawan() leaves logout_pending intact outside explicit login.
+    if (user.value?.role === 'RELAWAN') await recordVerifiedRelawan(user.value);
+    const result = await resolveRelawanContinuity();
+    if (check !== continuityCheck) return;
+    loggedOutLocally.value = result.state !== 'ELIGIBLE'
+      || result.context.owner_user_id !== Number(user.value?.id);
+    if (result.state === 'STORAGE_UNAVAILABLE') {
+      logoutError.value = 'Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.';
+    }
+  } catch {
+    if (check !== continuityCheck) return;
+    // If the local store cannot be checked, a previous logout intent is unknown.
+    loggedOutLocally.value = true;
+    logoutError.value = 'Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.';
+  } finally {
+    if (check === continuityCheck) checkingContinuity.value = false;
+  }
+}
+function onVerifiedLogin() { void checkContinuity(); }
+onMounted(() => {
+  void checkContinuity();
+  registerRelawanServiceWorker();
+  window.addEventListener('rapid-mind:verified-login', onVerifiedLogin);
+  window.addEventListener('rapid-mind:emergency-created', onEmergencyCreated);
+});
+onUnmounted(() => {
+  window.removeEventListener('rapid-mind:emergency-created', onEmergencyCreated);
+  window.removeEventListener('rapid-mind:verified-login', onVerifiedLogin);
+});
 </script>

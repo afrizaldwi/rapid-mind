@@ -67,12 +67,24 @@ export interface OutboxItem {
     created_at: string;
     updated_at: string;
 }
+export interface RelawanContinuity {
+    key: "active";
+    owner_user_id: number;
+    role: "RELAWAN";
+    display_name: string;
+    shelter_id: number | null;
+    shelter_name: string | null;
+    verified_at: string;
+    logout_pending: boolean;
+    schema_version: 1;
+}
 export class RapidMindDB extends Dexie {
     patients!: Table<LocalPatient, string>;
     patientSnapshots!: Table<LocalPatient, [number, string]>;
     assessments!: Table<LocalAssessment, string>;
     emergencies!: Table<LocalEmergency, string>;
     outbox!: Table<OutboxItem, number>;
+    relawanContinuity!: Table<RelawanContinuity, string>;
     constructor() {
         super("RapidMindOfflineDB");
         this.version(1).stores({
@@ -128,6 +140,9 @@ export class RapidMindDB extends Dexie {
             assessments: "id, owner_user_id, patient_id, status, sync_state, updated_at",
             emergencies: "id, owner_user_id, patient_id, sync_state, created_at",
             outbox: "++id, [owner_user_id+type+entity_id], owner_user_id, status, priority, created_at",
+        });
+        this.version(4).stores({
+            relawanContinuity: "key, owner_user_id",
         });
     }
 }
