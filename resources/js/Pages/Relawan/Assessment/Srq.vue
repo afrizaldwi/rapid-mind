@@ -21,34 +21,25 @@
 
         <!-- Progress Bar -->
         <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-          <div
-            class="bg-teal-600 h-2 rounded-full transition-all duration-300"
-            :style="{ width: `${(answeredCount / 20) * 100}%` }"
-          ></div>
+          <div class="bg-teal-600 h-2 rounded-full transition-all duration-300"
+            :style="{ width: `${(answeredCount / 20) * 100}%` }"></div>
         </div>
 
         <!-- Verbal / Non-Verbal Mode & Speech Recognition -->
         <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
           <div class="flex items-center space-x-2">
             <span class="font-semibold text-slate-600">Mode:</span>
-            <button
-              type="button"
-              @click="toggleMode"
-              class="px-2 py-0.5 rounded-lg border font-bold"
-              :class="isVerbal ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-700 border-slate-300'"
-            >
+            <button type="button" @click="toggleMode" class="px-2 py-0.5 rounded-lg border font-bold"
+              :class="isVerbal ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-700 border-slate-300'">
               {{ isVerbal ? '🗣️ Verbal' : '🤝 Adaptif' }}
             </button>
           </div>
 
           <!-- Web Speech API Assistive Recognition Button -->
           <div v-if="isVerbal">
-            <button
-              type="button"
-              @click="toggleSpeechRecognition"
+            <button type="button" @click="toggleSpeechRecognition"
               class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
-              :class="isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'"
-            >
+              :class="isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'">
               <span>{{ isListening ? '🔴 Mendengarkan…' : '🎤 Bantuan Suara (STT)' }}</span>
             </button>
           </div>
@@ -62,12 +53,8 @@
 
       <!-- SRQ-20 Scrollable Question List -->
       <div class="space-y-4">
-        <div
-          v-for="q in srqQuestions"
-          :key="q.number"
-          class="bg-white p-5 rounded-2xl border transition"
-          :class="answers[q.number] === true ? 'border-teal-400 shadow-xs' : 'border-slate-200 shadow-xs'"
-        >
+        <div v-for="q in srqQuestions" :key="q.number" class="bg-white p-5 rounded-2xl border transition"
+          :class="answers[q.number] === true ? 'border-teal-400 shadow-xs' : 'border-slate-200 shadow-xs'">
           <div class="flex items-start justify-between">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
@@ -89,26 +76,20 @@
 
           <!-- Large YA / TIDAK Buttons -->
           <div class="grid grid-cols-2 gap-3 mt-4">
-            <button
-              type="button"
-              @click="setManualAnswer(q.number, true)"
+            <button type="button" @click="setManualAnswer(q.number, true)"
               class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
               :class="answers[q.number] === true
                 ? (q.number === 17 ? 'border-red-600 bg-red-600 text-white shadow-md' : 'border-teal-700 bg-teal-700 text-white shadow-md')
-                : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'"
-            >
+                : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
               <span v-if="answers[q.number] === true">✓</span>
               <span>YA</span>
             </button>
 
-            <button
-              type="button"
-              @click="setManualAnswer(q.number, false)"
+            <button type="button" @click="setManualAnswer(q.number, false)"
               class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
               :class="answers[q.number] === false
                 ? 'border-slate-700 bg-slate-700 text-white shadow-md'
-                : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'"
-            >
+                : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
               <span v-if="answers[q.number] === false">✓</span>
               <span>TIDAK</span>
             </button>
@@ -117,44 +98,31 @@
       </div>
 
       <!-- Sticky Bottom Navigation: Next to Risk Factors -->
-      <div data-assessment-action-bar class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
+      <div data-assessment-action-bar
+        class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
         <div class="flex items-center justify-between space-x-3">
-          <Link
-            href="/relawan/assessment"
-            class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50"
-          >
+          <Link href="/relawan/assessment"
+            class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">
             ← Kembali
           </Link>
-          <button
-            type="button"
-            @click="saveAndNext"
-            :disabled="isSaving || !draftReady || answeredCount !== 20"
-            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
-          >
+          <button type="button" @click="saveAndNext" :disabled="isSaving || !draftReady || answeredCount !== 20"
+            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60">
             Lanjut: Faktor Risiko ({{ answeredCount }}/20) →
           </button>
         </div>
-        <p v-if="answeredCount !== 20" class="mt-2 text-xs text-slate-600">Lengkapi semua jawaban sebelum melanjutkan ({{ answeredCount }}/20).</p>
+        <p v-if="answeredCount !== 20" class="mt-2 text-xs text-slate-600">Lengkapi semua jawaban sebelum melanjutkan
+          ({{ answeredCount }}/20).</p>
         <p v-if="draftWarning" role="alert" class="mt-2 text-xs font-semibold text-amber-900">{{ draftWarning }}</p>
         <p v-if="saveError" role="alert" class="mt-2 text-xs font-semibold text-red-800">{{ saveError }}</p>
       </div>
     </div>
 
     <!-- Potential Red Flag Safety Interruption Modal -->
-    <PotentialRedFlag
-      :show="showRedFlagModal"
-      @escalate="handleEscalate"
-      @dismiss="showRedFlagModal = false"
-    />
+    <PotentialRedFlag :show="showRedFlagModal" @escalate="handleEscalate" @dismiss="showRedFlagModal = false" />
 
     <!-- T0 Verification Modal -->
-    <T0Verification
-      :show="showEmergencyVerification"
-      :patient-id="patient?.id"
-      :patient-name="patient?.name"
-      :assessment-id="assessment?.id"
-      @close="showEmergencyVerification = false"
-    />
+    <T0Verification :show="showEmergencyVerification" :patient-id="patient?.id" :patient-name="patient?.name"
+      :assessment-id="assessment?.id" @close="showEmergencyVerification = false" />
   </RelawanLayout>
 </template>
 
@@ -162,6 +130,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { jsonRequest } from '@/offline/jsonRequest';
 import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft, clearSavedAssessmentDraft } from '@/offline/assessmentDraft';
 import PotentialRedFlag from '@/components/Relawan/PotentialRedFlag.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
@@ -304,7 +273,7 @@ async function persistDraft() {
 
 onMounted(async () => {
   try {
-    const local = await readAssessmentDraft(props.assessment.id, 'srq_answers');
+    const local = await readAssessmentDraft(props.assessment.user_id, props.assessment.id, 'srq_answers');
     const merged = mergeAssessmentDraft('srq_answers', answers.value, local);
     for (const [key, value] of Object.entries(merged)) {
       if (!editedKeys.has(key)) (answers.value as Record<string, typeof value>)[key] = value;
@@ -327,18 +296,10 @@ async function saveAndNext() {
   const savedAnswers = { ...answers.value };
   const payload = Array.from({ length: 20 }, (_, index) => ({ question_number: index + 1, answer: savedAnswers[index + 1] }));
   try {
-    const response = await fetch(`/relawan/assessment/${props.assessment.id}/srq`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-      },
-      body: JSON.stringify({ responses: payload, mode: isVerbal.value ? 'VERBAL' : 'NON_VERBAL' }),
-    });
+    const response = await jsonRequest(`/relawan/assessment/${props.assessment.id}/srq`, { responses: payload, mode: isVerbal.value ? 'VERBAL' : 'NON_VERBAL' });
     if (!response.ok) throw new Error('Simpan gagal');
     try {
-      await clearSavedAssessmentDraft(props.assessment.id, 'srq_answers', savedAnswers);
+      await clearSavedAssessmentDraft(props.assessment.user_id, props.assessment.id, 'srq_answers', savedAnswers);
     } catch {
       draftWarning.value = 'Jawaban tersimpan di server, tetapi draf lokal belum dapat dibersihkan.';
     }

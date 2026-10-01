@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ShelterManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Healthcare\HealthcareController;
 use App\Http\Controllers\Relawan\RelawanController;
+use App\Http\Controllers\Relawan\RelawanSyncController;
 use Illuminate\Support\Facades\Route;
 
 // Public & Auth Routes
@@ -37,6 +38,9 @@ Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawa
     Route::get('/assessment/{assessmentId}/review', [RelawanController::class, 'assessmentReview'])->name('assessment.review');
     Route::post('/assessment/{assessmentId}/complete', [RelawanController::class, 'completeAssessment'])->name('assessment.complete');
     Route::get('/assessment/{assessmentId}/result', [RelawanController::class, 'assessmentResult'])->name('assessment.result');
+
+    Route::post('/sync/assessments', [RelawanSyncController::class, 'assessment'])->name('sync.assessments');
+    Route::post('/sync/emergencies', [RelawanSyncController::class, 'emergency'])->name('sync.emergencies');
 
     // Data & Local Sync Workspace
     Route::get('/data', [RelawanController::class, 'data'])->name('data');

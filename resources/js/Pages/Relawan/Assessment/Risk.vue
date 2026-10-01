@@ -14,12 +14,8 @@
       </div>
 
       <div class="space-y-3">
-        <div
-          v-for="item in riskItems"
-          :key="item.code"
-          class="p-4 rounded-2xl border-2 transition"
-          :class="risks[item.code] === true ? 'bg-amber-50/70 border-amber-500 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'"
-        >
+        <div v-for="item in riskItems" :key="item.code" class="p-4 rounded-2xl border-2 transition"
+          :class="risks[item.code] === true ? 'bg-amber-50/70 border-amber-500 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'">
           <div class="space-y-1">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold text-amber-900 uppercase">
@@ -36,25 +32,19 @@
               {{ item.description }}
             </p>
             <div class="grid grid-cols-2 gap-3 mt-4">
-              <button
-                type="button"
-                @click="setRiskAnswer(item.code, true)"
+              <button type="button" @click="setRiskAnswer(item.code, true)"
                 class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
                 :class="risks[item.code] === true
                   ? 'border-amber-700 bg-amber-600 text-white shadow-md'
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'"
-              >
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
                 <span v-if="risks[item.code] === true">✓</span>
                 <span>YA</span>
               </button>
-              <button
-                type="button"
-                @click="setRiskAnswer(item.code, false)"
+              <button type="button" @click="setRiskAnswer(item.code, false)"
                 class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
                 :class="risks[item.code] === false
                   ? 'border-slate-700 bg-slate-700 text-white shadow-md'
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'"
-              >
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
                 <span v-if="risks[item.code] === false">✓</span>
                 <span>TIDAK</span>
               </button>
@@ -72,24 +62,20 @@
       </div>
 
       <!-- Sticky Bottom Navigation Bar -->
-      <div data-assessment-action-bar class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
+      <div data-assessment-action-bar
+        class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
         <div class="flex items-center justify-between space-x-3">
-          <Link
-            :href="`/relawan/assessment/${assessment.id}/srq`"
-            class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50"
-          >
+          <Link :href="`/relawan/assessment/${assessment.id}/srq`"
+            class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">
             ← Kembali
           </Link>
-          <button
-            type="button"
-            @click="saveAndNext"
-            :disabled="isSaving || !draftReady || answeredCount !== 5"
-            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
-          >
+          <button type="button" @click="saveAndNext" :disabled="isSaving || !draftReady || answeredCount !== 5"
+            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60">
             Lanjut: Fungsi Harian →
           </button>
         </div>
-        <p v-if="answeredCount !== 5" class="mt-2 text-xs text-slate-600">Lengkapi semua jawaban sebelum melanjutkan ({{ answeredCount }}/5).</p>
+        <p v-if="answeredCount !== 5" class="mt-2 text-xs text-slate-600">Lengkapi semua jawaban sebelum melanjutkan ({{
+          answeredCount }}/5).</p>
         <p v-if="draftWarning" role="alert" class="mt-2 text-xs font-semibold text-amber-900">{{ draftWarning }}</p>
         <p v-if="saveError" role="alert" class="mt-2 text-xs font-semibold text-red-800">{{ saveError }}</p>
       </div>
@@ -101,6 +87,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { jsonRequest } from '@/offline/jsonRequest';
 import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft, clearSavedAssessmentDraft } from '@/offline/assessmentDraft';
 
 const props = defineProps<{
@@ -184,7 +171,7 @@ async function persistDraft() {
 
 onMounted(async () => {
   try {
-    const local = await readAssessmentDraft(props.assessment.id, 'risk_indicators');
+    const local = await readAssessmentDraft(props.assessment.user_id, props.assessment.id, 'risk_indicators');
     const merged = mergeAssessmentDraft('risk_indicators', risks.value, local);
     for (const [key, value] of Object.entries(merged)) {
       if (!editedKeys.has(key)) (risks.value as Record<string, typeof value>)[key] = value;
@@ -206,18 +193,10 @@ async function saveAndNext() {
   saveError.value = '';
   const savedAnswers = { ...risks.value };
   try {
-    const response = await fetch(`/relawan/assessment/${props.assessment.id}/risk`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-      },
-      body: JSON.stringify({ risks: savedAnswers }),
-    });
+    const response = await jsonRequest(`/relawan/assessment/${props.assessment.id}/risk`, { risks: savedAnswers });
     if (!response.ok) throw new Error('Simpan gagal');
     try {
-      await clearSavedAssessmentDraft(props.assessment.id, 'risk_indicators', savedAnswers);
+      await clearSavedAssessmentDraft(props.assessment.user_id, props.assessment.id, 'risk_indicators', savedAnswers);
     } catch {
       draftWarning.value = 'Jawaban tersimpan di server, tetapi draf lokal belum dapat dibersihkan.';
     }
