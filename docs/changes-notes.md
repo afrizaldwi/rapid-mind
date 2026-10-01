@@ -451,13 +451,13 @@ Retained limitations: Gate G visibility retry, Gate N local-write failure, and R
 
 ## Phase B3C — Full Offline Relawan Runtime & Navigation (1 October 2026)
 
-Phase B3C is **COMPLETE / PASS for the selected prototype scope**. The checkpoint status is:
+Phase B3C is **COMPLETE / PASS for the selected prototype scope**. The current delivery status after the subsequent B3D verification is:
 
 ```text
 Phase B3A — COMPLETE / PASS
 Phase B3B — COMPLETE / PASS
 Phase B3C — COMPLETE / PASS for selected prototype scope
-Phase B3D — NOT STARTED
+Phase B3D — COMPLETE / PASS for selected prototype scope
 Phase B3E — NOT STARTED
 Phase C offline STT — NOT STARTED
 ```
@@ -483,6 +483,87 @@ The Service Worker/build evidence retained for this checkpoint shows the offline
 
 Repository/Dexie inspection shows records partitioned by `owner_user_id`, and the offline route resolver uses the continuity owner with owner-scoped repositories. A direct two-account browser switching isolation test was **NOT TESTED** for B3C and is not recorded as a browser pass.
 
-After Nginx was restored and the user explicitly logged in again, the previously offline-created T0 was later observed as `Diterima server`. This is an **observed reconnect signal only**. B3D remains **NOT STARTED** and still requires explicit verification of session restoration, CSRF/auth recovery, T0-first synchronization ordering, assessment replay, canonical reconciliation, duplicate prevention, and failure/retry behavior. B3C therefore means the selected offline path `verified Relawan -> server unavailable -> offline Relawan runtime -> owner-scoped Dexie -> PFA -> patient/assessment -> SRQ -> risk -> function -> local triage -> Result -> T0 -> outbox` passed; it does not mean the reconnect/synchronization lifecycle is fully validated.
+After Nginx was restored and the user explicitly logged in again, the previously offline-created T0 was later observed as `Diterima server`. For the B3C checkpoint this was an **observed reconnect signal only**, not systematic reconnect/synchronization verification. B3C therefore means the selected offline path `verified Relawan -> server unavailable -> offline Relawan runtime -> owner-scoped Dexie -> PFA -> patient/assessment -> SRQ -> risk -> function -> local triage -> Result -> T0 -> outbox` passed. The subsequent B3D acceptance run separately verified the reconnect/synchronization lifecycle.
 
-Existing final-worktree evidence supplied for this checkpoint is `npm run build` **PASS**, `npx vue-tsc --noEmit` **PASS**, and `git diff --check` **PASS**. No dependencies were installed. Phase B3D was not started, Phase C offline STT was not started, and `docs/workflow.md` was not changed.
+Existing final-worktree evidence supplied for the B3C checkpoint is `npm run build` **PASS**, `npx vue-tsc --noEmit` **PASS**, and `git diff --check` **PASS**. No dependencies were installed. At that checkpoint B3D had not started. B3D has since completed for the selected prototype scope; Phase B3E and Phase C offline STT remain not started, and `docs/workflow.md` was not changed.
+
+---
+
+## Phase B3D — Reconnect, Session Recovery, and Browser-Wide Synchronization Ownership (1 October 2026)
+
+Phase B3D is **COMPLETE / PASS for the selected prototype scope** across three verified areas:
+
+```text
+B3D.1 — server/session recovery boundary
+B3D.2 — auth-aware T0-priority synchronization
+B3D.3 — browser-wide same-owner synchronization ownership
+```
+
+This checkpoint does not claim production hardening, production security certification, production concurrency/load certification, all-browser Web Locks support, a full automated browser E2E suite, installed standalone-PWA interoperability, clinical certification, B3E completion, or Phase C STT completion.
+
+### B3D.1 / B3D.2 browser/runtime acceptance
+
+The authoritative real-browser run used genuine Nginx/Laravel unavailability and reported **Gates A–J PASS**. It directly verified offline assessment and T0 creation, server restoration, same-owner `/relawan/session-status` recovery, and transition from the static offline runtime through a genuine Laravel/Inertia `/relawan/data` document. The static offline shell sent no clinical POST directly.
+
+The run verified priority-1 T0 transmission before the routine assessment:
+
+```text
+POST /relawan/sync/emergencies
+→ HTTP 201
+
+then
+
+POST /relawan/sync/assessments
+→ HTTP 200
+```
+
+Stable client UUIDs became canonical server UUIDs. Reconciliation ended with one canonical assessment, one canonical emergency, and exactly one Healthcare T0 incident; replay/reload did not create duplicates.
+
+The same run also verified expired session transition to `REAUTHENTICATION_REQUIRED`; preserved IndexedDB/outbox through explicit `/login?reauth=1` reauthentication; wrong-Relawan and wrong-role isolation; a retryable T0 failure preventing assessment overtaking; HTTP 419 recovery through a fresh Laravel/CSRF document context; truthful server-unavailable probe behavior; offline logout retaining `logout_pending`; and a permanent HTTP 422 conflict remaining preserved without an automatic retry loop.
+
+### B3D.3 implementation and Chrome/CDP acceptance
+
+B3D.3 adds the native Web Locks API around the synchronization critical section using the browser-managed, exclusive, owner-scoped namespace:
+
+```text
+rapid-mind:relawan-sync:<owner>
+```
+
+The implementation retains the same-runtime `isSyncing` / `syncRequested` guard, Dexie owner/revision protection, owner isolation, server stable UUID/idempotency, and PostgreSQL advisory identity locking. It changed neither the outbox schema nor the backend synchronization contract and added no dependency. Where Web Locks are unavailable, the existing same-runtime, Dexie, and backend-idempotency layers remain the fallback; browser-wide serialization is not claimed for unsupported browsers.
+
+Direct Chrome/CDP acceptance used Chrome/Chromium `154.0.8037.92`, with the Web Locks API and `navigator.locks.query()` available:
+
+```text
+Gate A — Two tabs / one processor               PASS
+Gate B — Delayed-holder serialization           PASS
+Gate C — Trigger storm                          PASS
+Gate D — Lock handoff                           PASS
+Gate E — Owner change while waiting             PASS
+Gate F — Lock-holder disappears                 PASS
+Gate G — Canonical duplicate protection         PASS
+Gate H — T0 ordering regression                 PASS
+Gate I — No persistent lock artifact            PASS
+Gate J — Installed PWA interoperability         NOT DIRECTLY VERIFIED
+```
+
+For serialization, Tab A held `rapid-mind:relawan-sync:19` around a deliberately paused emergency POST while Tab B received multiple synchronization triggers. `navigator.locks.query()` showed Tab A holding the exclusive lock and Tab B waiting for it. Tab B emitted zero clinical POSTs throughout the held interval. After release, Tab B acquired the lock, re-read Dexie, found no pending records, and emitted no duplicate POST.
+
+For owner-change safety, Tab B requested owner 19's lock and waited while active continuity changed to owner 25. After acquisition, `ownerCanSync(19)` returned false. Tab B sent zero clinical POSTs, deleted zero owner-19 outbox records, and left owner 19's records preserved.
+
+For dead-tab handoff, Tab A was closed abruptly while holding the lock and after leaving an emergency item as `SYNCING`. The browser released the lock automatically. Tab B acquired it, recovered stale `SYNCING` to `PENDING`, synchronized the emergency before the assessment, and emptied the outbox without persistent manual lock cleanup.
+
+Across the concurrency flows, results remained one canonical patient, one canonical assessment, one canonical emergency, and one Healthcare incident per flow. Exact replay returned the equivalent of `created: false` and `replayed: true`. No duplicate Healthcare first-creation event was observed.
+
+The standalone installed-PWA cross-window gate is **NOT DIRECTLY VERIFIED** because the Chrome/CDP environment did not have an OS-installed standalone PWA shell. Same-origin multi-tab Web Locks behavior was directly verified. This explicit NDV does not invalidate B3D for the selected prototype scope.
+
+Automated implementation evidence retained for B3D.3:
+
+```text
+Focused Laravel tests: 19 passed, 129 assertions
+Full Laravel suite: 124 passed, 1,416 assertions
+Vue TypeScript: PASS
+Production build: PASS
+git diff --check: PASS
+```
+
+The existing non-fatal large-chunk and PWA/build deprecation advisories remain advisories. No dependency was installed. Phase B3E and Phase C remain **NOT STARTED**. `docs/workflow.md` was not changed.
