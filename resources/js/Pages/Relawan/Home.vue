@@ -16,13 +16,13 @@
         </div>
         <div class="mt-3 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60">
           <span class="mr-1.5">📍</span>
-          <span>{{ shelter?.name || 'Posko Candi, Sleman' }}</span>
+          <span>{{ shelter?.name || userShelterName || 'Posko belum ditetapkan' }}</span>
         </div>
       </div>
 
       <!-- Active Emergency Banner if any -->
       <div
-        v-if="activeEmergency"
+        v-if="displayEmergency"
         class="bg-red-50 border-2 border-red-500 rounded-2xl p-5 text-red-950 shadow-md space-y-3"
       >
         <div class="flex items-center justify-between">
@@ -32,27 +32,27 @@
               Sinyal Darurat T0 Aktif
             </span>
           </div>
-          <Badge variant="t0">{{ activeEmergency.status }}</Badge>
+          <Badge variant="t0">{{ displayEmergency?.status }}</Badge>
         </div>
         <div>
           <h3 class="font-extrabold text-base">
-            {{ activeEmergency.patient?.name || 'Penyintas Tanpa Nama' }}
+            {{ displayEmergency?.patient?.name || 'Penyintas Tanpa Nama' }}
           </h3>
           <p class="text-xs text-red-800 mt-1">
-            {{ activeEmergency.notes || 'Menunggu respons konfirmasi dari tim PSC 119 / RS Rujukan.' }}
+            {{ displayEmergency?.notes || 'Lihat status penerimaan server dan respons Healthcare secara terpisah.' }}
           </p>
         </div>
         <Link
-          :href="`/relawan/emergencies/${activeEmergency.id}`"
+          :href="`/relawan/emergencies/${displayEmergency?.id}`"
           class="block text-center py-2.5 px-4 bg-red-800 hover:bg-red-900 text-white font-bold text-xs rounded-xl shadow-xs transition"
         >
-          Lihat Status Penjemputan Medis →
+          Lihat Status T0 →
         </Link>
       </div>
 
       <!-- Resume Incomplete Draft Banner -->
       <div
-        v-if="activeDraft"
+        v-if="displayDraft"
         class="bg-amber-50 border border-amber-300 rounded-2xl p-5 shadow-xs space-y-3"
       >
         <div class="flex items-center justify-between">
@@ -63,17 +63,17 @@
         </div>
         <div>
           <h3 class="font-extrabold text-slate-900 text-base">
-            {{ activeDraft.patient?.name || 'Penyintas Baru' }}
+            {{ displayDraft?.name || 'Penyintas' }}
           </h3>
           <p class="text-xs text-slate-600 mt-0.5">
-            Tahap berikutnya mengikuti jawaban yang tersimpan di server.
+            {{ displayDraft?.local ? 'Tahap berikutnya mengikuti jawaban yang tersimpan di perangkat.' : local.ready.value ? 'Asesmen ini tersedia di server; buka saat online untuk menyalinnya ke perangkat.' : 'Asesmen tersedia di server. Status di perangkat belum dapat dipastikan.' }}
           </p>
         </div>
         <Link
-          :href="activeDraft.resume_url"
+          :href="displayDraft?.resumeUrl || '/relawan/assessment'"
           class="inline-flex items-center justify-center w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-xs transition"
         >
-          {{ activeDraft.resume_label }} →
+          {{ displayDraft?.resumeLabel }} →
         </Link>
       </div>
 
@@ -144,14 +144,46 @@ import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
+import { useOwnedLocalRecords } from '@/composables/useRelawanDataWorkspace';
+import { resumeStage } from '@/offline/assessmentWorkflow';
 
-const page = usePage();
-const userName = computed(() => (page.props.auth as any)?.user?.name || 'Relawan');
-
-defineProps<{
-  activeDraft?: any;
-  recentAssessments?: any[];
-  activeEmergency?: any;
-  shelter?: any;
+const props = defineProps<{
+  activeDraft?: { id: string; user_id?: number; patient?: { name?: string }; resume_url?: string; resume_label?: string } | null;
+  recentAssessments?: unknown[];
+  activeEmergency?: { id: string; user_id?: number; status: string; notes?: string | null; patient?: { name?: string } } | null;
+  shelter?: { name?: string } | null;
 }>();
+const page = usePage();
+const userName = computed(() => (page.props.auth as { user?: { name?: string } })?.user?.name || 'Relawan');
+const userShelterName = computed(() => (page.props.auth as { user?: { shelter?: { name?: string } } })?.user?.shelter?.name);
+const owner = computed(() => {
+  const user = (page.props.auth as { user?: { id?: number; role?: string } })?.user;
+  return user?.role === 'RELAWAN' ? Number(user.id) || null : null;
+});
+const local = useOwnedLocalRecords(owner);
+const displayEmergency = computed(() => props.activeEmergency?.user_id === owner.value ? props.activeEmergency : null);
+const stageLabels: Record<string, string> = {
+  srq: 'Lanjutkan SRQ-20', risk: 'Lanjutkan Faktor Risiko',
+  function: 'Lanjutkan Fungsi Harian', review: 'Tinjau Asesmen',
+};
+const displayDraft = computed(() => {
+  const drafts = local.records.value.assessments.filter(item => item.status === 'IN_PROGRESS')
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const latest = drafts[0];
+  if (latest) {
+    const patient = local.records.value.patients.find(item => item.id === latest.patient_id);
+    const stage = resumeStage(latest);
+    return {
+      name: patient?.name || 'Penyintas', local: true,
+      resumeUrl: `/relawan/assessment/${latest.id}/${stage}`,
+      resumeLabel: stageLabels[stage],
+    };
+  }
+  const server = props.activeDraft?.user_id === owner.value ? props.activeDraft : null;
+  return server ? {
+    name: server.patient?.name || 'Penyintas', local: false,
+    resumeUrl: server.resume_url || `/relawan/assessment/${server.id}/srq`,
+    resumeLabel: server.resume_label || 'Lanjutkan',
+  } : null;
+});
 </script>

@@ -10,6 +10,7 @@ import { emergencyRepository } from "./emergencyRepository";
 import { outboxRepository } from "./outboxRepository";
 import { patientRepository } from "./patientRepository";
 import { syncManager } from "./syncManager";
+import { localPersistenceHealth } from "./localPersistenceHealth";
 
 const redFlags = new Set([
     "SUICIDAL_IDEATION",
@@ -121,7 +122,7 @@ export async function createLocalEmergency(
     };
     const payload = await buildEmergencySyncPayload(owner, emergency);
     // One IndexedDB transaction makes the emergency and its priority-1 outbox item durable together.
-    await db.transaction(
+    await localPersistenceHealth.recordWrite(owner, () => db.transaction(
         "rw",
         db.emergencies,
         db.outbox,
@@ -135,7 +136,7 @@ export async function createLocalEmergency(
                 payload,
             );
         },
-    );
+    ));
     return emergency.id;
 }
 

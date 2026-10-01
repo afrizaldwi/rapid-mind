@@ -6,8 +6,11 @@ namespace Tests\Feature;
 
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
+use App\Enums\EmergencyStatus;
+use App\Enums\RedFlagType;
 use App\Enums\UserRole;
 use App\Models\Assessment;
+use App\Models\EmergencyEvent;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -58,6 +61,49 @@ final class AssessmentLocalShellTest extends TestCase
         $this->get('/relawan/assessment/not-a-uuid/srq')->assertNotFound();
         $this->assertDatabaseCount('assessments', 0);
         $this->assertDatabaseCount('patients', 0);
+    }
+
+    public function test_data_keeps_owned_server_history_without_exposing_another_relawan(): void
+    {
+        $owner = $this->relawan();
+        $other = $this->relawan();
+        $patient = Patient::create(['name' => 'Penyintas Pemilik', 'created_by' => $owner->id]);
+        $foreignPatient = Patient::create(['name' => 'Penyintas Lain', 'created_by' => $other->id]);
+        $assessment = Assessment::create([
+            'patient_id' => $patient->id,
+            'user_id' => $owner->id,
+            'status' => AssessmentStatus::COMPLETED,
+            'mode' => AssessmentMode::VERBAL,
+            'completed_at' => now(),
+        ]);
+        Assessment::create([
+            'patient_id' => $foreignPatient->id,
+            'user_id' => $other->id,
+            'status' => AssessmentStatus::COMPLETED,
+            'mode' => AssessmentMode::VERBAL,
+            'completed_at' => now(),
+        ]);
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $patient->id,
+            'user_id' => $owner->id,
+            'red_flag_type' => RedFlagType::MEDICAL_CRISIS,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+        EmergencyEvent::create([
+            'patient_id' => $foreignPatient->id,
+            'user_id' => $other->id,
+            'red_flag_type' => RedFlagType::MEDICAL_CRISIS,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+
+        $this->actingAs($owner)->get('/relawan/data')->assertInertia(fn (Assert $page) => $page
+            ->component('Relawan/Data', false)
+            ->has('completed', 1)
+            ->where('completed.0.id', $assessment->id)
+            ->has('emergencies', 1)
+            ->where('emergencies.0.id', $emergency->id)
+            ->where('emergencies.0.patient.name', 'Penyintas Pemilik')
+            ->etc());
     }
 
     public function test_interactive_creation_rejects_unrelated_existing_patient(): void

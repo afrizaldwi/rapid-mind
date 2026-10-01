@@ -18,7 +18,7 @@
       </div>
 
       <div class="flex items-center space-x-2">
-        <StatusIndicator :is-online="isOnline" :is-syncing="isSyncing" :pending-count="pendingCount" />
+        <StatusIndicator :kind="status.kind.value" :label="status.label.value" @open="showStatusSheet = true" />
         <button
           type="button"
           @click="logout"
@@ -32,7 +32,7 @@
 
     <!-- Main Content Area -->
     <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
-      <LocalEmergencyActive v-if="activeLocalId && currentOwner" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
+      <LocalEmergencyActive v-if="activeLocalId && currentOwner && !isDataRoute" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
       <slot v-else />
     </main>
 
@@ -46,6 +46,23 @@
       :patient-name="t0AssessmentContext?.patientName"
       :assessment-id="t0AssessmentContext?.assessmentId"
       @close="showEmergencyModal = false"
+    />
+
+    <RelawanStatusDataSheet
+      :show="showStatusSheet"
+      :kind="status.kind.value"
+      :label="status.label.value"
+      :ready="status.ready.value"
+      :online="status.online.value"
+      :pending-count="status.pendingCount.value"
+      :failed-count="status.failedCount.value"
+      :unfinished-count="status.unfinishedCount.value"
+      :unqueued-completed-count="status.unqueuedCompletedCount.value"
+      :is-syncing="status.isSyncing.value"
+      :can-retry="status.canRetry.value"
+      :action-error="status.actionError.value"
+      @close="showStatusSheet = false"
+      @retry="status.retry"
     />
 
     <!-- Bottom Navigation Bar (4 items) -->
@@ -86,10 +103,10 @@
           <span class="text-lg leading-none mb-1">📂</span>
           <span>Data</span>
           <span
-            v-if="pendingCount > 0"
+            v-if="status.pendingCount.value > 0"
             class="absolute top-2 right-6 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs"
           >
-            {{ pendingCount }}
+            {{ status.pendingCount.value }}
           </span>
         </Link>
       </div>
@@ -98,27 +115,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import StatusIndicator from '@/components/ui/StatusIndicator.vue';
 import T0Button from '@/components/Relawan/T0Button.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
 import LocalEmergencyActive from '@/components/Relawan/LocalEmergencyActive.vue';
 import { emergencyRepository } from '@/offline/emergencyRepository';
-import { syncManager } from '@/offline/syncManager';
+import RelawanStatusDataSheet from '@/components/Relawan/RelawanStatusDataSheet.vue';
+import { useRelawanOperationalStatus } from '@/composables/useRelawanOperationalStatus';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const currentOwner = computed(() => Number(user.value?.id) || null);
+const currentOwner = computed(() => user.value?.role === 'RELAWAN' ? Number(user.value.id) || null : null);
 const activeLocalId = ref<string | null>(null);
+const showStatusSheet = ref(false);
+const status = useRelawanOperationalStatus(currentOwner);
+const isDataRoute = computed(() => page.url.split('?')[0] === '/relawan/data');
 const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(page.url.split('?')[0]));
 
 const t0AssessmentContext = computed(() => {
   const route = page.url.split('?')[0].match(/^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/);
-  const assessment = page.props.assessment as { id?: unknown; patient_id?: unknown } | undefined;
+  const assessment = page.props.assessment as { id?: unknown; patient_id?: unknown; user_id?: unknown } | undefined;
   const patient = page.props.patient as { id?: unknown; name?: unknown } | undefined;
 
-  if (!route || typeof assessment?.id !== 'string' || assessment.id !== route[1]
+  if (!route || assessment?.user_id !== currentOwner.value || typeof assessment?.id !== 'string' || assessment.id !== route[1]
     || typeof patient?.id !== 'string' || assessment.patient_id !== patient.id) {
     return null;
   }
@@ -131,10 +152,6 @@ const t0AssessmentContext = computed(() => {
 });
 
 const showEmergencyModal = ref(false);
-const isOnline = ref(true);
-const isSyncing = ref(false);
-const pendingCount = ref(0);
-
 function isRoute(path: string) {
   return page.url.startsWith(path);
 }
@@ -148,23 +165,17 @@ function onEmergencyCreated(event: Event) {
   if (detail.owner === currentOwner.value) activeLocalId.value = detail.id;
 }
 
-onMounted(() => {
-  window.addEventListener('rapid-mind:emergency-created', onEmergencyCreated);
-  const owner = currentOwner.value;
-  if (owner && !/^\/relawan\/emergencies\//.test(page.url)) {
-    void emergencyRepository.list(owner).then(items => {
-      if (owner !== currentOwner.value || activeLocalId.value) return;
-      const pending = items.filter(item => item.status === 'PENDING' && item.sync_state !== 'SYNCED');
-      pending.sort((a, b) => b.created_at.localeCompare(a.created_at));
-      activeLocalId.value = pending[0]?.id ?? null;
-      if (activeLocalId.value) void syncManager.sync(owner);
-    }).catch(() => { /* T0 submission surfaces local storage failures. */ });
-  }
-  if (typeof navigator !== 'undefined') {
-    isOnline.value = navigator.onLine;
-    window.addEventListener('online', () => (isOnline.value = true));
-    window.addEventListener('offline', () => (isOnline.value = false));
-  }
-});
+watch(currentOwner, owner => {
+  activeLocalId.value = null;
+  showStatusSheet.value = false;
+  if (!owner || /^\/relawan\/emergencies\//.test(page.url)) return;
+  void emergencyRepository.list(owner).then(items => {
+    if (owner !== currentOwner.value || activeLocalId.value) return;
+    const pending = items.filter(item => item.status === 'PENDING' && item.sync_state !== 'SYNCED');
+    pending.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    activeLocalId.value = pending[0]?.id ?? null;
+  }).catch(() => { /* T0 submission surfaces local storage failures. */ });
+}, { immediate: true });
+onMounted(() => window.addEventListener('rapid-mind:emergency-created', onEmergencyCreated));
 onUnmounted(() => window.removeEventListener('rapid-mind:emergency-created', onEmergencyCreated));
 </script>

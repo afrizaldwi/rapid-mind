@@ -393,7 +393,7 @@ The browser-tested local triage example was SRQ `4`, Risk `4`, Function `2`, tot
 
 After the endpoint was restored and manual synchronization was triggered, `POST /relawan/sync/assessments` returned HTTP 201. The same client-generated assessment and patient UUIDs became canonical PostgreSQL identifiers; local state became `SYNCED`; the outbox entry was removed; and repeated synchronization/reload created no duplicate logical patient or assessment. A second local assessment reused an existing canonical server patient UUID. Browser-verified non-destructive account isolation showed both accounts' records simultaneously, with each Relawan seeing only its own drafts and patient context across logout/login; records were not deleted to achieve isolation.
 
-Phase B remains **IN PROGRESS**. B2A is not full PWA/offline reload verification; true reload/reopen/startup remains B3. B2B covers the local-first T0 emergency workflow, and B2C covers shell/Data/synchronization operational integration. Phase C remains separate, STT safety hardening is not claimed, and `docs/workflow.md` was not changed.
+At the B2A checkpoint, Phase B remained **IN PROGRESS**. B2A was not full PWA/offline reload verification; true reload/reopen/startup remains B3. B2B covered the local-first T0 emergency workflow, and B2C was the subsequent shell/Data/synchronization checkpoint. Phase C remains separate, STT safety hardening is not claimed, and `docs/workflow.md` was not changed.
 
 **NEXT: B2B — Local-First T0 Emergency Workflow.** B2C and B3 remain pending.
 
@@ -401,7 +401,7 @@ Phase B remains **IN PROGRESS**. B2A is not full PWA/offline reload verification
 
 ## Phase B2B — Local-First T0 Emergency Workflow (1 October 2026)
 
-Phase B2B is **COMPLETE / PASS for the selected prototype scope** after source implementation and Antigravity Chrome/CDP browser/runtime verification. Phase B and B2 remain **IN PROGRESS**: B1 and B2A are COMPLETE / PASS, B2C is NEXT, and B3 is PENDING. Phase C STT safety hardening remains separate.
+Phase B2B is **COMPLETE / PASS for the selected prototype scope** after source implementation and Antigravity Chrome/CDP browser/runtime verification. Phase B and B2 remain **IN PROGRESS** at that checkpoint: B1 and B2A were COMPLETE / PASS, B2C was NEXT, and B3 was PENDING. The subsequent B2C checkpoint is now COMPLETE / PASS; B3 remains pending. Phase C STT safety hardening remains separate.
 
 The visible Relawan T0 path now requires explicit verification and KIRIM T0-SUSPECT. A manual/global trigger starts with no Red Flag selected; Q17 manual escalation may suggest SUICIDAL_IDEATION, but cannot create T0 without the final action. The client generates one stable emergency UUID, commits LocalEmergency and its priority-1 EMERGENCY outbox item in IndexedDB, and foregrounds T0-Suspect before server synchronization. An unsynchronized incident cannot be dismissed through the ordinary return action. GPS is optional; unidentified incidents are allowed. Owner-scoped patient records and snapshots preserve patient/assessment UUID relationships. The legacy server-first POST remains; the visible path uses the B1 sync endpoint. Server detail is scoped to the reporting Relawan. SMS remains an assisted browser/native handoff. The single red_flag_type schema and migrations were unchanged.
 
@@ -413,4 +413,36 @@ The dependency gate used patient `5c9881ca-7216-4b99-8378-06d356684840`, local a
 
 Retained limits: B2B did not verify Service Worker startup, offline page reload/reopen, or the B3 full disconnect/reconnect PWA gate. Native OS SMS composer launch or delivery was not directly verified in the desktop environment beyond the `sms:119?body=...` link and truthful handoff copy. Healthcare queue presence and no duplicate logical incident were directly browser verified; first-creation-only EmergencyCreated dispatch remains covered by the existing automated sync contract. Direct instrumentation of Reverb delivery itself was not performed in this browser gate. Concurrent duplicate replay under real load, broader Phase C STT safety, and production/security/clinical certification remain outside this checkpoint.
 
-**NEXT: B2C — Shell/Data/Synchronization Operational Integration.** B3 remains pending.
+**At the B2B checkpoint, NEXT: B2C — Shell/Data/Synchronization Operational Integration.** B3 remained pending.
+
+---
+
+## Phase B2C — Shell, Data, and Synchronization Operational Integration (1 October 2026)
+
+B2C is **COMPLETE / PASS for the selected prototype scope**. B2 is **COMPLETE / PASS for the selected prototype scope**; Phase B remains **IN PROGRESS** because B3 is pending. The Relawan shell reads the active owner's outbox/local state reactively and uses the existing sync manager for startup, network restoration, visibility restoration, new queue entries, and manual retry. The Status Data sheet distinguishes pending, failed, syncing, locally safe offline work, and runtime local-write failure. The runtime failure signal is owner scoped and in memory; it is not persisted through a second IndexedDB write.
+
+Data presents incomplete local assessments, pending/failed assessment and priority-1 T0 records, and synchronized local plus server history deduplicated by record type and stable UUID. Pending T0 remains visible without replacing the workspace. Beranda resumes local incomplete work. Missing recommendation and score remain unavailable rather than becoming T3 or `0/37`. The compact synchronized shell wording is exactly `Tersinkron`.
+
+Automated/source evidence already completed:
+
+```text
+AssessmentLocalShellTest: 4 passed, 109 assertions
+RelawanSyncContractTest: 15 passed, 121 assertions
+RelawanT0SubmissionTest: 11 passed, 68 assertions
+Full Laravel suite: 116 passed, 1,379 assertions
+./node_modules/.bin/vue-tsc --noEmit: PASS
+npm run build: PASS; existing >500 kB chunk advisory remains
+git diff --check: PASS
+```
+
+No dependencies were installed. These results are recorded evidence and were not rerun for this documentation-only completion pass.
+
+Direct Chrome/CDP browser/runtime verification was performed at `http://localhost:8080`; it was not an automated browser E2E suite. Gates A–F and H–M passed. Gate G visibility restoration and Gate N local-write failure are **NDV / SOURCE-COVERED**. The verified pass scope includes clean `outbox = 0`, pending/failed assessment semantics, priority-1 T0 before priority-2 assessment transmission, offline locally-safe state, genuine CDP `ONLINE -> OFFLINE -> ONLINE` automatic retry with HTTP 201 and stable UUID reconciliation, online assessment-only startup, manual retry, one-in-flight concurrent trigger protection, reconciliation/deduplication, two-Relawan non-destructive isolation, and local incomplete draft resume.
+
+Gate J request-level evidence used one assessment UUID, a temporary 1000 ms delay, a second legitimate trigger during the first request, exactly one network request, maximum one concurrent in-flight request, HTTP 201, a cleared outbox, and one canonical server assessment. This does not claim all possible race or load conditions were tested.
+
+The B2C regression checks were: R1 Data remained usable with pending T0 **PASS**; R2 immediate post-T0 local safety surface **PASS**; R3 separate clinical classification, transmission, and Healthcare response axes **PASS**; R4 missing synchronized triage fallback **NDV / SOURCE-COVERED** (`Rekomendasi Sistem: Belum tersedia`, `Total Skor: Belum tersedia`); and R5 Q17 T0 regression **PASS**, with explicit Relawan confirmation still required.
+
+Retained limitations: Gate G visibility retry, Gate N local-write failure, and R4 missing synchronized triage were source-covered but not directly reproduced. B3 Service Worker/PWA work remains pending; offline page reload/reopen/cold startup, PWA installation, and Background Sync are not verified or implemented. Phase C STT safety hardening remains pending. Broader concurrent duplicate replay under real-world load remains unverified. This does not establish production security or clinical certification.
+
+**NEXT: B3 — PWA Shell & Offline Browser Verification.** `docs/workflow.md` was not changed, and no application/source or test files were modified during this documentation pass.

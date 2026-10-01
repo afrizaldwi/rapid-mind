@@ -135,6 +135,7 @@ import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '
 import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
 import { assessmentRepository } from '@/offline/assessmentRepository';
+import { localPersistenceHealth } from '@/offline/localPersistenceHealth';
 import PotentialRedFlag from '@/components/Relawan/PotentialRedFlag.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
 
@@ -210,7 +211,7 @@ async function toggleMode() {
   if (!localAssessment.value) return;
   const nextMode = isVerbal.value ? 'NON_VERBAL' : 'VERBAL';
   try {
-    await assessmentRepository.update(owner, props.assessment.id, { mode: nextMode, sync_state: 'LOCAL_SAVED' });
+    await localPersistenceHealth.recordWrite(owner, () => assessmentRepository.update(owner, props.assessment.id, { mode: nextMode, sync_state: 'LOCAL_SAVED' }));
     localAssessment.value.mode = nextMode;
     isVerbal.value = nextMode === 'VERBAL';
     draftWarning.value = '';

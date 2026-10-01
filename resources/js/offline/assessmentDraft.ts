@@ -1,5 +1,6 @@
 import { type LocalAssessment, requireOwner } from "./db";
 import { assessmentRepository } from "./assessmentRepository";
+import { localPersistenceHealth } from "./localPersistenceHealth";
 
 type DraftField = "srq_answers" | "risk_indicators" | "function_domains";
 type DraftValue<K extends DraftField> = NonNullable<LocalAssessment[K]>;
@@ -93,7 +94,7 @@ export function saveAssessmentDraft<K extends DraftField>(
     const cleaned = validAnswers(field, answers);
     return enqueue(assessment.id, async () => {
         const existing = await assessmentRepository.get(owner, assessment.id);
-        await assessmentRepository.save(owner, {
+        await localPersistenceHealth.recordWrite(owner, () => assessmentRepository.save(owner, {
             ...(existing ?? {
                 id: assessment.id,
                 patient_id: assessment.patient_id,
@@ -103,7 +104,7 @@ export function saveAssessmentDraft<K extends DraftField>(
             }),
             [field]: cleaned,
             sync_state: "LOCAL_SAVED",
-        });
+        }));
     });
 }
 

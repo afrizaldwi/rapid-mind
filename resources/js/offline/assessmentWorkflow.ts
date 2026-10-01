@@ -5,6 +5,7 @@ import { requireOwner, type LocalAssessment, type LocalPatient } from './db';
 import { mergeAssessmentDraft } from './assessmentDraft';
 import { TriageCalculator } from '@/domain/triage/triageCalculator';
 import { syncManager } from './syncManager';
+import { localPersistenceHealth } from './localPersistenceHealth';
 
 export type ServerPatient = Partial<LocalPatient> & { id: string; name: string };
 export type ServerAssessment = Partial<LocalAssessment> & {
@@ -23,16 +24,16 @@ export function relawanOwner(): number {
 
 export async function startLocalAssessment(owner: number, patientInput: Omit<LocalPatient, 'id' | 'owner_user_id' | 'sync_state'> & { id?: string; serverKnown?: boolean }, mode: LocalAssessment['mode']) {
     const { serverKnown, ...input } = patientInput;
-    const patientId = serverKnown
-        ? await patientRepository.saveServerSnapshot(owner, input as ServerPatient)
-        : await patientRepository.save(owner, input);
-    const id = await assessmentRepository.save(owner, {
+    const patientId = await localPersistenceHealth.recordWrite(owner, () => serverKnown
+        ? patientRepository.saveServerSnapshot(owner, input as ServerPatient)
+        : patientRepository.save(owner, input));
+    const id = await localPersistenceHealth.recordWrite(owner, () => assessmentRepository.save(owner, {
         patient_id: patientId,
         mode,
         status: 'IN_PROGRESS',
         started_at: new Date().toISOString(),
         sync_state: 'LOCAL_SAVED',
-    });
+    }));
     return id;
 }
 
@@ -113,7 +114,7 @@ export async function completeLocalAssessment(owner: number, id: string) {
     const triage = new TriageCalculator().calculate(local.srq_answers!, local.risk_indicators!, local.function_domains!);
     const completedAt = local.completed_at ?? new Date().toISOString();
     if (local.status === 'IN_PROGRESS') {
-        await assessmentRepository.update(owner, id, { status: 'COMPLETED', completed_at: completedAt, triage_result: triage, sync_state: 'LOCAL_SAVED' });
+        await localPersistenceHealth.recordWrite(owner, () => assessmentRepository.update(owner, id, { status: 'COMPLETED', completed_at: completedAt, triage_result: triage, sync_state: 'LOCAL_SAVED' }));
     }
     const payload = {
         id, patient: { id: patient.id, nik: patient.nik ?? null, name: patient.name, age: patient.age ?? null, gender: patient.gender ?? null },

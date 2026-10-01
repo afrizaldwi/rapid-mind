@@ -1026,7 +1026,7 @@ The corrected replay semantic remains: `assessment_mode` used to create a missin
 ## 12. Phase B2A Verification — Local-First Normal Assessment Workflow
 
 **Checkpoint:** `49f632ab4a5d7b7bd624da298ce123d9c4f7aa13`
-**Status:** B2A **COMPLETE / PASS for the selected prototype scope**. Phase B remains **IN PROGRESS**; B2B is next, B2C is pending, and B3 is pending.
+**Status at the B2A checkpoint:** B2A **COMPLETE / PASS for the selected prototype scope**. Phase B remained **IN PROGRESS**; B2B was next, B2C was pending, and B3 was pending at that earlier checkpoint. B2C is now recorded as COMPLETE / PASS in Section 14.
 
 | Verification slice | Status | Evidence / scope |
 |---|---|---|
@@ -1055,7 +1055,7 @@ The corrected replay semantic remains: `assessment_mode` used to create a missin
 ## 13. Phase B2B Verification — Local-First T0 Emergency Workflow
 
 **Checkpoint:** 1 October 2026, B2B source and browser/runtime verification.
-**Status:** B2B **COMPLETE / PASS for the selected prototype scope**. Phase B and B2 remain **IN PROGRESS**; B1 and B2A are COMPLETE / PASS, B2C is NEXT, B3 is PENDING, and Phase C STT safety hardening remains separate.
+**Status:** B2B **COMPLETE / PASS for the selected prototype scope**. At the B2B checkpoint, Phase B and B2 remained **IN PROGRESS**; B1 and B2A were COMPLETE / PASS, B2C was NEXT, and B3 was PENDING. The subsequent B2C checkpoint is now COMPLETE / PASS; B3 remains pending, and Phase C STT safety hardening remains separate.
 
 Evidence categories in this section are deliberately distinct: **SOURCE INSPECTED** describes code review, **AUTOMATED TESTED** describes repository tests, **BROWSER/RUNTIME VERIFIED** describes Antigravity Chrome/CDP interaction plus direct IndexedDB/network/server-state observations, and **NOT DIRECTLY VERIFIED** identifies limits. These browser gates were not a Playwright/CI automated E2E suite.
 
@@ -1093,3 +1093,60 @@ Evidence categories in this section are deliberately distinct: **SOURCE INSPECTE
 4. Concurrent duplicate replay under real load was not tested.
 5. Broader Phase C STT safety hardening remains pending.
 6. This selected prototype gate does not establish production, security, or clinical certification.
+
+## 14. Phase B2C Verification — Shell, Data, and Synchronization Operational Integration
+
+**Checkpoint:** 1 October 2026. **Status:** B2C **COMPLETE / PASS for the selected prototype scope**; B2 **COMPLETE / PASS for the selected prototype scope**; Phase B remains **IN PROGRESS** because B3 is pending.
+
+Evidence categories remain distinct: **AUTOMATED TESTED** is repository-backed testing; **BROWSER/RUNTIME VERIFIED** is direct Chrome/CDP interaction plus IndexedDB/network evidence; **NDV / SOURCE-COVERED** is source-supported but not directly reproduced. This was not an automated browser E2E suite.
+
+### Automated and source evidence
+
+| Evidence | Result | Scope |
+|---|---|---|
+| Owner-scoped Data response | **PASS — AUTOMATED TESTED** | `AssessmentLocalShellTest`: 4 passed, 109 assertions. |
+| Existing sync/replay contract | **PASS — AUTOMATED TESTED** | `RelawanSyncContractTest`: 15 passed, 121 assertions. |
+| Existing T0 contract | **PASS — AUTOMATED TESTED** | `RelawanT0SubmissionTest`: 11 passed, 68 assertions. |
+| Full backend regression | **PASS — AUTOMATED TESTED** | 116 tests / 1,379 assertions. |
+| Vue TypeScript | **PASS** | `./node_modules/.bin/vue-tsc --noEmit`. |
+| Production build | **PASS** | `npm run build`; existing `>500 kB` chunk advisory remains. |
+| Git diff check | **PASS** | `git diff --check`. |
+
+### Direct browser/runtime gate matrix
+
+Application: `http://localhost:8080` using direct Chrome/CDP browser/runtime verification.
+
+| Gate | Result | Direct evidence |
+|---|---|---|
+| A — Clean synchronized state | **PASS** | `outbox = 0`, pending/failed = 0, no Data badge, no pending Data records, compact shell text exactly `Tersinkron`. |
+| B — Pending assessment while offline | **PASS** | Local assessment remained readable with stable UUID, priority-2 `ASSESSMENT` outbox, no successful offline transmission, local-safe shell, and Data `Menunggu Sinkronisasi`. |
+| C — Failed synchronization | **PASS** | HTTP 500 produced `FAILED`, retry count, `last_http_status = 500`, retained local assessment/Data record, shell `Sinkronisasi belum berhasil`, and retry availability; it did not show `Data belum tersimpan di perangkat`. |
+| D — T0 priority | **PASS** | Queue showed `EMERGENCY` priority 1 before `ASSESSMENT` priority 2; emergency POST preceded assessment POST; stable UUIDs retained. |
+| E — Offline locally-safe state | **PASS** | Pending work remained readable and communicated local-safe/offline semantics rather than data loss. |
+| F — Genuine network restoration | **PASS** | CDP `ONLINE -> OFFLINE -> ONLINE`; native restoration triggered automatic sync, HTTP 201, same UUID, outbox 1 -> 0, local assessment `SYNCED`, no retry click. |
+| G — Visibility restoration | **NDV / SOURCE-COVERED** | CDP did not produce a genuine hidden -> visible transition; source inspection confirmed the native listener invokes sync on visibility. |
+| H — Online startup with assessment-only backlog | **PASS** | Normal online reload of `/relawan/home` automatically synced assessment-only backlog with HTTP 201 and same UUID, without Data navigation, status interaction, or manual retry. This is online startup only, not B3 offline cold startup. |
+| I — Manual retry | **PASS** | Actual retry control invoked synchronization and reconciled local state. |
+| J — Concurrent trigger guard | **PASS** | One UUID, 1000 ms delay, second trigger during the first request, exactly one network request, max one in-flight, HTTP 201, cleared outbox, one canonical assessment. Broader race/load conditions remain untested. |
+| K — Reconciliation and deduplication | **PASS** | Reconciled items left pending, outbox removed, local state `SYNCED`, UUID retained, and local/server Data projections showed one row per logical type + UUID. |
+| L — Two-Relawan isolation | **PASS** | Same browser storage profile: B saw no A drafts/counts/records/outbox; A's physical owner-scoped rows remained and reappeared on return; records were not deleted. |
+| M — Local incomplete draft resume | **PASS** | Local `IN_PROGRESS` assessment appeared in Beranda and Data; resume resolved to the local stage with answers preserved. |
+| N — Local persistence failure | **NDV / SOURCE-COVERED** | No destructive IndexedDB failure was induced; source confirms owner-scoped failure signal, `Data belum tersimpan di perangkat`, neutral Slate/Ink treatment, and clearing after a successful later write. |
+
+### B2C regression checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| R1 — Data usable with pending T0 | **PASS** | Pending T0 did not replace `/relawan/data`; Data remained accessible. |
+| R2 — Immediate post-T0 local safety surface | **PASS** | Offline `KIRIM T0-SUSPECT` immediately rendered `LocalEmergencyActive` with same UUID, T0-Suspect, `Menunggu sinkronisasi`, `Belum dapat dipastikan`, `Aman tersimpan di perangkat`, `Belum diterima server`, no false dispatch, SMS fallback, and separate Data access. |
+| R3 — Multi-axis T0 semantics | **PASS** | Clinical classification, transmission status, and Healthcare response remained separate. |
+| R4 — Missing synchronized triage fallback | **NDV / SOURCE-COVERED** | No naturally occurring fixture existed; source renders `Rekomendasi Sistem: Belum tersedia` and `Total Skor: Belum tersedia`, not fabricated T3/0/37. |
+| R5 — Q17 T0 regression | **PASS** | Q17 surfaces the Red Flag gate without silently creating/sending T0; explicit Relawan confirmation remains required. |
+
+### Retained boundaries
+
+- B3 Service Worker/PWA work remains pending. Offline page reload, browser reopen, offline cold startup, PWA installation, and Background Sync are not verified or implemented.
+- Gate G visibility retry, Gate N local-write failure, and R4 missing synchronized triage are source-covered but NDV.
+- Phase C STT safety hardening remains pending.
+- Concurrent duplicate replay under broader real-world load remains unverified.
+- This does not establish production security or clinical certification.

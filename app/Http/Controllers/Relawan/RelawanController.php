@@ -391,9 +391,15 @@ final class RelawanController extends Controller
             ->latest('completed_at')
             ->get();
 
+        $emergencies = EmergencyEvent::with('patient')
+            ->where('user_id', $user->id)
+            ->latest('created_at')
+            ->get();
+
         return Inertia::render('Relawan/Data', [
             'inProgress' => $inProgress,
             'completed' => $completed,
+            'emergencies' => $emergencies,
         ]);
     }
 

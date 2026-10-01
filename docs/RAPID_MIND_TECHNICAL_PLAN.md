@@ -14,10 +14,10 @@ This section defines the **authoritative implementation sequence for the `demo` 
 
 ---
 
-## 1. B2B Starting Repository Checkpoint
+## 1. B2C Starting Repository Checkpoint
 
 - **Branch:** `demo`
-- **B2B Starting Committed Checkpoint:** `f7ca4e428acc1a8683be6855da3652d3959a3ba1` (`docs(plan): record phase B2A completion and verification`).
+- **B2C Starting Committed Checkpoint:** `a427fc6d955260af7d0b1efd33604bb81fc82c76` (`feat(relawan): complete phase B2B local-first T0 workflow`).
 - **Phase A Main Implementation Checkpoint:** `e778ddfb5f842eab467881f2c15be929290c6a0e` (`feat(healthcare): harden realtime and referral lifecycle`)
 - **Prior Healthcare Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
 
@@ -25,14 +25,15 @@ This section defines the **authoritative implementation sequence for the `demo` 
 - **B2A `AssessmentLocalShellTest`:** `3 passed, 92 assertions`
 - **Phase B1 Targeted `RelawanSyncContractTest`:** `15 passed, 121 assertions`
 - **B2A Full Laravel Suite:** `114 passed, 1,350 assertions`
-- **B2B `RelawanT0SubmissionTest`:** `11 passed`
-- **B2B `RelawanSyncContractTest`:** `15 passed`
-- **B2B Full Laravel Suite:** `115 passed`
+- **B2C `AssessmentLocalShellTest`:** `4 passed, 109 assertions`
+- **B2C `RelawanSyncContractTest`:** `15 passed, 121 assertions`
+- **B2C `RelawanT0SubmissionTest`:** `11 passed, 68 assertions`
+- **B2C Full Laravel Suite:** `116 passed, 1,379 assertions`
 - **Vue TypeScript:** `./node_modules/.bin/vue-tsc --noEmit` PASS
 - **Frontend Production Build:** `npm run build` PASS; standard existing `>500 kB` chunk advisory warning retained (not an error)
 - **Git Formatting / Diff Check:** `git diff --check` PASS
 - **B2A Antigravity Browser Verification:** **Gates A–L PASS**; no functional browser/runtime error observed in the B2A gate
-- **B2B Antigravity Chrome/CDP Verification:** **Gates A–N PASS; Q17 regression PASS** for the selected prototype scope; no unexpected browser console errors, uncaught exceptions, unhandled promise rejections, or Vue runtime/reactivity errors.
+- **B2C direct Chrome/CDP browser/runtime verification:** **Gates A–F, H–M PASS; Gate G NDV / SOURCE-COVERED; Gate N NDV / SOURCE-COVERED** for the selected prototype scope.
 - **Phase A Status:** **COMPLETE / PASS for the directly testable selected prototype scope** (does not represent full production certification, full production hardening, or user manual sign-off)
 - **Healthcare Antigravity Browser Verification:** **PASS** for the directly testable selected prototype scope; preserved NDVs and limited-evidence gates are documented in the Phase A verification matrix below.
 - **User Manual Final Retest:** **NOT YET PERFORMED** (pending project owner verification prior to final team demo)
@@ -67,7 +68,7 @@ The following areas represent the current implemented functional baseline. Verif
 - Persistent floating T0 Red Flag emergency shortcut and 3-step confirmation/verification modal.
 - Client-side IndexedDB/Dexie schema, draft persistence, outbox abstraction, and sync manager baseline.
 - Web Speech API speech-to-text (STT) voice assistance baseline.
-*(Current boundary: B2A assessment and B2B T0 local-first paths are complete for the selected prototype scope. B2C shell/Data/synchronization integration, B3 PWA offline startup/reload/reopen, and Phase C STT safety hardening remain pending.)*
+*(Current boundary: B2A, B2B, and B2C are complete for the selected prototype scope. B3 PWA offline startup/reload/reopen and Phase C STT safety hardening remain pending.)*
 
 ### Healthcare Functional Baseline
 - Emergency-first desktop workspace with T0 queue and incident detail view.
@@ -222,7 +223,7 @@ Harden the realtime emergency reception path and complete the operational referr
 
 #### Status
 
-**IN PROGRESS — B1 COMPLETE / PASS; B2A COMPLETE / PASS; B2B COMPLETE / PASS for selected prototype scope; B2C NEXT; B3 PENDING**
+**IN PROGRESS — B1 COMPLETE / PASS; B2A COMPLETE / PASS; B2B COMPLETE / PASS; B2C COMPLETE / PASS for selected prototype scope; B3 PENDING**
 
 Phase B is intentionally divided into implementation checkpoints, with B2A/B2B/B2C as checkpoints inside B2:
 
@@ -237,7 +238,7 @@ B2B — Local-first T0 emergency workflow
 COMPLETE / PASS for selected prototype scope
 ↓
 B2C — Shell/Data/synchronization operational integration
-NEXT
+COMPLETE / PASS for selected prototype scope
 ↓
 B3 — PWA Shell & Offline Browser Verification
 PENDING
@@ -245,7 +246,7 @@ PENDING
 
 These checkpoints must be completed in order.
 
-The split is deliberate. B2A and B2B connect the existing IndexedDB and outbox contract to the visible assessment and T0 workflows. B2C still needs truthful shell/Data synchronization integration. A Service Worker must not be used to hide or compensate for an incomplete local data model.
+The split is deliberate. B2A and B2B connect the existing IndexedDB and outbox contract to the visible assessment and T0 workflows. B2C connects shell/Data to owner-scoped local state and has passed the selected browser/runtime gates. A Service Worker must not be used to hide or compensate for an incomplete local data model.
 
 ---
 
@@ -335,29 +336,19 @@ The visible path now generates a stable client emergency UUID, commits LocalEmer
 
 Automated/source checks: `RelawanT0SubmissionTest` 11 passed; `RelawanSyncContractTest` 15 passed; full Laravel suite 115 passed; Vue typecheck, production build, and `git diff --check` passed. The build retained the existing >500 kB chunk advisory. Antigravity Chrome/CDP Gates A–N and the Q17 regression check passed. A blocked sync left a priority-1 failed outbox and locally active T0; restored sync returned HTTP 201, set the same UUID to SYNCED, and removed the outbox item. Exact replay returned HTTP 200 with one canonical EmergencyEvent and one logical Healthcare queue entry. The browser gate did not independently instrument Reverb delivery; first-creation-only EmergencyCreated dispatch remains automated-contract evidence. Native OS SMS composer launch was not directly verified in the desktop environment. B3 offline reload/reopen/startup, concurrent duplicate replay under load, and Phase C STT safety hardening remain outside B2B.
 
-##### B2C remaining gap: shell synchronization state
+##### B2C shell, Data, and synchronization operational integration
 
-The Relawan shell currently tracks raw browser online/offline state, but it does not consume the real `syncManager` state.
+**COMPLETE / PASS for the selected prototype scope.** The Relawan shell reads owner-scoped local/outbox state reactively and uses the sync manager for startup, network restoration, visibility restoration, new queue entries, and manual retry. The Data workspace presents incomplete, pending/failed, and synchronized local/server records deduplicated by type and stable UUID. Pending T0 remains visible without replacing the workspace, Beranda resumes local incomplete work, and local-write failures use a truthful `Data belum tersimpan di perangkat` state.
 
-Therefore the shell can display `Tersinkron` while local outbox work still exists.
+Direct Chrome/CDP browser/runtime verification at `http://localhost:8080` passed Gates A–F and H–M. Gate G visibility restoration and Gate N local-write failure are **NDV / SOURCE-COVERED**. The exact compact synchronized shell wording is `Tersinkron`.
 
-This must be corrected.
+Verified B2C behavior includes priority-1 `EMERGENCY` transmission before priority-2 `ASSESSMENT`, genuine CDP offline/online restoration with automatic HTTP 201 reconciliation and stable UUID retention, online startup with assessment-only backlog, manual retry, request-level concurrent trigger guarding with one in-flight request, local/server deduplication, two-Relawan non-destructive isolation, local incomplete draft resume, immediate post-T0 local safety rendering, separate clinical/transmission/Healthcare axes, and Q17 explicit-confirmation regression.
 
-##### B2C remaining gap: data workspace
+The B2C gate was direct browser/runtime evidence, not an automated browser E2E suite. B3 Service Worker/PWA work, offline reload/reopen/cold startup, PWA installation, and Background Sync remain pending; Phase C STT safety hardening, broader concurrent replay/load testing, production security, and clinical certification remain outside this checkpoint.
 
-`/relawan/data` currently primarily reflects server-backed assessments.
+The Relawan shell now combines owner-scoped reactive local/outbox reads with actual `syncManager` execution state and a runtime-only local-write failure signal. Its compact status opens the Status Data sheet; online startup, network restoration, visibility restoration, new queue entries, and manual retry use the existing manager. A pending T0 remains visible in Data without replacing the whole workspace.
 
-It does not yet truthfully expose all required local states such as:
-
-```text
-Sedang Dikerjakan
-Belum Selesai
-Menunggu Sinkronisasi
-Sinkronisasi belum berhasil
-Tersinkron
-local-only T0
-pending outbox work
-```
+`/relawan/data` now groups incomplete local work, pending/failed assessment and T0 work, and synchronized history. The synchronized group merges owner-scoped server assessment/T0 history with local SYNCED records by type and stable UUID. Beranda resumes the latest local incomplete assessment and no longer uses server-save, hardcoded Posko, or medical-pickup wording. Missing recommendation/score remains unavailable rather than becoming T3 or 0/37.
 
 ##### B3 remaining gap: PWA shell
 
@@ -688,10 +679,10 @@ Checkpoint mapping:
 |---|---|---|
 | B2A | Normal local-first assessment integration; B2.1–B2.5 | **COMPLETE / PASS** |
 | B2B | Local-first T0 emergency integration; B2.6–B2.7 and applicable SMS/T0 transmission contract | **COMPLETE / PASS** |
-| B2C | Shell, Data, and synchronization operational integration; B2.8–B2.10 | **NEXT** |
-| B2 | All three checkpoints above | **IN PROGRESS** |
+| B2C | Shell, Data, and synchronization operational integration; B2.8–B2.10 | **COMPLETE / PASS for selected prototype scope** |
+| B2 | All three checkpoints above | **COMPLETE / PASS for selected prototype scope** |
 
-B2A/B2B evidence does not claim true offline page reload/reopen/startup; that remains a B3 verification boundary.
+B2A/B2B/B2C evidence does not claim true offline page reload/reopen/startup; that remains a B3 verification boundary.
 
 ---
 
@@ -1213,7 +1204,7 @@ Once Phases A through D are completed, the final verification sequence will be e
 ```text
 Phase A — COMPLETE / PASS for selected prototype scope
 ↓
-Phase B — Relawan Offline / PWA Completion (IN PROGRESS; B1 COMPLETE / PASS, B2A COMPLETE / PASS, B2B COMPLETE / PASS for selected prototype scope, B2C NEXT, B3 PENDING)
+Phase B — Relawan Offline / PWA Completion (IN PROGRESS; B1 COMPLETE / PASS, B2A COMPLETE / PASS, B2B COMPLETE / PASS, B2C COMPLETE / PASS for selected prototype scope, B2 COMPLETE / PASS for selected prototype scope, B3 PENDING)
 ↓
 Phase C — STT Safety & Interaction Hardening
 ↓

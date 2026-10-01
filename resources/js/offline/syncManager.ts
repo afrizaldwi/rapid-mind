@@ -7,43 +7,51 @@ import {
 import { outboxRepository } from "./outboxRepository";
 import { jsonRequest } from "./jsonRequest";
 
-type State = { isSyncing: boolean; pendingCount: number };
+export type SyncExecutionState = { owner: number | null; isSyncing: boolean };
 class SyncManager {
     private isSyncing = false;
     private syncRequested = false;
     private owner: number | null = null;
-    private listeners: Array<(state: State) => void> = [];
+    private activeRunOwner: number | null = null;
+    private ownerLease = 0;
+    private listeners = new Set<(state: SyncExecutionState) => void>();
 
     constructor() {
         if (typeof window !== "undefined") {
             window.addEventListener("online", () => {
-                void this.sync();
+                void this.sync().catch(() => {});
             });
             document.addEventListener("visibilitychange", () => {
-                if (document.visibilityState === "visible") void this.sync();
+                if (document.visibilityState === "visible")
+                    void this.sync().catch(() => {});
             });
         }
     }
-    public setOwner(owner: number | null) {
+    public setOwner(owner: number) {
         const previous = this.owner;
-        this.owner = owner === null ? null : requireOwner(owner);
-        if (this.isSyncing && this.owner !== previous && this.owner !== null)
+        this.owner = requireOwner(owner);
+        const lease = ++this.ownerLease;
+        if (this.isSyncing && this.owner !== previous)
             this.syncRequested = true;
-        void this.notify();
+        this.notify();
+        return lease;
     }
-    public subscribe(listener: (state: State) => void) {
-        this.listeners.push(listener);
-        void this.notify();
-        return () => {
-            this.listeners = this.listeners.filter((item) => item !== listener);
-        };
+    public clearOwner(lease: number) {
+        if (lease !== this.ownerLease) return;
+        this.owner = null;
+        this.syncRequested = false;
+        this.notify();
     }
-    private async notify() {
-        const owner = this.owner;
-        const pendingCount = owner ? await outboxRepository.count(owner) : 0;
-        if (owner !== this.owner) return;
-        for (const listener of this.listeners)
-            listener({ isSyncing: this.isSyncing, pendingCount });
+    public subscribe(listener: (state: SyncExecutionState) => void) {
+        this.listeners.add(listener);
+        listener(this.state());
+        return () => this.listeners.delete(listener);
+    }
+    private state(): SyncExecutionState {
+        return { owner: this.owner, isSyncing: this.isSyncing && this.activeRunOwner === this.owner };
+    }
+    private notify() {
+        for (const listener of this.listeners) listener(this.state());
     }
     public async queueItem(
         owner: number,
@@ -51,13 +59,15 @@ class SyncManager {
         entityId: string,
         payload: Record<string, unknown>,
     ) {
-        this.setOwner(owner);
+        requireOwner(owner);
+        if (this.owner !== null && this.owner !== owner)
+            throw new Error("Another Relawan owns the active synchronization session");
         await outboxRepository.enqueue(owner, type, entityId, payload);
-        await this.notify();
-        void this.sync();
+        if (this.owner === owner) void this.sync(owner).catch(() => {});
     }
     public async sync(owner?: number) {
-        if (owner !== undefined) this.setOwner(owner);
+        if (owner !== undefined && requireOwner(owner) !== this.owner) return;
+        if (!this.owner) return;
         if (this.isSyncing) {
             this.syncRequested = true;
             return;
@@ -70,15 +80,18 @@ class SyncManager {
             return;
 
         this.isSyncing = true;
+        this.activeRunOwner = this.owner;
         // A follow-up pass may see a newer revision, but never retry the same
         // failed revision immediately just because another trigger arrived.
         const attempted = new Set<string>();
         try {
-            await this.notify();
+            this.notify();
             do {
                 this.syncRequested = false;
                 const active: number | null = this.owner;
                 if (!active || !navigator.onLine) break;
+                this.activeRunOwner = active;
+                this.notify();
 
                 for (const item of await outboxRepository.list(active)) {
                     if (this.owner !== active || !navigator.onLine) break;
@@ -157,12 +170,12 @@ class SyncManager {
                             );
                         }
                     }
-                    await this.notify();
                 }
             } while (this.syncRequested);
         } finally {
             this.isSyncing = false;
-            await this.notify();
+            this.activeRunOwner = null;
+            this.notify();
         }
     }
 }
