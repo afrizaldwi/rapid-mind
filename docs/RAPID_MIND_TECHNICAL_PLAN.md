@@ -68,7 +68,7 @@ The following areas represent the current implemented functional baseline. Verif
 - Persistent floating T0 Red Flag emergency shortcut and 3-step confirmation/verification modal.
 - Client-side IndexedDB/Dexie schema, draft persistence, outbox abstraction, and sync manager baseline.
 - Web Speech API speech-to-text (STT) voice assistance baseline.
-*(Current boundary: B2A, B2B, B2C, and B3A–B3D are complete for the selected prototype scope. B3E and Phase C STT safety hardening remain not started.)*
+*(Current boundary: B2A, B2B, B2C, and B3A–B3E are complete for the selected prototype scope. Phase C STT safety hardening remains not started.)*
 
 ### Healthcare Functional Baseline
 - Emergency-first desktop workspace with T0 queue and incident detail view.
@@ -101,7 +101,7 @@ To complete the end-to-end competition prototype safely without scope creep, rem
 ```mermaid
 flowchart TD
     PhaseA["Phase A: Healthcare Realtime & Referral Lifecycle (COMPLETE)"]
-   PhaseB["Phase B: Relawan Offline / PWA Completion (IN PROGRESS)"]
+   PhaseB["Phase B: Relawan Offline / PWA Completion (COMPLETE / PASS)"]
     PhaseC["Phase C: STT Safety & Interaction Hardening"]
     PhaseD["Phase D: Cross-Role Integration Hardening"]
     FinalVerif["Final Verification & End-to-End Rehearsal"]
@@ -223,7 +223,7 @@ Harden the realtime emergency reception path and complete the operational referr
 
 #### Status
 
-**IN PROGRESS — B1 COMPLETE / PASS; B2A COMPLETE / PASS; B2B COMPLETE / PASS; B2C COMPLETE / PASS; B3A–B3D COMPLETE / PASS for selected prototype scope; B3E NOT STARTED**
+**COMPLETE / PASS for selected prototype scope — B1, B2A, B2B, B2C, and B3A–B3E complete**
 
 Phase B is intentionally divided into implementation checkpoints, with B2A/B2B/B2C as checkpoints inside B2:
 
@@ -241,7 +241,7 @@ B2C — Shell/Data/synchronization operational integration
 COMPLETE / PASS for selected prototype scope
 ↓
 B3 — PWA Shell & Offline Browser Verification
-IN PROGRESS — B3A–B3D COMPLETE / PASS for selected prototype scope; B3E NOT STARTED
+COMPLETE / PASS for selected prototype scope — B3A–B3E complete
 ```
 
 These checkpoints must be completed in order.
@@ -1060,6 +1060,37 @@ The existing non-fatal large-chunk and PWA/build deprecation advisories remain a
 
 ---
 
+##### B3E — Final Source/Build Readiness and Real-Browser Acceptance (1 October 2026)
+
+**COMPLETE / PASS for the selected prototype scope.** The final source/build readiness pass found **no source correction necessary**; the existing implementation already satisfied the requirements and no source/tracked file changed. It verified the valid manifest, `/relawan/` Service Worker scope, neutral `offline.html`, complete offline dependency precache, safe Cache Storage boundary, Dexie clinical/local store, Dexie outbox plus document-side `syncManager` replay, no Workbox Background Sync, owner-scoped Web Lock `rapid-mind:relawan-sync:<owner>`, valid generated PWA artifacts/precache graph, Vue TypeScript, production build, and `git diff --check`.
+
+The authoritative real-browser run used Chrome/Chromium `154.0.8037.92`, `http://localhost:8080`, branch `demo`, HEAD `cee9bffcf4a3463e782ab407c0ace63438e82cc3`:
+
+```text
+A Manifest discovery PASS                  B Service Worker registration PASS
+C Cache boundary PASS                      D Warm online state PASS
+E Genuine server outage PASS               F Offline PFA PASS
+G Offline assessment PASS                  H Offline T0 PASS
+I Reload/reopen persistence PASS           J Truthful pending state PASS
+K Server restoration PASS                  L Session/CSRF restoration PASS
+M T0-first ordering PASS                   N Canonical reconciliation PASS
+O Healthcare single T0 PASS                P Duplicate protection PASS
+Q Final local sync state PASS              R Cross-tab serialization PASS
+S Integrated clean end state PASS          T Installed standalone PWA NOT DIRECTLY VERIFIED
+```
+
+A genuine Nginx outage verified the complete path from an online Service Worker-controlled Relawan runtime through neutral offline fallback, offline PFA, patient/assessment, local triage, T0-Suspect, IndexedDB/outbox persistence, normal offline reload/reopen, Nginx restoration, `/relawan/session-status`, same-owner authentication, genuine Laravel/Inertia `/relawan/data`, fresh session/CSRF, T0-first synchronization, canonical reconciliation, Healthcare realtime reception, duplicate-safe replay, and final synchronized state.
+
+Synthetic evidence: patient `4217c934-c7fe-442d-9c10-317bdcf79ae1`, assessment `cc31c60f-f706-476e-bae8-e3727ae914ea`, emergency `ef7bc889-5617-4c8b-962e-be3f1c487ac1`; assessment `COMPLETED`, SRQ-20 `6`, Risk `2`, Function `0`, Total `8/37`, recommendation `T2`; outbox Emergency priority `1` / `PENDING`, Assessment priority `2` / `PENDING` before reconnect.
+
+Observed ordering was `GET /relawan/session-status` → `200 AUTHENTICATED`, `GET /relawan/data` → `200 genuine Laravel document`, `POST /relawan/sync/emergencies` → `HTTP 201`, then `POST /relawan/sync/assessments` → `HTTP 200`. The static offline runtime emitted no clinical POST before Laravel document restoration. Cache Storage contained only the neutral/static runtime and no authenticated clinical responses matching `/relawan/data`, `/relawan/assessment/*`, `/relawan/emergencies/*`, or `/relawan/sync/*`; clinical records remained in Dexie. Local and server UUIDs matched, the server contained exactly one patient/assessment/emergency, and exact replay returned the equivalent of `created: false`, `replayed: true` without duplicates.
+
+Healthcare received the emergency through Reverb with `realtime_delivered: true`, one incident card, and zero duplicate cards. The final Relawan state was `Menunggu Sinkronisasi (0)`, Assessment `Tersinkron`, T0 `Diterima server`, outbox `0`. Cross-tab testing retained `rapid-mind:relawan-sync:19`; the waiting tab emitted zero concurrent clinical POSTs and no stranded lock remained.
+
+Final Admin smoke coverage passed `/admin/summary`, `/admin/map`, `/admin/analytics`, `/admin/volunteers`, `/admin/facilities/users`, `/admin/facilities/organizations`, `/admin/operations/posko`, and `/admin/logistics`; the shell, summary, MapLibre map, analytics, and master-data pages rendered with zero fatal console errors and no Relawan offline contamination. Admin had `navigator.serviceWorker.controller = null`; the only relevant worker remained scoped to `/relawan/`. Healthcare was exercised through the realtime T0 gate.
+
+Installed standalone-PWA behavior remains **NOT DIRECTLY VERIFIED** because headless Linux Chrome/CDP could not launch an OS-installed standalone shell, although manifest support and `beforeinstallprompt` were verified. This limitation does not invalidate Phase B for the selected prototype scope and does not claim production security, production concurrency/load, all-browser PWA, complete offline authentication, clinical, or full automated browser E2E certification.
+
 ##### B3.1 PWA Integration
 
 Implement the minimum Vite/Workbox-compatible PWA integration required for the prototype.
@@ -1204,7 +1235,7 @@ The existing STT direct-answer mutation issue remains assigned to Phase C.
 
 #### Phase B Completion Criteria
 
-Phase B remains **IN PROGRESS** and may be marked **COMPLETE / PASS for the selected prototype scope** only when all five checkpoints are complete:
+Phase B is **COMPLETE / PASS for the selected prototype scope** because all five checkpoints are complete:
 
 ```text
 B1 — Local Data & Replay Contract
@@ -1242,7 +1273,7 @@ Required final evidence:
 15. authoritative server state is reconciled locally;
 16. existing Healthcare/Admin workflows remain regression-free.
 
-Phase B completion does not constitute production security certification or full production offline-authentication certification.
+Phase B completion does not constitute production security certification, production concurrency/load certification, all-browser PWA certification, installed standalone-PWA certification, complete offline authentication certification, clinical certification, or full automated browser E2E certification.
 ---
 
 ### Phase C — STT Safety & Interaction Hardening
@@ -1307,7 +1338,7 @@ Once Phases A through D are completed, the final verification sequence will be e
 ```text
 Phase A — COMPLETE / PASS for selected prototype scope
 ↓
-Phase B — Relawan Offline / PWA Completion (IN PROGRESS; B1 and B2 COMPLETE / PASS; B3A–B3D COMPLETE / PASS for selected prototype scope; B3E NOT STARTED)
+Phase B — Relawan Offline / PWA Completion (COMPLETE / PASS for selected prototype scope; B1–B3E complete)
 ↓
 Phase C — STT Safety & Interaction Hardening
 ↓

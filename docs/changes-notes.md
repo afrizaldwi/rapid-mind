@@ -567,3 +567,105 @@ git diff --check: PASS
 ```
 
 The existing non-fatal large-chunk and PWA/build deprecation advisories remain advisories. No dependency was installed. Phase B3E and Phase C remain **NOT STARTED**. `docs/workflow.md` was not changed.
+
+## Phase B3E and Phase B Closure — Final PWA Readiness and Browser Acceptance (1 October 2026)
+
+### Final status
+
+```text
+Phase B3A — COMPLETE / PASS
+Phase B3B — COMPLETE / PASS
+Phase B3C — COMPLETE / PASS for selected prototype scope
+Phase B3D — COMPLETE / PASS for selected prototype scope
+Phase B3E — COMPLETE / PASS for selected prototype scope
+
+Phase B3 — COMPLETE / PASS for selected prototype scope
+Phase B — COMPLETE / PASS for selected prototype scope
+
+Phase C — NOT STARTED
+```
+
+The final B3E source/build readiness pass found **no source correction necessary**. The existing implementation already satisfied the source/build requirements. It verified the valid Web App Manifest, `/relawan/` Service Worker scope, neutral `offline.html`, complete offline runtime dependency precache, safe Cache Storage boundary, Dexie clinical/local storage, Dexie outbox plus document-side `syncManager` replay, absence of Workbox Background Sync, owner-scoped Web Lock `rapid-mind:relawan-sync:<owner>`, valid generated manifest/Service Worker/offline HTML/icons/precache graph, Vue TypeScript, production build, and `git diff --check`. No source or tracked file changed during this readiness pass.
+
+### Authoritative B3E real-browser matrix
+
+Environment: Chrome/Chromium `154.0.8037.92`, `http://localhost:8080`, branch `demo`, HEAD `cee9bffcf4a3463e782ab407c0ace63438e82cc3`.
+
+| Gate | Result | Gate | Result |
+|---|---|---|---|
+| A Manifest discovery | PASS | B Service Worker registration | PASS |
+| C Cache boundary | PASS | D Warm online state | PASS |
+| E Genuine server outage | PASS | F Offline PFA | PASS |
+| G Offline assessment | PASS | H Offline T0 | PASS |
+| I Reload/reopen persistence | PASS | J Truthful pending state | PASS |
+| K Server restoration | PASS | L Session/CSRF restoration | PASS |
+| M T0-first ordering | PASS | N Canonical reconciliation | PASS |
+| O Healthcare single T0 | PASS | P Duplicate protection | PASS |
+| Q Final local sync state | PASS | R Cross-tab serialization | PASS |
+| S Integrated clean end state | PASS | T Installed standalone PWA | NOT DIRECTLY VERIFIED |
+
+### Integrated outage and replay evidence
+
+A genuine Nginx outage verified this end-to-end path:
+
+```text
+online verified Relawan
+→ Service Worker-controlled Relawan runtime
+→ Nginx unavailable
+→ neutral offline fallback
+→ OFFLINE_FIELD_MODE
+→ offline PFA
+→ offline patient + assessment
+→ local triage Result
+→ offline T0-Suspect
+→ IndexedDB/outbox persistence
+→ normal offline reload/reopen
+→ Nginx restored
+→ /relawan/session-status
+→ same-owner AUTHENTICATED
+→ full Laravel/Inertia /relawan/data navigation
+→ fresh session/CSRF runtime
+→ T0 synchronization
+→ assessment synchronization
+→ canonical reconciliation
+→ Healthcare realtime reception
+→ duplicate-safe reload/replay
+→ final synchronized local state
+```
+
+Synthetic identifiers:
+
+```text
+Patient UUID:     4217c934-c7fe-442d-9c10-317bdcf79ae1
+Assessment UUID:  cc31c60f-f706-476e-bae8-e3727ae914ea
+Emergency UUID:   ef7bc889-5617-4c8b-962e-be3f1c487ac1
+```
+
+Assessment evidence was `COMPLETED`, SRQ-20 `6`, Risk `2`, Function `0`, Total `8/37`, with system recommendation `T2`. Before reconnect, the Emergency outbox item was priority `1` / `PENDING` and the Assessment item was priority `2` / `PENDING`.
+
+The observed network order was:
+
+```text
+GET /relawan/session-status → 200 AUTHENTICATED
+GET /relawan/data → 200 genuine Laravel document
+POST /relawan/sync/emergencies → HTTP 201
+POST /relawan/sync/assessments → HTTP 200
+```
+
+The emergency completed before assessment synchronization began. The static offline runtime emitted no clinical POST before the genuine Laravel document was restored. Cache Storage contained only `manifest.webmanifest`, PWA icons, `offline.html`, offline/runtime JavaScript chunks, CSS, and required offline dependencies. Zero cached authenticated clinical/server responses matched `/relawan/data`, `/relawan/assessment/*`, `/relawan/emergencies/*`, or `/relawan/sync/*`; clinical records remained in Dexie IndexedDB.
+
+Local and server UUIDs matched for patient, assessment, and emergency. The server contained exactly one patient, one assessment, and one emergency for this flow. Exact replay returned the equivalent of `created: false`, `replayed: true`, with no duplicate canonical rows.
+
+Healthcare received emergency `ef7bc889-5617-4c8b-962e-be3f1c487ac1` through Reverb realtime with `realtime_delivered: true`, one incident card, and zero duplicate cards. Server acceptance is not Healthcare clinical acknowledgement or validation.
+
+The final Relawan state was `Menunggu Sinkronisasi (0)`, Assessment `Tersinkron`, T0 `Diterima server`, and outbox `0`. No stale pending label remained. Cross-tab testing retained `rapid-mind:relawan-sync:19`: one tab held the lock, the second emitted zero concurrent clinical POSTs, and no stranded lock remained.
+
+### Admin regression evidence
+
+Final Admin BPBD smoke test environment: `admin@rapidmind.id`, User ID `21`, branch `demo`, HEAD `cee9bffcf4a3463e782ab407c0ace63438e82cc3`.
+
+All of these routes passed with the normal shell and expected rendered content: `/admin/summary`, `/admin/map`, `/admin/analytics`, `/admin/volunteers`, `/admin/facilities/users`, `/admin/facilities/organizations`, `/admin/operations/posko`, and `/admin/logistics`. The command-center summary, MapLibre map, analytics, and master-data pages rendered; zero fatal console errors occurred; and no Relawan offline UI contamination was observed. Admin pages had `navigator.serviceWorker.controller = null`, while the only active relevant worker registration remained scoped to `/relawan/`. Healthcare was exercised directly through the B3E realtime T0 reception gate.
+
+Installed standalone-PWA behavior remains **NOT DIRECTLY VERIFIED** because headless Linux Chrome/CDP could verify manifest support and `beforeinstallprompt` but could not launch an OS-installed standalone desktop/mobile shell. This does not invalidate Phase B for the selected prototype scope.
+
+Phase B closure does not claim production security, production concurrency/load, all-browser PWA, installed standalone-PWA, complete offline authentication, clinical, or full automated browser E2E certification. `docs/workflow.md` was unchanged, and no Phase C code was implemented.
