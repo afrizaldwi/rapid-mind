@@ -317,3 +317,30 @@ Demo database state was manipulated solely through normal application UI interac
 - Non-T0 `Sedang Ditinjau` persistent owner/review state remains not implemented.
 - T0 confirmation still automatically creates referral in the prototype.
 - Production readiness, clinical validity, security hardening, offline/PWA, realtime beyond tested scope, and full E2E remain unproven and out of scope.
+
+---
+
+## Phase B1 — Local Data & Replay Contract
+
+**1 October 2026**
+
+Repository checkpoint: `9d3900fa95fc68b5f7f64166fa1a9617a57702ed` (`feat(relawan): complete phase B1 local sync contract`).
+
+B1 is **COMPLETE / PASS for the selected prototype scope**. The implementation establishes account-scoped IndexedDB access with `owner_user_id`, stable client UUIDs for patient/assessment/emergency synchronization, focused patient/assessment/emergency/outbox repositories, `EMERGENCY` and `ASSESSMENT` outbox operations with priorities 1 and 2, coalesced/revisioned entries, synchronization metadata, serialized follow-up synchronization, and retry distinction between transient/session failures and deterministic conflict/input failures. It also provides shared same-origin CSRF-aware JSON transport and authenticated Relawan synchronization endpoints:
+
+```text
+POST /relawan/sync/assessments
+POST /relawan/sync/emergencies
+```
+
+Canonical PHP triage recalculation, deterministic assessment replay, deterministic T0 replay, no duplicate Healthcare alert on exact emergency replay, local-only patient dependency reconciliation, minimal `IN_PROGRESS` assessment shell creation for priority-1 T0, and later priority-2 reconciliation into the same assessment UUID are implemented.
+
+The replay semantic is explicit: `assessment_mode` used to create a missing T0 assessment shell is dependency context, not immutable emergency replay identity. An exact T0 replay remains valid if the linked assessment later changes mode during canonical assessment synchronization. Account isolation is the local data foundation; patient, assessment, emergency, and outbox records are scoped to the authenticated owner.
+
+The focused authenticated browser/session gate through the running Nginx/Laravel application verified assessment creation with HTTP 201, preserved client assessment/patient UUIDs, `IN_PROGRESS`, and `created = true`, followed by exact replay with HTTP 200 and no duplicate logical assessment. Emergency creation returned HTTP 201 with the client emergency UUID and assessment relationship preserved, followed by exact replay with HTTP 200, `replayed = true`, and the same emergency UUID. This was a focused authenticated synchronization gate, not full offline/PWA browser verification.
+
+Evidence recorded: `RelawanSyncContractTest` **15 passed, 121 assertions**; full Laravel suite **111 passed, 1,258 assertions**; `./node_modules/.bin/vue-tsc --noEmit` PASS; `npm run build` PASS with the standard existing `>500 kB` chunk advisory warning; and `git diff --check` PASS. Dependencies installed: **NONE**.
+
+Retained limitations: populated Dexie v1 to v2 migration was source/static verified but not directly runtime-tested against a populated real browser database; concurrent duplicate replay was not load-tested; the visible Relawan workflow is not yet fully local-first; and offline reload/reopen, Service Worker shell, and complete disconnect/reconnect remain unverified. Complete local-first/PWA operation remains B2/B3 work.
+
+**NEXT: B2 — Relawan Local-First Workflow Integration.** B3 — PWA Shell & Offline Browser Verification remains pending after B2. Phase C/STT behavior and `docs/workflow.md` are unchanged in this documentation-only update.

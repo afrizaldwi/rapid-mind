@@ -1,6 +1,6 @@
 # RAPID-MIND Workflow Verification Ledger
 
-**Verification checkpoint:** 30 September 2026
+**Verification checkpoint:** 1 October 2026 — Phase B1 focused synchronization gate
 **Branch:** `demo`
 **Document type:** Evidence and status documentation
 
@@ -964,3 +964,59 @@ Testing intentionally modified demo database state through normal application UI
 10. **Validasi Priority Ordering:** With both unvalidated T1 and T2 assessments available, verify T1 appears before T2 in `Perlu Divalidasi`.
 11. **Validasi FIFO Ordering:** With multiple unvalidated assessments in the same T1/T2 category, verify the older assessment appears before the newer assessment.
 12. **Historical Inactive Faskes:** If a safe historical fixture is available, open a patient whose existing referral points to a now-inactive Faskes and verify the original destination remains visible and is marked `(Nonaktif saat ini)`.
+
+## 11. Phase B1 Verification — Local Data & Replay Contract
+
+**Checkpoint:** `9d3900fa95fc68b5f7f64166fa1a9617a57702ed`
+**Status:** B1 **COMPLETE / PASS for the selected prototype scope**; B2 is next and B3 remains pending.
+
+| Verification slice | Status | Evidence / scope |
+|---|---|---|
+| B1 source implementation | **PASS — SOURCE INSPECTED** | Account-scoped repositories, stable UUIDs, outbox, metadata, transport, and sync endpoints inspected. |
+| B1 automated contract | **PASS — AUTOMATED TESTED** | `RelawanSyncContractTest`: 15 targeted tests / 121 assertions. |
+| Full backend regression | **PASS** | 111 tests / 1,258 assertions. |
+| Authenticated assessment sync transport | **PASS — BROWSER/RUNTIME VERIFIED** | HTTP 201 first submission; HTTP 200 exact replay; client assessment and patient UUIDs preserved; replay created no duplicate logical assessment. |
+| Authenticated emergency sync transport | **PASS — BROWSER/RUNTIME VERIFIED** | HTTP 201 first submission; HTTP 200 exact replay; `replayed = true`; same emergency UUID preserved. |
+| Full local-first Relawan workflow | **NOT YET VERIFIED / B2** | Visible assessment/T0 workflow is not yet fully local-first. |
+| Offline reload/reopen and PWA | **NOT YET VERIFIED / B3** | Service Worker shell and complete disconnect/reconnect workflow were not tested. |
+| Populated v1 IndexedDB upgrade | **NOT DIRECTLY RUNTIME TESTED** | Migration exists and was source/static verified; populated real-browser v1 upgrade was not exercised. |
+| Concurrent load replay | **NOT LOAD TESTED** | Server transaction/identity locking exists; real concurrent duplicate replay was not load-tested. |
+
+### Focused Authenticated Browser Gate
+
+This was a focused authenticated browser/session synchronization gate through the running Nginx/Laravel application, not a full offline/PWA browser gate, complete browser E2E test, load test, or production certification. Manual DevTools calls were runtime evidence and were not an automated browser test.
+
+Assessment synchronization:
+
+```text
+POST /relawan/sync/assessments
+-> HTTP 201
+-> client assessment UUID preserved
+-> client patient UUID preserved
+-> status IN_PROGRESS
+-> created = true
+
+same payload replay
+-> HTTP 200
+-> same assessment UUID and patient UUID
+-> deterministic replay; no duplicate logical assessment
+```
+
+Emergency synchronization:
+
+```text
+POST /relawan/sync/emergencies
+-> HTTP 201
+-> client emergency UUID preserved
+-> assessment relationship preserved
+-> created = true
+
+same payload replay
+-> HTTP 200
+-> replayed = true
+-> same emergency UUID
+```
+
+The B1 contract coverage includes stable IDs, canonical server triage, client triage non-authority, exact and conflicting assessment replay, ownership collision, `IN_PROGRESS` shell reconciliation, invalid complete-payload rollback, unidentified emergency, exact emergency replay, one `EmergencyCreated` dispatch for first creation only, local patient reconciliation, minimal T0 assessment shell creation, later completion using the same UUID, replay after assessment-mode change, same-shelter existing-patient semantics, inaccessible-patient protection, partial `IN_PROGRESS` response groups, non-Relawan endpoint rejection, patient/assessment relationship conflict, and broadcast-failure persistence.
+
+The corrected replay semantic remains: `assessment_mode` used to create a missing T0 assessment shell is dependency context, not immutable emergency replay identity. An exact T0 replay remains valid if the linked assessment later changes mode during canonical assessment synchronization.

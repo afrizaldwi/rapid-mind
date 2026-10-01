@@ -17,15 +17,16 @@ This section defines the **authoritative implementation sequence for the `demo` 
 ## 1. Current Repository Checkpoint
 
 - **Branch:** `demo`
-- **Current Repository Checkpoint:** `ce90474836b02ad3484ad01ed82d85d272aa78e4` (`docs(plan): record phase A completion and verification`)
+- **Current Repository Checkpoint:** `9d3900fa95fc68b5f7f64166fa1a9617a57702ed` (`feat(relawan): complete phase B1 local sync contract`)
 - **Phase A Main Implementation Checkpoint:** `e778ddfb5f842eab467881f2c15be929290c6a0e` (`feat(healthcare): harden realtime and referral lifecycle`)
 - **Prior Healthcare Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
 
 ### Verification Baseline
-- **Laravel Test Suite:** `96 tests passed, 1,137 assertions` (`docker compose exec -T app php artisan test`)
-- **Vue TypeScript Check:** `npx vue-tsc --noEmit` PASS (0 errors)
-- **Frontend Production Build:** `npm run build` PASS (clean asset manifest, standard large-chunk advisory warning for Map/Analytics assets)
-- **Git Formatting / Diff Check:** `git diff --check` PASS (clean, no trailing whitespace or formatting defects)
+- **Laravel Full Suite:** `111 passed, 1,258 assertions`
+- **Phase B1 Targeted `RelawanSyncContractTest`:** `15 passed, 121 assertions`
+- **Vue TypeScript:** `./node_modules/.bin/vue-tsc --noEmit` PASS
+- **Frontend Production Build:** `npm run build` PASS; standard existing `>500 kB` chunk advisory warning retained (not an error)
+- **Git Formatting / Diff Check:** `git diff --check` PASS
 - **Phase A Status:** **COMPLETE / PASS for the directly testable selected prototype scope** (does not represent full production certification, full production hardening, or user manual sign-off)
 - **Healthcare Antigravity Browser Verification:** **PASS** for the directly testable selected prototype scope; preserved NDVs and limited-evidence gates are documented in the Phase A verification matrix below.
 - **User Manual Final Retest:** **NOT YET PERFORMED** (pending project owner verification prior to final team demo)
@@ -93,7 +94,7 @@ To complete the end-to-end competition prototype safely without scope creep, rem
 ```mermaid
 flowchart TD
     PhaseA["Phase A: Healthcare Realtime & Referral Lifecycle (COMPLETE)"]
-    PhaseB["Phase B: Relawan Offline / PWA Completion (NEXT)"]
+   PhaseB["Phase B: Relawan Offline / PWA Completion (IN PROGRESS)"]
     PhaseC["Phase C: STT Safety & Interaction Hardening"]
     PhaseD["Phase D: Cross-Role Integration Hardening"]
     FinalVerif["Final Verification & End-to-End Rehearsal"]
@@ -215,16 +216,19 @@ Harden the realtime emergency reception path and complete the operational referr
 
 #### Status
 
-**NEXT / NOT YET IMPLEMENTED**
+**IN PROGRESS — B1 COMPLETE / PASS; B2 NEXT; B3 PENDING**
 
 Phase B is intentionally divided into three implementation checkpoints:
 
 ```text
 B1 — Local Data & Replay Contract
+COMPLETE / PASS
 ↓
 B2 — Relawan Local-First Workflow Integration
+NEXT
 ↓
 B3 — PWA Shell & Offline Browser Verification
+PENDING
 ```
 
 These checkpoints must be completed in order.
@@ -666,6 +670,38 @@ Automated/server-side tests must cover at minimum:
 Existing Phase A and previous Relawan/Healthcare behavior must remain green.
 
 B1 does **not** claim complete browser offline operation yet.
+
+##### B1 Completion and Evidence
+
+**COMPLETE / PASS for the selected prototype scope.** B1 establishes:
+
+- account-scoped IndexedDB repository access with `owner_user_id`;
+- stable client UUIDs for patient, assessment, and emergency synchronization;
+- focused patient, assessment, emergency, and outbox repositories;
+- outbox operation types limited to `EMERGENCY` and `ASSESSMENT`, with priorities 1 and 2 respectively;
+- coalesced/revisioned outbox entries and synchronization state/error metadata;
+- serialized follow-up synchronization when work is queued during an active run;
+- retry distinction for transient/session failures versus deterministic conflict/input failures;
+- shared same-origin CSRF-aware JSON mutation transport;
+- authenticated Relawan endpoints `POST /relawan/sync/assessments` and `POST /relawan/sync/emergencies`;
+- canonical PHP triage recalculation and deterministic assessment/T0 replay;
+- no second Healthcare alert on exact emergency replay;
+- local-only patient dependency reconciliation;
+- minimal `IN_PROGRESS` assessment shell creation for priority-1 T0 when needed;
+- later priority-2 assessment reconciliation into the same stable assessment UUID.
+
+The corrected replay semantic is important: `assessment_mode` used to create a missing T0 assessment shell is dependency context, not immutable emergency replay identity. An exact T0 replay remains valid even if the linked assessment later changes mode during canonical assessment synchronization.
+
+The focused authenticated browser/session gate exercised the running Nginx/Laravel application with the real CSRF/session transport. Assessment synchronization returned HTTP 201 with the client assessment and patient UUIDs preserved, `IN_PROGRESS`, and `created = true`; the exact replay returned HTTP 200 with the same IDs and no duplicate logical assessment. Emergency synchronization returned HTTP 201 with the client emergency UUID and assessment relationship preserved, `created = true`; the exact replay returned HTTP 200 with `replayed = true` and the same emergency UUID. This was not a full offline/PWA browser gate.
+
+Automated evidence: `RelawanSyncContractTest` **15 passed, 121 assertions**; full Laravel suite **111 passed, 1,258 assertions**. Vue TypeScript, production build, and `git diff --check` also passed. The build retained the standard existing `>500 kB` chunk advisory warning; it is not an error.
+
+Retained limitations:
+
+- Populated Dexie v1 to v2 migration is source/static verified, but a previously populated real browser v1 database was not directly runtime-tested through the v2 upgrade.
+- Server-side concurrency protection exists, but concurrent duplicate replay under real load was not load-tested.
+- The visible Relawan assessment/T0 workflow is not yet fully local-first; this belongs to B2.
+- Offline reload/reopen, Service Worker shell, and complete disconnect/reconnect workflow are not yet verified; this belongs to B3.
 
 ---
 
@@ -1189,7 +1225,7 @@ Once Phases A through D are completed, the final verification sequence will be e
 ```text
 Phase A — COMPLETE / PASS for selected prototype scope
 ↓
-Phase B — Relawan Offline / PWA Completion (NEXT)
+Phase B — Relawan Offline / PWA Completion (IN PROGRESS; B1 COMPLETE / PASS, B2 NEXT, B3 PENDING)
 ↓
 Phase C — STT Safety & Interaction Hardening
 ↓
