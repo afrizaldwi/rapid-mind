@@ -1,6 +1,6 @@
 # RAPID-MIND Workflow Verification Ledger
 
-**Verification checkpoint:** 1 October 2026 — Phase B1 focused synchronization gate
+**Verification checkpoint:** 1 October 2026 — Phase B2A local-first assessment gate
 **Branch:** `demo`
 **Document type:** Evidence and status documentation
 
@@ -977,7 +977,9 @@ Testing intentionally modified demo database state through normal application UI
 | Full backend regression | **PASS** | 111 tests / 1,258 assertions. |
 | Authenticated assessment sync transport | **PASS — BROWSER/RUNTIME VERIFIED** | HTTP 201 first submission; HTTP 200 exact replay; client assessment and patient UUIDs preserved; replay created no duplicate logical assessment. |
 | Authenticated emergency sync transport | **PASS — BROWSER/RUNTIME VERIFIED** | HTTP 201 first submission; HTTP 200 exact replay; `replayed = true`; same emergency UUID preserved. |
-| Full local-first Relawan workflow | **NOT YET VERIFIED / B2** | Visible assessment/T0 workflow is not yet fully local-first. |
+| Normal assessment local-first path | **PASS / B2A** | Local patient/assessment creation, stage persistence, local triage, completion, Result, and priority-2 outbox path verified. |
+| T0 local-first path | **PENDING / B2B** | Real Relawan T0 UI integration remains for the next checkpoint. |
+| Shell/Data operational integration | **PENDING / B2C** | Real shell state, Data workspace, and operational sync integration remain pending. |
 | Offline reload/reopen and PWA | **NOT YET VERIFIED / B3** | Service Worker shell and complete disconnect/reconnect workflow were not tested. |
 | Populated v1 IndexedDB upgrade | **NOT DIRECTLY RUNTIME TESTED** | Migration exists and was source/static verified; populated real-browser v1 upgrade was not exercised. |
 | Concurrent load replay | **NOT LOAD TESTED** | Server transaction/identity locking exists; real concurrent duplicate replay was not load-tested. |
@@ -1020,3 +1022,32 @@ same payload replay
 The B1 contract coverage includes stable IDs, canonical server triage, client triage non-authority, exact and conflicting assessment replay, ownership collision, `IN_PROGRESS` shell reconciliation, invalid complete-payload rollback, unidentified emergency, exact emergency replay, one `EmergencyCreated` dispatch for first creation only, local patient reconciliation, minimal T0 assessment shell creation, later completion using the same UUID, replay after assessment-mode change, same-shelter existing-patient semantics, inaccessible-patient protection, partial `IN_PROGRESS` response groups, non-Relawan endpoint rejection, patient/assessment relationship conflict, and broadcast-failure persistence.
 
 The corrected replay semantic remains: `assessment_mode` used to create a missing T0 assessment shell is dependency context, not immutable emergency replay identity. An exact T0 replay remains valid if the linked assessment later changes mode during canonical assessment synchronization.
+
+## 12. Phase B2A Verification — Local-First Normal Assessment Workflow
+
+**Checkpoint:** `49f632ab4a5d7b7bd624da298ce123d9c4f7aa13`
+**Status:** B2A **COMPLETE / PASS for the selected prototype scope**. Phase B remains **IN PROGRESS**; B2B is next, B2C is pending, and B3 is pending.
+
+| Verification slice | Status | Evidence / scope |
+|---|---|---|
+| Remote/source B2A implementation | **PASS — SOURCE INSPECTED** | Pushed checkpoint reviewed; local patient/assessment shell, Identity, stage persistence, local triage, Result, and priority-2 outbox path are present. |
+| `AssessmentLocalShellTest` | **PASS — AUTOMATED TESTED** | 3 passed / 92 assertions. |
+| `RelawanSyncContractTest` regression | **PASS — AUTOMATED TESTED** | 15 passed / 121 assertions. |
+| Full Laravel regression | **PASS** | 114 tests / 1,350 assertions. |
+| Vue TypeScript | **PASS** | `./node_modules/.bin/vue-tsc --noEmit`. |
+| Production build | **PASS** | `npm run build`; existing `>500 kB` chunk advisory only. |
+| Git diff check | **PASS** | `git diff --check`. |
+| New local assessment creation | **PASS — BROWSER/RUNTIME VERIFIED** | Patient and assessment created in `RapidMindOfflineDB` with stable UUIDs; `IN_PROGRESS`; `LOCAL_SAVED`; no `POST /relawan/assessment` required. |
+| Stage-local persistence | **PASS — BROWSER/RUNTIME VERIFIED** | SRQ, Risk, and Function answers confirmed directly in IndexedDB; stage progression did not require server POST success. |
+| Resume behavior | **PASS — BROWSER/RUNTIME VERIFIED** | Partial SRQ work survived leaving and resuming the assessment. |
+| Local triage and Result | **PASS — BROWSER/RUNTIME VERIFIED** | SRQ 4 + Risk 4 + Function 2 = 10/37; local recommendation T2 existed before successful synchronization. |
+| Forced synchronization failure | **PASS — BROWSER/RUNTIME VERIFIED** | Assessment remained `COMPLETED`, `SYNC_FAILED`, with local completion time and triage preserved. |
+| Priority-2 `ASSESSMENT` outbox | **PASS — BROWSER/RUNTIME VERIFIED** | Failed item had type `ASSESSMENT`, priority 2, status `FAILED`, revision 1, retry count 1. |
+| HTTP 201 recovery/reconciliation | **PASS — BROWSER/RUNTIME VERIFIED** | Restored sync returned HTTP 201; local state became `SYNCED`; outbox entry was removed. |
+| Stable client/server UUIDs | **PASS — BROWSER/RUNTIME VERIFIED** | Client-generated assessment and patient UUIDs became canonical PostgreSQL identifiers. |
+| Duplicate protection | **PASS — BROWSER/RUNTIME VERIFIED** | Repeated synchronization/reload did not create duplicate logical patient or assessment. |
+| Existing-server-patient reuse | **PASS — BROWSER/RUNTIME VERIFIED** | A second local assessment reused an existing canonical server patient UUID. |
+| Cross-account isolation | **PASS — BROWSER/RUNTIME VERIFIED** | Non-destructive isolation verified across two Relawan accounts; each saw only its own records and drafts across logout/login. |
+| Offline reload/reopen/PWA boundary | **NOT YET VERIFIED / B3** | B2A did not verify Service Worker startup, true offline reload/reopen, or the complete PWA disconnect/reconnect golden gate. |
+
+**Browser/runtime scope:** Gates A-L **PASS** with no functional browser/runtime error observed in the B2A gate. This is Chrome/CDP and direct IndexedDB/network evidence, not complete automated browser E2E coverage, production readiness, security certification, or clinical certification. B2A did not redesign STT/Q17 behavior; Phase C remains separate.

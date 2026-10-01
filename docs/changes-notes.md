@@ -344,3 +344,55 @@ Evidence recorded: `RelawanSyncContractTest` **15 passed, 121 assertions**; full
 Retained limitations: populated Dexie v1 to v2 migration was source/static verified but not directly runtime-tested against a populated real browser database; concurrent duplicate replay was not load-tested; the visible Relawan workflow is not yet fully local-first; and offline reload/reopen, Service Worker shell, and complete disconnect/reconnect remain unverified. Complete local-first/PWA operation remains B2/B3 work.
 
 **NEXT: B2 — Relawan Local-First Workflow Integration.** B3 — PWA Shell & Offline Browser Verification remains pending after B2. Phase C/STT behavior and `docs/workflow.md` are unchanged in this documentation-only update.
+
+---
+
+## Phase B2A — Local-First Normal Assessment Workflow
+
+**1 October 2026**
+
+Repository checkpoint: `49f632ab4a5d7b7bd624da298ce123d9c4f7aa13` (`feat(relawan): complete phase B2A local-first assessment workflow`).
+
+Phase B2A is **COMPLETE / PASS for the selected prototype scope**. The normal Relawan journey now follows:
+
+```text
+patient
+-> assessment
+-> Identity
+-> SRQ-20
+-> Risk
+-> Function
+-> Review
+-> local TypeScript triage
+-> local COMPLETED
+-> priority-2 ASSESSMENT outbox
+-> local Result
+-> later server synchronization/reconciliation
+```
+
+New local patients and assessments receive stable UUIDs and are persisted to IndexedDB before synchronization. Identity participates in the local-first path; SRQ-20, Risk, and Function answers persist immediately; successful stage-level server POSTs are not prerequisites for progression; Review reads the canonical local assessment; the existing TypeScript triage domain calculates the recommendation; and the assessment is marked `COMPLETED` locally before entering the priority-2 `ASSESSMENT` outbox. Result renders from local data before server synchronization succeeds. Existing server assessments can bootstrap locally, valid local answers remain authoritative during merging, incomplete assessments resume, completed-but-unsynchronized assessments are not unfinished drafts, and foreign assessment routes/mutations remain rejected. B2A did not redesign STT/Q17 behavior, and the legacy server stage endpoints remain available.
+
+The patient storage correction is also recorded: when the owner already owns `patients[id]`, the row is reused/updated without a duplicate `patientSnapshots` row; when another owner owns it, the current owner uses `patientSnapshots[owner,id]` without overwriting the canonical row; server-known patients may use snapshots when no local `patients` row exists; and new local patients use `patients`. `patientRepository.list(owner)` deduplicates logical UUIDs. Successful assessment/emergency reconciliation supports both representations. `patientSnapshots` is not a second logical patient identity.
+
+Existing verification evidence:
+
+```text
+AssessmentLocalShellTest: 3 passed, 92 assertions
+RelawanSyncContractTest: 15 passed, 121 assertions
+Full Laravel suite: 114 passed, 1,350 assertions
+./node_modules/.bin/vue-tsc --noEmit: PASS
+npm run build: PASS; existing >500 kB chunk advisory only
+git diff --check: PASS
+```
+
+No dependencies were installed, and no application/source code was changed during this documentation checkpoint.
+
+Antigravity Chrome/CDP browser/runtime verification recorded **Gates A-L: PASS**, with no functional browser/runtime error observed in the B2A gate. A new assessment created both patient and assessment records in `RapidMindOfflineDB`, with stable UUIDs, `IN_PROGRESS`, and `LOCAL_SAVED`, without requiring `POST /relawan/assessment`. SRQ, Risk, and Function persistence was confirmed directly in IndexedDB, including partial SRQ resume behavior.
+
+The browser-tested local triage example was SRQ `4`, Risk `4`, Function `2`, total `10 / 37`, recommendation `T2`, present locally before successful synchronization. A forced `POST /relawan/sync/assessments` failure left the assessment `COMPLETED` with `SYNC_FAILED`, local `completed_at`, and local triage preserved. Its outbox item remained `ASSESSMENT`, priority `2`, status `FAILED`, revision `1`, retry count `1`, and the Result UI truthfully indicated local safety without confirmed server synchronization.
+
+After the endpoint was restored and manual synchronization was triggered, `POST /relawan/sync/assessments` returned HTTP 201. The same client-generated assessment and patient UUIDs became canonical PostgreSQL identifiers; local state became `SYNCED`; the outbox entry was removed; and repeated synchronization/reload created no duplicate logical patient or assessment. A second local assessment reused an existing canonical server patient UUID. Browser-verified non-destructive account isolation showed both accounts' records simultaneously, with each Relawan seeing only its own drafts and patient context across logout/login; records were not deleted to achieve isolation.
+
+Phase B remains **IN PROGRESS**. B2A is not full PWA/offline reload verification; true reload/reopen/startup remains B3. B2B covers the local-first T0 emergency workflow, and B2C covers shell/Data/synchronization operational integration. Phase C remains separate, STT safety hardening is not claimed, and `docs/workflow.md` was not changed.
+
+**NEXT: B2B — Local-First T0 Emergency Workflow.** B2C and B3 remain pending.

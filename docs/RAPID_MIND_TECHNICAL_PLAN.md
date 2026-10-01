@@ -17,16 +17,18 @@ This section defines the **authoritative implementation sequence for the `demo` 
 ## 1. Current Repository Checkpoint
 
 - **Branch:** `demo`
-- **Current Repository Checkpoint:** `9d3900fa95fc68b5f7f64166fa1a9617a57702ed` (`feat(relawan): complete phase B1 local sync contract`)
+- **Current Repository Checkpoint:** `49f632ab4a5d7b7bd624da298ce123d9c4f7aa13` (`feat(relawan): complete phase B2A local-first assessment workflow`)
 - **Phase A Main Implementation Checkpoint:** `e778ddfb5f842eab467881f2c15be929290c6a0e` (`feat(healthcare): harden realtime and referral lifecycle`)
 - **Prior Healthcare Checkpoint:** `ce38ba6cad97af146a7244d1e8f4835806f14d6e` (`feat(healthcare): complete operational validation and referral workflow`)
 
 ### Verification Baseline
-- **Laravel Full Suite:** `111 passed, 1,258 assertions`
+- **B2A `AssessmentLocalShellTest`:** `3 passed, 92 assertions`
 - **Phase B1 Targeted `RelawanSyncContractTest`:** `15 passed, 121 assertions`
+- **Full Laravel Suite:** `114 passed, 1,350 assertions`
 - **Vue TypeScript:** `./node_modules/.bin/vue-tsc --noEmit` PASS
 - **Frontend Production Build:** `npm run build` PASS; standard existing `>500 kB` chunk advisory warning retained (not an error)
 - **Git Formatting / Diff Check:** `git diff --check` PASS
+- **B2A Antigravity Browser Verification:** **Gates A–L PASS**; no functional browser/runtime error observed in the B2A gate
 - **Phase A Status:** **COMPLETE / PASS for the directly testable selected prototype scope** (does not represent full production certification, full production hardening, or user manual sign-off)
 - **Healthcare Antigravity Browser Verification:** **PASS** for the directly testable selected prototype scope; preserved NDVs and limited-evidence gates are documented in the Phase A verification matrix below.
 - **User Manual Final Retest:** **NOT YET PERFORMED** (pending project owner verification prior to final team demo)
@@ -216,16 +218,22 @@ Harden the realtime emergency reception path and complete the operational referr
 
 #### Status
 
-**IN PROGRESS — B1 COMPLETE / PASS; B2 NEXT; B3 PENDING**
+**IN PROGRESS — B1 COMPLETE / PASS; B2A COMPLETE / PASS; B2B NEXT; B2C PENDING; B3 PENDING**
 
-Phase B is intentionally divided into three implementation checkpoints:
+Phase B is intentionally divided into implementation checkpoints, with B2A/B2B/B2C as checkpoints inside B2:
 
 ```text
 B1 — Local Data & Replay Contract
 COMPLETE / PASS
 ↓
-B2 — Relawan Local-First Workflow Integration
+B2A — Local-first normal assessment workflow
+COMPLETE / PASS
+↓
+B2B — Local-first T0 emergency workflow
 NEXT
+↓
+B2C — Shell/Data/synchronization operational integration
+PENDING
 ↓
 B3 — PWA Shell & Offline Browser Verification
 PENDING
@@ -305,36 +313,17 @@ These foundations must not be discarded through a broad rewrite unless a concret
 
 ---
 
-#### Confirmed Current Gaps
+#### Current Checkpoint Status and Remaining Gaps
 
-Source inspection confirms the following Phase B gaps.
+Source inspection and verification establish the following Phase B checkpoint status and remaining gaps.
 
-##### Local assessment lifecycle
+##### B2A normal assessment workflow
 
-Current local persistence is primarily answer-draft persistence after a server assessment already exists.
+**COMPLETE / PASS.** The normal Relawan assessment path now creates stable patient and assessment UUIDs locally, persists Identity/SRQ-20/Risk/Function work to IndexedDB first, calculates the recommendation with the existing TypeScript triage domain, marks the assessment `COMPLETED` locally, queues priority-2 `ASSESSMENT`, and renders the local Result before server synchronization. B1 synchronization later reconciles canonical Laravel/PostgreSQL state. Existing server stage endpoints remain available; the active local-first UI path does not depend on them for stage progression.
 
-A completely new assessment cannot yet be created, progressed, completed, reloaded, and synchronized entirely from a local-first record.
+The B2A path also supports existing server assessment bootstrap, valid local-answer precedence during merging, incomplete-assessment resume, and exclusion of completed-but-unsynchronized work from unfinished drafts. Patient ownership and same-shelter/creator access rules remain enforced.
 
-Current assessment creation remains server-first:
-
-```text
-UI
-→ POST /relawan/assessment
-→ server creates patient / assessment UUID
-→ assessment stages begin
-```
-
-Phase B must instead establish stable local patient/assessment identity before server synchronization is required.
-
-##### Assessment outbox coverage
-
-SRQ, risk, and function pages currently attempt direct server writes when advancing between stages.
-
-Failed server writes are not currently converted into a canonical assessment outbox operation.
-
-The existing `ASSESSMENT` outbox type therefore does not yet establish complete assessment synchronization coverage.
-
-##### T0 local-first behavior
+##### B2B remaining gap: T0 local-first behavior
 
 `T0Verification.vue` currently submits directly to the server.
 
@@ -350,7 +339,13 @@ validate emergency input
 
 Server transmission must never be a prerequisite for emergency data durability.
 
-##### Shell synchronization state
+B2B must preserve one stable client-originated emergency UUID from local creation through failed transmission, retry, and canonical server reconciliation.
+
+An exact replay of the same T0 emergency must remain idempotent: it must not create a duplicate logical `EmergencyEvent` or duplicate Healthcare realtime incident/alert.
+
+B2B browser verification must also confirm that locally stored emergency state remains scoped to the authenticated Relawan account during same-browser account switching.
+
+##### B2C remaining gap: shell synchronization state
 
 The Relawan shell currently tracks raw browser online/offline state, but it does not consume the real `syncManager` state.
 
@@ -358,7 +353,7 @@ Therefore the shell can display `Tersinkron` while local outbox work still exist
 
 This must be corrected.
 
-##### Data workspace
+##### B2C remaining gap: data workspace
 
 `/relawan/data` currently primarily reflects server-backed assessments.
 
@@ -374,21 +369,7 @@ local-only T0
 pending outbox work
 ```
 
-##### Server replay / idempotency
-
-Current server-created UUID behavior is insufficient for deterministic offline replay.
-
-Client-originated synchronized entities must use stable UUIDs so an exact retry does not create another logical patient, assessment, or T0 incident.
-
-T0 exact replay must not produce duplicate Healthcare alerts.
-
-##### Local account isolation
-
-The existing fixed Dexie database is not yet sufficient evidence of account-isolated local clinical/emergency data.
-
-Phase B must prevent locally stored Relawan data from one authenticated account from becoming visible or synchronizable under another Relawan account on the same browser profile/device.
-
-##### PWA shell
+##### B3 remaining gap: PWA shell
 
 A production Service Worker / PWA application-shell configuration is not currently present.
 
@@ -710,6 +691,17 @@ Retained limitations:
 ##### Goal
 
 Connect the B1 data/replay contract to the real Relawan UI so the field workflow uses IndexedDB as the primary durability boundary.
+
+Checkpoint mapping:
+
+| Checkpoint | Scope | Status |
+|---|---|---|
+| B2A | Normal local-first assessment integration; B2.1–B2.5 | **COMPLETE / PASS** |
+| B2B | Local-first T0 emergency integration; B2.6–B2.7 and applicable SMS/T0 transmission contract | **NEXT** |
+| B2C | Shell, Data, and synchronization operational integration; B2.8–B2.10 | **PENDING** |
+| B2 | All three checkpoints above | **IN PROGRESS** |
+
+B2A evidence does not claim true offline page reload/reopen/startup; that remains a B3 verification boundary.
 
 ---
 
@@ -1128,13 +1120,19 @@ The existing STT direct-answer mutation issue remains assigned to Phase C.
 
 #### Phase B Completion Criteria
 
-Phase B may be marked **COMPLETE / PASS for the selected prototype scope** only when all three checkpoints are complete:
+Phase B remains **IN PROGRESS** and may be marked **COMPLETE / PASS for the selected prototype scope** only when all five checkpoints are complete:
 
 ```text
 B1 — Local Data & Replay Contract
 PASS
 ↓
-B2 — Relawan Local-First Workflow Integration
+B2A — Local-first normal assessment workflow
+PASS
+↓
+B2B — Local-first T0 emergency workflow
+PASS
+↓
+B2C — Shell/Data/synchronization operational integration
 PASS
 ↓
 B3 — PWA Shell & Offline Browser Verification
@@ -1225,7 +1223,7 @@ Once Phases A through D are completed, the final verification sequence will be e
 ```text
 Phase A — COMPLETE / PASS for selected prototype scope
 ↓
-Phase B — Relawan Offline / PWA Completion (IN PROGRESS; B1 COMPLETE / PASS, B2 NEXT, B3 PENDING)
+Phase B — Relawan Offline / PWA Completion (IN PROGRESS; B1 COMPLETE / PASS, B2A COMPLETE / PASS, B2B NEXT, B2C PENDING, B3 PENDING)
 ↓
 Phase C — STT Safety & Interaction Hardening
 ↓
