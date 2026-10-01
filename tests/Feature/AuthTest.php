@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class AuthTest extends TestCase
@@ -16,6 +17,67 @@ final class AuthTest extends TestCase
     {
         $response = $this->get('/login');
         $response->assertStatus(200);
+    }
+
+    public function test_authenticated_user_keeps_normal_login_redirect_behavior(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::HEALTHCARE,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/login')
+            ->assertRedirect('/healthcare/emergencies');
+    }
+
+    public function test_authenticated_wrong_user_can_open_explicit_reauthentication_form(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::ADMIN,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/login?reauth=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Login', false)
+                ->where('auth.user', null));
+    }
+
+    public function test_unauthenticated_user_can_open_explicit_reauthentication_form(): void
+    {
+        $this->get('/login?reauth=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Login', false)
+                ->where('auth.user', null));
+    }
+
+    public function test_successful_account_switch_replaces_user_and_regenerates_session(): void
+    {
+        $current = User::factory()->create([
+            'role' => UserRole::ADMIN,
+            'is_active' => true,
+        ]);
+        $replacement = User::factory()->create([
+            'email' => 'pemulihan@rapidmind.id',
+            'password' => Hash::make('password'),
+            'role' => UserRole::RELAWAN,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($current)->get('/login?reauth=1')->assertOk();
+        $previousSessionId = session()->getId();
+
+        $this->post('/login', [
+            'email' => $replacement->email,
+            'password' => 'password',
+        ])->assertRedirect('/relawan/home');
+
+        $this->assertAuthenticatedAs($replacement);
+        $this->assertNotSame($previousSessionId, session()->getId());
     }
 
     public function test_relawan_login_redirects_to_relawan_home(): void

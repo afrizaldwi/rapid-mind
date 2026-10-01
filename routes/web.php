@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ShelterManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Healthcare\HealthcareController;
 use App\Http\Controllers\Relawan\RelawanController;
+use App\Http\Controllers\Relawan\RelawanSessionController;
 use App\Http\Controllers\Relawan\RelawanSyncController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,10 @@ Route::get('/', [AuthController::class, 'showLogin'])->name('home');
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Read-only recovery boundary for the static offline Relawan runtime.
+Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'])
+    ->name('relawan.session-status');
 
 // ──────────────────────────────────────────────
 // ROLE 1: RELAWAN (Mobile PWA)

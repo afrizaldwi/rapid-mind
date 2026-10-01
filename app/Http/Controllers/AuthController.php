@@ -19,14 +19,20 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 final class AuthController extends Controller
 {
-    public function showLogin(): InertiaResponse|RedirectResponse
+    public function showLogin(Request $request): InertiaResponse|RedirectResponse
     {
-        if (Auth::guard('web')->check()) {
+        $reauthentication = $request->boolean('reauth');
+
+        if (Auth::guard('web')->check() && !$reauthentication) {
             $user = Auth::guard('web')->user();
             return redirect($this->getRedirectPath($user));
         }
 
-        return Inertia::render('Auth/Login');
+        return Inertia::render('Auth/Login', $reauthentication ? [
+            // The existing server session remains intact until valid replacement
+            // credentials are submitted, but it must not affect local continuity.
+            'auth' => ['user' => null],
+        ] : []);
     }
 
     public function login(Request $request): JsonResponse|RedirectResponse
@@ -69,6 +75,9 @@ final class AuthController extends Controller
 
         // Also log into web session for Inertia page transitions
         Auth::guard('web')->login($user);
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         $redirectPath = $this->getRedirectPath($user);
 

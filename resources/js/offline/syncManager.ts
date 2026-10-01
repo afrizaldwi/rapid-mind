@@ -5,15 +5,24 @@ import {
     type OutboxItem,
 } from "./db";
 import { outboxRepository } from "./outboxRepository";
-import { jsonRequest } from "./jsonRequest";
+import { jsonRequest, MissingCsrfTokenError } from "./jsonRequest";
 
-export type SyncExecutionState = { owner: number | null; isSyncing: boolean };
+export type SyncSessionState =
+    | "READY"
+    | "REAUTHENTICATION_REQUIRED"
+    | "RECOVERING_SESSION";
+export type SyncExecutionState = {
+    owner: number | null;
+    isSyncing: boolean;
+    sessionState: SyncSessionState;
+};
 class SyncManager {
     private isSyncing = false;
     private syncRequested = false;
     private owner: number | null = null;
     private activeRunOwner: number | null = null;
     private ownerLease = 0;
+    private sessionState: SyncSessionState = "READY";
     private listeners = new Set<(state: SyncExecutionState) => void>();
 
     constructor() {
@@ -30,6 +39,7 @@ class SyncManager {
     public setOwner(owner: number) {
         const previous = this.owner;
         this.owner = requireOwner(owner);
+        if (previous !== this.owner) this.sessionState = "READY";
         const lease = ++this.ownerLease;
         if (this.isSyncing && this.owner !== previous)
             this.syncRequested = true;
@@ -48,7 +58,11 @@ class SyncManager {
         return () => this.listeners.delete(listener);
     }
     private state(): SyncExecutionState {
-        return { owner: this.owner, isSyncing: this.isSyncing && this.activeRunOwner === this.owner };
+        return {
+            owner: this.owner,
+            isSyncing: this.isSyncing && this.activeRunOwner === this.owner,
+            sessionState: this.sessionState,
+        };
     }
     private notify() {
         for (const listener of this.listeners) listener(this.state());
@@ -68,6 +82,7 @@ class SyncManager {
     public async sync(owner?: number) {
         if (owner !== undefined && requireOwner(owner) !== this.owner) return;
         if (!this.owner) return;
+        if (this.sessionState !== "READY") return;
         if (this.isSyncing) {
             this.syncRequested = true;
             return;
@@ -88,6 +103,7 @@ class SyncManager {
             this.notify();
             do {
                 this.syncRequested = false;
+                let stopCurrentPass = false;
                 const active: number | null = this.owner;
                 if (!active || !navigator.onLine) break;
                 this.activeRunOwner = active;
@@ -139,6 +155,27 @@ class SyncManager {
                                 `HTTP ${response.status}`,
                                 response.status,
                             );
+                            const retryable =
+                                [401, 408, 419, 429].includes(response.status) ||
+                                response.status >= 500;
+                            if (response.status === 401) {
+                                this.sessionState =
+                                    "REAUTHENTICATION_REQUIRED";
+                                this.syncRequested = false;
+                                this.notify();
+                                stopCurrentPass = true;
+                            } else if (response.status === 419) {
+                                this.sessionState = "RECOVERING_SESSION";
+                                this.syncRequested = false;
+                                this.notify();
+                                stopCurrentPass = true;
+                                window.setTimeout(() => {
+                                    if (this.owner === active)
+                                        window.location.assign("/relawan/data");
+                                }, 0);
+                            } else if (item.type === "EMERGENCY" && retryable) {
+                                stopCurrentPass = true;
+                            }
                         } else {
                             const canonical = (await response.json()) as {
                                 assessment?: Partial<LocalAssessment> & { id: string };
@@ -169,8 +206,22 @@ class SyncManager {
                                 message,
                             );
                         }
+                        if (error instanceof MissingCsrfTokenError) {
+                            this.sessionState = "RECOVERING_SESSION";
+                            this.syncRequested = false;
+                            this.notify();
+                            stopCurrentPass = true;
+                            window.setTimeout(() => {
+                                if (this.owner === active)
+                                    window.location.assign("/relawan/data");
+                            }, 0);
+                        } else if (item.type === "EMERGENCY") {
+                            stopCurrentPass = true;
+                        }
                     }
+                    if (stopCurrentPass) break;
                 }
+                if (stopCurrentPass) break;
             } while (this.syncRequested);
         } finally {
             this.isSyncing = false;

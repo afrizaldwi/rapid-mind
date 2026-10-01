@@ -9,7 +9,7 @@
           @click="$emit('close')">Tutup</button>
       </div>
       <p class="rounded-xl border p-3 text-sm font-semibold"
-        :class="kind === 'local-failure' ? 'border-slate-700 bg-slate-100 text-slate-900' : kind === 'failed' || kind === 'unqueued' ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-800'">
+        :class="kind === 'local-failure' ? 'border-slate-700 bg-slate-100 text-slate-900' : kind === 'failed' || kind === 'unqueued' || kind === 'reauthentication-required' ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-800'">
         {{ label }}
       </p>
       <dl class="mt-4 space-y-3 text-sm">
@@ -38,6 +38,7 @@
         akan dicoba kembali saat koneksi tersedia.</p>
       <p v-if="failedCount > 0" class="mt-3 text-sm text-amber-900">Sinkronisasi sebelumnya belum berhasil. Data yang
         tersimpan di perangkat tetap tersedia.</p>
+      <p v-if="kind === 'reauthentication-required'" class="mt-3 text-sm text-amber-900">Data tetap aman di perangkat. Masuk kembali sebelum mencoba sinkronisasi lagi.</p>
       <p v-if="failedCount > 0 && online && !canRetry" class="mt-2 text-xs text-amber-900">Sebagian data perlu diperiksa sebelum dicoba kembali.</p>
       <p v-if="unqueuedCompletedCount > 0" class="mt-3 text-sm text-amber-900">{{ unqueuedCompletedCount }} asesmen
         selesai belum masuk antrean sinkronisasi. Buka Data untuk menyiapkannya kembali.</p>

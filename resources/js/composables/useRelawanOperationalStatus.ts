@@ -14,6 +14,8 @@ type LocalCounts = {
 export type OperationalKind =
     | "local-failure"
     | "unavailable"
+    | "recovering-session"
+    | "reauthentication-required"
     | "syncing"
     | "offline"
     | "failed"
@@ -36,6 +38,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
     const execution = ref<SyncExecutionState>({
         owner: null,
         isSyncing: false,
+        sessionState: "READY",
     });
     const actionError = ref("");
     let localSubscription: Subscription | undefined;
@@ -130,6 +133,10 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
     const kind = computed<OperationalKind>(() => {
         if (localFailure.value) return "local-failure";
         if (!ready.value) return "unavailable";
+        if (execution.value.sessionState === "RECOVERING_SESSION")
+            return "recovering-session";
+        if (execution.value.sessionState === "REAUTHENTICATION_REQUIRED")
+            return "reauthentication-required";
         if (isSyncing.value) return "syncing";
         if (!online.value) return "offline";
         if (failedCount.value > 0) return "failed";
@@ -144,6 +151,10 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
                 return "Data belum tersimpan di perangkat";
             case "unavailable":
                 return "Status data belum tersedia";
+            case "recovering-session":
+                return "Memulihkan sesi…";
+            case "reauthentication-required":
+                return "Perlu masuk kembali untuk sinkronisasi";
             case "syncing":
                 return pendingCount.value > 0
                     ? `Menyinkronkan ${pendingCount.value} data…`
@@ -172,6 +183,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
             ready.value &&
             online.value &&
             !isSyncing.value &&
+            execution.value.sessionState === "READY" &&
             retryableCount.value > 0,
     );
     async function retry() {
@@ -215,6 +227,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
             () => counts.value.unqueuedCompletedCount,
         ),
         isSyncing,
+        sessionState: computed(() => execution.value.sessionState),
         kind,
         label,
         canRetry,

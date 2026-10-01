@@ -42,6 +42,11 @@
     <!-- Main Content Area -->
     <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
       <p v-if="logoutError" role="alert" class="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{{ logoutError }}</p>
+      <section v-if="recoveryMessage" role="status" class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+        <p class="font-bold">{{ recoveryMessage.title }}</p>
+        <p class="mt-1">{{ recoveryMessage.detail }}</p>
+        <button v-if="recoveryMessage.login" type="button" class="mt-3 rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white" @click="openRelawanLogin">Masuk kembali</button>
+      </section>
       <LocalEmergencyActive v-if="runtime.mode === 'ONLINE_SERVER' && activeLocalId && currentOwner && !isDataRoute" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
       <slot v-else />
     </main>
@@ -139,6 +144,7 @@ import RelawanStatusDataSheet from '@/components/Relawan/RelawanStatusDataSheet.
 import { useRelawanOperationalStatus } from '@/composables/useRelawanOperationalStatus';
 import { lockRelawanContinuity, recordVerifiedRelawan, resolveRelawanContinuity } from '@/offline/relawanContinuity';
 import { registerRelawanServiceWorker } from '@/pwa/register';
+import { openRelawanLogin, relawanSessionRecovery } from '@/offline/sessionRecovery';
 
 const runtime = useRelawanRuntime();
 const user = computed(() => ({ id: runtime.owner, role: 'RELAWAN', name: runtime.name, shelter_id: runtime.shelterId, shelter: { name: runtime.shelterName ?? undefined } }));
@@ -153,6 +159,37 @@ let offlineContinuitySubscription: Subscription | undefined;
 const status = useRelawanOperationalStatus(currentOwner, computed(() => runtime.mode === 'ONLINE_SERVER'));
 const isDataRoute = computed(() => runtime.path.split('?')[0] === '/relawan/data');
 const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(runtime.path.split('?')[0]));
+const recoveryMessage = computed(() => {
+  if (runtime.mode === 'ONLINE_SERVER') {
+    if (status.sessionState.value === 'RECOVERING_SESSION') return {
+      title: 'Memulihkan sesi…',
+      detail: 'Data tetap aman di perangkat. Sinkronisasi akan dilanjutkan setelah konteks server dipulihkan.',
+      login: false,
+    };
+    if (status.sessionState.value === 'REAUTHENTICATION_REQUIRED') return {
+      title: 'Perlu masuk kembali untuk sinkronisasi.',
+      detail: 'Data tetap aman di perangkat.',
+      login: true,
+    };
+    return null;
+  }
+  switch (relawanSessionRecovery.state) {
+    case 'CHECKING':
+      return { title: 'Memulihkan sesi…', detail: 'Memeriksa ketersediaan server tanpa mengirim data lokal.', login: false };
+    case 'RESTORING_ONLINE_RUNTIME':
+      return { title: 'Memulihkan sesi…', detail: 'Membuka kembali aplikasi server sebelum sinkronisasi dimulai.', login: false };
+    case 'REAUTHENTICATION_REQUIRED':
+      return { title: 'Perlu masuk kembali untuk sinkronisasi.', detail: 'Data tetap aman di perangkat.', login: true };
+    case 'WRONG_IDENTITY':
+      return { title: 'Akun server tidak sesuai.', detail: 'Data akun Relawan ini tetap aman dan tidak akan disinkronkan melalui akun lain. Keluar dari akun server yang aktif, lalu masuk dengan akun yang benar.', login: true };
+    case 'ACCOUNT_INACTIVE':
+      return { title: 'Sinkronisasi tidak diizinkan.', detail: 'Akun perlu diaktifkan oleh Admin. Data tetap aman di perangkat.', login: true };
+    case 'SERVER_REJECTED':
+      return { title: 'Sinkronisasi belum dapat dilanjutkan.', detail: 'Server menolak pemulihan sesi. Data tetap aman di perangkat.', login: true };
+    default:
+      return null;
+  }
+});
 
 const t0AssessmentContext = computed(() => {
   const route = runtime.path.split('?')[0].match(/^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/);

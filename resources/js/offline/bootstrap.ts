@@ -3,6 +3,7 @@ import { createApp, h } from "vue";
 import { resolveRelawanContinuity } from "./relawanContinuity";
 import { resolveOfflineRoute } from "@/relawan/offlineRoutes";
 import { relawanRuntimeKey, type RelawanRuntime } from "@/relawan/runtime";
+import { startRelawanSessionRecovery } from "./sessionRecovery";
 
 const target = document.getElementById("offline-state");
 function message(title: string, detail: string) {
@@ -67,6 +68,7 @@ async function start() {
         });
         app.provide(relawanRuntimeKey, runtime);
         app.mount(mountPoint);
+        startRelawanSessionRecovery(continuity.context.owner_user_id);
     } catch {
         message(
             "Data perangkat belum tersedia",

@@ -1,3 +1,10 @@
+export class MissingCsrfTokenError extends Error {
+    constructor() {
+        super("Missing CSRF token");
+        this.name = "MissingCsrfTokenError";
+    }
+}
+
 export function jsonRequest(url: string, payload: unknown): Promise<Response> {
     if (!url.startsWith("/") || url.startsWith("//"))
         throw new Error("Only same-origin paths are allowed");
@@ -6,7 +13,7 @@ export function jsonRequest(url: string, payload: unknown): Promise<Response> {
             'meta[name="csrf-token"]',
         ) as HTMLMetaElement | null
     )?.content;
-    if (!token) throw new Error("Missing CSRF token");
+    if (!token) throw new MissingCsrfTokenError();
     return fetch(url, {
         method: "POST",
         credentials: "same-origin",
