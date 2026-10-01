@@ -957,6 +957,21 @@ Full offline page reload/startup is not claimed until B3 is complete.
 
 Add the minimum approved production PWA/runtime layer after the local-first domain workflow is already correct.
 
+##### Current Delivery Status — 1 October 2026
+
+```text
+Phase B3A — COMPLETE / PASS
+Phase B3B — COMPLETE / PASS
+Phase B3C — COMPLETE / PASS for selected prototype scope
+Phase B3D — NOT STARTED
+Phase B3E — NOT STARTED
+Phase C offline STT — NOT STARTED
+```
+
+B3C covers the verified server-unavailable Relawan runtime through owner-scoped local data, PFA, patient/assessment creation and progression, local triage and Result, T0-Suspect creation, and the pending outbox. It does not complete the reconnect/synchronization lifecycle described later in B3.5. B3D must still explicitly verify session restoration, CSRF/auth recovery, T0-first synchronization ordering, assessment replay, canonical reconciliation, duplicate prevention, and failure/retry behavior. The later observation of one offline-created T0 as `Diterima server` after Nginx restoration and explicit login is a reconnect signal only, not systematic B3D verification.
+
+The authoritative B3C acceptance evidence is the later Chrome test with the local Nginx service genuinely stopped. The earlier CDP-only Antigravity attempt is not the final B3C result because the renderer and localhost Service Worker network path were isolated differently and produced cascading failures.
+
 ---
 
 ##### B3.1 PWA Integration
@@ -1006,6 +1021,8 @@ browser/PWA reopened
 Do not claim fresh offline password authentication.
 
 If existing offline eligibility cannot be established safely, preserve local data without pretending a new server-authenticated session exists.
+
+For the selected B3C prototype scope, normal reload/reopen under an existing controlling Service Worker is the supported acceptance gate. `Ctrl+Shift+R` / hard reload is excluded because it can bypass normal Service Worker behavior.
 
 ---
 

@@ -74,18 +74,18 @@
 
       <!-- Action Buttons -->
       <div class="space-y-2.5 pt-2">
-        <Link
+        <RelawanLink
           href="/relawan/home"
           class="w-full flex justify-center py-3.5 px-4 bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm rounded-xl shadow-md transition"
         >
           Kembali ke Beranda
-        </Link>
-        <Link
+        </RelawanLink>
+        <RelawanLink
           href="/relawan/assessment"
           class="w-full flex justify-center py-3 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-sm rounded-xl transition"
         >
           Kembali ke Daftar Asesmen
-        </Link>
+        </RelawanLink>
       </div>
     </div>
   </RelawanLayout>
@@ -93,8 +93,10 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import { Link } from '@inertiajs/vue3';
+
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import { loadAssessmentContext, relawanOwner, type ServerAssessment, type ServerPatient } from '@/offline/assessmentWorkflow';
 import { normalizeTriage } from '@/offline/triageDisplay';
 import type { LocalPatient } from '@/offline/db';
@@ -105,6 +107,7 @@ const props = defineProps<{
   triageResult?: unknown;
 }>();
 
+const runtime = useRelawanRuntime();
 const owner = relawanOwner();
 const localPatient = ref<LocalPatient | null>(null);
 const triageResult = ref(normalizeTriage(props.triageResult));
@@ -112,7 +115,7 @@ const syncLabel = ref('Tersimpan di perangkat ini; sinkronisasi belum dikonfirma
 const loadError = ref('');
 onMounted(async () => {
   try {
-    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
     if (context.assessment.status !== 'COMPLETED') throw new Error('Asesmen belum selesai.');
     localPatient.value = context.patient;
     triageResult.value = normalizeTriage(context.assessment.triage_result ?? props.triageResult);

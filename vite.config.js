@@ -3,6 +3,7 @@ import laravel from "laravel-vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync } from "node:fs";
 
 export default defineConfig({
     plugins: [
@@ -29,6 +30,15 @@ export default defineConfig({
             registerType: "prompt",
             scope: "/relawan/",
             buildBase: "/build/",
+            integration: {
+                beforeBuildServiceWorker(options) {
+                    // The plugin also adds a root-relative manifest entry. Laravel serves it under /build/.
+                    options.injectManifest.additionalManifestEntries =
+                        (options.injectManifest.additionalManifestEntries ?? []).filter(
+                            (entry) => typeof entry === "string" ? entry !== "manifest.webmanifest" : entry.url !== "manifest.webmanifest",
+                        );
+                },
+            },
             manifest: {
                 name: "RAPID-MIND Relawan",
                 short_name: "RAPID-MIND",
@@ -52,12 +62,27 @@ export default defineConfig({
                     { url: "/pwa-192.png", revision: null },
                     { url: "/pwa-512.png", revision: null },
                 ],
-                manifestTransforms: [async (entries) => ({
-                    manifest: entries.filter(({ url }) =>
-                        /(?:\/build\/)?(?:offline\.html|manifest\.webmanifest|assets\/(?:offline|relawanContinuity)-[^/]+\.js)$/.test(url)
-                        || url === "/pwa-192.png" || url === "/pwa-512.png"),
-                    warnings: [],
-                })],
+                manifestTransforms: [async (entries) => {
+                    // Follow the offline HTML entry, including its route chunks and shared imports.
+                    const manifest = JSON.parse(readFileSync(new URL("./public/build/manifest.json", import.meta.url), "utf8"));
+                    const required = new Set(["offline.html", "manifest.webmanifest"]);
+                    const visited = new Set();
+                    function include(key) {
+                        if (visited.has(key)) return;
+                        visited.add(key);
+                        const item = manifest[key];
+                        if (!item) throw new Error(`Missing offline asset: ${key}`);
+                        required.add(item.file);
+                        for (const file of [...(item.css ?? []), ...(item.assets ?? [])]) required.add(file);
+                        for (const dependency of [...(item.imports ?? []), ...(item.dynamicImports ?? [])]) include(dependency);
+                    }
+                    include("offline.html");
+                    return {
+                        manifest: entries.filter(({ url }) => required.has(url.replace(/^\/build\//, ""))
+                            || url === "/pwa-192.png" || url === "/pwa-512.png"),
+                        warnings: [],
+                    };
+                }],
             },
         }),
     ],

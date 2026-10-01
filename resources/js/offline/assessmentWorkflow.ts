@@ -1,4 +1,4 @@
-import { usePage } from '@inertiajs/vue3';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import { assessmentRepository } from './assessmentRepository';
 import { patientRepository } from './patientRepository';
 import { requireOwner, type LocalAssessment, type LocalPatient } from './db';
@@ -17,14 +17,13 @@ export type ServerAssessment = Partial<LocalAssessment> & {
 };
 
 export function relawanOwner(): number {
-    const page = usePage();
-    const auth = page.props.auth as { user?: { id?: number } } | undefined;
-    return requireOwner(Number(auth?.user?.id));
+    return requireOwner(useRelawanRuntime().owner);
 }
 
 export async function startLocalAssessment(owner: number, patientInput: Omit<LocalPatient, 'id' | 'owner_user_id' | 'sync_state'> & { id?: string; serverKnown?: boolean }, mode: LocalAssessment['mode']) {
     const { serverKnown, ...input } = patientInput;
-    const patientId = await localPersistenceHealth.recordWrite(owner, () => serverKnown
+    const existingLocal = input.id && !serverKnown ? await patientRepository.get(owner, input.id) : null;
+    const patientId = existingLocal?.id ?? await localPersistenceHealth.recordWrite(owner, () => serverKnown
         ? patientRepository.saveServerSnapshot(owner, input as ServerPatient)
         : patientRepository.save(owner, input));
     const id = await localPersistenceHealth.recordWrite(owner, () => assessmentRepository.save(owner, {
@@ -37,9 +36,16 @@ export async function startLocalAssessment(owner: number, patientInput: Omit<Loc
     return id;
 }
 
-export async function loadAssessmentContext(owner: number, server: ServerAssessment, patientSnapshot?: ServerPatient | null) {
+export async function loadAssessmentContext(owner: number, server: ServerAssessment, patientSnapshot?: ServerPatient | null, localOnly = false) {
     requireOwner(owner);
     if (server.user_id !== owner) throw new Error('Asesmen tidak tersedia untuk Relawan ini.');
+    if (localOnly) {
+        const assessment = await assessmentRepository.get(owner, server.id);
+        if (!assessment) throw new Error('Asesmen ini belum tersedia di perangkat.');
+        const patient = await patientRepository.get(owner, assessment.patient_id);
+        if (!patient) throw new Error('Data penyintas belum tersedia di perangkat.');
+        return { assessment, patient };
+    }
     let local = await assessmentRepository.get(owner, server.id);
     if (!local) {
         if (!server.patient_id) throw new Error('Asesmen lokal tidak ditemukan pada perangkat ini.');

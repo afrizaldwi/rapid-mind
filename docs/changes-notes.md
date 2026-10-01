@@ -446,3 +446,43 @@ The B2C regression checks were: R1 Data remained usable with pending T0 **PASS**
 Retained limitations: Gate G visibility retry, Gate N local-write failure, and R4 missing synchronized triage were source-covered but not directly reproduced. B3 Service Worker/PWA work remains pending; offline page reload/reopen/cold startup, PWA installation, and Background Sync are not verified or implemented. Phase C STT safety hardening remains pending. Broader concurrent duplicate replay under real-world load remains unverified. This does not establish production security or clinical certification.
 
 **NEXT: B3 — PWA Shell & Offline Browser Verification.** `docs/workflow.md` was not changed, and no application/source or test files were modified during this documentation pass.
+
+---
+
+## Phase B3C — Full Offline Relawan Runtime & Navigation (1 October 2026)
+
+Phase B3C is **COMPLETE / PASS for the selected prototype scope**. The checkpoint status is:
+
+```text
+Phase B3A — COMPLETE / PASS
+Phase B3B — COMPLETE / PASS
+Phase B3C — COMPLETE / PASS for selected prototype scope
+Phase B3D — NOT STARTED
+Phase B3E — NOT STARTED
+Phase C offline STT — NOT STARTED
+```
+
+The authoritative browser evidence is the later manual Chrome test with `rapid-mind-nginx-1` genuinely stopped, making Laravel unavailable. The earlier CDP-only Antigravity run is not the final B3C result: its browser renderer and localhost Service Worker network path were isolated differently and produced cascading failures.
+
+With an existing Service Worker controlling `/relawan/`, a normal reload of `/relawan/home` opened the full offline Relawan runtime. Verified Relawan identity and Posko continuity metadata were restored, owner-scoped IndexedDB data loaded, and the UI truthfully displayed `Mode lapangan offline`. Normal reload is the supported acceptance gate; `Ctrl+Shift+R` / hard reload is not, because it can bypass normal Service Worker behavior.
+
+Direct browser verification covered:
+
+- offline `/relawan/pfa`, including LOOK, LISTEN, LINK, grounding, and normal reload;
+- offline `/relawan/data`, including owner-scoped records, `Menunggu sinkronisasi`, locally accessible results, reload restoration, and no false server-sync claim;
+- creation and persistence of a new synthetic patient and assessment entirely offline, including Identity route reload;
+- the complete local `Identity -> SRQ-20 -> Risk -> Function -> Review -> Result` workflow, with SRQ-20, Risk, and Function answers surviving reload, Review loading persisted local data, local triage calculation, local completion..., Review loading local data, local triage calculation, local completion, `sync_state = PENDING_SYNC`, Result reopening from Data, and Result surviving normal offline reload;
+- Q17 `Ya` opening the Red Flag interruption. Cancelling escalation retained Q17 as `Ya`: dismissing T0 escalation does not change the recorded SRQ answer;
+- manual SRQ input offline. Browser Web Speech is not treated as offline STT; true offline STT remains Phase C;
+- creation of a T0 entirely offline, persistence of `LocalEmergency`, navigation to the real `/relawan/emergencies/<id>` route, restoration after normal reload, clinical status `T0-Suspect`, transmission `Menunggu sinkronisasi`, Healthcare response `Belum ada konfirmasi Healthcare`, no false `Diterima server`, and with the existing SMS composer handoff path left unchanged;
+- direct IndexedDB evidence that pending `EMERGENCY` work had priority `1` and pending `ASSESSMENT` work had priority `2`;
+- truthful missing-record handling for nonexistent assessment and emergency IDs: `Halaman tidak tersedia` with `Asesmen ini belum tersedia di perangkat.` or `Insiden ini belum tersedia di perangkat.`, without creating replacement records;
+- offline logout locking local access, followed after reload by `Akses lapangan belum tersedia` and `Masuk kembali saat terhubung ke internet. Data lokal tetap dipertahankan.` Local clinical records remained preserved, and explicit login was required after Nginx returned.
+
+The Service Worker/build evidence retained for this checkpoint shows the offline runtime dependency graph precached. Browser inspection found safe application runtime assets in Workbox Cache Storage and did not find authenticated Inertia responses or clinical records stored there. No exact generated asset hash is contractual, and any cache-entry count may change with build chunking. The fallback CSS regression found during testing was corrected by isolating `offline.html` fallback styles; the offline Result page's `Kembali ke Beranda` button was manually retested with the intended white text.
+
+Repository/Dexie inspection shows records partitioned by `owner_user_id`, and the offline route resolver uses the continuity owner with owner-scoped repositories. A direct two-account browser switching isolation test was **NOT TESTED** for B3C and is not recorded as a browser pass.
+
+After Nginx was restored and the user explicitly logged in again, the previously offline-created T0 was later observed as `Diterima server`. This is an **observed reconnect signal only**. B3D remains **NOT STARTED** and still requires explicit verification of session restoration, CSRF/auth recovery, T0-first synchronization ordering, assessment replay, canonical reconciliation, duplicate prevention, and failure/retry behavior. B3C therefore means the selected offline path `verified Relawan -> server unavailable -> offline Relawan runtime -> owner-scoped Dexie -> PFA -> patient/assessment -> SRQ -> risk -> function -> local triage -> Result -> T0 -> outbox` passed; it does not mean the reconnect/synchronization lifecycle is fully validated.
+
+Existing final-worktree evidence supplied for this checkpoint is `npm run build` **PASS**, `npx vue-tsc --noEmit` **PASS**, and `git diff --check` **PASS**. No dependencies were installed. Phase B3D was not started, Phase C offline STT was not started, and `docs/workflow.md` was not changed.

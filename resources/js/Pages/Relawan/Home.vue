@@ -20,6 +20,8 @@
         </div>
       </div>
 
+      <p v-if="runtime.mode === 'OFFLINE_FIELD_MODE'" class="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-900">Mode lapangan offline · data tersedia dari perangkat ini</p>
+      <p v-if="local.error.value" role="alert" class="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{{ local.error.value }}</p>
       <!-- Active Emergency Banner if any -->
       <div
         v-if="displayEmergency"
@@ -32,22 +34,22 @@
               Sinyal Darurat T0 Aktif
             </span>
           </div>
-          <Badge variant="t0">{{ displayEmergency?.status }}</Badge>
+          <Badge variant="t0">{{ runtime.mode === 'OFFLINE_FIELD_MODE' ? 'T0-Suspect' : displayEmergency?.status }}</Badge>
         </div>
         <div>
           <h3 class="font-extrabold text-base">
             {{ displayEmergency?.patient?.name || 'Penyintas Tanpa Nama' }}
           </h3>
           <p class="text-xs text-red-800 mt-1">
-            {{ displayEmergency?.notes || 'Lihat status penerimaan server dan respons Healthcare secara terpisah.' }}
+            {{ displayEmergency?.notes || (runtime.mode === 'OFFLINE_FIELD_MODE' ? 'Tersimpan di perangkat; menunggu sinkronisasi.' : 'Lihat status penerimaan server dan respons Healthcare secara terpisah.') }}
           </p>
         </div>
-        <Link
+        <RelawanLink
           :href="`/relawan/emergencies/${displayEmergency?.id}`"
           class="block text-center py-2.5 px-4 bg-red-800 hover:bg-red-900 text-white font-bold text-xs rounded-xl shadow-xs transition"
         >
           Lihat Status T0 →
-        </Link>
+        </RelawanLink>
       </div>
 
       <!-- Resume Incomplete Draft Banner -->
@@ -69,12 +71,12 @@
             {{ displayDraft?.local ? 'Tahap berikutnya mengikuti jawaban yang tersimpan di perangkat.' : local.ready.value ? 'Asesmen ini tersedia di server; buka saat online untuk menyalinnya ke perangkat.' : 'Asesmen tersedia di server. Status di perangkat belum dapat dipastikan.' }}
           </p>
         </div>
-        <Link
+        <RelawanLink
           :href="displayDraft?.resumeUrl || '/relawan/assessment'"
           class="inline-flex items-center justify-center w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-xs transition"
         >
           {{ displayDraft?.resumeLabel }} →
-        </Link>
+        </RelawanLink>
       </div>
 
       <!-- Main Interaction Paths: PFA vs Structured Screening -->
@@ -84,7 +86,7 @@
         </h3>
 
         <!-- PFA Guidebook Card (Hari 1-3) -->
-        <Link
+        <RelawanLink
           href="/relawan/pfa"
           class="block bg-white hover:bg-teal-50/40 p-5 rounded-2xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
         >
@@ -102,10 +104,10 @@
             </div>
             <span class="text-3xl text-teal-600 group-hover:scale-110 transition">📖</span>
           </div>
-        </Link>
+        </RelawanLink>
 
         <!-- Structured SRQ-20 Screening Card (Hari 4-30) -->
-        <Link
+        <RelawanLink
           href="/relawan/assessment"
           class="block bg-white hover:bg-teal-50/40 p-5 rounded-2xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
         >
@@ -123,7 +125,7 @@
             </div>
             <span class="text-3xl text-teal-600 group-hover:scale-110 transition">📋</span>
           </div>
-        </Link>
+        </RelawanLink>
       </div>
 
       <!-- Quick Guidance -->
@@ -141,8 +143,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import Badge from '@/components/ui/Badge.vue';
 import { useOwnedLocalRecords } from '@/composables/useRelawanDataWorkspace';
 import { resumeStage } from '@/offline/assessmentWorkflow';
@@ -153,15 +156,19 @@ const props = defineProps<{
   activeEmergency?: { id: string; user_id?: number; status: string; notes?: string | null; patient?: { name?: string } } | null;
   shelter?: { name?: string } | null;
 }>();
-const page = usePage();
-const userName = computed(() => (page.props.auth as { user?: { name?: string } })?.user?.name || 'Relawan');
-const userShelterName = computed(() => (page.props.auth as { user?: { shelter?: { name?: string } } })?.user?.shelter?.name);
-const owner = computed(() => {
-  const user = (page.props.auth as { user?: { id?: number; role?: string } })?.user;
-  return user?.role === 'RELAWAN' ? Number(user.id) || null : null;
-});
+const runtime = useRelawanRuntime();
+const userName = computed(() => runtime.name);
+const userShelterName = computed(() => runtime.shelterName);
+const owner = computed(() => runtime.owner);
 const local = useOwnedLocalRecords(owner);
-const displayEmergency = computed(() => props.activeEmergency?.user_id === owner.value ? props.activeEmergency : null);
+const displayEmergency = computed(() => {
+  if (runtime.mode === 'OFFLINE_FIELD_MODE') {
+    const item = local.records.value.emergencies.filter(e => e.sync_state !== 'SYNCED')
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    return item ? { ...item, patient: { name: item.patient_name } } : null;
+  }
+  return props.activeEmergency?.user_id === owner.value ? props.activeEmergency : null;
+});
 const stageLabels: Record<string, string> = {
   srq: 'Lanjutkan SRQ-20', risk: 'Lanjutkan Faktor Risiko',
   function: 'Lanjutkan Fungsi Harian', review: 'Tinjau Asesmen',

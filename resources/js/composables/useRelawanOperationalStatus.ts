@@ -22,9 +22,9 @@ export type OperationalKind =
     | "local-only"
     | "synced";
 
-export function useRelawanOperationalStatus(owner: Ref<number | null>) {
+export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync: Ref<boolean> = ref(true)) {
     const online = ref(
-        typeof navigator === "undefined" ? true : navigator.onLine,
+        allowSync.value && (typeof navigator === "undefined" ? true : navigator.onLine),
     );
     const localFailure = ref(false);
     const ready = ref(false);
@@ -67,7 +67,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>) {
         actionError.value = "";
         if (!next) return;
         const currentGeneration = generation;
-        lease = syncManager.setOwner(next);
+        if (allowSync.value) lease = syncManager.setOwner(next);
         stopFailure = localPersistenceHealth.subscribe(next, (failed) => {
             if (currentGeneration === generation) localFailure.value = failed;
         });
@@ -187,7 +187,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>) {
 
     const stopOwner = watch(owner, activate, { immediate: true });
     const onOnline = () => {
-        online.value = true;
+        online.value = allowSync.value;
     };
     const onOffline = () => {
         online.value = false;

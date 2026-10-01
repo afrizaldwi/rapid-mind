@@ -32,12 +32,12 @@
                 NIK: {{ a.patient?.nik || 'Tanpa NIK' }} • Mode: {{ a.mode }}
               </p>
             </div>
-            <Link
+            <RelawanLink
               :href="a.resume_url"
               class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
             >
               {{ a.resume_label }} →
-            </Link>
+            </RelawanLink>
           </div>
         </div>
       </div>
@@ -172,24 +172,31 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import { assessmentRepository } from '@/offline/assessmentRepository';
 import { patientRepository } from '@/offline/patientRepository';
 import { loadAssessmentContext, relawanOwner, resumeStage, startLocalAssessment } from '@/offline/assessmentWorkflow';
+import type { LocalPatient } from '@/offline/db';
 import type { ServerAssessment } from '@/offline/assessmentWorkflow';
 
 const props = defineProps<{
   inProgressAssessments?: ServerAssessment[];
   patients?: Array<{ id: string; name: string; nik?: string; age?: number; gender?: string; shelter_id?: number; created_by?: number }>;
 }>();
+const runtime = useRelawanRuntime();
 const owner = relawanOwner();
-const page = usePage();
-const shelterId = (page.props.auth as { user?: { shelter_id?: number } })?.user?.shelter_id;
+const shelterId = runtime.shelterId;
 const localError = ref('');
 const drafts = ref<Array<{ id: string; patient: { name: string; nik?: string }; mode: string; resume_url: string; resume_label: string }>>([]);
 const inProgressAssessments = computed(() => drafts.value);
-const patients = computed(() => props.patients ?? []);
+const localPatients = ref<LocalPatient[]>([]);
+const patients = computed(() => {
+  const byId = new Map(localPatients.value.map(patient => [patient.id, patient]));
+  for (const patient of props.patients ?? []) if (!byId.has(patient.id)) byId.set(patient.id, { ...patient, owner_user_id: owner, sync_state: 'SYNCED' });
+  return [...byId.values()];
+});
 const labels: Record<string, string> = { srq: 'Lanjutkan SRQ-20', risk: 'Lanjutkan Faktor Risiko', function: 'Lanjutkan Fungsi Harian', review: 'Tinjau Asesmen' };
 
 async function refreshDrafts() {
@@ -197,6 +204,7 @@ async function refreshDrafts() {
     try { await loadAssessmentContext(owner, server, server.patient); }
     catch { localError.value = 'Sebagian asesmen server belum dapat disalin ke perangkat ini.'; }
   }
+  localPatients.value = await patientRepository.list(owner);
   const rows = await assessmentRepository.list(owner);
   drafts.value = (await Promise.all(rows.filter(a => a.status === 'IN_PROGRESS').map(async a => {
     const patient = await patientRepository.get(owner, a.patient_id);
@@ -223,11 +231,11 @@ async function startNew() {
   try {
     const selected = patients.value.find(p => p.id === form.value.patient_id);
     const patient = selected
-      ? { id: selected.id, name: selected.name, nik: selected.nik, age: selected.age, gender: selected.gender, shelter_id: selected.shelter_id, serverKnown: true }
-      : { name: form.value.name.trim(), nik: form.value.nik || undefined, age: form.value.age, gender: form.value.gender, shelter_id: shelterId };
+      ? { id: selected.id, name: selected.name, nik: selected.nik, age: selected.age, gender: selected.gender, shelter_id: selected.shelter_id, serverKnown: selected.sync_state === 'SYNCED' }
+      : { name: form.value.name.trim(), nik: form.value.nik || undefined, age: form.value.age, gender: form.value.gender, shelter_id: shelterId ?? undefined };
     if (!patient.name) throw new Error('Nama penyintas harus diisi.');
     const id = await startLocalAssessment(owner, patient, form.value.mode as 'VERBAL' | 'NON_VERBAL');
-    router.visit(`/relawan/assessment/${id}/identity`);
+    runtime.navigate(`/relawan/assessment/${id}/identity`);
   } catch (error) {
     localError.value = error instanceof Error ? error.message : 'Asesmen belum tersimpan pada perangkat ini.';
   } finally {

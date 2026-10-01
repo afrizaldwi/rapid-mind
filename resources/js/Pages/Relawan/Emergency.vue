@@ -14,7 +14,7 @@
               Insiden T0 Darurat Aktif
             </span>
           </div>
-          <Badge variant="t0">{{ emergency.status }}</Badge>
+          <Badge variant="t0">{{ localEmergency ? 'T0-Suspect' : emergency.status }}</Badge>
         </div>
 
         <div>
@@ -45,7 +45,7 @@
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
           <span class="text-slate-600 font-semibold">2. Transmisi Sistem:</span>
           <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-            Diterima server
+            {{ localEmergency ? transmissionLabel : 'Diterima server' }}
           </span>
         </div>
 
@@ -109,27 +109,42 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
+import type { LocalEmergency } from '@/offline/db';
 
 const props = defineProps<{
-  emergency: any;
+  emergency?: any;
+  localEmergency?: LocalEmergency;
 }>();
-
-const page = usePage();
-const broadcastWarning = computed(() => (page.props.flash as { error?: string } | undefined)?.error);
-
-const clinicalLabel = computed(() => props.emergency.status === 'CONFIRMED' ? 'T0 dikonfirmasi Healthcare' : props.emergency.status === 'DOWNGRADED' ? 'Klasifikasi diturunkan Healthcare' : 'T0-Suspect (menunggu validasi Healthcare)');
-
-const healthcareResponse = computed(() => ({
+const runtime = useRelawanRuntime();
+const localEmergency = computed(() => props.localEmergency);
+const emergency = computed(() => props.localEmergency ? {
+  ...props.localEmergency,
+  patient: { name: props.localEmergency.patient_name },
+  shelter: { name: props.localEmergency.shelter_id === runtime.shelterId ? runtime.shelterName : null },
+} : props.emergency);
+const broadcastWarning = computed(() => (runtime.pageProps.flash as { error?: string } | undefined)?.error);
+const transmissionLabel = computed(() => ({
+  LOCAL_SAVED: 'Tersimpan di perangkat',
+  PENDING_SYNC: 'Menunggu sinkronisasi',
+  SYNCING: 'Menunggu sinkronisasi',
+  SYNC_FAILED: 'Sinkronisasi belum berhasil',
+  SYNCED: 'Diterima server',
+})[props.localEmergency?.sync_state ?? 'LOCAL_SAVED']);
+const clinicalLabel = computed(() => props.localEmergency ? 'T0-Suspect (menunggu validasi Healthcare)'
+  : emergency.value.status === 'CONFIRMED' ? 'T0 dikonfirmasi Healthcare'
+  : emergency.value.status === 'DOWNGRADED' ? 'Klasifikasi diturunkan Healthcare'
+  : 'T0-Suspect (menunggu validasi Healthcare)');
+const healthcareResponse = computed(() => props.localEmergency ? 'Belum ada konfirmasi Healthcare' : ({
   PENDING: 'Belum diakui Healthcare',
   ACKNOWLEDGED: 'Diakui Healthcare',
   REVIEWING: 'Sedang ditinjau Healthcare',
   CONFIRMED: 'Dikonfirmasi Healthcare',
   DOWNGRADED: 'Klasifikasi diperbarui Healthcare',
   RESOLVED: 'Insiden selesai',
-})[props.emergency.status as string] ?? 'Lihat pembaruan Healthcare');
+})[emergency.value.status as string] ?? 'Lihat pembaruan Healthcare');
 
 function formatRedFlag(rf?: string) {
   switch (rf) {
@@ -145,10 +160,10 @@ function formatRedFlag(rf?: string) {
 }
 
 const smsHref = computed(() => {
-  const patient = props.emergency.patient?.name || 'Tanpa Nama';
-  const posko = props.emergency.shelter?.name || 'Tidak tercatat';
+  const patient = emergency.value.patient?.name || 'Tanpa Nama';
+  const posko = emergency.value.shelter?.name || 'Tidak tercatat';
   const text = encodeURIComponent(
-    `[SOS RAPID-MIND T0] ${props.emergency.red_flag_type}. Pasien: ${patient}. Posko: ${posko}. Butuh evakuasi segera PSC 119.`
+    `[SOS RAPID-MIND T0] ${emergency.value.red_flag_type}. Pasien: ${patient}. Posko: ${posko}. Butuh evakuasi segera PSC 119.`
   );
   return `sms:119?body=${text}`;
 });

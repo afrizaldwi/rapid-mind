@@ -65,10 +65,10 @@
       <div data-assessment-action-bar
         class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
         <div class="flex items-center justify-between space-x-3">
-          <Link :href="`/relawan/assessment/${assessment.id}/srq`"
+          <RelawanLink :href="`/relawan/assessment/${assessment.id}/srq`"
             class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">
             ← Kembali
-          </Link>
+          </RelawanLink>
           <button type="button" @click="saveAndNext" :disabled="isSaving || !draftReady || answeredCount !== 5"
             class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60">
             Lanjut: Fungsi Harian →
@@ -85,8 +85,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '@/offline/assessmentDraft';
 import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
@@ -98,6 +99,7 @@ const props = defineProps<{
 }>();
 
 const risks = ref<Record<string, boolean>>(mergeAssessmentDraft('risk_indicators', props.risks, {}));
+const runtime = useRelawanRuntime();
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(props.patient);
@@ -176,7 +178,7 @@ async function persistDraft() {
 
 onMounted(async () => {
   try {
-    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
     localAssessment.value = context.assessment;
     patient.value = context.patient;
     const local = await readAssessmentDraft(owner, props.assessment.id, 'risk_indicators');
@@ -201,7 +203,7 @@ async function saveAndNext() {
   try {
     await persistDraft();
     if (draftWarning.value) throw new Error(draftWarning.value);
-    router.visit(`/relawan/assessment/${props.assessment.id}/function`);
+    runtime.navigate(`/relawan/assessment/${props.assessment.id}/function`);
   } catch {
     saveError.value = 'Jawaban belum tersimpan di perangkat ini. Coba lagi.';
   } finally {

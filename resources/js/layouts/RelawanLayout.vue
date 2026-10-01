@@ -4,7 +4,7 @@
       <h1 class="text-lg font-bold">{{ checkingContinuity ? 'Memeriksa akses perangkat…' : 'Akses lokal dikunci' }}</h1>
       <p v-if="!checkingContinuity" class="mt-3">Data di perangkat tetap tersimpan. Masuk kembali untuk mengaksesnya.</p>
       <p v-if="logoutError" class="mt-3 text-sm text-amber-800">{{ logoutError }}</p>
-      <button v-if="!checkingContinuity" type="button" class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-white" @click="retryServerLogout">Selesaikan keluar</button>
+      <button v-if="!checkingContinuity && runtime.mode === 'ONLINE_SERVER'" type="button" class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-white" @click="retryServerLogout">Selesaikan keluar</button>
     </div>
   </div>
   <div v-else class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
@@ -26,6 +26,7 @@
       </div>
 
       <div class="flex items-center space-x-2">
+        <span v-if="runtime.mode === 'OFFLINE_FIELD_MODE'" class="text-xs font-semibold text-teal-800">Mode lapangan offline</span>
         <StatusIndicator :kind="status.kind.value" :label="status.label.value" @open="showStatusSheet = true" />
         <button
           type="button"
@@ -41,7 +42,7 @@
     <!-- Main Content Area -->
     <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
       <p v-if="logoutError" role="alert" class="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{{ logoutError }}</p>
-      <LocalEmergencyActive v-if="activeLocalId && currentOwner && !isDataRoute" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
+      <LocalEmergencyActive v-if="runtime.mode === 'ONLINE_SERVER' && activeLocalId && currentOwner && !isDataRoute" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
       <slot v-else />
     </main>
 
@@ -77,34 +78,34 @@
     <!-- Bottom Navigation Bar (4 items) -->
     <nav v-if="!isFocusedAssessment" class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-md mx-auto sm:max-w-lg">
       <div class="grid grid-cols-4 h-16">
-        <Link
+        <RelawanLink
           href="/relawan/home"
           class="flex flex-col items-center justify-center text-xs font-semibold transition"
           :class="isRoute('/relawan/home') ? 'text-teal-700 font-bold' : 'text-slate-500 hover:text-slate-800'"
         >
           <span class="text-lg leading-none mb-1">🏠</span>
           <span>Beranda</span>
-        </Link>
+        </RelawanLink>
 
-        <Link
+        <RelawanLink
           href="/relawan/pfa"
           class="flex flex-col items-center justify-center text-xs font-semibold transition"
           :class="isRoute('/relawan/pfa') ? 'text-teal-700 font-bold' : 'text-slate-500 hover:text-slate-800'"
         >
           <span class="text-lg leading-none mb-1">📖</span>
           <span>PFA</span>
-        </Link>
+        </RelawanLink>
 
-        <Link
+        <RelawanLink
           href="/relawan/assessment"
           class="flex flex-col items-center justify-center text-xs font-semibold transition"
           :class="isRoute('/relawan/assessment') ? 'text-teal-700 font-bold' : 'text-slate-500 hover:text-slate-800'"
         >
           <span class="text-lg leading-none mb-1">📋</span>
           <span>Asesmen</span>
-        </Link>
+        </RelawanLink>
 
-        <Link
+        <RelawanLink
           href="/relawan/data"
           class="flex flex-col items-center justify-center text-xs font-semibold transition relative"
           :class="isRoute('/relawan/data') ? 'text-teal-700 font-bold' : 'text-slate-500 hover:text-slate-800'"
@@ -117,7 +118,7 @@
           >
             {{ status.pendingCount.value }}
           </span>
-        </Link>
+        </RelawanLink>
       </div>
     </nav>
   </div>
@@ -125,7 +126,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { Link, usePage, router } from '@inertiajs/vue3';
+import { liveQuery, type Subscription } from 'dexie';
+import { router } from '@inertiajs/vue3';
+import { useRelawanRuntime } from '@/relawan/runtime';
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import StatusIndicator from '@/components/ui/StatusIndicator.vue';
 import T0Button from '@/components/Relawan/T0Button.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
@@ -136,23 +140,24 @@ import { useRelawanOperationalStatus } from '@/composables/useRelawanOperational
 import { lockRelawanContinuity, recordVerifiedRelawan, resolveRelawanContinuity } from '@/offline/relawanContinuity';
 import { registerRelawanServiceWorker } from '@/pwa/register';
 
-const page = usePage();
-const user = computed(() => (page.props.auth as any)?.user);
+const runtime = useRelawanRuntime();
+const user = computed(() => ({ id: runtime.owner, role: 'RELAWAN', name: runtime.name, shelter_id: runtime.shelterId, shelter: { name: runtime.shelterName ?? undefined } }));
 const currentOwner = computed(() => !loggedOutLocally.value && !checkingContinuity.value && user.value?.role === 'RELAWAN' ? Number(user.value.id) || null : null);
 const activeLocalId = ref<string | null>(null);
 const showStatusSheet = ref(false);
 const loggedOutLocally = ref(false);
-const checkingContinuity = ref(true);
+const checkingContinuity = ref(runtime.mode === 'ONLINE_SERVER');
 const logoutError = ref('');
 let continuityCheck = 0;
-const status = useRelawanOperationalStatus(currentOwner);
-const isDataRoute = computed(() => page.url.split('?')[0] === '/relawan/data');
-const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(page.url.split('?')[0]));
+let offlineContinuitySubscription: Subscription | undefined;
+const status = useRelawanOperationalStatus(currentOwner, computed(() => runtime.mode === 'ONLINE_SERVER'));
+const isDataRoute = computed(() => runtime.path.split('?')[0] === '/relawan/data');
+const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(runtime.path.split('?')[0]));
 
 const t0AssessmentContext = computed(() => {
-  const route = page.url.split('?')[0].match(/^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/);
-  const assessment = page.props.assessment as { id?: unknown; patient_id?: unknown; user_id?: unknown } | undefined;
-  const patient = page.props.patient as { id?: unknown; name?: unknown } | undefined;
+  const route = runtime.path.split('?')[0].match(/^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/);
+  const assessment = runtime.pageProps.assessment as { id?: unknown; patient_id?: unknown; user_id?: unknown } | undefined;
+  const patient = runtime.pageProps.patient as { id?: unknown; name?: unknown } | undefined;
 
   if (!route || assessment?.user_id !== currentOwner.value || typeof assessment?.id !== 'string' || assessment.id !== route[1]
     || typeof patient?.id !== 'string' || assessment.patient_id !== patient.id) {
@@ -168,7 +173,7 @@ const t0AssessmentContext = computed(() => {
 
 const showEmergencyModal = ref(false);
 function isRoute(path: string) {
-  return page.url.startsWith(path);
+  return runtime.path.startsWith(path);
 }
 
 function retryServerLogout() {
@@ -195,7 +200,7 @@ async function logout() {
   }
   loggedOutLocally.value = true;
   checkingContinuity.value = false;
-  if (navigator.onLine) {
+  if (navigator.onLine && runtime.mode === 'ONLINE_SERVER') {
     retryServerLogout();
   } else {
     logoutError.value = 'Logout server tertunda hingga perangkat terhubung kembali.';
@@ -204,13 +209,15 @@ async function logout() {
 
 function onEmergencyCreated(event: Event) {
   const detail = (event as CustomEvent<{ owner: number; id: string }>).detail;
-  if (detail.owner === currentOwner.value) activeLocalId.value = detail.id;
+  if (detail.owner !== currentOwner.value) return;
+  if (runtime.mode === 'OFFLINE_FIELD_MODE') runtime.navigate(`/relawan/emergencies/${detail.id}`);
+  else activeLocalId.value = detail.id;
 }
 
 watch(currentOwner, owner => {
   activeLocalId.value = null;
   showStatusSheet.value = false;
-  if (!owner || /^\/relawan\/emergencies\//.test(page.url)) return;
+  if (!owner || /^\/relawan\/emergencies\//.test(runtime.path)) return;
   void emergencyRepository.list(owner).then(items => {
     if (owner !== currentOwner.value || activeLocalId.value) return;
     const pending = items.filter(item => item.status === 'PENDING' && item.sync_state !== 'SYNCED');
@@ -242,12 +249,19 @@ async function checkContinuity() {
 }
 function onVerifiedLogin() { void checkContinuity(); }
 onMounted(() => {
-  void checkContinuity();
+  if (runtime.mode === 'ONLINE_SERVER') void checkContinuity();
+  else offlineContinuitySubscription = liveQuery(resolveRelawanContinuity).subscribe({
+    next: result => {
+      if (result.state !== 'ELIGIBLE' || result.context.owner_user_id !== runtime.owner) loggedOutLocally.value = true;
+    },
+    error: () => { loggedOutLocally.value = true; },
+  });
   registerRelawanServiceWorker();
   window.addEventListener('rapid-mind:verified-login', onVerifiedLogin);
   window.addEventListener('rapid-mind:emergency-created', onEmergencyCreated);
 });
 onUnmounted(() => {
+  offlineContinuitySubscription?.unsubscribe();
   window.removeEventListener('rapid-mind:emergency-created', onEmergencyCreated);
   window.removeEventListener('rapid-mind:verified-login', onVerifiedLogin);
 });

@@ -130,10 +130,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
 import { patientRepository } from '@/offline/patientRepository';
 import type { LocalPatient } from '@/offline/db';
 import { relawanOwner } from '@/offline/assessmentWorkflow';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import { createLocalEmergency } from '@/offline/emergencyWorkflow';
 import { syncManager } from '@/offline/syncManager';
 
@@ -150,10 +150,10 @@ const emit = defineEmits<{
 }>();
 
 const owner = relawanOwner();
-const page = usePage();
+const runtime = useRelawanRuntime();
 const chosenPatientId = ref('');
 const availablePatients = ref<LocalPatient[]>([]);
-const serverPatients = computed(() => (page.props.patients as Array<{ id: string; name: string; nik?: string; age?: number; gender?: string; shelter_id?: number }> | undefined) ?? []);
+const serverPatients = computed(() => (runtime.pageProps.patients as Array<{ id: string; name: string; nik?: string; age?: number; gender?: string; shelter_id?: number }> | undefined) ?? []);
 const selectablePatients = computed(() => {
   const byId = new Map(availablePatients.value.map(patient => [patient.id, patient]));
   for (const patient of serverPatients.value) if (!byId.has(patient.id)) byId.set(patient.id, { ...patient, owner_user_id: owner, sync_state: 'SYNCED' });
@@ -236,7 +236,7 @@ async function submitEmergency() {
       patientId: chosenPatientId.value || null,
       assessmentId: props.assessmentId,
       redFlagType: selectedRedFlag.value,
-      shelterId: Number((page.props.auth as { user?: { shelter_id?: number | null } })?.user?.shelter_id) || null,
+      shelterId: runtime.shelterId,
       notes: notes.value,
       latitude: coordinates.value?.lat ?? null,
       longitude: coordinates.value?.lng ?? null,
@@ -250,6 +250,6 @@ async function submitEmergency() {
   window.dispatchEvent(new CustomEvent('rapid-mind:emergency-created', { detail: { owner, id } }));
   emit('close');
   await nextTick();
-  void syncManager.sync(owner);
+  if (runtime.mode === 'ONLINE_SERVER') void syncManager.sync(owner);
 }
 </script>

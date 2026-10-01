@@ -63,12 +63,12 @@
       <!-- Sticky Action Bar -->
       <div data-assessment-action-bar class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
         <div class="flex items-center justify-between space-x-3">
-          <Link
+          <RelawanLink
             :href="`/relawan/assessment/${assessment.id}/function`"
             class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50"
           >
             ← Kembali
-          </Link>
+          </RelawanLink>
           <button
             type="button"
             :disabled="isSubmitting || !assessmentComplete"
@@ -87,13 +87,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import { completeLocalAssessment, exactAssessmentAnswers, loadAssessmentContext, relawanOwner, type ServerAssessment, type ServerPatient } from '@/offline/assessmentWorkflow';
 import { RiskCalculator } from '@/domain/triage/riskCalculator';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
 
 const props = defineProps<{ assessment: ServerAssessment; patient?: ServerPatient | null }>();
+const runtime = useRelawanRuntime();
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const localPatient = ref<LocalPatient | null>(null);
@@ -106,7 +108,7 @@ const functionScore = computed(() => Object.values(localAssessment.value?.functi
 const totalScore = computed(() => srqYesCount.value + riskScore.value + functionScore.value);
 onMounted(async () => {
   try {
-    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
     localAssessment.value = context.assessment;
     localPatient.value = context.patient;
   } catch (error) { completionError.value = error instanceof Error ? error.message : 'Asesmen lokal tidak tersedia.'; }
@@ -117,7 +119,7 @@ async function finalizeAssessment() {
   completionError.value = '';
   try {
     await completeLocalAssessment(owner, props.assessment.id);
-    router.visit(`/relawan/assessment/${props.assessment.id}/result`);
+    runtime.navigate(`/relawan/assessment/${props.assessment.id}/result`);
   } catch (error) {
     completionError.value = error instanceof Error ? error.message : 'Asesmen belum dapat diselesaikan.';
   } finally { isSubmitting.value = false; }

@@ -29,7 +29,7 @@
             </div>
             <span class="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800">Asesmen</span>
           </div>
-          <Link v-if="item.resumeUrl" :href="item.resumeUrl" class="mt-3 inline-block rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white">{{ item.status || 'Lanjutkan' }} →</Link>
+          <RelawanLink v-if="item.resumeUrl" :href="item.resumeUrl" class="mt-3 inline-block rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white">{{ item.status || 'Lanjutkan' }} →</RelawanLink>
         </article>
       </section>
 
@@ -53,7 +53,7 @@
             <p class="mt-2 font-semibold">Belum ada konfirmasi penerimaan server pada perangkat ini. Tetap dampingi penyintas dan gunakan jalur bantuan darurat yang tersedia.</p>
           </details>
           <div class="mt-3 flex flex-wrap gap-2">
-            <Link v-if="item.resultUrl" :href="item.resultUrl" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Lihat hasil</Link>
+            <RelawanLink v-if="item.resultUrl || item.emergencyUrl" :href="(item.resultUrl || item.emergencyUrl)!" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Lihat hasil</RelawanLink>
             <button v-if="item.unqueued" type="button" :disabled="busy" @click="prepareAssessment(item.id)"
               class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Siapkan sinkronisasi</button>
             <button v-else-if="item.retryable" type="button" :disabled="busy || !online" @click="triggerSync"
@@ -79,7 +79,7 @@
             Total Skor: {{ item.triage ? item.triage.total_score + '/37' : 'Belum tersedia' }}
           </p>
           <p v-if="item.type === 'EMERGENCY'" class="mt-2 text-xs text-slate-600">Respons Healthcare: {{ healthcareLabel(item.status) }}</p>
-          <Link v-if="item.resultUrl || item.emergencyUrl" :href="(item.resultUrl || item.emergencyUrl)!" class="mt-3 inline-block rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Lihat detail →</Link>
+          <RelawanLink v-if="item.resultUrl || item.emergencyUrl" :href="(item.resultUrl || item.emergencyUrl)!" class="mt-3 inline-block rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Lihat detail →</RelawanLink>
         </article>
       </section>
     </div>
@@ -88,8 +88,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { useRelawanRuntime } from '@/relawan/runtime';
 import Badge from '@/components/ui/Badge.vue';
 import { useRelawanDataWorkspace, type ServerDataAssessment, type ServerDataEmergency } from '@/composables/useRelawanDataWorkspace';
 import { completeLocalAssessment } from '@/offline/assessmentWorkflow';
@@ -100,11 +101,8 @@ const props = defineProps<{
   completed?: ServerDataAssessment[];
   emergencies?: ServerDataEmergency[];
 }>();
-const page = usePage();
-const owner = computed(() => {
-  const user = (page.props.auth as { user?: { id?: number; role?: string } })?.user;
-  return user?.role === 'RELAWAN' ? Number(user.id) || null : null;
-});
+const runtime = useRelawanRuntime();
+const owner = computed(() => runtime.owner);
 const workspace = useRelawanDataWorkspace(
   owner,
   computed(() => props.inProgress ?? []),
@@ -113,8 +111,8 @@ const workspace = useRelawanDataWorkspace(
 );
 const busy = ref(false);
 const actionError = ref('');
-const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine);
-const onOnline = () => { online.value = true; };
+const online = ref(runtime.mode === 'ONLINE_SERVER' && (typeof navigator === 'undefined' ? true : navigator.onLine));
+const onOnline = () => { online.value = runtime.mode === 'ONLINE_SERVER'; };
 const onOffline = () => { online.value = false; };
 onMounted(() => {
   window.addEventListener('online', onOnline);
@@ -132,7 +130,7 @@ async function triggerSync() {
   const active = owner.value;
   try {
     await syncManager.sync(active);
-    if (owner.value === active) router.reload({ only: ['inProgress', 'completed', 'emergencies'] });
+    if (owner.value === active) runtime.reload(['inProgress', 'completed', 'emergencies']);
   } catch {
     actionError.value = 'Sinkronisasi belum berhasil. Data yang tersimpan di perangkat tetap tersedia.';
   } finally {

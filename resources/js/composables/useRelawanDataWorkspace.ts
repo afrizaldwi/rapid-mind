@@ -282,6 +282,7 @@ export function useRelawanDataWorkspace(
                 status: item.status,
                 redFlagType: item.red_flag_type,
                 notes: item.notes,
+                emergencyUrl: `/relawan/emergencies/${item.id}`,
             };
             if (queue || item.sync_state !== "SYNCED") {
                 pending.push({
