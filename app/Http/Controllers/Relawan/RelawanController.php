@@ -399,7 +399,9 @@ final class RelawanController extends Controller
 
     public function emergencyDetail(string $emergencyId): InertiaResponse
     {
-        $emergency = EmergencyEvent::with(['patient', 'shelter', 'verifications.verifier'])->findOrFail($emergencyId);
+        $emergency = EmergencyEvent::with(['patient', 'shelter', 'verifications.verifier'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($emergencyId);
 
         return Inertia::render('Relawan/Emergency', [
             'emergency' => $emergency,

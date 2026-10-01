@@ -180,6 +180,24 @@ final class RelawanT0SubmissionTest extends TestCase
                 ->where('flash.error', fn ($warning) => str_contains($warning, 'belum dapat dikonfirmasi')));
     }
 
+    public function test_emergency_detail_is_scoped_to_reporting_relawan(): void
+    {
+        $otherRelawan = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::MEDICAL_CRISIS->value])
+            ->assertCreated();
+        $id = EmergencyEvent::sole()->id;
+
+        $this->get('/relawan/emergencies/'.$id)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Relawan/Emergency', false)
+                ->where('emergency.id', $id));
+
+        $this->actingAs($otherRelawan)
+            ->get('/relawan/emergencies/'.$id)
+            ->assertNotFound();
+    }
+
     public function test_emergency_broadcast_is_healthcare_only_and_contains_id_only(): void
     {
         $patient = Patient::create(['name' => 'Rahasia', 'created_by' => $this->relawan->id]);

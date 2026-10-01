@@ -32,7 +32,8 @@
 
     <!-- Main Content Area -->
     <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
-      <slot />
+      <LocalEmergencyActive v-if="activeLocalId && currentOwner" :key="String(currentOwner) + activeLocalId" :owner="currentOwner" :id="activeLocalId" @close="activeLocalId = null" />
+      <slot v-else />
     </main>
 
     <!-- Persistent Floating Red Flag Button -->
@@ -97,14 +98,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import StatusIndicator from '@/components/ui/StatusIndicator.vue';
 import T0Button from '@/components/Relawan/T0Button.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
+import LocalEmergencyActive from '@/components/Relawan/LocalEmergencyActive.vue';
+import { emergencyRepository } from '@/offline/emergencyRepository';
+import { syncManager } from '@/offline/syncManager';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
+const currentOwner = computed(() => Number(user.value?.id) || null);
+const activeLocalId = ref<string | null>(null);
 const isFocusedAssessment = computed(() => /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(page.url.split('?')[0]));
 
 const t0AssessmentContext = computed(() => {
@@ -137,11 +143,28 @@ function logout() {
   router.post('/logout');
 }
 
+function onEmergencyCreated(event: Event) {
+  const detail = (event as CustomEvent<{ owner: number; id: string }>).detail;
+  if (detail.owner === currentOwner.value) activeLocalId.value = detail.id;
+}
+
 onMounted(() => {
+  window.addEventListener('rapid-mind:emergency-created', onEmergencyCreated);
+  const owner = currentOwner.value;
+  if (owner && !/^\/relawan\/emergencies\//.test(page.url)) {
+    void emergencyRepository.list(owner).then(items => {
+      if (owner !== currentOwner.value || activeLocalId.value) return;
+      const pending = items.filter(item => item.status === 'PENDING' && item.sync_state !== 'SYNCED');
+      pending.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      activeLocalId.value = pending[0]?.id ?? null;
+      if (activeLocalId.value) void syncManager.sync(owner);
+    }).catch(() => { /* T0 submission surfaces local storage failures. */ });
+  }
   if (typeof navigator !== 'undefined') {
     isOnline.value = navigator.onLine;
     window.addEventListener('online', () => (isOnline.value = true));
     window.addEventListener('offline', () => (isOnline.value = false));
   }
 });
+onUnmounted(() => window.removeEventListener('rapid-mind:emergency-created', onEmergencyCreated));
 </script>

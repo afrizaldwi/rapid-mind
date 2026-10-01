@@ -1,6 +1,6 @@
 # RAPID-MIND Workflow Verification Ledger
 
-**Verification checkpoint:** 1 October 2026 — Phase B2A local-first assessment gate
+**Verification checkpoint:** 1 October 2026 — Phase B2B local-first T0 emergency gate
 **Branch:** `demo`
 **Document type:** Evidence and status documentation
 
@@ -1051,3 +1051,45 @@ The corrected replay semantic remains: `assessment_mode` used to create a missin
 | Offline reload/reopen/PWA boundary | **NOT YET VERIFIED / B3** | B2A did not verify Service Worker startup, true offline reload/reopen, or the complete PWA disconnect/reconnect golden gate. |
 
 **Browser/runtime scope:** Gates A-L **PASS** with no functional browser/runtime error observed in the B2A gate. This is Chrome/CDP and direct IndexedDB/network evidence, not complete automated browser E2E coverage, production readiness, security certification, or clinical certification. B2A did not redesign STT/Q17 behavior; Phase C remains separate.
+
+## 13. Phase B2B Verification — Local-First T0 Emergency Workflow
+
+**Checkpoint:** 1 October 2026, B2B source and browser/runtime verification.
+**Status:** B2B **COMPLETE / PASS for the selected prototype scope**. Phase B and B2 remain **IN PROGRESS**; B1 and B2A are COMPLETE / PASS, B2C is NEXT, B3 is PENDING, and Phase C STT safety hardening remains separate.
+
+Evidence categories in this section are deliberately distinct: **SOURCE INSPECTED** describes code review, **AUTOMATED TESTED** describes repository tests, **BROWSER/RUNTIME VERIFIED** describes Antigravity Chrome/CDP interaction plus direct IndexedDB/network/server-state observations, and **NOT DIRECTLY VERIFIED** identifies limits. These browser gates were not a Playwright/CI automated E2E suite.
+
+| Gate / slice | Result and evidence category | Direct evidence |
+|---|---|---|
+| B2B implementation | **PASS — SOURCE INSPECTED** | Explicit verification leads to a stable client UUID, an IndexedDB LocalEmergency plus priority-1 EMERGENCY outbox, local active view, then separate B1 sync to `POST /relawan/sync/emergencies`. Legacy `POST /relawan/emergencies` remains; reporting-Relawan detail ownership is enforced; one red_flag_type remains. |
+| Focused T0 feature tests | **PASS — AUTOMATED TESTED** | RelawanT0SubmissionTest: 11 passed. |
+| Sync/replay contract | **PASS — AUTOMATED TESTED** | RelawanSyncContractTest: 15 passed; existing contract covers first-creation-only EmergencyCreated dispatch and no new dispatch on exact replay. |
+| Full backend regression | **PASS — AUTOMATED TESTED** | Laravel suite: 115 passed. |
+| Frontend and diff checks | **PASS — SOURCE/BUILD CHECKS** | `vue-tsc --noEmit`, `npm run build`, and `git diff --check` passed; existing >500 kB build advisory only. |
+| A — first tap safety | **PASS — BROWSER/RUNTIME VERIFIED** | Before T0: emergencies=0, outbox=0. First tap opened verification with no reason selected and disabled KIRIM T0-SUSPECT. Closing created nothing; neither T0 POST endpoint was called. |
+| B — explicit creation | **PASS — BROWSER/RUNTIME VERIFIED** | Selecting SEVERE_AGITATION and pressing KIRIM T0-SUSPECT created UUID `72079489-bc98-4d92-80e8-bf2e41e486c0`, owner_user_id=19, status=PENDING. |
+| C — local-first durability | **PASS — BROWSER/RUNTIME VERIFIED** | LocalEmergency existed in IndexedDB while server synchronization was deliberately blocked; T0-Suspect active view remained available without server receipt. |
+| D — emergency priority | **PASS — BROWSER/RUNTIME VERIFIED** | Outbox item type=EMERGENCY, entity_id=`72079489-bc98-4d92-80e8-bf2e41e486c0`, priority=1. |
+| E — patient/assessment IDs | **PASS — BROWSER/RUNTIME VERIFIED** | Patient `5c9881ca-7216-4b99-8378-06d356684840`, assessment `14fa5f8c-5e83-4f6b-b628-b691dbf515a8`, and T0 `73e58e1e-1046-4c99-914c-a4dee30a3b4c` retained stable relationships. |
+| F — local assessment dependency | **PASS — BROWSER/RUNTIME VERIFIED** | T0 sync while the assessment was local/incomplete created or reused one server IN_PROGRESS shell with the same assessment UUID. Later assessment sync completed it; final counts were one patient, one assessment, and one EmergencyEvent for those UUIDs. |
+| G — unidentified emergency | **PASS — BROWSER/RUNTIME VERIFIED** | Patient and assessment IDs were null locally and server-side; no fake NIK such as `0000000000000000` was created. |
+| H — GPS unavailable | **PASS — BROWSER/RUNTIME VERIFIED** | Simulated geolocation permission failure showed “GPS belum tersedia; T0 tetap dapat disimpan”; local emergency/outbox had null latitude and longitude and creation remained possible. |
+| I — forced sync failure | **PASS — BROWSER/RUNTIME VERIFIED** | Blocked sync left the same PENDING emergency as SYNC_FAILED. Outbox remained FAILED, revision=1, retry_count=1. UI showed local safety, “Belum diterima server”, and “Sinkronisasi belum berhasil”; retry and SMS handoff stayed available, without ordinary return while unsynchronized. |
+| J — recovery | **PASS — BROWSER/RUNTIME VERIFIED** | Restored endpoint and retry returned HTTP 201 for the same UUID; LocalEmergency became SYNCED, outbox count became zero, UI changed to “Diterima server”, and navigation became available. |
+| K — replay and logical Healthcare incident | **PASS — BROWSER/RUNTIME VERIFIED; AUTOMATED CONTRACT SUPPORT** | Exact replay returned HTTP 200, created=false, replayed=true, realtime_delivered=null. Server EmergencyEvent count for the UUID was one; Healthcare browser queue had one logical entry, without duplicate queue entry. The first-creation-only event dispatch invariant is automated-contract evidence, not direct Reverb transport instrumentation in this gate. |
+| L — account isolation | **PASS — BROWSER/RUNTIME VERIFIED** | Owner 19's unsynchronized `28d6e27b-79a5-4e10-aa11-e984472e509b` remained stored while owner 25 used `7e96b21c-2238-4747-9ac5-1c99492fd67d`. Neither account's application UI or owner-scoped data access exposed the other owner's active T0. Physical IndexedDB rows for both owners remained stored concurrently and were not deleted during account switching; switching back restored A's active emergency. Cross-owner server detail URL returned 404. |
+| M — transmission truthfulness | **PASS — BROWSER/RUNTIME VERIFIED** | SYNC_FAILED displayed “Sinkronisasi belum berhasil”; SYNCED displayed “Diterima server”. Server incident screen separately showed T0-Suspect pending clinical validation, server receipt, and “Belum diakui Healthcare”. Server receipt was not presented as clinical validation. |
+| N — SMS handoff | **PASS — BROWSER/RUNTIME VERIFIED, WITH ENVIRONMENT LIMIT** | Browser link was `sms:119?body=...`; copy instructed the Relawan to check and send the message in the SMS application. It never claimed “SMS berhasil dikirim”. Desktop environment did not directly verify native OS composer launch or actual SMS transmission. |
+
+**Q17 regression — PASS, BROWSER/RUNTIME VERIFIED:** Manual SRQ Q17=YA opened the Potential Red Flag interruption. An explicit action opened T0 verification with the current patient context and suggested/preselected SUICIDAL_IDEATION. No emergency was created before KIRIM T0-SUSPECT, and assessment answers remained preserved afterward. This does not verify Phase C STT safety behavior.
+
+**Runtime health:** No unexpected browser console errors, uncaught exceptions, unhandled promise rejections, or Vue runtime/reactivity errors were observed. Network failures during failure gates were deliberately injected.
+
+**NOT DIRECTLY VERIFIED / retained boundaries:**
+
+1. Service Worker/PWA offline startup, page reload/reopen, and the full B3 disconnect/reconnect golden gate remain pending.
+2. Native SMS transmission and OS composer launch were not directly verified beyond browser `sms:` handoff generation because the desktop environment lacked an applicable handler verification.
+3. Healthcare queue presence and no duplicate logical incident were directly browser verified; first-creation-only EmergencyCreated dispatch remains covered by the existing automated sync contract. Direct instrumentation of the Reverb delivery event itself was not performed in this gate.
+4. Concurrent duplicate replay under real load was not tested.
+5. Broader Phase C STT safety hardening remains pending.
+6. This selected prototype gate does not establish production, security, or clinical certification.

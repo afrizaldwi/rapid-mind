@@ -122,7 +122,8 @@
 
     <!-- T0 Verification Modal -->
     <T0Verification :show="showEmergencyVerification" :patient-id="patient?.id" :patient-name="patient?.name"
-      :assessment-id="assessment?.id" @close="showEmergencyVerification = false" />
+      :assessment-id="assessment?.id" suggested-red-flag="SUICIDAL_IDEATION"
+      @close="showEmergencyVerification = false" />
   </RelawanLayout>
 </template>
 

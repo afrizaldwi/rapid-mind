@@ -37,7 +37,7 @@
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
           <span class="text-slate-600 font-semibold">1. Status Klinis:</span>
           <span class="font-extrabold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
-            T0-Suspect (Menunggu Validasi Dokter)
+            {{ clinicalLabel }}
           </span>
         </div>
 
@@ -45,7 +45,7 @@
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
           <span class="text-slate-600 font-semibold">2. Transmisi Sistem:</span>
           <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-            ✓ Diterima Server Pusat
+            Diterima server
           </span>
         </div>
 
@@ -56,7 +56,7 @@
             class="font-bold px-2 py-0.5 rounded-md border"
             :class="emergency.status === 'PENDING' ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-teal-800 bg-teal-50 border-teal-200'"
           >
-            {{ emergency.status === 'PENDING' ? 'Belum Diakui Nakes' : 'Sudah Diakui / Ditangani Nakes' }}
+            {{ healthcareResponse }}
           </span>
         </div>
       </div>
@@ -80,7 +80,7 @@
           Detail Lokasi & Kejadian
         </h3>
         <p class="text-slate-800">
-          <strong>Posko:</strong> {{ emergency.shelter?.name || 'Posko Candi, Sleman' }}
+          <strong>Posko:</strong> {{ emergency.shelter?.name || 'Tidak tercatat' }}
         </p>
         <p class="text-slate-800">
           <strong>Waktu Kejadian:</strong> {{ new Date(emergency.created_at).toLocaleString('id-ID') }}
@@ -100,7 +100,7 @@
           <span>Buka SMS Cadangan (Jika Sinyal Data Terputus)</span>
         </a>
         <p class="text-[11px] text-slate-500 text-center">
-          Format SMS SOS otomatis terisi untuk dikirimkan langsung ke nomor pos komando darurat.
+          Periksa dan kirim pesan sendiri di aplikasi SMS.
         </p>
       </div>
     </div>
@@ -120,6 +120,17 @@ const props = defineProps<{
 const page = usePage();
 const broadcastWarning = computed(() => (page.props.flash as { error?: string } | undefined)?.error);
 
+const clinicalLabel = computed(() => props.emergency.status === 'CONFIRMED' ? 'T0 dikonfirmasi Healthcare' : props.emergency.status === 'DOWNGRADED' ? 'Klasifikasi diturunkan Healthcare' : 'T0-Suspect (menunggu validasi Healthcare)');
+
+const healthcareResponse = computed(() => ({
+  PENDING: 'Belum diakui Healthcare',
+  ACKNOWLEDGED: 'Diakui Healthcare',
+  REVIEWING: 'Sedang ditinjau Healthcare',
+  CONFIRMED: 'Dikonfirmasi Healthcare',
+  DOWNGRADED: 'Klasifikasi diperbarui Healthcare',
+  RESOLVED: 'Insiden selesai',
+})[props.emergency.status as string] ?? 'Lihat pembaruan Healthcare');
+
 function formatRedFlag(rf?: string) {
   switch (rf) {
     case 'SUICIDAL_IDEATION':
@@ -135,7 +146,7 @@ function formatRedFlag(rf?: string) {
 
 const smsHref = computed(() => {
   const patient = props.emergency.patient?.name || 'Tanpa Nama';
-  const posko = props.emergency.shelter?.name || 'Posko Candi';
+  const posko = props.emergency.shelter?.name || 'Tidak tercatat';
   const text = encodeURIComponent(
     `[SOS RAPID-MIND T0] ${props.emergency.red_flag_type}. Pasien: ${patient}. Posko: ${posko}. Butuh evakuasi segera PSC 119.`
   );
