@@ -69,6 +69,7 @@ export interface OutboxItem {
 }
 export class RapidMindDB extends Dexie {
     patients!: Table<LocalPatient, string>;
+    patientSnapshots!: Table<LocalPatient, [number, string]>;
     assessments!: Table<LocalAssessment, string>;
     emergencies!: Table<LocalEmergency, string>;
     outbox!: Table<OutboxItem, number>;
@@ -121,6 +122,13 @@ export class RapidMindDB extends Dexie {
                 // Unattributable v1 records remain intact, without owner_user_id. Indexed owner queries exclude them.
                 // v1 emergencies and outbox entries had no reliable owner; they are preserved but never replayed.
             });
+        this.version(3).stores({
+            patients: "id, owner_user_id, nik, shelter_id",
+            patientSnapshots: "[owner_user_id+id], id, owner_user_id, nik, shelter_id",
+            assessments: "id, owner_user_id, patient_id, status, sync_state, updated_at",
+            emergencies: "id, owner_user_id, patient_id, sync_state, created_at",
+            outbox: "++id, [owner_user_id+type+entity_id], owner_user_id, status, priority, created_at",
+        });
     }
 }
 export const db = new RapidMindDB();

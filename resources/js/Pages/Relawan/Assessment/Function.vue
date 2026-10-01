@@ -28,7 +28,7 @@
           </div>
 
           <div class="space-y-2">
-            <button v-for="opt in d.options" :key="opt.level" type="button" @click="setFunctionLevel(d.code, opt.level)"
+            <button v-for="opt in d.options" :key="opt.level" type="button" :disabled="!draftReady" @click="setFunctionLevel(d.code, opt.level)"
               :aria-pressed="functions[d.code] === opt.level"
               class="w-full min-h-[64px] text-left p-4 rounded-xl border-2 transition flex items-start gap-3" :class="functions[d.code] === opt.level
                 ? 'border-teal-700 bg-teal-50 text-teal-950 ring-1 ring-teal-500/20'
@@ -82,8 +82,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
-import { jsonRequest } from '@/offline/jsonRequest';
-import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft, clearSavedAssessmentDraft } from '@/offline/assessmentDraft';
+import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '@/offline/assessmentDraft';
+import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
+import type { LocalAssessment, LocalPatient } from '@/offline/db';
 
 const props = defineProps<{
   assessment: any;
@@ -92,6 +93,9 @@ const props = defineProps<{
 }>();
 
 const functions = ref<Record<string, number>>(mergeAssessmentDraft('function_domains', props.functions, {}));
+const owner = relawanOwner();
+const localAssessment = ref<LocalAssessment | null>(null);
+const patient = ref<LocalPatient | null>(props.patient);
 const isSaving = ref(false);
 const saveError = ref('');
 const draftWarning = ref('');
@@ -144,7 +148,8 @@ function setFunctionLevel(code: string, level: number) {
 
 async function persistDraft() {
   try {
-    await saveAssessmentDraft(props.assessment, 'function_domains', functions.value);
+    if (!localAssessment.value) throw new Error('Asesmen lokal belum siap.');
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value);
     draftWarning.value = '';
   } catch {
     draftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
@@ -153,15 +158,17 @@ async function persistDraft() {
 
 onMounted(async () => {
   try {
-    const local = await readAssessmentDraft(props.assessment.user_id, props.assessment.id, 'function_domains');
-    const merged = mergeAssessmentDraft('function_domains', functions.value, local);
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    localAssessment.value = context.assessment;
+    patient.value = context.patient;
+    const local = await readAssessmentDraft(owner, props.assessment.id, 'function_domains');
+    const merged = mergeAssessmentDraft('function_domains', props.functions, local);
     for (const [key, value] of Object.entries(merged)) {
       if (!editedKeys.has(key)) (functions.value as Record<string, typeof value>)[key] = value;
     }
-  } catch {
-    draftWarning.value = 'Draf lokal tidak dapat dibaca. Jawaban yang sudah tersimpan di server tetap ditampilkan.';
-  } finally {
     draftReady.value = true;
+  } catch (error) {
+    draftWarning.value = error instanceof Error ? error.message : 'Asesmen lokal tidak dapat dibaca.';
   }
 });
 
@@ -173,20 +180,15 @@ async function saveAndNext() {
   }
   isSaving.value = true;
   saveError.value = '';
-  const savedAnswers = { ...functions.value };
   try {
-    const response = await jsonRequest(`/relawan/assessment/${props.assessment.id}/function`, { functions: savedAnswers });
-    if (!response.ok) throw new Error('Simpan gagal');
-    try {
-      await clearSavedAssessmentDraft(props.assessment.user_id, props.assessment.id, 'function_domains', savedAnswers);
-    } catch {
-      draftWarning.value = 'Jawaban tersimpan di server, tetapi draf lokal belum dapat dibersihkan.';
-    }
+    await persistDraft();
+    if (draftWarning.value) throw new Error(draftWarning.value);
     router.visit(`/relawan/assessment/${props.assessment.id}/review`);
   } catch {
-    saveError.value = 'Fungsi harian belum tersimpan di server. Periksa koneksi atau jawaban, lalu coba lagi.';
+    saveError.value = 'Jawaban belum tersimpan di perangkat ini. Coba lagi.';
   } finally {
     isSaving.value = false;
   }
 }
+
 </script>

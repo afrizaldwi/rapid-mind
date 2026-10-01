@@ -37,7 +37,7 @@
 
           <!-- Web Speech API Assistive Recognition Button -->
           <div v-if="isVerbal">
-            <button type="button" @click="toggleSpeechRecognition"
+            <button type="button" :disabled="!draftReady" @click="toggleSpeechRecognition"
               class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
               :class="isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'">
               <span>{{ isListening ? '🔴 Mendengarkan…' : '🎤 Bantuan Suara (STT)' }}</span>
@@ -76,7 +76,7 @@
 
           <!-- Large YA / TIDAK Buttons -->
           <div class="grid grid-cols-2 gap-3 mt-4">
-            <button type="button" @click="setManualAnswer(q.number, true)"
+            <button type="button" :disabled="!draftReady" @click="setManualAnswer(q.number, true)"
               class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
               :class="answers[q.number] === true
                 ? (q.number === 17 ? 'border-red-600 bg-red-600 text-white shadow-md' : 'border-teal-700 bg-teal-700 text-white shadow-md')
@@ -85,7 +85,7 @@
               <span>YA</span>
             </button>
 
-            <button type="button" @click="setManualAnswer(q.number, false)"
+            <button type="button" :disabled="!draftReady" @click="setManualAnswer(q.number, false)"
               class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
               :class="answers[q.number] === false
                 ? 'border-slate-700 bg-slate-700 text-white shadow-md'
@@ -130,8 +130,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
-import { jsonRequest } from '@/offline/jsonRequest';
-import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft, clearSavedAssessmentDraft } from '@/offline/assessmentDraft';
+import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '@/offline/assessmentDraft';
+import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
+import type { LocalAssessment, LocalPatient } from '@/offline/db';
+import { assessmentRepository } from '@/offline/assessmentRepository';
 import PotentialRedFlag from '@/components/Relawan/PotentialRedFlag.vue';
 import T0Verification from '@/components/Relawan/T0Verification.vue';
 
@@ -142,12 +144,15 @@ const props = defineProps<{
 }>();
 
 const answers = ref<Record<number, boolean>>(mergeAssessmentDraft('srq_answers', props.responses, {}));
+const owner = relawanOwner();
+const localAssessment = ref<LocalAssessment | null>(null);
+const patient = ref<LocalPatient | null>(props.patient);
 const isSaving = ref(false);
 const saveError = ref('');
 const draftWarning = ref('');
 const draftReady = ref(false);
 const editedKeys = new Set<string>();
-const isVerbal = ref(props.assessment?.mode === 'VERBAL');
+const isVerbal = ref(props.assessment?.mode !== 'NON_VERBAL');
 const isListening = ref(false);
 const transcriptSnippet = ref('');
 const showRedFlagModal = ref(false);
@@ -200,8 +205,15 @@ function handleEscalate() {
   showEmergencyVerification.value = true;
 }
 
-function toggleMode() {
-  isVerbal.value = !isVerbal.value;
+async function toggleMode() {
+  if (!localAssessment.value) return;
+  const nextMode = isVerbal.value ? 'NON_VERBAL' : 'VERBAL';
+  try {
+    await assessmentRepository.update(owner, props.assessment.id, { mode: nextMode, sync_state: 'LOCAL_SAVED' });
+    localAssessment.value.mode = nextMode;
+    isVerbal.value = nextMode === 'VERBAL';
+    draftWarning.value = '';
+  } catch { draftWarning.value = 'Mode belum tersimpan di perangkat ini.'; }
 }
 
 // Browser Web Speech API for assistive voice detection
@@ -239,6 +251,7 @@ function toggleSpeechRecognition() {
           for (const kw of q.keywords) {
             if (transcript.includes(kw)) {
               setAnswer(q.number, true);
+              void persistDraft();
               break;
             }
           }
@@ -264,7 +277,8 @@ function toggleSpeechRecognition() {
 
 async function persistDraft() {
   try {
-    await saveAssessmentDraft(props.assessment, 'srq_answers', answers.value);
+    if (!localAssessment.value) throw new Error('Asesmen lokal belum siap.');
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'srq_answers', answers.value);
     draftWarning.value = '';
   } catch {
     draftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
@@ -273,15 +287,18 @@ async function persistDraft() {
 
 onMounted(async () => {
   try {
-    const local = await readAssessmentDraft(props.assessment.user_id, props.assessment.id, 'srq_answers');
-    const merged = mergeAssessmentDraft('srq_answers', answers.value, local);
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    localAssessment.value = context.assessment;
+    isVerbal.value = context.assessment.mode === 'VERBAL';
+    patient.value = context.patient;
+    const local = await readAssessmentDraft(owner, props.assessment.id, 'srq_answers');
+    const merged = mergeAssessmentDraft('srq_answers', props.responses, local);
     for (const [key, value] of Object.entries(merged)) {
       if (!editedKeys.has(key)) (answers.value as Record<string, typeof value>)[key] = value;
     }
-  } catch {
-    draftWarning.value = 'Draf lokal tidak dapat dibaca. Jawaban yang sudah tersimpan di server tetap ditampilkan.';
-  } finally {
     draftReady.value = true;
+  } catch (error) {
+    draftWarning.value = error instanceof Error ? error.message : 'Asesmen lokal tidak dapat dibaca.';
   }
 });
 
@@ -293,21 +310,15 @@ async function saveAndNext() {
   }
   isSaving.value = true;
   saveError.value = '';
-  const savedAnswers = { ...answers.value };
-  const payload = Array.from({ length: 20 }, (_, index) => ({ question_number: index + 1, answer: savedAnswers[index + 1] }));
   try {
-    const response = await jsonRequest(`/relawan/assessment/${props.assessment.id}/srq`, { responses: payload, mode: isVerbal.value ? 'VERBAL' : 'NON_VERBAL' });
-    if (!response.ok) throw new Error('Simpan gagal');
-    try {
-      await clearSavedAssessmentDraft(props.assessment.user_id, props.assessment.id, 'srq_answers', savedAnswers);
-    } catch {
-      draftWarning.value = 'Jawaban tersimpan di server, tetapi draf lokal belum dapat dibersihkan.';
-    }
+    await persistDraft();
+    if (draftWarning.value) throw new Error(draftWarning.value);
     router.visit(`/relawan/assessment/${props.assessment.id}/risk`);
   } catch {
-    saveError.value = 'Jawaban SRQ belum tersimpan di server. Periksa koneksi atau jawaban, lalu coba lagi.';
+    saveError.value = 'Jawaban belum tersimpan di perangkat ini. Coba lagi.';
   } finally {
     isSaving.value = false;
   }
 }
+
 </script>

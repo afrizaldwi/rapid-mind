@@ -3,10 +3,12 @@ import {
     requireOwner,
     type LocalAssessment,
     type LocalEmergency,
+    type LocalPatient,
     type OutboxItem,
 } from "./db";
 import { assessmentRepository } from "./assessmentRepository";
 import { emergencyRepository } from "./emergencyRepository";
+import { patientRepository } from "./patientRepository";
 
 export const outboxRepository = {
     async list(owner: number) {
@@ -132,6 +134,7 @@ export const outboxRepository = {
             db.assessments,
             db.emergencies,
             db.patients,
+            db.patientSnapshots,
             async () => {
                 const latest = await this.get(owner, item.id!);
                 if (!latest) throw new Error("Outbox owner changed");
@@ -156,18 +159,12 @@ export const outboxRepository = {
                         | Record<string, unknown>
                         | undefined;
                     if (patient && typeof patient.id === "string") {
-                        const localPatient = await db.patients.get(patient.id);
-                        if (
-                            localPatient &&
-                            localPatient.owner_user_id === owner
-                        )
-                            await db.patients.put({
-                                ...localPatient,
-                                ...patient,
-                                owner_user_id: owner,
-                                sync_state: "SYNCED",
-                                last_error: undefined,
-                            });
+                        if (await patientRepository.get(owner, patient.id)) {
+                            await patientRepository.reconcile(
+                                owner,
+                                patient as Partial<LocalPatient> & { id: string },
+                            );
+                        }
                     }
                     await db.assessments.put({
                         ...local,
@@ -199,18 +196,12 @@ export const outboxRepository = {
                         canonical.emergency as Record<string, unknown>
                     ).patient as Record<string, unknown> | undefined;
                     if (patient && typeof patient.id === "string") {
-                        const localPatient = await db.patients.get(patient.id);
-                        if (
-                            localPatient &&
-                            localPatient.owner_user_id === owner
-                        )
-                            await db.patients.put({
-                                ...localPatient,
-                                ...patient,
-                                owner_user_id: owner,
-                                sync_state: "SYNCED",
-                                last_error: undefined,
-                            });
+                        if (await patientRepository.get(owner, patient.id)) {
+                            await patientRepository.reconcile(
+                                owner,
+                                patient as Partial<LocalPatient> & { id: string },
+                            );
+                        }
                     }
                 }
                 await db.outbox.delete(item.id!);

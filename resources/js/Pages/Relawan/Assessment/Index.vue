@@ -52,6 +52,7 @@
         </div>
 
         <form @submit.prevent="startNew" class="space-y-4">
+          <p v-if="localError" role="alert" class="text-xs font-semibold text-red-800">{{ localError }}</p>
           <!-- Existing Patient Selector -->
           <div v-if="patients && patients.length > 0">
             <label class="block text-xs font-bold text-slate-700 mb-1">
@@ -160,7 +161,7 @@
               class="w-full py-3.5 px-4 bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm rounded-xl shadow-md transition disabled:opacity-60"
             >
               <span v-if="loading">Menyiapkan Asesmen…</span>
-              <span v-else>Mulai Wawancara SRQ-20 →</span>
+              <span v-else>Mulai Asesmen →</span>
             </button>
           </div>
         </form>
@@ -170,14 +171,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { assessmentRepository } from '@/offline/assessmentRepository';
+import { patientRepository } from '@/offline/patientRepository';
+import { loadAssessmentContext, relawanOwner, resumeStage, startLocalAssessment } from '@/offline/assessmentWorkflow';
+import type { ServerAssessment } from '@/offline/assessmentWorkflow';
 
-defineProps<{
-  inProgressAssessments?: any[];
-  patients?: any[];
+const props = defineProps<{
+  inProgressAssessments?: ServerAssessment[];
+  patients?: Array<{ id: string; name: string; nik?: string; age?: number; gender?: string; shelter_id?: number; created_by?: number }>;
 }>();
+const owner = relawanOwner();
+const page = usePage();
+const shelterId = (page.props.auth as { user?: { shelter_id?: number } })?.user?.shelter_id;
+const localError = ref('');
+const drafts = ref<Array<{ id: string; patient: { name: string; nik?: string }; mode: string; resume_url: string; resume_label: string }>>([]);
+const inProgressAssessments = computed(() => drafts.value);
+const patients = computed(() => props.patients ?? []);
+const labels: Record<string, string> = { srq: 'Lanjutkan SRQ-20', risk: 'Lanjutkan Faktor Risiko', function: 'Lanjutkan Fungsi Harian', review: 'Tinjau Asesmen' };
+
+async function refreshDrafts() {
+  for (const server of props.inProgressAssessments ?? []) {
+    try { await loadAssessmentContext(owner, server, server.patient); }
+    catch { localError.value = 'Sebagian asesmen server belum dapat disalin ke perangkat ini.'; }
+  }
+  const rows = await assessmentRepository.list(owner);
+  drafts.value = (await Promise.all(rows.filter(a => a.status === 'IN_PROGRESS').map(async a => {
+    const patient = await patientRepository.get(owner, a.patient_id);
+    const stage = resumeStage(a);
+    return { id: a.id, patient: { name: patient?.name ?? 'Penyintas', nik: patient?.nik }, mode: a.mode, resume_url: `/relawan/assessment/${a.id}/${stage}`, resume_label: labels[stage] };
+  }))).sort((a, b) => a.id.localeCompare(b.id));
+}
+onMounted(() => { void refreshDrafts().catch(() => { localError.value = 'Daftar asesmen lokal belum dapat dibaca.'; }); });
 
 const loading = ref(false);
 const form = ref({
@@ -189,12 +216,22 @@ const form = ref({
   mode: 'VERBAL',
 });
 
-function startNew() {
+async function startNew() {
+  if (loading.value) return;
   loading.value = true;
-  router.post('/relawan/assessment', form.value, {
-    onFinish: () => {
-      loading.value = false;
-    },
-  });
+  localError.value = '';
+  try {
+    const selected = patients.value.find(p => p.id === form.value.patient_id);
+    const patient = selected
+      ? { id: selected.id, name: selected.name, nik: selected.nik, age: selected.age, gender: selected.gender, shelter_id: selected.shelter_id, serverKnown: true }
+      : { name: form.value.name.trim(), nik: form.value.nik || undefined, age: form.value.age, gender: form.value.gender, shelter_id: shelterId };
+    if (!patient.name) throw new Error('Nama penyintas harus diisi.');
+    const id = await startLocalAssessment(owner, patient, form.value.mode as 'VERBAL' | 'NON_VERBAL');
+    router.visit(`/relawan/assessment/${id}/identity`);
+  } catch (error) {
+    localError.value = error instanceof Error ? error.message : 'Asesmen belum tersimpan pada perangkat ini.';
+  } finally {
+    loading.value = false;
+  }
 }
 </script>

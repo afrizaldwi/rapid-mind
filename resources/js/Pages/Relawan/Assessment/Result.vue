@@ -8,23 +8,25 @@
         </span>
 
         <!-- Triage Level Display -->
-        <div class="py-2">
+        <p v-if="loadError" role="alert" class="text-sm text-red-800">{{ loadError }}</p>
+        <p v-if="triageResult" class="text-xs font-semibold text-teal-800">{{ syncLabel }}</p>
+        <div v-if="triageResult" class="py-2">
           <div
             class="inline-flex items-center justify-center px-6 py-3 rounded-2xl text-2xl font-black tracking-wide border-2 shadow-sm"
             :class="categoryStyle.badge"
           >
-            {{ triageResult?.system_recommendation || 'T3' }}
+            {{ triageResult?.system_recommendation || '—' }}
           </div>
           <h2 class="text-xl font-extrabold text-slate-900 mt-3">
             {{ categoryStyle.title }}
           </h2>
           <p class="text-xs text-slate-500 mt-1">
-            Pasien: <strong class="text-slate-800">{{ patient?.name }}</strong> (NIK: {{ patient?.nik || 'Tanpa NIK' }})
+            Pasien: <strong class="text-slate-800">{{ localPatient?.name }}</strong> (NIK: {{ localPatient?.nik || 'Tanpa NIK' }})
           </p>
         </div>
 
         <!-- Score Breakdown Cards -->
-        <div class="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 text-center">
+        <div v-if="triageResult" class="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 text-center">
           <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
             <span class="text-[10px] font-bold text-slate-500 uppercase block">SRQ-20</span>
             <span class="text-base font-extrabold text-slate-900">{{ triageResult?.srq_score }}</span>
@@ -52,7 +54,7 @@
       </div>
 
       <!-- Field Intervention Guidance -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+      <div v-if="triageResult" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Rekomendasi Tindak Lanjut Relawan
         </h3>
@@ -79,10 +81,10 @@
           Kembali ke Beranda
         </Link>
         <Link
-          href="/relawan/data"
+          href="/relawan/assessment"
           class="w-full flex justify-center py-3 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-sm rounded-xl transition"
         >
-          Lihat Riwayat & Status Sinkronisasi Data
+          Kembali ke Daftar Asesmen
         </Link>
       </div>
     </div>
@@ -90,18 +92,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { loadAssessmentContext, relawanOwner, type ServerAssessment, type ServerPatient } from '@/offline/assessmentWorkflow';
+import { normalizeTriage } from '@/offline/triageDisplay';
+import type { LocalPatient } from '@/offline/db';
 
 const props = defineProps<{
-  assessment: any;
-  patient: any;
-  triageResult: any;
+  assessment: ServerAssessment;
+  patient?: ServerPatient | null;
+  triageResult?: unknown;
 }>();
 
+const owner = relawanOwner();
+const localPatient = ref<LocalPatient | null>(null);
+const triageResult = ref(normalizeTriage(props.triageResult));
+const syncLabel = ref('Tersimpan di perangkat ini; sinkronisasi belum dikonfirmasi.');
+const loadError = ref('');
+onMounted(async () => {
+  try {
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    if (context.assessment.status !== 'COMPLETED') throw new Error('Asesmen belum selesai.');
+    localPatient.value = context.patient;
+    triageResult.value = normalizeTriage(context.assessment.triage_result ?? props.triageResult);
+    if (!triageResult.value) throw new Error('Rekomendasi sistem belum tersedia.');
+    syncLabel.value = context.assessment.sync_state === 'SYNCED' ? 'Tersinkronisasi dengan server.' : 'Tersimpan di perangkat ini; sinkronisasi belum dikonfirmasi.';
+  } catch (error) { loadError.value = error instanceof Error ? error.message : 'Hasil tidak tersedia.'; }
+});
+
 const categoryStyle = computed(() => {
-  const cat = props.triageResult?.system_recommendation;
+  const cat = triageResult.value?.system_recommendation;
 
   switch (cat) {
     case 'T0_SUSPECT':

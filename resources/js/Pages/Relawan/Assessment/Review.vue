@@ -19,10 +19,10 @@
           Identitas Penyintas
         </h3>
         <div class="text-sm font-bold text-slate-900">
-          {{ patient?.name }} ({{ patient?.age ? `${patient.age} tahun` : 'Usia tidak terdata' }} / {{ patient?.gender }})
+          {{ localPatient?.name }} ({{ localPatient?.age ? `${localPatient.age} tahun` : 'Usia tidak terdata' }} / {{ localPatient?.gender }})
         </div>
         <p class="text-xs text-slate-500">
-          NIK: {{ patient?.nik || 'Tanpa NIK' }} • Mode: {{ assessment.mode }}
+          NIK: {{ localPatient?.nik || 'Tanpa NIK' }} • Mode: {{ localAssessment?.mode }}
         </p>
       </div>
 
@@ -54,7 +54,7 @@
           <h4>Kalkulasi Deterministik Sistem</h4>
         </div>
         <p class="text-xs text-teal-950 leading-relaxed">
-          Total skor estimasi: <strong>{{ totalScore }} / 37 poin</strong>. Sistem akan menghitung rekomendasi triase resmi dan menyimpan catatan ke server posko.
+          Total skor estimasi: <strong>{{ totalScore }} / 37 poin</strong>. Rekomendasi sistem dihitung dan disimpan di perangkat ini. Sinkronisasi server berjalan terpisah.
         </p>
       </div>
 
@@ -86,66 +86,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { completeLocalAssessment, exactAssessmentAnswers, loadAssessmentContext, relawanOwner, type ServerAssessment, type ServerPatient } from '@/offline/assessmentWorkflow';
+import { RiskCalculator } from '@/domain/triage/riskCalculator';
+import type { LocalAssessment, LocalPatient } from '@/offline/db';
 
-const props = defineProps<{
-  assessment: any;
-  patient: any;
-  srqResponses?: Record<number, boolean>;
-  riskResponses?: Record<string, boolean>;
-  functionResponses?: Record<string, number>;
-}>();
-
+const props = defineProps<{ assessment: ServerAssessment; patient?: ServerPatient | null }>();
+const owner = relawanOwner();
+const localAssessment = ref<LocalAssessment | null>(null);
+const localPatient = ref<LocalPatient | null>(null);
 const isSubmitting = ref(false);
 const completionError = ref('');
-const assessmentComplete = computed(() =>
-  Object.keys(props.srqResponses || {}).length === 20 &&
-  Object.keys(props.riskResponses || {}).length === 5 &&
-  Object.keys(props.functionResponses || {}).length === 3 &&
-  Array.from({ length: 20 }, (_, index) => typeof props.srqResponses?.[index + 1] === 'boolean').every(Boolean) &&
-  ['R1', 'R2', 'R3', 'R4', 'R5'].every(code => typeof props.riskResponses?.[code] === 'boolean') &&
-  ['F1', 'F2', 'F3'].every(code => [0, 1, 3].includes(props.functionResponses?.[code] as number))
-);
-
-
-const srqYesCount = computed(() => {
-  if (!props.srqResponses) return 0;
-  return Object.values(props.srqResponses).filter((v) => v === true).length;
+const assessmentComplete = computed(() => !!localAssessment.value && exactAssessmentAnswers(localAssessment.value));
+const srqYesCount = computed(() => Object.values(localAssessment.value?.srq_answers ?? {}).filter(Boolean).length);
+const riskScore = computed(() => new RiskCalculator().calculate(localAssessment.value?.risk_indicators ?? {}));
+const functionScore = computed(() => Object.values(localAssessment.value?.function_domains ?? {}).reduce((sum, value) => sum + value, 0));
+const totalScore = computed(() => srqYesCount.value + riskScore.value + functionScore.value);
+onMounted(async () => {
+  try {
+    const context = await loadAssessmentContext(owner, props.assessment, props.patient);
+    localAssessment.value = context.assessment;
+    localPatient.value = context.patient;
+  } catch (error) { completionError.value = error instanceof Error ? error.message : 'Asesmen lokal tidak tersedia.'; }
 });
-
-const riskScore = computed(() => {
-  const weights: Record<string, number> = { R1: 2, R2: 2, R3: 1, R4: 2, R5: 1 };
-  let total = 0;
-  for (const [code, val] of Object.entries(props.riskResponses || {})) {
-    if (val && weights[code]) {
-      total += weights[code];
-    }
-  }
-  return total;
-});
-
-const functionScore = computed(() => {
-  if (!props.functionResponses) return 0;
-  return Object.values(props.functionResponses).reduce((acc, v) => acc + (v || 0), 0);
-});
-
-const totalScore = computed(() => {
-  return srqYesCount.value + riskScore.value + functionScore.value;
-});
-
-function finalizeAssessment() {
+async function finalizeAssessment() {
   if (isSubmitting.value || !assessmentComplete.value) return;
   isSubmitting.value = true;
   completionError.value = '';
-  router.post(`/relawan/assessment/${props.assessment.id}/complete`, {}, {
-    onError: (errors) => {
-      completionError.value = errors.assessment || 'Asesmen belum dapat diselesaikan. Periksa semua jawaban, lalu coba lagi.';
-    },
-    onFinish: () => {
-      isSubmitting.value = false;
-    },
-  });
+  try {
+    await completeLocalAssessment(owner, props.assessment.id);
+    router.visit(`/relawan/assessment/${props.assessment.id}/result`);
+  } catch (error) {
+    completionError.value = error instanceof Error ? error.message : 'Asesmen belum dapat diselesaikan.';
+  } finally { isSubmitting.value = false; }
 }
 </script>

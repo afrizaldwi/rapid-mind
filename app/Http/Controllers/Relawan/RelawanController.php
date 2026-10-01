@@ -85,8 +85,8 @@ final class RelawanController extends Controller
 
         $inProgressAssessments->each(fn (Assessment $assessment) => $resume->attach($assessment));
 
-        $patients = Patient::where('shelter_id', $user->shelter_id)
-            ->orWhere('created_by', $user->id)
+        $patients = Patient::where(fn ($query) => $query->where('created_by', $user->id)
+            ->when($user->shelter_id, fn ($query) => $query->orWhere('shelter_id', $user->shelter_id)))
             ->latest()
             ->get();
 
@@ -110,6 +110,13 @@ final class RelawanController extends Controller
         ]);
 
         $patientId = $validated['patient_id'] ?? null;
+
+        if ($patientId && !Patient::whereKey($patientId)
+            ->where(fn ($query) => $query->where('created_by', $user->id)
+                ->when($user->shelter_id, fn ($query) => $query->orWhere('shelter_id', $user->shelter_id)))
+            ->exists()) {
+            throw ValidationException::withMessages(['patient_id' => 'Penyintas tidak tersedia untuk Relawan ini.']);
+        }
 
         if (!$patientId) {
             $patient = Patient::create([
@@ -140,30 +147,30 @@ final class RelawanController extends Controller
 
     public function assessmentIdentity(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with('patient')->findOrFail($assessmentId);
+        $assessment = $this->assessmentShell($assessmentId, 'patient');
 
         return Inertia::render('Relawan/Assessment/Identity', [
             'assessment' => $assessment,
-            'patient' => $assessment->patient,
+            'patient' => $assessment?->patient,
         ]);
     }
 
     public function assessmentSrq(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with(['patient', 'srqResponses'])->findOrFail($assessmentId);
+        $assessment = $this->assessmentShell($assessmentId, ['patient', 'srqResponses']);
 
-        $existingResponses = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
+        $existingResponses = $assessment?->srqResponses->pluck('answer', 'question_number')->toArray() ?? [];
 
         return Inertia::render('Relawan/Assessment/Srq', [
             'assessment' => $assessment,
-            'patient' => $assessment->patient,
+            'patient' => $assessment?->patient,
             'responses' => $existingResponses,
         ]);
     }
 
     public function saveSrq(Request $request, string $assessmentId): JsonResponse
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->ownedAssessment($assessmentId);
 
         $validated = $request->validate([
             'responses' => ['required', 'array', 'size:20'],
@@ -193,20 +200,20 @@ final class RelawanController extends Controller
 
     public function assessmentRisk(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with(['patient', 'riskAssessment'])->findOrFail($assessmentId);
+        $assessment = $this->assessmentShell($assessmentId, ['patient', 'riskAssessment']);
 
-        $existingRisks = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
+        $existingRisks = $assessment?->riskAssessment->pluck('answer', 'indicator')->toArray() ?? [];
 
         return Inertia::render('Relawan/Assessment/Risk', [
             'assessment' => $assessment,
-            'patient' => $assessment->patient,
+            'patient' => $assessment?->patient,
             'risks' => $existingRisks,
         ]);
     }
 
     public function saveRisk(Request $request, string $assessmentId): JsonResponse
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->ownedAssessment($assessmentId);
 
         $validated = $request->validate([
             'risks' => ['required', 'array:R1,R2,R3,R4,R5', 'size:5'],
@@ -231,20 +238,20 @@ final class RelawanController extends Controller
 
     public function assessmentFunction(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with(['patient', 'functionAssessment'])->findOrFail($assessmentId);
+        $assessment = $this->assessmentShell($assessmentId, ['patient', 'functionAssessment']);
 
-        $existingFunctions = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
+        $existingFunctions = $assessment?->functionAssessment->pluck('level', 'domain')->toArray() ?? [];
 
         return Inertia::render('Relawan/Assessment/Function', [
             'assessment' => $assessment,
-            'patient' => $assessment->patient,
+            'patient' => $assessment?->patient,
             'functions' => $existingFunctions,
         ]);
     }
 
     public function saveFunction(Request $request, string $assessmentId): JsonResponse
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->ownedAssessment($assessmentId);
 
         $validated = $request->validate([
             'functions' => ['required', 'array:F1,F2,F3', 'size:3'],
@@ -267,20 +274,20 @@ final class RelawanController extends Controller
 
     public function assessmentReview(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with(['patient', 'srqResponses', 'riskAssessment', 'functionAssessment'])->findOrFail($assessmentId);
+        $assessment = $this->assessmentShell($assessmentId, ['patient', 'srqResponses', 'riskAssessment', 'functionAssessment']);
 
         return Inertia::render('Relawan/Assessment/Review', [
             'assessment' => $assessment,
-            'patient' => $assessment->patient,
-            'srqResponses' => $assessment->srqResponses->pluck('answer', 'question_number'),
-            'riskResponses' => $assessment->riskAssessment->pluck('answer', 'indicator'),
-            'functionResponses' => $assessment->functionAssessment->pluck('level', 'domain'),
+            'patient' => $assessment?->patient,
+            'srqResponses' => $assessment?->srqResponses->pluck('answer', 'question_number') ?? [],
+            'riskResponses' => $assessment?->riskAssessment->pluck('answer', 'indicator') ?? [],
+            'functionResponses' => $assessment?->functionAssessment->pluck('level', 'domain') ?? [],
         ]);
     }
 
     public function completeAssessment(Request $request, string $assessmentId, TriageCalculator $calculator): JsonResponse|RedirectResponse
     {
-        $assessment = Assessment::with(['srqResponses', 'riskAssessment', 'functionAssessment'])->findOrFail($assessmentId);
+        $assessment = $this->ownedAssessment($assessmentId, ['srqResponses', 'riskAssessment', 'functionAssessment']);
 
         if (!$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
             || !$this->hasExactResponseSet($assessment->riskAssessment, ['R1', 'R2', 'R3', 'R4', 'R5'], 'indicator', 'answer', [true, false])
@@ -336,13 +343,34 @@ final class RelawanController extends Controller
 
     public function assessmentResult(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with(['patient', 'triageResult'])->findOrFail($assessmentId);
+        $assessment = $this->assessmentShell($assessmentId, ['patient', 'triageResult']);
 
         return Inertia::render('Relawan/Assessment/Result', [
             'assessment' => $assessment,
-            'patient' => $assessment->patient,
-            'triageResult' => $assessment->triageResult,
+            'patient' => $assessment?->patient,
+            'triageResult' => $assessment?->triageResult,
         ]);
+    }
+
+    private function ownedAssessment(string $assessmentId, array $relations = []): Assessment
+    {
+        abort_unless(\Illuminate\Support\Str::isUuid($assessmentId), 404);
+        return Assessment::with($relations)->whereKey($assessmentId)
+            ->where('user_id', Auth::id())->firstOrFail();
+    }
+
+    private function assessmentShell(string $assessmentId, array|string $relations = []): Assessment
+    {
+        abort_unless(\Illuminate\Support\Str::isUuid($assessmentId), 404);
+        $assessment = Assessment::with($relations)->find($assessmentId);
+        if ($assessment) {
+            abort_unless($assessment->user_id === Auth::id(), 404);
+            return $assessment;
+        }
+
+        $shell = new Assessment(['user_id' => Auth::id()]);
+        $shell->id = $assessmentId;
+        return $shell;
     }
 
     public function data(AssessmentResume $resume): InertiaResponse
