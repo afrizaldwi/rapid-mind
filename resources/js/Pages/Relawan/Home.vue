@@ -12,10 +12,9 @@
               {{ userName }}
             </h2>
           </div>
-          <span class="text-2xl">🤝</span>
         </div>
         <div class="mt-3 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60">
-          <span class="mr-1.5">📍</span>
+          <MapPin class="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
           <span>{{ shelter?.name || userShelterName || 'Posko belum ditetapkan' }}</span>
         </div>
       </div>
@@ -29,7 +28,7 @@
       >
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
-            <span class="text-xl">🚨</span>
+            <Siren class="h-5 w-5" aria-hidden="true" />
             <span class="text-xs font-extrabold uppercase tracking-wider text-red-800">
               Sinyal Darurat T0 Aktif
             </span>
@@ -102,7 +101,7 @@
                 Panduan humanis Look, Listen, Link tanpa beban input formulir, dan teknik relaksasi 5-4-3-2-1.
               </p>
             </div>
-            <span class="text-3xl text-teal-600 group-hover:scale-110 transition">📖</span>
+            <BookOpen class="h-8 w-8 text-teal-600 group-hover:scale-110 transition" aria-hidden="true" />
           </div>
         </RelawanLink>
 
@@ -123,18 +122,19 @@
                 Wawancara psikologis terstandarisasi, checklist faktor risiko, keberfungsian harian, dan rekomendasi triase sistem.
               </p>
             </div>
-            <span class="text-3xl text-teal-600 group-hover:scale-110 transition">📋</span>
+            <ClipboardList class="h-8 w-8 text-teal-600 group-hover:scale-110 transition" aria-hidden="true" />
           </div>
         </RelawanLink>
       </div>
 
       <!-- Quick Guidance -->
       <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs text-slate-600 space-y-1.5">
-        <p class="font-bold text-slate-800">
-          💡 Catatan Etik Garda Depan:
+        <p class="font-bold text-slate-800 inline-flex items-center gap-1.5">
+          <Info class="h-3.5 w-3.5" aria-hidden="true" />
+          <span>Catatan Etik Garda Depan:</span>
         </p>
         <p>
-          Prioritaskan keselamatan fisik dan kenyamanan emosional penyintas. Jika menemukan indikasi ideasi bunuh diri atau amuk, gunakan tombol <strong>🚨 T0 DARURAT</strong> di pojok kanan bawah.
+          Prioritaskan keselamatan fisik dan kenyamanan emosional penyintas. Jika menemukan indikasi ideasi bunuh diri atau amuk, gunakan tombol <strong>T0 DARURAT</strong> di pojok kanan bawah.
         </p>
       </div>
     </div>
@@ -143,6 +143,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { BookOpen, ClipboardList, Info, MapPin, Siren } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';

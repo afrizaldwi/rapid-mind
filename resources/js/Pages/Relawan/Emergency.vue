@@ -9,7 +9,7 @@
       <div class="bg-red-800 text-white rounded-3xl p-6 shadow-xl border border-red-700 space-y-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
-            <span class="text-2xl">🚨</span>
+            <Siren class="h-6 w-6" aria-hidden="true" />
             <span class="text-xs font-black uppercase tracking-wider bg-red-900/80 px-2.5 py-1 rounded-md">
               Insiden T0 Darurat Aktif
             </span>
@@ -64,7 +64,7 @@
       <!-- Safety Protocol Guidelines -->
       <div class="bg-amber-50 border border-amber-300 rounded-2xl p-5 text-xs text-amber-950 space-y-2">
         <div class="flex items-center space-x-2 font-bold text-amber-900 text-sm">
-          <span>🛡️</span>
+          <ShieldAlert class="h-4 w-4" aria-hidden="true" />
           <h4>Protokol Keselamatan Relawan</h4>
         </div>
         <ul class="space-y-1.5 list-disc list-inside text-amber-900">
@@ -96,7 +96,7 @@
           :href="smsHref"
           class="w-full flex items-center justify-center space-x-2 py-3.5 px-4 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-md transition"
         >
-          <span>📱</span>
+          <Smartphone class="h-4 w-4" aria-hidden="true" />
           <span>Buka SMS Cadangan (Jika Sinyal Data Terputus)</span>
         </a>
         <p class="text-[11px] text-slate-500 text-center">
@@ -109,6 +109,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { ShieldAlert, Siren, Smartphone } from 'lucide-vue-next';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';

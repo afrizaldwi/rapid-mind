@@ -29,19 +29,21 @@
         <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
           <div class="flex items-center space-x-2">
             <span class="font-semibold text-slate-600">Mode:</span>
-            <button type="button" @click="toggleMode" class="px-2 py-0.5 rounded-lg border font-bold"
+            <button type="button" @click="toggleMode" class="px-2 py-0.5 rounded-lg border font-bold inline-flex items-center gap-1.5"
               :class="isVerbal ? 'bg-teal-50 text-teal-800 border-teal-300' : 'bg-slate-100 text-slate-700 border-slate-300'">
-              {{ isVerbal ? '🗣️ Verbal' : '🤝 Adaptif' }}
+              <Mic v-if="isVerbal" class="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{{ isVerbal ? 'Verbal' : 'Adaptif' }}</span>
             </button>
           </div>
 
           <div v-if="isVerbal" class="flex items-center gap-2">
             <button type="button" :disabled="sttButtonDisabled" @click="handleSttAction"
-              class="px-3 py-1 rounded-lg text-xs font-bold transition border disabled:opacity-60"
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition border disabled:opacity-60"
               :class="sttStatus === 'recording'
                 ? 'bg-red-700 text-white border-red-700'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'">
-              {{ sttButtonLabel }}
+              <Mic v-if="sttStatus === 'ready'" class="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{{ sttButtonLabel }}</span>
             </button>
             <button v-if="sttStatus === 'recording'" type="button" @click="cancelRecording"
               class="px-3 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-100">
@@ -86,8 +88,9 @@
               <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
                 #{{ String(q.number).padStart(2, '0') }}
               </span>
-              <span v-if="q.number === 17" class="text-xs font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-800">
-                ⚠️ Red Flag Gate
+              <span v-if="q.number === 17" class="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-800">
+                <TriangleAlert class="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Red Flag Gate</span>
               </span>
             </div>
           </div>
@@ -156,6 +159,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Mic, TriangleAlert } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
@@ -210,7 +214,7 @@ const sttButtonDisabled = computed(() => !draftReady.value || ['preparing', 'pro
 const sttButtonLabel = computed(() => {
   switch (sttStatus.value) {
     case 'preparing': return 'Menyiapkan STT…';
-    case 'ready': return '🎤 Mulai Rekam';
+    case 'ready': return 'Mulai Rekam';
     case 'recording': return 'Selesai & Transkripsikan';
     case 'processing': return 'Memproses di Perangkat…';
     case 'error': return 'Coba Siapkan Lagi';

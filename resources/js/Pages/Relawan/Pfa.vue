@@ -12,7 +12,6 @@
               Buku Saku Digital PFA
             </h2>
           </div>
-          <span class="text-3xl">🌿</span>
         </div>
         <p class="text-xs text-slate-600 mt-2 leading-relaxed">
           <em>Psychological First Aid</em>: Hadir utuh, dengarkan tanpa menghakimi, dan berikan rasa aman tanpa membebani penyintas dengan administrasi.
@@ -29,7 +28,6 @@
           class="flex-1 py-2 text-xs font-bold rounded-lg transition duration-150 flex items-center justify-center space-x-1.5"
           :class="activeTab === tab.id ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
         >
-          <span>{{ tab.icon }}</span>
           <span>{{ tab.label }}</span>
         </button>
       </div>
@@ -38,8 +36,7 @@
       <div v-if="activeTab === 'LOOK'" class="space-y-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <span>👁️</span>
-            <h4>1. Amati Keamanan Fisik</h4>
+            <h4> Amati Keamanan Fisik</h4>
           </div>
           <ul class="text-xs text-slate-600 space-y-2 list-disc list-inside">
             <li>Pastikan area sekitar aman dari reruntuhan atau cuaca ekstrem.</li>
@@ -49,8 +46,7 @@
 
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <span>⚠️</span>
-            <h4>2. Amati Reaksi Distres Parah</h4>
+            <h4>Amati Reaksi Distres Parah</h4>
           </div>
           <div class="grid grid-cols-1 gap-2 text-xs">
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
@@ -74,44 +70,11 @@
         <!-- Sapaan Awal -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <span>💬</span>
             <h4>Skrip Sapaan Hangat</h4>
           </div>
           <blockquote class="bg-teal-50/60 p-4 rounded-xl border-l-4 border-teal-600 text-xs text-teal-950 italic leading-relaxed">
             "Halo Ibu/Bapak, kenalkan saya Relawan di posko ini. Saya hadir di sini untuk menemani Ibu/Bapak. Ada yang bisa saya bantu atau temani saat ini?"
           </blockquote>
-        </div>
-
-        <!-- Interactive Grounding 5-4-3-2-1 -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-              <span>🧘</span>
-              <h4>Latihan Grounding 5-4-3-2-1</h4>
-            </div>
-            <span class="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">Interaktif</span>
-          </div>
-          <p class="text-xs text-slate-600 leading-relaxed">
-            Gunakan teknik ini jika penyintas tampak panik, napas tersengal, atau mengalami disorientasi:
-          </p>
-
-          <div class="space-y-2 text-xs">
-            <div
-              v-for="(step, idx) in groundingSteps"
-              :key="idx"
-              class="p-3 rounded-xl border transition"
-              :class="activeGroundingStep === idx ? 'bg-teal-50 border-teal-300 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-600'"
-              @click="activeGroundingStep = idx"
-            >
-              <div class="flex items-center justify-between cursor-pointer">
-                <span>{{ step.title }}</span>
-                <span class="text-xs text-teal-700 font-bold">{{ activeGroundingStep === idx ? '● Aktif' : 'Pilih' }}</span>
-              </div>
-              <p v-if="activeGroundingStep === idx" class="mt-1.5 text-slate-700 text-xs font-normal leading-relaxed">
-                {{ step.script }}
-              </p>
-            </div>
-          </div>
         </div>
 
         <!-- Do's and Don'ts -->
@@ -121,7 +84,10 @@
           </h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5 text-emerald-950">
-              <span class="font-bold text-emerald-800 block">✅ LAKUKAN (DO):</span>
+              <div class="flex items-center gap-2 font-bold text-emerald-800">
+                <CircleCheck class="h-4 w-4" aria-hidden="true" />
+                <span>LAKUKAN (DO):</span>
+              </div>
               <ul class="space-y-1 list-disc list-inside text-emerald-900">
                 <li>Duduk sejajar pandangan mata.</li>
                 <li>Sediakan air minum hangat atau tisu.</li>
@@ -129,12 +95,35 @@
               </ul>
             </div>
             <div class="p-3 rounded-xl bg-red-50 border border-red-200 space-y-1.5 text-red-950">
-              <span class="font-bold text-red-800 block">❌ JANGAN (DON'T):</span>
+              <div class="flex items-center gap-2 font-bold text-red-800">
+                <CircleX class="h-4 w-4" aria-hidden="true" />
+                <span>JANGAN (DON'T):</span>
+              </div>
               <ul class="space-y-1 list-disc list-inside text-red-900">
                 <li>JANGAN memaksa cerita kronologi.</li>
                 <li>JANGAN beri janji palsu ("pasti diganti").</li>
                 <li>JANGAN membandingkan musibah orang.</li>
               </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grounding 5-4-3-2-1 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+          <h4 class="text-sm font-bold text-teal-800">Latihan Grounding</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Gunakan teknik ini jika penyintas tampak panik, napas tersengal, atau mengalami disorientasi:
+          </p>
+
+          <div class="space-y-2 text-xs">
+            <div v-for="step in groundingSteps" :key="step.title" class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div class="flex items-start gap-2">
+                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-100 text-[11px] font-bold text-teal-800">
+                  {{ step.number }}
+                </span>
+                <span class="font-bold text-slate-800">{{ step.title }}</span>
+              </div>
+              <p class="pl-7 text-slate-700 leading-relaxed">{{ step.script }}</p>
             </div>
           </div>
         </div>
@@ -144,7 +133,6 @@
       <div v-if="activeTab === 'LINK'" class="space-y-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <span>📦</span>
             <h4>Kebutuhan Dasar Logistik</h4>
           </div>
           <p class="text-xs text-slate-600">
@@ -152,23 +140,22 @@
           </p>
           <div class="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>💧</span> <span>Air Minum Bersih</span>
+              <span>Air Minum Bersih</span>
             </div>
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>🧥</span> <span>Selimut & Pakaian</span>
+              <span>Selimut & Pakaian</span>
             </div>
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>💊</span> <span>Obat Rutin Pribadi</span>
+              <span>Obat Rutin Pribadi</span>
             </div>
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>🍼</span> <span>Perlengkapan Bayi/Lansia</span>
+              <span>Perlengkapan Bayi/Lansia</span>
             </div>
           </div>
         </div>
 
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <span>👨‍👩‍👧‍👦</span>
             <h4>Menghubungkan Keluarga</h4>
           </div>
           <blockquote class="bg-slate-50 p-4 rounded-xl border-l-4 border-slate-400 text-xs text-slate-800 italic leading-relaxed">
@@ -178,7 +165,6 @@
 
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <span>🕊️</span>
             <h4>Penutup Sesi Humanis</h4>
           </div>
           <blockquote class="bg-teal-50 p-4 rounded-xl border border-teal-200 text-xs text-teal-950 italic leading-relaxed">
@@ -192,37 +178,32 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { CircleCheck, CircleX} from 'lucide-vue-next';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 
 const activeTab = ref<'LOOK' | 'LISTEN' | 'LINK'>('LOOK');
-const activeGroundingStep = ref(0);
 
 const tabs = [
-  { id: 'LOOK' as const, label: 'LOOK (Amati)', icon: '👁️' },
-  { id: 'LISTEN' as const, label: 'LISTEN (Dengar)', icon: '👂' },
-  { id: 'LINK' as const, label: 'LINK (Hubungkan)', icon: '🔗' },
+  { id: 'LOOK' as const, label: 'LOOK'},
+  { id: 'LISTEN' as const, label: 'LISTEN'},
+  { id: 'LINK' as const, label: 'LINK'},
 ];
 
 const groundingSteps = [
   {
-    title: '1. Atur Napas Dalam',
-    script: 'Ajak penyintas menarik napas perlahan melalui hidung selama 4 detik, tahan 4 detik, dan hembuskan perlahan melalui mulut.',
+    number: 1,
+    title: 'Atur Napas Perlahan',
+    script: '"Ayo tarik napas pelan-pelan bersama saya... Tahan... Hembuskan..."',
   },
   {
-    title: '2. Sebutkan 5 Benda yang Dilihat',
-    script: '"Coba Ibu/Bapak sebutkan 5 benda di sekitar kita yang berwarna merah atau ada di depan kita."',
+    number: 2,
+    title: 'Arahkan Perhatian ke Sekitar',
+    script: '"Sebutkan 3 benda yang ada di sekitar Ibu/Bapak saat ini."',
   },
   {
-    title: '3. Rasakan 4 Sentuhan Fisik',
-    script: '"Rasakan kedua telapak kaki menapak kokoh di tanah, lalu pegang gelas air minum ini dengan kedua tangan."',
-  },
-  {
-    title: '4. Dengarkan 3 Suara di Sekitar',
-    script: '"Coba dengarkan suara hembusan angin, langkah kaki, atau suara saya saat ini."',
-  },
-  {
-    title: '5. Minum Seteguk Air',
-    script: 'Berikan air minum suhu ruang dan minta penyintas meneguk perlahan untuk menyadarkan refleks tubuh.',
+    number: 3,
+    title: 'Kembalikan Fokus ke Tubuh',
+    script: '"Rasakan pijakan kedua kaki Ibu/Bapak di tanah dan pegang gelas air ini."',
   },
 ];
 </script>

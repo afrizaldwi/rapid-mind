@@ -45,7 +45,7 @@
       <!-- Start New Assessment Form -->
       <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
         <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
-          <span class="text-xl">👤</span>
+          <UserRound class="h-5 w-5" aria-hidden="true" />
           <h3 class="font-extrabold text-slate-900 text-base">
             Mulai Asesmen Baru
           </h3>
@@ -139,7 +139,7 @@
                 class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between"
                 :class="form.mode === 'VERBAL' ? 'border-teal-600 bg-teal-50/70 text-teal-950 font-bold ring-2 ring-teal-500/20' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
               >
-                <span class="text-sm">🗣️ Mode Verbal</span>
+                <span class="text-sm inline-flex items-center gap-2"><Mic class="h-4 w-4" aria-hidden="true" />Mode Verbal</span>
                 <span class="text-[11px] font-normal text-slate-500 mt-1">Interaksi dialogis + Bantuan Voice/STT</span>
               </button>
               <button
@@ -148,7 +148,7 @@
                 class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between"
                 :class="form.mode === 'NON_VERBAL' ? 'border-teal-600 bg-teal-50/70 text-teal-950 font-bold ring-2 ring-teal-500/20' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
               >
-                <span class="text-sm">🤝 Mode Adaptif</span>
+                <span class="text-sm">Mode Adaptif</span>
                 <span class="text-[11px] font-normal text-slate-500 mt-1">Isyarat visual untuk mutisme/syok</span>
               </button>
             </div>
@@ -172,6 +172,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { Mic, UserRound } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';

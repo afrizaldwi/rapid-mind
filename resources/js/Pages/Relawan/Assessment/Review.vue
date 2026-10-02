@@ -50,7 +50,7 @@
       <!-- Estimation Card -->
       <div v-if="assessmentComplete" class="bg-teal-50 border border-teal-200 rounded-2xl p-5 space-y-2">
         <div class="flex items-center space-x-2 text-teal-900 font-bold text-sm">
-          <span>⚙️</span>
+          <Calculator class="h-4 w-4" aria-hidden="true" />
           <h4>Kalkulasi Deterministik Sistem</h4>
         </div>
         <p class="text-xs text-teal-950 leading-relaxed">
@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { Calculator } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';

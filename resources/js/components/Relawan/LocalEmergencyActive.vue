@@ -1,7 +1,10 @@
 <template>
     <div v-if="emergency" class="space-y-5 pb-20">
         <div class="rounded-3xl bg-red-800 p-6 text-white shadow-xl">
-            <p class="text-xs font-bold uppercase">🚨 T0-Suspect Aktif</p>
+            <div class="flex items-center gap-2 text-xs font-bold uppercase">
+                <Siren class="h-4 w-4" aria-hidden="true" />
+                <p>T0-Suspect Aktif</p>
+            </div>
             <h2 class="mt-2 text-2xl font-black">
                 {{ emergency.patient_name || "Penyintas Tanpa Nama" }}
             </h2>
@@ -102,6 +105,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { Siren } from 'lucide-vue-next';
 import { liveQuery, type Subscription } from "dexie";
 import { db, type LocalEmergency } from "@/offline/db";
 import { retryEmergency } from "@/offline/emergencyWorkflow";

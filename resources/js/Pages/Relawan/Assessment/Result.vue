@@ -65,7 +65,7 @@
 
       <!-- Clinical Safety Disclaimer -->
       <div class="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-start space-x-2.5 leading-relaxed">
-        <span class="text-base leading-none">ℹ️</span>
+        <Info class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <div>
           <strong class="text-slate-800 block mb-0.5">Rekomendasi Sistem (Bukan Diagnosis Medis):</strong>
           RAPID-MIND adalah instrumen pendukung keputusan penapisan awal. Penetapan diagnosis klinis resmi, tata laksana medikamentosa, dan tindakan rujukan medis sepenuhnya menjadi kewenangan tenaga kesehatan (dokter/psikiater).
@@ -93,6 +93,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
+import { Info } from 'lucide-vue-next';
 
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';

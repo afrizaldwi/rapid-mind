@@ -49,11 +49,13 @@
       <!-- Functional Impairment Safety Warning if >= 6 -->
       <div v-if="functionScore !== null && functionScore >= 6"
         class="bg-orange-50 border-2 border-orange-400 p-4 rounded-xl text-orange-950 text-xs font-semibold space-y-1">
-        <span class="text-base">⚠️</span>
-        <p>
-          Skor disabilitas fungsi harian penyintas mencapai {{ functionScore }} poin (≥ 6). Sistem akan merekomendasikan
-          kategori <strong>T1 (Prioritas Pemeriksaan Dokter / Tenaga Medis)</strong>.
-        </p>
+        <div class="flex items-center gap-2">
+          <TriangleAlert class="h-4 w-4" aria-hidden="true" />
+          <p class="m-0">
+            Skor disabilitas fungsi harian penyintas mencapai {{ functionScore }} poin (≥ 6). Sistem akan merekomendasikan
+            kategori <strong>T1 (Prioritas Pemeriksaan Dokter / Tenaga Medis)</strong>.
+          </p>
+        </div>
       </div>
 
       <!-- Sticky Bottom Navigation Bar -->
@@ -80,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { TriangleAlert } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
