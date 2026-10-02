@@ -1281,3 +1281,49 @@ Both Brave and Google Chrome on the current Kubuntu/Linux environment exposed `n
 Whisper model files were observed in the Transformers browser cache. The Relawan Service Worker remains scoped to `/relawan/`, while generated Whisper/ONNX worker and runtime assets live under `/build/assets/`. The intended `rapid-mind-onnx-runtime-v1` Workbox runtime cache was not observed during testing. Complete disconnected/offline Whisper initialization is therefore **NOT VERIFIED** and is deferred until after core C2 MVP behavior or as the next required MVP hardening step.
 
 `docs/workflow.md` was not modified by this checkpoint.
+
+---
+
+## 17. Phase C2 — Conservative SRQ Transcript Interpretation
+
+**Checkpoint:** 2 October 2026. **Status:** **IMPLEMENTED / AUTOMATED VERIFIED / DEMO-CRITICAL BROWSER PATHS PASS**. This checkpoint adds deterministic transcript interpretation and answer ownership; it does not claim universal browser/language coverage, offline Whisper, WebGPU, continuous-recording, performance, clinical-validation, or production readiness.
+
+### Source and automated evidence
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Pure Indonesian SRQ interpreter | **PASS — AUTOMATED** | Node 24 built-in tests: 14 passed, 0 failed. Covers all 20 canonical question anchors with `YA` and `TIDAK`, comma-containing Q6 wording, question-only text, Q1 polarity, bare response rejection, multi-answer interpretation, Q18/Q20 ambiguity, and Q17 positive/negative/non-self/conflict cases. |
+| Manual/restored answer ownership | **PASS — SOURCE + AUTOMATED** | One test explicitly covers a manual-protected Q1, current-session-STT-owned Q3, and restored/unknown-origin protected Q4. A protected affirmative Q17 signal is also proven to remain identifiable without mutating the existing answer. |
+| Existing draft persistence | **PASS — SOURCE INSPECTED** | Accepted transcript answers are mutated as one batch and persisted once through `saveAssessmentDraft(..., 'srq_answers', ...)`; no transcript/audio storage or schema change. |
+| Q17 human safety boundary | **PASS — SOURCE INSPECTED + INTERPRETER AUTOMATED** | Accepted affirmative Q17 opens normal Potential Red Flag. Protected affirmative Q17 leaves the answer unchanged but still interrupts for normal/review-only handling according to the protected value. Transcript conflict leaves Q17 unresolved and requests manual review. STT has no emergency-creation call and cannot bypass T0 Verification/final submission. |
+| TypeScript validation | **PASS — AUTOMATED** | `npx vue-tsc --noEmit` exited 0. |
+| Production frontend build | **PASS — AUTOMATED** | `npm run build` exited 0; existing large-chunk and PWA deprecation advisories remain non-fatal. |
+| Focused Laravel regression | **PASS — AUTOMATED** | Docker `AssessmentLocalShellTest` and `RelawanT0SubmissionTest`: 15 tests, 177 assertions, 0 failures, against the guarded `rapid_mind_testing` database. |
+| Complete Laravel regression | **PASS — AUTOMATED** | `docker compose exec -T app php artisan test`: 124 tests, 1,416 assertions, 0 failures. |
+
+### Remaining browser/runtime gate
+
+### Direct browser verification — 2 October 2026
+
+The following selected demo-critical paths were directly browser verified:
+
+- `saya sering sakit kepala.` was accurately transcribed; Q1 became `YA`.
+- After page reload, Q1 remained `YA`, confirming persistence through the existing local SRQ draft path.
+- After reload, `saya tidak sakit kepala.` was accurately transcribed; restored Q1 remained `YA`, and the UI reported that the manual/stored answer was not changed.
+- `Apakah Anda merasa cemas, tegang, atau khawatir? Iya.` was accurately transcribed and interpreted; Q6 became `YA`.
+- `Saya susah tidur, saya sering menangis, saya tidak ingin mati.` was accurately transcribed and interpreted as Q3 `YA`, Q10 `YA`, and Q17 `TIDAK`, with no false affirmative Q17 interruption.
+- Same-session manual override protection prevented subsequent STT from overwriting a Relawan correction.
+- With current-session STT-owned Q17, `Saya ingin mati.` changed Q17 to `YA` and opened the normal `Indikator Red Flag Terdeteksi` interruption with `BUKA VERIFIKASI T0 DARURAT` available.
+- With protected/restored Q17 `TIDAK`, the same affirmative speech left Q17 unchanged and opened review-only `Ucapan Q17 Perlu Ditinjau`; STT did not create or send T0.
+- Manual Q17 `TIDAK` → `YA` reopened normal Potential Red Flag and opened T0 Verification correctly.
+- Q17/STT interpretation alone, Potential Red Flag alone, and opening T0 Verification alone did not create T0. Only explicit `KIRIM T0-SUSPECT` created the local emergency.
+- After clean-state retest, explicit T0 submission succeeded and reached `Tersinkron`.
+- `Saya ingin mati, saya tidak ingin mati.` was accurately transcribed; conflicting evidence remained unresolved, review-only `Ucapan Q17 Perlu Ditinjau` appeared, and no automatic T0 was created.
+
+The initial normal-profile emergency synchronization returned HTTP 409 because stale IndexedDB/server test state was present. This was test-state contamination, not an online/offline failure: the outbox showed `FAILED`, `last_error = HTTP 409`, and `last_http_status = 409`. Fresh Incognito state synchronized normally; the test PostgreSQL transactional data and normal-browser site data were then cleared while preserving users and registry data.
+
+The following remain **NOT DIRECTLY VERIFIED**: question-only spoken SRQ wording producing no false-positive answer; mode-switch cleanup of transcript/interpretation notice; deliberately forced STT failure followed by manual SRQ usability; complete disconnected/offline Whisper execution; WebGPU inference; continuous/chunked recording; performance optimization; and broad vocabulary/natural-language coverage outside the tested phrases. Existing WASM/CPU latency and offline/WebGPU caveats remain. C2 is not universal or production-ready behavior.
+
+Contradictory, context-dependent, or unsupported Q17 phrasing remains intentionally conservative and may require direct Relawan clarification. Future interpretation may improve discourse/context handling without allowing STT/NLP to autonomously create or transmit T0.
+
+`docs/workflow.md` was not modified by this checkpoint.

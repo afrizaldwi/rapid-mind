@@ -10,7 +10,7 @@
 ## 1. Executive Summary
 
 This log documents the end-to-end implementation of the RAPID-MIND decision-support system prototype for disaster mental-health response. The system delivers a unified Laravel + Vue 3 Inertia platform serving three canonical, role-segregated operational experiences:
-1. **RELAWAN (Mobile PWA)**: Frontline Psychological First Aid (PFA) guidebook, structured SRQ-20 screening with Web Speech API voice assistance, vulnerability risk factors, daily functioning evaluations, offline persistence, and T0 emergency trigger with 3 verification gates.
+1. **RELAWAN (Mobile PWA)**: Frontline Psychological First Aid (PFA) guidebook, structured SRQ-20 screening with local Indonesian Whisper assistance and conservative transcript interpretation, vulnerability risk factors, daily functioning evaluations, offline persistence, and T0 emergency trigger with 3 verification gates.
 2. **HEALTHCARE (Desktop Medical Workspace)**: Emergency-first clinical cockpit, realtime T0 WebSocket alerts via Reverb, explicit 2-step acknowledgement and tele-verification, formal clinical validation (T0 confirmation or downgrade to T1/T2), and 5-stage referral dispatch tracking.
 3. **ADMIN (Regional Command Center)**: Macro operational dashboard, interactive MapLibre GL JS geospatial heatmap, ECharts 30-day longitudinal trend analysis, volunteer deployment management, psychosocial logistics tracking, and account provisioning.
 
@@ -130,7 +130,7 @@ Implemented canonical PHP server-side calculators in `app/Domain/Triage/` and cl
 - **PFA Guidebook (`Pages/Relawan/Pfa.vue`)**: Non-intrusive acute phase pocket guide with LOOK, LISTEN, LINK tabs and interactive 5-4-3-2-1 grounding exercises.
 - **Assessment Flow (`Pages/Relawan/Assessment/`)**:
   - `Index.vue`: Candidate selection and verbal/adaptive mode toggle.
-  - `Srq.vue`: One continuous scrollable 20-question form, Web Speech API speech-to-text integration, large touch buttons ($\geq 56$px), and Q17 Red Flag safety interrupt modal (`PotentialRedFlag.vue`).
+  - `Srq.vue`: One continuous scrollable 20-question form, local Whisper push-to-talk assistance with conservative deterministic SRQ interpretation, large touch buttons ($\geq 56$px), and Q17 Red Flag safety interrupt modal (`PotentialRedFlag.vue`).
   - `Risk.vue`: Touch-friendly weighted checkboxes for R1–R5.
   - `Function.vue`: 3-domain WHODAS evaluation with functional override alerts.
   - `Review.vue`: Pre-calculation verification summary.
@@ -705,3 +705,40 @@ Generated ONNX runtime `.mjs` was initially served as `application/octet-stream`
 The verified inference backend was `WASM / CPU`. The longer utterance took approximately **30–60 seconds** in the current environment: a user-observed estimate, not a formal benchmark or RTF measurement. Accuracy is sufficient to continue MVP work, but latency is too slow for the intended final near-realtime/continuous experience. Performance and WebGPU-adapter investigation are deferred until after the 4 October MVP deadline.
 
 No dependency was installed or updated during this documentation-only pass. C1 introduced the exact frontend dependency `@huggingface/transformers@3.8.1`. `docs/workflow.md` remains unchanged.
+
+---
+
+## Phase C2 — Conservative SRQ Transcript Interpretation (2 October 2026)
+
+Phase C2 is **IMPLEMENTED / AUTOMATED VERIFIED / DEMO-CRITICAL BROWSER PATHS PASS**. The existing C1 push-to-talk capture, Indonesian Whisper model, worker, backend selection, and audio processing remain unchanged.
+
+The new pure SRQ domain layer normalizes a controlled set of Indonesian conversational variants without stemming or removing polarity. It accepts explicit first-person symptom statements and confidently recognized SRQ question plus local `ya`/`tidak` responses. Question-only speech, bare responses, weak phrases, overlapping concepts such as generic `saya lelah`, and conflicting evidence remain unresolved. One transcript can yield multiple independent answers.
+
+`Srq.vue` applies accepted interpretations as one batch and calls the existing assessment-draft persistence path once. STT may update an unanswered item or an item it populated during the current mounted session. It cannot overwrite manual choices, restored IndexedDB answers, server-loaded answers, or other answers without current-session STT ownership. Manual taps remove STT ownership. Audio and transcripts remain session-only and are not added to Dexie or server payloads.
+
+Q17 has dedicated rules rather than generic keyword/negation handling. Clear affirmative phrases can set Q17 and open Potential Red Flag; clear negative phrases can set Q17 to `TIDAK`. An affirmative speech signal that cannot replace a protected manual/restored Q17 answer still opens a safety interruption while leaving the answer unchanged; a protected `TIDAK` uses the review-only variant. Conflicting transcript evidence also leaves the stored answer unchanged and opens manual safety review. STT does not call emergency creation, open T0 Verification by itself, or bypass the explicit `KIRIM T0-SUSPECT` action.
+
+Automated/source verification passed with Node 24 built-in tests (`14` tests), `npx vue-tsc --noEmit`, `npm run build`, focused Docker Laravel regressions (`15` tests / `177` assertions), and the complete Docker Laravel suite (`124` tests / `1,416` assertions). The Node coverage includes all 20 canonical question anchors with both `YA` and `TIDAK`, comma-containing Q6 wording, manual/current-session-STT/restored ownership, and protected affirmative Q17 identification. The existing large-chunk and PWA deprecation warnings remain non-fatal advisories. No dependency was installed or updated during this documentation-only pass. C1 introduced the exact frontend dependency `@huggingface/transformers@3.8.1`. `docs/workflow.md` was not modified.
+
+### C2 browser verification — 2 October 2026
+
+Direct browser verification passed the selected demo-critical paths:
+
+- `saya sering sakit kepala.` was accurately transcribed and set Q1 to `YA`.
+- After reload, Q1 remained `YA` through the existing local SRQ draft path.
+- After reload, `saya tidak sakit kepala.` was accurately transcribed, but restored Q1 remained `YA`; the UI reported that the manual/stored answer was not changed.
+- `Apakah Anda merasa cemas, tegang, atau khawatir? Iya.` was accurately transcribed and interpreted as Q6 `YA`.
+- `Saya susah tidur, saya sering menangis, saya tidak ingin mati.` was interpreted as Q3 `YA`, Q10 `YA`, and Q17 `TIDAK`, with no false affirmative Q17 interruption.
+- Same-session manual override protection prevented later STT from overwriting a manual correction.
+- `Saya ingin mati.` changed current-session STT-owned Q17 to `YA` and opened the normal `Indikator Red Flag Terdeteksi` interruption with `BUKA VERIFIKASI T0 DARURAT` available.
+- With protected/restored Q17 `TIDAK`, the same speech left Q17 unchanged and opened review-only `Ucapan Q17 Perlu Ditinjau`; STT did not create or send T0.
+- Manual Q17 `TIDAK` → `YA` reopened normal Potential Red Flag and opened T0 Verification correctly.
+- Q17/STT interpretation, Potential Red Flag, and opening T0 Verification alone did not create T0. Only explicit `KIRIM T0-SUSPECT` created the local emergency.
+- After clean-state retest, explicit T0 submission succeeded and reached `Tersinkron`.
+- `Saya ingin mati, saya tidak ingin mati.` was accurately transcribed as conflicting evidence; Q17 remained unresolved, review-only `Ucapan Q17 Perlu Ditinjau` appeared, and no automatic T0 was created.
+
+The initial normal-profile HTTP 409 was test-state contamination between IndexedDB and the server database, not an online/offline failure. The outbox showed `FAILED`, `last_error = HTTP 409`, and `last_http_status = 409`. Fresh Incognito state synchronized normally; test PostgreSQL transactional data and normal-browser site data were then cleared while preserving users and registry data.
+
+Contradictory, context-dependent, or unsupported Q17 phrasing remains intentionally conservative and may require direct Relawan clarification. Future discourse/context interpretation may improve this behavior without allowing STT/NLP to autonomously create or transmit T0.
+
+The following remain **NOT DIRECTLY VERIFIED**: question-only spoken SRQ wording producing no false-positive answer; mode-switch cleanup of transcript/interpretation notice; deliberately forced STT failure followed by manual SRQ usability; complete disconnected/offline Whisper execution; WebGPU inference; continuous/chunked recording; performance optimization; and broad vocabulary/natural-language coverage outside the tested phrases. C2 is not universal or production-ready language coverage.

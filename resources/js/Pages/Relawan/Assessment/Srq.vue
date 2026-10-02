@@ -64,12 +64,15 @@
           <p v-if="sttMessage" :class="sttStatus === 'error' ? 'mt-1 font-semibold text-red-800' : 'mt-1 text-slate-600'">
             {{ sttMessage }}
           </p>
+          <p v-if="sttInterpretationNotice" class="mt-1 font-semibold text-amber-900">
+            {{ sttInterpretationNotice }}
+          </p>
           <div v-if="transcriptSnippet" class="mt-2 rounded-lg bg-white p-2 text-sm text-slate-900 border border-slate-200">
             <span class="block text-[11px] font-bold uppercase tracking-wide text-slate-500">Transkrip sementara</span>
             <p class="mt-1">“{{ transcriptSnippet }}”</p>
           </div>
           <p class="mt-2 text-[11px] text-slate-500">
-            Audio diproses di perangkat dan tidak mengubah jawaban SRQ pada tahap ini.
+            Audio diproses di perangkat. Hanya pernyataan yang cocok dengan aman yang mengisi jawaban; koreksi manual selalu dipertahankan.
           </p>
         </div>
       </div>
@@ -141,7 +144,8 @@
     </div>
 
     <!-- Potential Red Flag Safety Interruption Modal -->
-    <PotentialRedFlag :show="showRedFlagModal" @escalate="handleEscalate" @dismiss="showRedFlagModal = false" />
+    <PotentialRedFlag :show="showRedFlagModal" :review-only="redFlagReviewOnly"
+      @escalate="handleEscalate" @dismiss="showRedFlagModal = false" />
 
     <!-- T0 Verification Modal -->
     <T0Verification :show="showEmergencyVerification" :patient-id="patient?.id" :patient-name="patient?.name"
@@ -165,6 +169,7 @@ import T0Verification from '@/components/Relawan/T0Verification.vue';
 import { LocalAudioCapture } from '@/stt/audioCapture';
 import { WhisperClient } from '@/stt/whisperClient';
 import type { WhisperBackend, WhisperStatus, WhisperWorkerEvent } from '@/stt/types';
+import { interpretSrqTranscript, selectSrqSpeechAnswerUpdates } from '@/domain/srq/srqTranscriptInterpreter';
 
 const props = defineProps<{
   assessment: any;
@@ -181,14 +186,17 @@ const isSaving = ref(false);
 const saveError = ref('');
 const draftWarning = ref('');
 const draftReady = ref(false);
-const editedKeys = new Set<string>();
+const sttOwnedAnswers = new Set<number>();
+const manualOverrides = new Set<number>();
 const isVerbal = ref(props.assessment?.mode !== 'NON_VERBAL');
 const sttStatus = ref<WhisperStatus>('idle');
 const sttBackend = ref<WhisperBackend | null>(null);
 const sttProgress = ref<number | null>(null);
 const sttMessage = ref('Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.');
 const transcriptSnippet = ref('');
+const sttInterpretationNotice = ref('');
 const showRedFlagModal = ref(false);
+const redFlagReviewOnly = ref(false);
 const showEmergencyVerification = ref(false);
 let whisperClient: WhisperClient | null = null;
 let audioCapture: LocalAudioCapture | null = null;
@@ -198,7 +206,7 @@ const answeredCount = computed(() => {
   return Array.from({ length: 20 }, (_, index) => answers.value[index + 1]).filter(value => typeof value === 'boolean').length;
 });
 
-const sttButtonDisabled = computed(() => ['preparing', 'processing'].includes(sttStatus.value));
+const sttButtonDisabled = computed(() => !draftReady.value || ['preparing', 'processing'].includes(sttStatus.value));
 const sttButtonLabel = computed(() => {
   switch (sttStatus.value) {
     case 'preparing': return 'Menyiapkan STT…';
@@ -221,26 +229,26 @@ const sttStatusLabel = computed(() => {
 });
 
 const srqQuestions = [
-  { number: 1, question: 'Apakah sering merasa sakit kepala?', script: 'Selama di posko, kepala terasa berat atau sering cekot-cekot?', keywords: ['pusing', 'sakit kepala', 'cekot', 'berat'] },
-  { number: 2, question: 'Apakah nafsu makan menurun?', script: 'Gimana makanannya? Apakah sama sekali malas atau tidak berselera makan?', keywords: ['gak nafsu', 'males makan', 'gak selera'] },
-  { number: 3, question: 'Apakah sulit tidur nyenyak?', script: 'Malam hari susah tidur atau sering kebangun karena cemas?', keywords: ['gak bisa tidur', 'insomnia', 'kebangun'] },
-  { number: 4, question: 'Apakah mudah merasa takut?', script: 'Belakangan ini gampang kaget atau was-was tiba-tiba?', keywords: ['takut', 'was-was', 'kaget', 'khawatir'] },
-  { number: 5, question: 'Apakah tangan terasa gemetar?', script: 'Apakah jari-jari sering gemetar saat pegang barang atau ngobrol?', keywords: ['gemetar', 'gemeter', 'tremor'] },
-  { number: 6, question: 'Apakah merasa cemas, tegang, atau khawatir?', script: 'Dada rasanya sering berdebar-debar, tegang, atau ganjel?', keywords: ['cemas', 'tegang', 'deg-degan', 'gelisah'] },
-  { number: 7, question: 'Apakah pencernaan terasa buruk?', script: 'Perut mual, melilit, atau diare terutama saat teringat bencana?', keywords: ['mual', 'diare', 'melilit'] },
-  { number: 8, question: 'Apakah sulit berpikir jernih?', script: 'Kepala rasanya penuh atau linglung sampai susah fokus?', keywords: ['linglung', 'bingung', 'gak fokus', 'kosong'] },
-  { number: 9, question: 'Apakah merasa tidak bahagia?', script: 'Perasaan rasanya sedih dan hampa belakangan ini?', keywords: ['sedih', 'hampa', 'merana'] },
-  { number: 10, question: 'Apakah lebih sering menangis?', script: 'Rasanya ingin menangis terus atau mendadak menangis tanpa sebab?', keywords: ['nangis', 'menangis'] },
-  { number: 11, question: 'Apakah sulit menikmati kegiatan sehari-hari?', script: 'Hal-hal yang biasa bikin senang sekarang terasa tidak menarik lagi?', keywords: ['gak seru', 'males ngapa-ngapain'] },
-  { number: 12, question: 'Apakah kesulitan mengambil keputusan?', script: 'Untuk memutuskan hal sederhana saja rasanya bingung dan berat?', keywords: ['bingung milih', 'gak bisa mutusin'] },
-  { number: 13, question: 'Apakah hasil kerja atau tugas posko terganggu?', script: 'Tugas merawat diri atau keluarga terasa terbengkalai?', keywords: ['terbengkalai', 'gak keurus'] },
-  { number: 14, question: 'Apakah merasa tidak mampu berbuat hal bermanfaat?', script: 'Merasa diri tidak berguna atau hanya bikin repot orang lain?', keywords: ['gak berguna', 'nyusahin'] },
-  { number: 15, question: 'Apakah kehilangan minat total pada berbagai hal?', script: 'Kehilangan semangat total buat melakukan kegiatan apa pun hari ini?', keywords: ['hilang minat', 'gak ada semangat'] },
-  { number: 16, question: 'Apakah merasa diri tidak berharga atau gagal?', script: 'Pernah merasa keberadaan diri sudah tidak ada artinya lagi?', keywords: ['tidak berharga', 'gagal', 'gak ada artinya'] },
-  { number: 17, question: 'Apakah memiliki pemikiran untuk mengakhiri hidup?', script: 'Pernah terlintas di pikiran rasa ingin menyerah atau mengakhiri hidup?', keywords: ['mati', 'bunuh diri', 'nyerah', 'nyusul', 'gak mau hidup'] },
-  { number: 18, question: 'Apakah merasa lelah sepanjang waktu?', script: 'Badan dan pikiran lemas dan capek terus meski tidak kerja berat?', keywords: ['lelah terus', 'capek banget', 'lemes'] },
-  { number: 19, question: 'Apakah merasakan tidak nyaman di perut/ulu hati?', script: 'Perut sering terasa melilit atau perih di ulu hati?', keywords: ['ulu hati', 'perut perih'] },
-  { number: 20, question: 'Apakah mudah merasa lelah?', script: 'Baru gerak sebentar saja rasanya langsung kehabisan tenaga?', keywords: ['gampang capek', 'cepet lelah'] },
+  { number: 1, question: 'Apakah sering merasa sakit kepala?', script: 'Selama di posko, kepala terasa berat atau sering cekot-cekot?' },
+  { number: 2, question: 'Apakah nafsu makan menurun?', script: 'Gimana makanannya? Apakah sama sekali malas atau tidak berselera makan?' },
+  { number: 3, question: 'Apakah sulit tidur nyenyak?', script: 'Malam hari susah tidur atau sering kebangun karena cemas?' },
+  { number: 4, question: 'Apakah mudah merasa takut?', script: 'Belakangan ini gampang kaget atau was-was tiba-tiba?' },
+  { number: 5, question: 'Apakah tangan terasa gemetar?', script: 'Apakah jari-jari sering gemetar saat pegang barang atau ngobrol?' },
+  { number: 6, question: 'Apakah merasa cemas, tegang, atau khawatir?', script: 'Dada rasanya sering berdebar-debar, tegang, atau ganjel?' },
+  { number: 7, question: 'Apakah pencernaan terasa buruk?', script: 'Perut mual, melilit, atau diare terutama saat teringat bencana?' },
+  { number: 8, question: 'Apakah sulit berpikir jernih?', script: 'Kepala rasanya penuh atau linglung sampai susah fokus?' },
+  { number: 9, question: 'Apakah merasa tidak bahagia?', script: 'Perasaan rasanya sedih dan hampa belakangan ini?' },
+  { number: 10, question: 'Apakah lebih sering menangis?', script: 'Rasanya ingin menangis terus atau mendadak menangis tanpa sebab?' },
+  { number: 11, question: 'Apakah sulit menikmati kegiatan sehari-hari?', script: 'Hal-hal yang biasa bikin senang sekarang terasa tidak menarik lagi?' },
+  { number: 12, question: 'Apakah kesulitan mengambil keputusan?', script: 'Untuk memutuskan hal sederhana saja rasanya bingung dan berat?' },
+  { number: 13, question: 'Apakah hasil kerja atau tugas posko terganggu?', script: 'Tugas merawat diri atau keluarga terasa terbengkalai?' },
+  { number: 14, question: 'Apakah merasa tidak mampu berbuat hal bermanfaat?', script: 'Merasa diri tidak berguna atau hanya bikin repot orang lain?' },
+  { number: 15, question: 'Apakah kehilangan minat total pada berbagai hal?', script: 'Kehilangan semangat total buat melakukan kegiatan apa pun hari ini?' },
+  { number: 16, question: 'Apakah merasa diri tidak berharga atau gagal?', script: 'Pernah merasa keberadaan diri sudah tidak ada artinya lagi?' },
+  { number: 17, question: 'Apakah memiliki pemikiran untuk mengakhiri hidup?', script: 'Pernah terlintas di pikiran rasa ingin menyerah atau mengakhiri hidup?' },
+  { number: 18, question: 'Apakah merasa lelah sepanjang waktu?', script: 'Badan dan pikiran lemas dan capek terus meski tidak kerja berat?' },
+  { number: 19, question: 'Apakah merasakan tidak nyaman di perut/ulu hati?', script: 'Perut sering terasa melilit atau perih di ulu hati?' },
+  { number: 20, question: 'Apakah mudah merasa lelah?', script: 'Baru gerak sebentar saja rasanya langsung kehabisan tenaga?' },
 ];
 
 function setAnswer(qNum: number, value: boolean) {
@@ -253,14 +261,57 @@ function setAnswer(qNum: number, value: boolean) {
 }
 
 function setManualAnswer(qNum: number, value: boolean) {
+  manualOverrides.add(qNum);
+  sttOwnedAnswers.delete(qNum);
+  if (qNum === 17 && value) redFlagReviewOnly.value = false;
   setAnswer(qNum, value);
-  editedKeys.add(String(qNum));
   void persistDraft();
 }
 
 function handleEscalate() {
   showRedFlagModal.value = false;
   showEmergencyVerification.value = true;
+}
+
+async function applySpeechTranscript(transcript: string) {
+  const interpretation = interpretSrqTranscript(transcript);
+  const { accepted, protectedQuestionNumbers } = selectSrqSpeechAnswerUpdates(
+    interpretation,
+    answers.value,
+    sttOwnedAnswers,
+    manualOverrides,
+  );
+
+  for (const update of accepted) {
+    answers.value[update.questionNumber] = update.answer;
+    sttOwnedAnswers.add(update.questionNumber);
+  }
+
+  if (accepted.length > 0) await persistDraft();
+
+  const acceptedNumbers = accepted.map(({ questionNumber }) => `#${questionNumber}`).join(', ');
+  const unresolvedNumbers = [...new Set([
+    ...interpretation.matches.filter(({ status }) => status === 'conflicting').map(({ questionNumber }) => questionNumber),
+    ...interpretation.unresolved.flatMap(({ questionNumbers }) => questionNumbers),
+  ])];
+  const notices: string[] = [];
+  if (acceptedNumbers) notices.push(`Jawaban terisi dari ucapan: ${acceptedNumbers}.`);
+  if (protectedQuestionNumbers.length > 0) notices.push(`Jawaban manual/tersimpan tidak diubah: ${protectedQuestionNumbers.map(number => `#${number}`).join(', ')}.`);
+  if (unresolvedNumbers.length > 0) notices.push(`Perlu diperiksa manual: ${unresolvedNumbers.map(number => `#${number}`).join(', ')}.`);
+  if (interpretation.unresolved.some(({ questionNumbers }) => questionNumbers.length === 0)) notices.push('Respons tanpa pertanyaan SRQ yang jelas tidak diterapkan.');
+  if (notices.length === 0) notices.push('Ucapan belum cukup jelas untuk mengisi jawaban dengan aman.');
+  sttInterpretationNotice.value = notices.join(' ');
+
+  const q17Interpretation = interpretation.matches.find(({ questionNumber }) => questionNumber === 17);
+  const affirmativeQ17 = q17Interpretation?.status === 'matched' && q17Interpretation.answer === true;
+  const protectedQ17 = protectedQuestionNumbers.includes(17);
+  if (interpretation.requiresSafetyReview) {
+    redFlagReviewOnly.value = true;
+    showRedFlagModal.value = true;
+  } else if (affirmativeQ17) {
+    redFlagReviewOnly.value = protectedQ17 && answers.value[17] !== true;
+    showRedFlagModal.value = true;
+  }
 }
 
 async function toggleMode() {
@@ -306,9 +357,13 @@ function handleWorkerEvent(event: WhisperWorkerEvent) {
       sttStatus.value = 'ready';
       sttBackend.value = event.backend;
       transcriptSnippet.value = event.transcript;
-      sttMessage.value = event.transcript
-        ? 'Transkripsi selesai. Transkrip belum mengubah jawaban SRQ.'
-        : 'Tidak ada ucapan yang dikenali. Coba rekam lagi di tempat yang lebih tenang.';
+      sttInterpretationNotice.value = '';
+      if (event.transcript) {
+        sttMessage.value = 'Transkripsi selesai dan diperiksa dengan aturan SRQ konservatif.';
+        void applySpeechTranscript(event.transcript);
+      } else {
+        sttMessage.value = 'Tidak ada ucapan yang dikenali. Coba rekam lagi di tempat yang lebih tenang.';
+      }
       break;
     case 'ERROR':
       sttStatus.value = event.stage === 'transcribe' && sttBackend.value ? 'ready' : 'error';
@@ -343,6 +398,7 @@ async function startRecording() {
   const capture = new LocalAudioCapture();
   audioCapture = capture;
   transcriptSnippet.value = '';
+  sttInterpretationNotice.value = '';
   try {
     await capture.start();
     if (sttSession !== session || audioCapture !== capture) {
@@ -408,6 +464,7 @@ function cleanupStt() {
   sttProgress.value = null;
   sttMessage.value = 'Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.';
   transcriptSnippet.value = '';
+  sttInterpretationNotice.value = '';
 }
 
 
@@ -430,7 +487,7 @@ onMounted(async () => {
     const local = await readAssessmentDraft(owner, props.assessment.id, 'srq_answers');
     const merged = mergeAssessmentDraft('srq_answers', props.responses, local);
     for (const [key, value] of Object.entries(merged)) {
-      if (!editedKeys.has(key)) (answers.value as Record<string, typeof value>)[key] = value;
+      if (!manualOverrides.has(Number(key))) (answers.value as Record<string, typeof value>)[key] = value;
     }
     draftReady.value = true;
   } catch (error) {

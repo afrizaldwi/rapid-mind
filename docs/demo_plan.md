@@ -67,7 +67,7 @@ npm run build
 | Question | Decision |
 |---|---|
 | **JWT Package** | `php-open-source-saver/jwt-auth` — install via `docker compose exec -T app composer require php-open-source-saver/jwt-auth` |
-| **STT for SRQ-20** | Browser Web Speech API — free, no API key, works in Chrome/Edge |
+| **STT for SRQ-20** | Local Indonesian Whisper via Transformers.js Web Worker; conservative deterministic C2 interpretation; push-to-talk MVP |
 | **Test Framework** | PHPUnit (already installed) — no Pest for this demo sprint |
 | **MapLibre Tiles** | OpenStreetMap raster tiles (free, no API key) |
 
@@ -440,7 +440,7 @@ Pages/Relawan/Assessment/Result.vue      (/relawan/assessment/:id/result)
 **SRQ-20** (`Srq.vue`):
 - One continuous scrollable page (not 20 separate screens)
 - Verbal / Non-Verbal mode toggle
-- Verbal mode: Web Speech API, one continuous interview session, assistive not authoritative
+- Verbal mode: local Indonesian Whisper push-to-talk; deterministic conservative transcript interpretation; assistive, not authoritative
 - `YA` / `TIDAK` large touch buttons (Teal selected state, ≥56px height)
 - Q17 → triggers Potential Red Flag interruption overlay
 - Progress: "SRQ-20 • 8 dari 20" (answered count)
@@ -698,7 +698,7 @@ Separates `AUTHENTICATED` from `OFFLINE_FIELD_MODE`. Expired token while offline
 
 Per AGENTS.md, these come last:
 
-- **STT**: Web Speech API integration for SRQ-20 verbal interview mode
+- **STT**: C2 local Whisper transcript interpretation is source/automated verified; browser behavior, complete offline execution, continuous recording, and performance hardening remain pending
 - **Visual polish**: Consistent design system, responsive refinements
 - **Security hardening**: Rate limiting, CSRF, security headers, audit log coverage (deferred for demo if blocking)
 

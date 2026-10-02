@@ -6,20 +6,27 @@
       </div>
 
       <h3 class="text-xl font-bold text-slate-900">
-        Indikator Red Flag Terdeteksi
+        {{ reviewOnly ? 'Ucapan Q17 Perlu Ditinjau' : 'Indikator Red Flag Terdeteksi' }}
       </h3>
 
       <div class="bg-red-50 text-red-900 rounded-xl p-4 text-sm text-left space-y-2 border border-red-200">
-        <p class="font-bold">
+        <p v-if="reviewOnly" class="font-bold">
+          Ucapan terkait Q17 memerlukan peninjauan manual. Jawaban tersimpan tidak diubah otomatis.
+        </p>
+        <p v-else class="font-bold">
           Penyintas mengindikasikan pikiran mengakhiri hidup (SRQ #17) atau kondisi krisis jiwa akut.
         </p>
         <p class="text-xs text-red-800">
-          <strong>Protokol Etik & Keselamatan:</strong> JANGAN tinggalkan penyintas sendirian. Tetap dampingi secara fisik dan picu sinyal darurat T0 ke fasilitas kesehatan terdekat.
+          <strong>Protokol Etik & Keselamatan:</strong>
+          {{ reviewOnly
+            ? 'Periksa jawaban Q17 langsung dengan penyintas. STT tidak membuat atau mengirim T0.'
+            : 'JANGAN tinggalkan penyintas sendirian. Tetap dampingi secara fisik dan picu sinyal darurat T0 ke fasilitas kesehatan terdekat.' }}
         </p>
       </div>
 
       <div class="pt-2 flex flex-col gap-2.5">
         <button
+          v-if="!reviewOnly"
           type="button"
           @click="$emit('escalate')"
           class="w-full py-3.5 px-4 rounded-xl bg-red-800 hover:bg-red-900 text-white font-extrabold text-sm tracking-wide shadow-md transition"
@@ -31,7 +38,7 @@
           @click="$emit('dismiss')"
           class="w-full py-2.5 px-4 rounded-xl border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition"
         >
-          Lanjutkan Asesmen Manual
+          {{ reviewOnly ? 'Tutup dan Periksa Q17 Manual' : 'Lanjutkan Asesmen Manual' }}
         </button>
       </div>
     </div>
@@ -41,6 +48,7 @@
 <script setup lang="ts">
 defineProps<{
   show: boolean;
+  reviewOnly?: boolean;
 }>();
 
 defineEmits<{

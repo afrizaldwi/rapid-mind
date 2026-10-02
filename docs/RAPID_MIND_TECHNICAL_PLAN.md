@@ -1290,7 +1290,7 @@ C1B — Indonesian model accuracy selection:
 BROWSER VERIFIED / PASS WITH KNOWN PERFORMANCE LIMITATION
 
 C2 — Transcript interpretation and SRQ auto-answer:
-NOT STARTED
+IMPLEMENTED / AUTOMATED VERIFIED / DEMO-CRITICAL BROWSER PATHS PASS
 
 Continuous/chunked one-session recording:
 NOT STARTED
@@ -1333,7 +1333,11 @@ Siapkan STT
 → transcript displayed
 ```
 
-The transcript is display-only in C1. It does not mutate SRQ answers, trigger Q17 handling, create a T0 event, or submit/transmit a T0. Manual SRQ completion remains available if STT preparation, microphone access, or transcription fails.
+The transcript was display-only at the C1 checkpoint. C2 now passes each non-empty transcript to a separate deterministic Indonesian SRQ interpreter. Only explicit first-person statements or a confidently recognized SRQ question followed locally by `ya`/`tidak` can populate an answer. Question-only text, bare responses, ambiguous overlaps, and conflicting evidence remain unresolved. Accepted answers are applied as one batch and persisted once through the existing `saveAssessmentDraft(..., 'srq_answers', ...)` Dexie path; raw audio and transcripts are not persisted.
+
+Manual selections and restored answers remain authoritative. In-memory session ownership permits STT to update only unanswered items or items populated by STT during the current mounted page session. A manual selection removes STT ownership, and a remount intentionally protects all restored answers.
+
+Q17 uses dedicated affirmative and negative phrase rules. An unambiguous affirmative match may set Q17 and open the existing Potential Red Flag interruption. If a manual/restored answer protects Q17 from that affirmative update, the answer remains unchanged and a safety interruption still appears: review-only when the protected answer is `TIDAK`, or the normal interruption when it is already `YA`. Conflicting transcript evidence also leaves Q17 unchanged and opens the manual safety-review variant. None of these paths creates, submits, or transmits T0; Potential Red Flag, T0 Verification, and the explicit `KIRIM T0-SUSPECT` action remain separate human gates. Manual SRQ completion remains available if STT preparation, microphone access, transcription, or interpretation does not produce a safe match.
 
 #### Current Browser Evidence and Performance Boundary
 
@@ -1343,13 +1347,36 @@ The latency is a known prototype performance limitation. It is deferred until af
 
 `navigator.gpu` existed in both Brave and Google Chrome on the current Kubuntu/Linux test environment, and `brave://gpu` reported WebGPU and WebGPU interop as hardware accelerated. However, `navigator.gpu.requestAdapter()` returned no usable adapter for default, `low-power`, or `high-performance` requests in both browsers. Application inference therefore used `WASM / CPU`. This does not claim WebGPU is universally unavailable; WebGPU/Linux/browser/driver optimization is deliberately deferred.
 
-#### Approved Later C2 Direction
+#### C2 Safety and Interaction Boundaries
 
-- The eventual Relawan experience should use one efficient microphone session, rather than a microphone press for every SRQ question. Internal chunking/background processing may support this without exposing repeated microphone interactions.
-- C2 may interpret transcripts and update relevant SRQ answers, but manual Relawan corrections remain authoritative.
-- Interpretation must account for polarity and negation, not raw keyword substring matching: `saya ingin mati` and `saya tidak ingin mati` must remain distinct.
-- An affirmative Q17 interpretation may set Q17 and surface the existing Potential Red Flag workflow in C2.
-- STT must never autonomously create, submit, or transmit a T0 emergency. Explicit Relawan verification and final submission remain mandatory.
+- C2 interprets complete push-to-talk transcripts and updates only safely matched SRQ answers; manual Relawan corrections remain authoritative.
+- Interpretation uses explicit rules for ownership, polarity, question/response association, overlap, and Q17 safety semantics rather than raw keyword substring matching.
+- An affirmative Q17 interpretation may set Q17 and surface the existing Potential Red Flag workflow. Conflicting Q17 evidence remains unanswered and requires manual review.
+- STT never autonomously creates, submits, or transmits a T0 emergency. Explicit Relawan verification and final submission remain mandatory.
+- The eventual Relawan experience may use one efficient microphone session with internal chunking/background processing. That interaction and performance work is not implemented in C2; the C1 push-to-talk interaction remains.
+
+#### C2 Browser Verification — 2 October 2026
+
+**IMPLEMENTED / AUTOMATED VERIFIED / DEMO-CRITICAL BROWSER PATHS PASS.** Direct browser verification covered the following selected paths:
+
+- `saya sering sakit kepala.` was accurately transcribed; Q1 became `YA`.
+- After reload, Q1 remained `YA`, confirming persistence through the existing local SRQ draft path.
+- After reload, `saya tidak sakit kepala.` was accurately transcribed; the restored Q1 remained `YA` and the UI reported that the manual/stored answer was not changed.
+- `Apakah Anda merasa cemas, tegang, atau khawatir? Iya.` was accurately transcribed and interpreted; Q6 became `YA`.
+- `Saya susah tidur, saya sering menangis, saya tidak ingin mati.` was accurately transcribed and interpreted as Q3 `YA`, Q10 `YA`, and Q17 `TIDAK`, with no false affirmative Q17 interruption.
+- Same-session manual override protection worked: later STT did not overwrite a manual correction.
+- Clear affirmative Q17 speech, `Saya ingin mati.`, changed a current-session STT-owned Q17 to `YA` and opened the normal `Indikator Red Flag Terdeteksi` interruption with `BUKA VERIFIKASI T0 DARURAT` available.
+- With protected/restored Q17 `TIDAK`, the same affirmative speech left Q17 unchanged and opened review-only `Ucapan Q17 Perlu Ditinjau`; STT did not create or send T0.
+- Manually changing Q17 from `TIDAK` to `YA` reopened normal Potential Red Flag and opened T0 Verification correctly.
+- Q17 interpretation alone, Potential Red Flag alone, and opening T0 Verification alone did not create T0. Only explicit `KIRIM T0-SUSPECT` created the local emergency.
+- After a clean-state retest, explicit T0 submission synchronized successfully and reached `Tersinkron`.
+- Conflicting speech, `Saya ingin mati, saya tidak ingin mati.`, was transcribed accurately; the interpreter left structured Q17 unresolved, showed review-only `Ucapan Q17 Perlu Ditinjau`, and created no automatic T0.
+
+An initial normal-profile T0 synchronization returned HTTP 409 because stale test state existed between IndexedDB and the server database. The outbox recorded `FAILED`, `last_error = HTTP 409`, and `last_http_status = 409`. This was diagnosed as test-state contamination rather than an online/offline failure; fresh Incognito state synchronized normally, and the test PostgreSQL transactional data plus normal-browser site data were then cleared while preserving users and registry data.
+
+The conflicting Q17 result is the current safe conservative behavior. Contradictory, context-dependent, or unsupported phrasing may remain unresolved and requires direct Relawan clarification. Future interpretation may improve discourse/context handling without weakening the boundary that prevents STT/NLP from autonomously creating or transmitting T0.
+
+The following remain **NOT DIRECTLY VERIFIED**: question-only spoken SRQ wording producing no false-positive answer; mode-switch cleanup of transcript/interpretation notice; deliberately forced STT failure followed by manual SRQ usability; complete disconnected/offline Whisper execution; WebGPU inference; continuous/chunked recording; performance optimization; and broad vocabulary/natural-language coverage outside the tested phrases. C2 is not universal or production-ready browser/language coverage.
 
 ---
 
