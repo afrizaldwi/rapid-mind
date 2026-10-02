@@ -4,6 +4,7 @@ import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createApp, h, type DefineComponent } from "vue";
 import { configureEcho } from "@laravel/echo-vue";
+import { lockRelawanContinuity, type VerifiedRelawan } from "./offline/relawanContinuity";
 
 configureEcho({
     broadcaster: "reverb",
@@ -19,6 +20,10 @@ createInertiaApp({
         ),
 
     setup({ el, App, props, plugin }) {
+        const user = (props.initialPage.props.auth as { user?: VerifiedRelawan | null } | undefined)?.user;
+        if (user && user.role !== "RELAWAN") {
+            void lockRelawanContinuity().catch(() => {});
+        }
         createApp({
             render: () => h(App, props),
         })

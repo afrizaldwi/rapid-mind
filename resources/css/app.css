@@ -2,8 +2,53 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+@source '../js/**/*.vue';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+
+    --color-ink: #0F172A;
+    --color-teal-brand: #0F766E;
+    --color-slate-brand: #64748B;
+    --color-soft-gray: #F1F5F9;
+
+    --color-t0: #991B1B;
+    --color-t0-deep: #7F1D1D;
+    --color-t1: #C2410C;
+    --color-t2: #A16207;
+    --color-t3: #15803D;
+}
+
+body {
+    background-color: var(--color-soft-gray);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Custom utility styles */
+.badge-t0 {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
+}
+
+.badge-t1 {
+    background-color: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FDBA74;
+}
+
+.badge-t2 {
+    background-color: #FEFCE8;
+    color: #A16207;
+    border: 1px solid #FDE047;
+}
+
+.badge-t3 {
+    background-color: #F0FDF4;
+    color: #15803D;
+    border: 1px solid #86EFAC;
 }

@@ -4,6 +4,7 @@
         "useDefineForClassFields": true,
         "module": "ESNext",
         "moduleResolution": "Bundler",
+        "allowImportingTsExtensions": true,
         "strict": true,
         "resolveJsonModule": true,
         "isolatedModules": true,
@@ -17,7 +18,12 @@
             "vite/client"
         ],
         "skipLibCheck": true,
-        "noEmit": true
+        "noEmit": true,
+        "ignoreDeprecations": "6.0",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"]
+        }
     },
     "include": [
         "resources/**/*.ts",

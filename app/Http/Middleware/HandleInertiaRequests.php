@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\EmergencyStatus;
+use App\Enums\UserRole;
+use App\Models\EmergencyEvent;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,9 +38,30 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
+        $shared = [
             ...parent::share($request),
-            //
+            'auth' => [
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'role' => $request->user()->role instanceof \App\Enums\UserRole ? $request->user()->role->value : (string)$request->user()->role,
+                    'shelter_id' => $request->user()->shelter_id,
+                    'facility_id' => $request->user()->facility_id,
+                    'shelter' => $request->user()->shelter ? ['id' => $request->user()->shelter->id, 'name' => $request->user()->shelter->name] : null,
+                    'facility' => $request->user()->facility ? ['id' => $request->user()->facility->id, 'name' => $request->user()->facility->name] : null,
+                ] : null,
+            ],
+            'flash' => [
+                'message' => fn () => $request->session()->get('message'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ];
+
+        if ($request->user()?->role === UserRole::HEALTHCARE && $request->is('healthcare/*')) {
+            $shared['pendingT0Count'] = fn () => EmergencyEvent::where('status', EmergencyStatus::PENDING)->count();
+        }
+
+        return $shared;
     }
 }
