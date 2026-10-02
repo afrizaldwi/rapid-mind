@@ -31,21 +31,6 @@ use Throwable;
 
 final class HealthcareController extends Controller
 {
-    private function activeReferralFacility(int|string|null $requestedId, int|string|null $assignedId): int
-    {
-        $facilityId = $requestedId
-            ?? HealthcareFacility::whereKey($assignedId)->where('is_active', true)->value('id')
-            ?? HealthcareFacility::where('is_active', true)->orderBy('id')->value('id');
-
-        if (!$facilityId || !HealthcareFacility::whereKey($facilityId)->where('is_active', true)->exists()) {
-            throw ValidationException::withMessages([
-                'facility_id' => 'Pilih Faskes aktif untuk rujukan baru.',
-            ]);
-        }
-
-        return (int) $facilityId;
-    }
-
     public function emergencies(): InertiaResponse
     {
         $user = Auth::user();
@@ -88,19 +73,35 @@ final class HealthcareController extends Controller
     public function acknowledge(Request $request, string $emergencyId): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
-        $emergency = EmergencyEvent::findOrFail($emergencyId);
+        $result = DB::transaction(function () use ($emergencyId, $user): array {
+            $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
 
-        $emergency->update([
-            'status' => EmergencyStatus::ACKNOWLEDGED,
-        ]);
+            if ($emergency->status === EmergencyStatus::ACKNOWLEDGED) {
+                return ['replay' => true];
+            }
+            if ($emergency->status !== EmergencyStatus::PENDING) {
+                return ['conflict' => true, 'current' => $emergency->status];
+            }
 
-        AuditLog::create([
-            'actor_id' => $user->id,
-            'action' => 'EMERGENCY_ACKNOWLEDGED',
-            'entity_type' => 'EmergencyEvent',
-            'entity_id' => $emergency->id,
-            'new_values' => ['status' => EmergencyStatus::ACKNOWLEDGED->value],
-        ]);
+            $emergency->update(['status' => EmergencyStatus::ACKNOWLEDGED]);
+            AuditLog::create([
+                'actor_id' => $user->id,
+                'action' => 'EMERGENCY_ACKNOWLEDGED',
+                'entity_type' => 'EmergencyEvent',
+                'entity_id' => $emergency->id,
+                'new_values' => ['status' => EmergencyStatus::ACKNOWLEDGED->value],
+            ]);
+
+            return ['updated' => true];
+        });
+
+        if (isset($result['conflict'])) {
+            return $this->emergencyConflictResponse(
+                $request,
+                'Kasus sudah melewati tahap pengakuan dan tidak dapat dimundurkan.',
+                $result['current'],
+            );
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Kasus berhasil diakui.']);
@@ -112,34 +113,60 @@ final class HealthcareController extends Controller
     public function verify(Request $request, string $emergencyId): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
-        $emergency = EmergencyEvent::findOrFail($emergencyId);
-
         $validated = $request->validate([
             'method' => ['required', 'string', 'in:PHONE,VIDEO,FIELD_TEAM'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
+        $method = VerificationMethod::from($validated['method']);
+        $notes = $validated['notes'] ?? null;
 
-        EmergencyVerification::create([
-            'emergency_event_id' => $emergency->id,
-            'verified_by' => $user->id,
-            'method' => VerificationMethod::from($validated['method']),
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        $result = DB::transaction(function () use ($emergencyId, $user, $method, $notes): array {
+            $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            $savedVerification = $emergency->verifications()
+                ->whereNotNull('method')
+                ->whereNull('clinical_result')
+                ->oldest('id')
+                ->first();
 
-        $emergency->update([
-            'status' => EmergencyStatus::REVIEWING,
-        ]);
+            if ($emergency->status === EmergencyStatus::REVIEWING) {
+                $isExactReplay = $savedVerification
+                    && $savedVerification->verified_by === $user->id
+                    && $savedVerification->method === $method
+                    && $savedVerification->notes === $notes;
 
-        AuditLog::create([
-            'actor_id' => $user->id,
-            'action' => 'EMERGENCY_VERIFIED',
-            'entity_type' => 'EmergencyEvent',
-            'entity_id' => $emergency->id,
-            'new_values' => [
-                'method' => $validated['method'],
-                'notes' => $validated['notes'] ?? null,
-            ],
-        ]);
+                return $isExactReplay
+                    ? ['replay' => true]
+                    : ['conflict' => true, 'current' => $emergency->status];
+            }
+            if ($emergency->status !== EmergencyStatus::ACKNOWLEDGED || $savedVerification) {
+                return ['conflict' => true, 'current' => $emergency->status];
+            }
+
+            EmergencyVerification::create([
+                'emergency_event_id' => $emergency->id,
+                'verified_by' => $user->id,
+                'method' => $method,
+                'notes' => $notes,
+            ]);
+            $emergency->update(['status' => EmergencyStatus::REVIEWING]);
+            AuditLog::create([
+                'actor_id' => $user->id,
+                'action' => 'EMERGENCY_VERIFIED',
+                'entity_type' => 'EmergencyEvent',
+                'entity_id' => $emergency->id,
+                'new_values' => ['method' => $method->value, 'notes' => $notes],
+            ]);
+
+            return ['updated' => true];
+        });
+
+        if (isset($result['conflict'])) {
+            return $this->emergencyConflictResponse(
+                $request,
+                'Verifikasi sekunder tidak dapat disimpan karena tahap kasus sudah berubah.',
+                $result['current'],
+            );
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Verifikasi sekunder tersimpan.']);
@@ -156,8 +183,6 @@ final class HealthcareController extends Controller
         $validated = $request->validate([
             'clinical_result' => ['required', 'string', 'in:T0_CONFIRMED,T1,T2'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'create_referral' => ['nullable', 'boolean'],
-            'facility_id' => ['nullable', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
         ]);
 
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
@@ -168,8 +193,23 @@ final class HealthcareController extends Controller
             default => EmergencyStatus::REVIEWING,
         };
 
-        DB::transaction(function () use ($emergency, $newStatus, $user, $clinicalResult, $validated): void {
+        $result = DB::transaction(function () use ($emergency, $newStatus, $user, $clinicalResult, $validated): array {
             $emergency = EmergencyEvent::whereKey($emergency->id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($emergency->status, [EmergencyStatus::CONFIRMED, EmergencyStatus::DOWNGRADED], true)) {
+                $savedDecision = $emergency->verifications()
+                    ->whereNotNull('clinical_result')
+                    ->oldest('id')
+                    ->first();
+
+                return $savedDecision?->clinical_result === $clinicalResult
+                    ? ['replay' => true]
+                    : ['conflict' => true, 'current' => $emergency->status];
+            }
+            if ($emergency->status !== EmergencyStatus::REVIEWING) {
+                return ['conflict' => true, 'current' => $emergency->status];
+            }
+
             $emergency->update([
                 'status' => $newStatus,
             ]);
@@ -182,25 +222,6 @@ final class HealthcareController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // Historical referrals remain unchanged on a replay.
-            if ((($validated['create_referral'] ?? false) || $clinicalResult === TriageCategory::T0_CONFIRMED)
-                && $emergency->patient_id && ! $emergency->referrals()->exists()) {
-                $facilityId = $this->activeReferralFacility($validated['facility_id'] ?? null, $user->facility_id);
-                $referral = $emergency->referrals()->create([
-                    'patient_id' => $emergency->patient_id,
-                    'referred_by' => $user->id,
-                    'facility_id' => $facilityId,
-                    'status' => ReferralStatus::ACTIVE,
-                    'notes' => $validated['notes'] ?? 'Rujukan darurat T0 dikonfirmasi.',
-                ]);
-                ReferralStatusHistory::create([
-                    'referral_id' => $referral->id,
-                    'status' => ReferralStatus::ACTIVE,
-                    'changed_by' => $user->id,
-                    'notes' => 'Rujukan darurat diterbitkan.',
-                ]);
-            }
-
             AuditLog::create([
                 'actor_id' => $user->id,
                 'action' => 'EMERGENCY_CLASSIFIED',
@@ -211,13 +232,109 @@ final class HealthcareController extends Controller
                     'status' => $newStatus->value,
                 ],
             ]);
+
+            return ['updated' => true];
         });
+
+        if (isset($result['conflict'])) {
+            return $this->emergencyConflictResponse(
+                $request,
+                'Keputusan klinis tidak dapat disimpan karena tahap atau hasil klinis kasus sudah berubah.',
+                $result['current'],
+            );
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Status klinis darurat berhasil diperbarui.']);
         }
 
         return back()->with('message', 'Status klinis darurat berhasil diperbarui.');
+    }
+
+    public function createEmergencyReferral(Request $request, string $emergencyId): JsonResponse|RedirectResponse
+    {
+        $user = Auth::user();
+        $validated = $request->validate([
+            'facility_id' => ['required', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $result = DB::transaction(function () use ($emergencyId, $user, $validated): array {
+            $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+
+            if ($emergency->status !== EmergencyStatus::CONFIRMED) {
+                return ['conflict' => true, 'current' => $emergency->status];
+            }
+            if (! $emergency->patient_id) {
+                return ['patient_missing' => true];
+            }
+
+            $existingReferral = $emergency->referrals()->oldest('created_at')->oldest('id')->first();
+            if ($existingReferral) {
+                return $existingReferral->facility_id === (int) $validated['facility_id']
+                    ? ['replay' => true]
+                    : ['referral_conflict' => true, 'referral' => $existingReferral];
+            }
+
+            $referral = $emergency->referrals()->create([
+                'patient_id' => $emergency->patient_id,
+                'referred_by' => $user->id,
+                'facility_id' => (int) $validated['facility_id'],
+                'status' => ReferralStatus::ACTIVE,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+            ReferralStatusHistory::create([
+                'referral_id' => $referral->id,
+                'status' => ReferralStatus::ACTIVE,
+                'changed_by' => $user->id,
+                'notes' => 'Rujukan darurat diterbitkan setelah konfirmasi T0.',
+            ]);
+
+            return ['created' => true];
+        });
+
+        if (isset($result['conflict'])) {
+            return $this->emergencyConflictResponse(
+                $request,
+                'Rujukan darurat hanya dapat dibuat setelah T0 dikonfirmasi.',
+                $result['current'],
+            );
+        }
+        if (isset($result['patient_missing'])) {
+            return $this->emergencyConflictResponse(
+                $request,
+                'Rujukan tidak dapat dibuat karena identitas pasien belum tercatat.',
+                EmergencyStatus::CONFIRMED,
+            );
+        }
+        if (isset($result['referral_conflict'])) {
+            return $this->emergencyConflictResponse(
+                $request,
+                'Rujukan untuk kasus ini sudah tercatat ke Faskes lain dan tidak dapat diubah.',
+                EmergencyStatus::CONFIRMED,
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Rujukan darurat berhasil dibuat.']);
+        }
+
+        return back()->with('message', 'Rujukan darurat berhasil dibuat.');
+    }
+
+    private function emergencyConflictResponse(
+        Request $request,
+        string $message,
+        EmergencyStatus $currentStatus,
+    ): JsonResponse|RedirectResponse {
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $message,
+                'current_status' => $currentStatus->value,
+            ], 409);
+        }
+
+        return back()->withErrors(['conflict' => $message]);
     }
 
     public function validations(): InertiaResponse

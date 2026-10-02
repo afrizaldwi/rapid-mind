@@ -742,3 +742,31 @@ The initial normal-profile HTTP 409 was test-state contamination between Indexed
 Contradictory, context-dependent, or unsupported Q17 phrasing remains intentionally conservative and may require direct Relawan clarification. Future discourse/context interpretation may improve this behavior without allowing STT/NLP to autonomously create or transmit T0.
 
 The following remain **NOT DIRECTLY VERIFIED**: question-only spoken SRQ wording producing no false-positive answer; mode-switch cleanup of transcript/interpretation notice; deliberately forced STT failure followed by manual SRQ usability; complete disconnected/offline Whisper execution; WebGPU inference; continuous/chunked recording; performance optimization; and broad vocabulary/natural-language coverage outside the tested phrases. C2 is not universal or production-ready language coverage.
+
+---
+
+## Phase D1.1 — Critical Cross-Role Integration Integrity Fixes (2 October 2026)
+
+**Status:** **BROWSER VERIFIED FOR SELECTED PROTOTYPE SCOPE**; automated verification also passed. Phase D is not complete.
+
+### Changed
+
+- Healthcare acknowledgement, secondary verification, and classification now lock the emergency row and enforce `PENDING → ACKNOWLEDGED → REVIEWING → CONFIRMED|DOWNGRADED`. Approved retries are no-ops; stale, backward, reopened, and changed final decisions return Indonesian conflict errors without mutating state or duplicating audit/verification rows.
+- `T0_CONFIRMED` classification no longer creates a referral or accepts a facility selection. Confirmed emergencies expose a separate `BUAT RUJUKAN` action backed by `POST /healthcare/emergencies/{emergencyId}/referrals`. It requires an identified patient and active destination, creates one `ACTIVE` referral plus one initial history row transactionally, accepts same-destination replay, and rejects a changed destination without mutation.
+- Admin 30-day trends now use completed assessment dates and actual T1/T2/T3 results in 30 exact daily buckets. Distribution values no longer substitute fake non-zero data. All-zero distribution has a truthful empty state. Patient rows use the latest completed triage result; missing triage displays `Belum ada hasil` and `-`.
+- Focused lifecycle, referral, rollback/provenance, and Admin analytics regression coverage was added or updated. Older automatic-referral assertions were migrated to the explicit endpoint rather than discarded.
+
+### Verification
+
+- Focused Docker Laravel suites: 38 tests, 519 assertions, 0 failures.
+- Complete Docker Laravel suite: 135 tests, 1,580 assertions, 0 failures.
+- `npx vue-tsc --noEmit`: exit 0.
+- `npm run build`: exit 0; 1,280 client modules transformed. Existing large-chunk and PWA deprecation advisories remain non-fatal.
+- `git diff --check`: passed.
+- No dependency installed or updated. `docs/workflow.md` unchanged.
+
+Browser verification on 2 October 2026 passed Gates A–I, K, and L for the selected prototype scope. Healthcare remained on `/healthcare/emergencies` with `Realtime aktif` while fresh T0-Suspect `Anisa Wardani D1` was received without manual reload; queue and pending counts increased. The browser also directly verified PENDING gating, acknowledgement, stale-tab lifecycle conflicts, secondary verification using `Panggilan Telepon` with notes `Verifikasi browser D1.1`, T0 confirmation without automatic referral, explicit referral to `RSUD Candi`, referral visibility in `/healthcare/referrals` and patient history, and downgrade of `Bambang Wijaya D1` without an emergency-origin referral. Real assessment analytics for `Cahyo Utomo GateK` verified `8 / 37` and `T2` across the Admin distribution, trend, and patient table; repeated analytics refreshes remained stable.
+
+Gate J is **NOT DIRECTLY VERIFIED — dataset not empty**. The runtime dataset was deliberately not wiped. Direct browser evidence did confirm truthful missing-result presentation (`BELUM ADA HASIL`, score `-`, screening time `-`, and no false T3 fallback); the automated all-zero dataset contract remains verified. No browser defects were found during the D1.1 browser verification scope. This does not generalize to production correctness or claim production concurrency/load, security hardening, clinical validation, or full E2E coverage outside the selected path.
+
+Deferred: dedicated dispatch model/schema, referral/dispatch architecture redesign, Admin realtime, Faskes map markers, full geospatial heatmap, continuous STT, WebGPU Whisper, complete offline Whisper, broad responsive/accessibility D2/D3 gates, production concurrency/load, production security, and clinical validation. Existing referral movement-like states remain a known post-demo mismatch; no separate dispatch model is claimed.

@@ -14,6 +14,19 @@
         </Badge>
       </div>
 
+      <div
+        v-if="actionErrors.length"
+        role="alert"
+        class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"
+      >
+        <p class="font-extrabold">Tindakan belum dapat diproses</p>
+        <ul class="mt-1 list-disc space-y-1 pl-5">
+          <li v-for="error in actionErrors" :key="error.key">
+            {{ error.message }}
+          </li>
+        </ul>
+      </div>
+
       <!-- Main Emergency Summary Card -->
       <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
         <div class="flex items-start justify-between">
@@ -97,7 +110,7 @@
       </div>
 
       <!-- Action Step 2: Secondary Tele-Verification -->
-      <div v-if="['ACKNOWLEDGED', 'REVIEWING'].includes(emergency.status)" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+      <div v-if="emergency.status === 'ACKNOWLEDGED'" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h3 class="font-extrabold text-slate-900 text-base">
@@ -166,7 +179,7 @@
       </div>
 
       <!-- Action Step 3: Clinical Decision Gate -->
-      <div v-if="['ACKNOWLEDGED', 'REVIEWING'].includes(emergency.status)" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+      <div v-if="emergency.status === 'REVIEWING'" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h3 class="font-extrabold text-slate-900 text-base">
@@ -239,26 +252,45 @@
             ></textarea>
           </div>
 
-          <div v-if="decisionForm.clinical_result === 'T0_CONFIRMED'" class="p-4 rounded-xl bg-red-50 border border-red-200 space-y-2">
-            <span class="text-xs font-bold text-red-900 block">
-              Pilihan Faskes Tujuan Rujukan Darurat:
-            </span>
-            <select
-              v-model="decisionForm.facility_id"
-              class="w-full rounded-xl border border-red-300 p-2.5 text-xs bg-white text-slate-800"
-            >
-              <option v-for="f in facilities" :key="f.id" :value="f.id">
-                {{ f.name }} ({{ f.type }})
-              </option>
-            </select>
-          </div>
-
           <button
             type="submit"
             :disabled="isSubmitting"
             class="w-full py-3.5 px-4 bg-teal-800 hover:bg-teal-900 text-white font-extrabold text-sm rounded-xl shadow-md transition"
           >
-            SIMPAN KEPUTUSAN KLINIS & TERBITKAN INSTRUKSI MEDIS
+            SIMPAN KEPUTUSAN KLINIS
+          </button>
+        </form>
+      </div>
+
+      <div v-if="emergency.status === 'CONFIRMED'" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-base">Tindak Lanjut Darurat</h3>
+          <p class="mt-1 text-xs text-slate-600">T0 telah dikonfirmasi.</p>
+        </div>
+
+        <template v-if="emergency.referrals?.length">
+          <div class="rounded-xl border border-teal-200 bg-teal-50 p-4 text-xs">
+            <p class="font-bold text-teal-950">Rujukan telah tercatat</p>
+            <p class="mt-1 text-teal-900">Tujuan: {{ emergency.referrals[0].facility?.name || 'Faskes tidak tersedia' }}</p>
+            <p class="mt-1 text-teal-900">Status: {{ formatReferralStatus(emergency.referrals[0].status) }}</p>
+          </div>
+        </template>
+
+        <form v-else @submit.prevent="submitReferral" class="space-y-3">
+          <p class="text-xs text-slate-600">Belum ada rujukan yang tercatat.</p>
+          <div>
+            <label class="mb-1 block text-xs font-bold text-slate-700">Faskes tujuan rujukan</label>
+            <select v-model="referralForm.facility_id" required class="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-800">
+              <option :value="null" disabled>Pilih Faskes aktif</option>
+              <option v-for="f in facilities" :key="f.id" :value="f.id">{{ f.name }} ({{ f.type }})</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-bold text-slate-700">Catatan rujukan (opsional)</label>
+            <textarea v-model="referralForm.notes" rows="2" class="w-full rounded-xl border border-slate-300 p-3 text-xs focus:border-teal-700 focus:outline-none"></textarea>
+          </div>
+          <button type="submit" :disabled="isSubmitting || !referralForm.facility_id" class="rounded-xl bg-teal-800 px-5 py-3 text-xs font-extrabold text-white hover:bg-teal-900 disabled:cursor-not-allowed disabled:opacity-50">
+            BUAT RUJUKAN
           </button>
         </form>
       </div>
@@ -290,10 +322,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import HealthcareLayout from '@/layouts/HealthcareLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
+import { formatReferralStatus } from '@/lib/referralStatus';
 
 const props = defineProps<{
   emergency: any;
@@ -301,6 +334,11 @@ const props = defineProps<{
 }>();
 
 const isSubmitting = ref(false);
+const page = usePage();
+const actionErrors = computed(() => Object.entries(page.props.errors ?? {}).map(([key, message]) => ({
+  key,
+  message: String(message),
+})));
 
 const verificationForm = ref({
   method: 'PHONE',
@@ -310,7 +348,11 @@ const verificationForm = ref({
 const decisionForm = ref({
   clinical_result: 'T0_CONFIRMED',
   notes: '',
+});
+
+const referralForm = ref({
   facility_id: props.facilities?.[0]?.id ?? null,
+  notes: '',
 });
 
 function acknowledgeCase() {
@@ -330,6 +372,13 @@ function submitVerification() {
 function submitClassification() {
   isSubmitting.value = true;
   router.post(`/healthcare/emergencies/${props.emergency.id}/classify`, decisionForm.value, {
+    onFinish: () => (isSubmitting.value = false),
+  });
+}
+
+function submitReferral() {
+  isSubmitting.value = true;
+  router.post(`/healthcare/emergencies/${props.emergency.id}/referrals`, referralForm.value, {
     onFinish: () => (isSubmitting.value = false),
   });
 }

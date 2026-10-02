@@ -95,17 +95,20 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame($history->id, $referral->statusHistory()->firstOrFail()->id);
     }
 
-    public function test_emergency_classification_persists_referral_history_and_audit(): void
+    public function test_emergency_classification_and_explicit_referral_persist_separate_records(): void
     {
         $emergency = $this->emergency();
 
         $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
             'clinical_result' => 'T0_CONFIRMED',
-            'facility_id' => $this->facility->id,
         ])->assertOk();
 
         $this->assertSame(EmergencyStatus::CONFIRMED, $emergency->fresh()->status);
         $this->assertSame(TriageCategory::T0_CONFIRMED, $emergency->verifications()->firstOrFail()->clinical_result);
+        $this->assertSame(0, $emergency->referrals()->count());
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
+            'facility_id' => $this->facility->id,
+        ])->assertOk();
         $referral = $emergency->referrals()->firstOrFail();
         $this->assertSame(ReferralStatus::ACTIVE, $referral->status);
         $this->assertSame(ReferralStatus::ACTIVE, $referral->statusHistory()->firstOrFail()->status);
@@ -137,9 +140,12 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->facility->update(['is_active' => false]);
 
         $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
-            'clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id,
+            'clinical_result' => 'T0_CONFIRMED',
+        ])->assertOk();
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
+            'facility_id' => $this->facility->id,
         ])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
-        $this->assertSame(EmergencyStatus::REVIEWING, $emergency->fresh()->status);
+        $this->assertSame(EmergencyStatus::CONFIRMED, $emergency->fresh()->status);
 
         $this->postJson("/healthcare/validations/{$assessment->id}", [
             'clinical_result' => 'T1', 'referral_required' => true, 'facility_id' => $this->facility->id,
@@ -151,14 +157,16 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame(0, ClinicalValidation::count());
     }
 
-    public function test_inactive_assigned_facility_falls_back_only_to_an_active_facility(): void
+    public function test_emergency_referral_requires_an_explicit_active_facility(): void
     {
         $active = HealthcareFacility::create(['name' => 'Faskes Aktif', 'type' => 'RS', 'is_active' => true]);
         $this->facility->update(['is_active' => false]);
         $emergency = $this->emergency();
 
-        $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
-            'clinical_result' => 'T0_CONFIRMED',
+        $emergency->update(['status' => EmergencyStatus::CONFIRMED]);
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
+            'facility_id' => $active->id,
         ])->assertOk();
 
         $this->assertSame($active->id, $emergency->referrals()->firstOrFail()->facility_id);
@@ -168,7 +176,10 @@ final class HealthcareReferralIntegrityTest extends TestCase
     {
         $emergency = $this->emergency();
         $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
-            'clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id,
+            'clinical_result' => 'T0_CONFIRMED',
+        ])->assertOk();
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
+            'facility_id' => $this->facility->id,
         ])->assertOk();
         $referral = $emergency->referrals()->firstOrFail();
         $this->facility->update(['is_active' => false]);
@@ -200,11 +211,12 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $this->assertSame(ReferralStatus::EN_ROUTE, $referral->statusHistory()->firstOrFail()->status);
     }
 
-    public function test_late_history_failure_rolls_back_classification_and_retry_creates_one_referral(): void
+    public function test_late_history_failure_rolls_back_explicit_referral_and_retry_creates_one_referral(): void
     {
         $emergency = $this->emergency();
-        $url = "/healthcare/emergencies/{$emergency->id}/classify";
-        $payload = ['clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id];
+        $emergency->update(['status' => EmergencyStatus::CONFIRMED]);
+        $url = "/healthcare/emergencies/{$emergency->id}/referrals";
+        $payload = ['facility_id' => $this->facility->id];
 
         ReferralStatusHistory::creating(function (): void {
             throw new RuntimeException('Test-only history failure');
@@ -221,22 +233,22 @@ final class HealthcareReferralIntegrityTest extends TestCase
             ReferralStatusHistory::flushEventListeners();
         }
 
-        $this->assertSame(EmergencyStatus::REVIEWING, $emergency->fresh()->status);
+        $this->assertSame(EmergencyStatus::CONFIRMED, $emergency->fresh()->status);
         $this->assertSame(0, EmergencyVerification::where('emergency_event_id', $emergency->id)->count());
         $this->assertSame(0, $emergency->referrals()->count());
         $this->assertSame(0, ReferralStatusHistory::count());
-        $this->assertSame(0, AuditLog::where('action', 'EMERGENCY_CLASSIFIED')->count());
 
         $this->postJson($url, $payload)->assertOk();
         $this->assertSame(1, $emergency->referrals()->count());
         $this->assertSame(1, $emergency->referrals()->firstOrFail()->statusHistory()->count());
     }
 
-    public function test_successful_emergency_replay_keeps_one_referral_and_its_completed_state(): void
+    public function test_successful_explicit_emergency_referral_replay_keeps_completed_state(): void
     {
         $emergency = $this->emergency();
-        $url = "/healthcare/emergencies/{$emergency->id}/classify";
-        $payload = ['clinical_result' => 'T0_CONFIRMED', 'facility_id' => $this->facility->id, 'notes' => 'Initial referral'];
+        $emergency->update(['status' => EmergencyStatus::CONFIRMED]);
+        $url = "/healthcare/emergencies/{$emergency->id}/referrals";
+        $payload = ['facility_id' => $this->facility->id, 'notes' => 'Initial referral'];
 
         $this->postJson($url, $payload)->assertOk();
         $referral = $emergency->referrals()->firstOrFail();
@@ -250,7 +262,7 @@ final class HealthcareReferralIntegrityTest extends TestCase
             $this->postJson("/healthcare/referrals/{$referral->id}/status", ['expected_status' => $from, 'status' => $to])->assertOk();
         }
         $otherFacility = HealthcareFacility::create(['name' => 'Faskes Lain', 'type' => 'HOSPITAL', 'is_active' => true]);
-        $this->postJson($url, ['clinical_result' => 'T0_CONFIRMED', 'facility_id' => $otherFacility->id, 'notes' => 'Replay notes'])->assertOk();
+        $this->postJson($url, ['facility_id' => $otherFacility->id, 'notes' => 'Replay notes'])->assertConflict();
 
         $this->assertSame(1, $emergency->referrals()->count());
         $this->assertSame($referral->id, $emergency->referrals()->firstOrFail()->id);
@@ -314,8 +326,8 @@ final class HealthcareReferralIntegrityTest extends TestCase
         $assessment = $this->assessment();
 
         foreach ([$firstEmergency, $secondEmergency] as $emergency) {
-            $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
-                'clinical_result' => 'T0_CONFIRMED',
+            $emergency->update(['status' => EmergencyStatus::CONFIRMED]);
+            $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
                 'facility_id' => $this->facility->id,
             ])->assertOk();
         }

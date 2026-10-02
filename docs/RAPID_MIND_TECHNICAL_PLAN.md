@@ -1382,6 +1382,22 @@ The following remain **NOT DIRECTLY VERIFIED**: question-only spoken SRQ wording
 
 ### Phase D — Cross-Role Integration Hardening
 
+#### D1.1 — Critical Cross-Role Integration Integrity Fixes
+
+**Checkpoint:** 2 October 2026. **Status:** **BROWSER VERIFIED FOR SELECTED PROTOTYPE SCOPE**; automated verification also passed. Phase D remains in progress.
+
+The Healthcare emergency endpoints now enforce the server-side sequence `PENDING → ACKNOWLEDGED → REVIEWING → CONFIRMED|DOWNGRADED` under database row locks. Acknowledgement, secondary-verification, and final-classification retries are idempotent only under their approved replay rules; stale, backward, reopened, or changed final decisions return conflict responses and preserve the current state. Successful replay does not append duplicate verification or audit records.
+
+T0 confirmation now persists only the final emergency status, clinical decision record, and audit entry. It creates no referral. A separate confirmed-emergency referral endpoint and `BUAT RUJUKAN` UI action require a patient and explicitly selected active Faskes, then create one `ACTIVE` referral and one initial history row in a transaction. Same-destination replay is a no-op; a changed destination conflicts without mutating the existing referral.
+
+Admin analytics no longer uses random trends, non-zero chart fallbacks, or T3/0-score fallbacks for patients without triage. The 30-day series is built from completed assessments grouped by `completed_at`, retains exactly 30 chronological calendar buckets, and uses zero for empty days. Distribution values remain exact, an all-zero distribution renders an explicit empty state, and the patient table uses the latest completed assessment with a triage result or `Belum ada hasil` / `-`.
+
+Automated verification passed: the lifecycle-focused suite and adjacent Healthcare suites passed; the complete Docker Laravel suite passed with 135 tests and 1,580 assertions; `npx vue-tsc --noEmit`, `npm run build`, and `git diff --check` passed. The existing large-chunk build advisory remains non-fatal. No dependency was installed or updated. `docs/workflow.md` was not modified.
+
+Direct browser verification on 2 October 2026 passed Gates A–I, K, and L for the selected prototype scope: fresh T0 Reverb/Echo reception, PENDING lifecycle gating, acknowledgement, stale-tab conflicts, secondary verification, T0 confirmation/referral separation, explicit referral, cross-view referral visibility, downgrade without T0 referral, real assessment analytics, and refresh stability. Gate J remains **NOT DIRECTLY VERIFIED — dataset not empty**; the dataset was deliberately not wiped. Browser evidence nevertheless showed truthful missing-result presentation (`BELUM ADA HASIL`, score `-`, screening time `-`, and no false T3 fallback), while the automated all-zero dataset contract remains verified. No browser defects were found during this D1.1 scope. This does not claim production concurrency/load, security hardening, clinical validation, or full E2E coverage outside the selected path.
+
+Deferred beyond D1.1: a dedicated dispatch model/schema and referral/dispatch architecture redesign; Admin realtime subscription; Faskes map markers; full geospatial heatmap redesign; continuous STT; WebGPU/Whisper performance; complete offline Whisper; broad accessibility and D2/D3 responsive gates. The current referral model still carries movement-like `EN_ROUTE`, `ON_SITE`, and `TRANSPORT` states; this remains a known post-demo model mismatch and is not evidence that a separate dispatch domain exists.
+
 #### Goal
 Execute targeted integration and stability hardening across all three role experiences, resolving edge cases rather than adding new features.
 

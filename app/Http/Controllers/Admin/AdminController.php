@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\EmergencyStatus;
+use App\Enums\AssessmentStatus;
 use App\Enums\TriageCategory;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -65,29 +66,63 @@ final class AdminController extends Controller
 
     public function analytics(): InertiaResponse
     {
+        $completedTriage = TriageResult::query()
+            ->whereHas('assessment', fn ($query) => $query->where('status', AssessmentStatus::COMPLETED));
         $distribution = [
             'T0' => EmergencyEvent::count(),
-            'T1' => TriageResult::where('system_recommendation', TriageCategory::T1)->count(),
-            'T2' => TriageResult::where('system_recommendation', TriageCategory::T2)->count(),
-            'T3' => TriageResult::where('system_recommendation', TriageCategory::T3)->count(),
+            'T1' => (clone $completedTriage)->where('system_recommendation', TriageCategory::T1)->count(),
+            'T2' => (clone $completedTriage)->where('system_recommendation', TriageCategory::T2)->count(),
+            'T3' => (clone $completedTriage)->where('system_recommendation', TriageCategory::T3)->count(),
         ];
 
-        // 30-day longitudinal trend: group completed assessments by date
+        $today = now()->startOfDay();
+        $trendStart = $today->copy()->subDays(29);
+        $trendCounts = TriageResult::query()
+            ->join('assessments', 'assessments.id', '=', 'triage_results.assessment_id')
+            ->where('assessments.status', AssessmentStatus::COMPLETED->value)
+            ->whereBetween('assessments.completed_at', [$trendStart, $today->copy()->endOfDay()])
+            ->whereIn('triage_results.system_recommendation', [
+                TriageCategory::T1->value,
+                TriageCategory::T2->value,
+                TriageCategory::T3->value,
+            ])
+            ->selectRaw('DATE(assessments.completed_at) AS completion_date, triage_results.system_recommendation, COUNT(*) AS aggregate')
+            ->groupByRaw('DATE(assessments.completed_at), triage_results.system_recommendation')
+            ->get()
+            ->keyBy(fn ($row) => $row->completion_date.'|'.$row->system_recommendation->value);
+
         $trendData = [];
         for ($i = 29; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
+            $date = $today->copy()->subDays($i)->format('Y-m-d');
             $trendData[] = [
-                'date' => now()->subDays($i)->format('d M'),
-                't1' => rand(0, 4),
-                't2' => rand(1, 8),
-                't3' => rand(3, 15),
+                'date' => $date,
+                't1' => (int) ($trendCounts->get($date.'|'.TriageCategory::T1->value)?->aggregate ?? 0),
+                't2' => (int) ($trendCounts->get($date.'|'.TriageCategory::T2->value)?->aggregate ?? 0),
+                't3' => (int) ($trendCounts->get($date.'|'.TriageCategory::T3->value)?->aggregate ?? 0),
             ];
         }
 
-        $patients = Patient::with(['shelter', 'assessments.triageResult'])
+        $patients = Patient::with([
+            'shelter',
+            'assessments' => fn ($query) => $query
+                ->where('status', AssessmentStatus::COMPLETED)
+                ->whereNotNull('completed_at')
+                ->whereHas('triageResult')
+                ->with('triageResult')
+                ->orderByDesc('completed_at')
+                ->orderByDesc('created_at'),
+        ])
             ->latest('created_at')
             ->take(50)
-            ->get();
+            ->get()
+            ->map(function (Patient $patient): Patient {
+                $latestAssessment = $patient->assessments->first();
+                $patient->setAttribute('latest_triage_result', $latestAssessment?->triageResult);
+                $patient->setAttribute('latest_triage_completed_at', $latestAssessment?->completed_at);
+                $patient->unsetRelation('assessments');
+
+                return $patient;
+            });
 
         return Inertia::render('Admin/Analytics', [
             'distribution' => $distribution,

@@ -64,6 +64,7 @@ Route::middleware(['auth.jwt', 'role:HEALTHCARE'])->prefix('healthcare')->name('
     Route::post('/emergencies/{emergencyId}/acknowledge', [HealthcareController::class, 'acknowledge'])->name('emergencies.acknowledge');
     Route::post('/emergencies/{emergencyId}/verify', [HealthcareController::class, 'verify'])->name('emergencies.verify');
     Route::post('/emergencies/{emergencyId}/classify', [HealthcareController::class, 'classify'])->name('emergencies.classify');
+    Route::post('/emergencies/{emergencyId}/referrals', [HealthcareController::class, 'createEmergencyReferral'])->name('emergencies.referrals.store');
 
     // Clinical Validations
     Route::get('/validations', [HealthcareController::class, 'validations'])->name('validations.index');

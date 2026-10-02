@@ -323,6 +323,8 @@ final class HealthcareOperationalCompletionTest extends TestCase
         ]);
         $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
             'clinical_result' => 'T0_CONFIRMED',
+        ])->assertOk();
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
             'facility_id' => $this->facility->id,
         ])->assertOk();
         $assessment->clinicalValidation()->firstOrFail()->referral()->firstOrFail()

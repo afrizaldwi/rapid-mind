@@ -17,7 +17,10 @@
           <h3 class="font-extrabold text-slate-900 text-sm">
             Distribusi Proporsi Triase
           </h3>
-          <div ref="pieChartRef" class="w-full h-64"></div>
+          <div v-if="hasDistributionData" ref="pieChartRef" class="w-full h-64"></div>
+          <div v-else class="flex h-64 items-center justify-center rounded-2xl bg-slate-50 px-6 text-center text-xs font-medium text-slate-500">
+            Belum ada data triase untuk ditampilkan.
+          </div>
         </div>
 
         <!-- 30-Day Longitudinal Trend Line Chart -->
@@ -73,15 +76,15 @@
                 {{ p.shelter?.name || 'Posko Candi' }}
               </td>
               <td class="py-4 px-6">
-                <Badge :variant="badgeVariant(p.assessments?.[0]?.triage_result?.system_recommendation)">
-                  {{ p.assessments?.[0]?.triage_result?.system_recommendation || 'T3' }}
+                <Badge :variant="badgeVariant(p.latest_triage_result?.system_recommendation)">
+                  {{ p.latest_triage_result?.system_recommendation || 'Belum ada hasil' }}
                 </Badge>
               </td>
               <td class="py-4 px-6 font-bold">
-                {{ p.assessments?.[0]?.triage_result?.total_score || 0 }} / 37
+                {{ p.latest_triage_result ? `${p.latest_triage_result.total_score} / 37` : '-' }}
               </td>
               <td class="py-4 px-6 text-slate-400">
-                {{ new Date(p.created_at).toLocaleDateString('id-ID') }}
+                {{ p.latest_triage_completed_at ? new Date(p.latest_triage_completed_at).toLocaleDateString('id-ID') : '-' }}
               </td>
             </tr>
           </tbody>
@@ -92,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
 import * as echarts from 'echarts';
@@ -105,6 +108,7 @@ const props = defineProps<{
 
 const pieChartRef = ref<HTMLElement | null>(null);
 const lineChartRef = ref<HTMLElement | null>(null);
+const hasDistributionData = computed(() => Object.values(props.distribution).some((value) => value > 0));
 
 onMounted(() => {
   // 1. Pie Chart
@@ -121,10 +125,10 @@ onMounted(() => {
           avoidLabelOverlap: false,
           label: { show: false },
           data: [
-            { value: props.distribution.T0 || 1, name: 'T0 Darurat', itemStyle: { color: '#991B1B' } },
-            { value: props.distribution.T1 || 2, name: 'T1 Berat', itemStyle: { color: '#C2410C' } },
-            { value: props.distribution.T2 || 4, name: 'T2 Sedang', itemStyle: { color: '#A16207' } },
-            { value: props.distribution.T3 || 10, name: 'T3 Resilien', itemStyle: { color: '#15803D' } },
+            { value: props.distribution.T0, name: 'T0 Darurat', itemStyle: { color: '#991B1B' } },
+            { value: props.distribution.T1, name: 'T1 Berat', itemStyle: { color: '#C2410C' } },
+            { value: props.distribution.T2, name: 'T2 Sedang', itemStyle: { color: '#A16207' } },
+            { value: props.distribution.T3, name: 'T3 Resilien', itemStyle: { color: '#15803D' } },
           ],
         },
       ],
@@ -163,8 +167,10 @@ function badgeVariant(category?: string) {
       return 't1';
     case 'T2':
       return 't2';
-    default:
+    case 'T3':
       return 't3';
+    default:
+      return 'neutral';
   }
 }
 </script>

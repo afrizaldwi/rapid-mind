@@ -1326,4 +1326,65 @@ The following remain **NOT DIRECTLY VERIFIED**: question-only spoken SRQ wording
 
 Contradictory, context-dependent, or unsupported Q17 phrasing remains intentionally conservative and may require direct Relawan clarification. Future interpretation may improve discourse/context handling without allowing STT/NLP to autonomously create or transmit T0.
 
+---
+
+## 18. Phase D1.1 — Critical Cross-Role Integration Integrity Fixes
+
+**Checkpoint:** 2 October 2026. **Status:** **BROWSER VERIFIED FOR SELECTED PROTOTYPE SCOPE**; automated verification also passed. Phase D remains open.
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Emergency lifecycle enforcement | **PASS — AUTOMATED** | Locked transitions enforce `PENDING → ACKNOWLEDGED → REVIEWING → CONFIRMED|DOWNGRADED`; stale/backward/final-state mutations conflict and preserve state. |
+| Acknowledgement replay | **PASS — AUTOMATED** | Exact status replay is successful with one acknowledgement audit record. Advanced states reject acknowledgement. |
+| Secondary-verification replay | **PASS — AUTOMATED** | Matching actor/method/notes replay is a no-op; changed replay and final-state mutation conflict; one verification/audit row remains. |
+| Clinical-decision replay | **PASS — AUTOMATED** | Same saved clinical outcome is a no-op and preserves notes; changed outcome conflicts; no duplicate decision/audit/referral. |
+| T0 confirmation/referral separation | **PASS — AUTOMATED** | T0 confirmation creates zero referrals. Explicit confirmed-emergency referral creates one `ACTIVE` referral and initial history transactionally. |
+| Explicit referral replay | **PASS — AUTOMATED** | Same destination is a no-op; changed destination conflicts; invalid state, missing patient, inactive destination, and nonexistent destination are rejected. |
+| Real Admin 30-day trend | **PASS — AUTOMATED** | Exactly 30 chronological buckets from completed-assessment dates; real T1/T2/T3 counts; empty and out-of-window days remain zero. |
+| Truthful distribution/empty state | **PASS — SOURCE + AUTOMATED** | Backend zeroes remain zero; Vue removes non-zero fallbacks and shows an all-zero empty message. |
+| Latest patient triage | **PASS — AUTOMATED** | Latest completed assessment with triage is selected; incomplete later assessment is ignored; no-result contract is null and UI says `Belum ada hasil` / `-`. |
+| Complete Laravel regression | **PASS — AUTOMATED** | 135 tests, 1,580 assertions, 0 failures in guarded `rapid_mind_testing`. |
+| Frontend typecheck/build | **PASS — AUTOMATED** | `npx vue-tsc --noEmit` and `npm run build` exited 0; existing advisory warnings only. |
+| Browser D1.1 workflow | **PASS — BROWSER VERIFIED FOR SELECTED PROTOTYPE SCOPE** | Gates A–I, K, and L passed. Gate J was not directly verified because the runtime dataset was non-empty. |
+
+### D1.1 browser verification evidence — 2 October 2026
+
+The following gates were directly verified in the browser for the selected prototype scope:
+
+| Gate | Result | Evidence |
+|---|---|---|
+| A — Fresh T0 realtime reception | **PASS** | Healthcare remained on `/healthcare/emergencies` with `Realtime aktif`. A fresh T0-Suspect for synthetic patient `Anisa Wardani D1` appeared without manual Healthcare reload; total cases, urgent-response count, sidebar pending badge, and pending queue card increased. |
+| B — PENDING UI lifecycle gating | **PASS** | `AKUI KASUS SEKARANG` was visible. Secondary verification, clinical classification, and `BUAT RUJUKAN` were not visible; opening the emergency did not acknowledge it. |
+| C — Acknowledgement | **PASS** | After acknowledgement, status became `ACKNOWLEDGED`, the acknowledgement action disappeared, and secondary verification appeared while clinical classification remained unavailable. |
+| D — Stale-tab lifecycle conflict | **PASS** | A stale duplicate tab showed `role="alert"` with `Tindakan belum dapat diproses` and `Kasus sudah melewati tahap pengakuan dan tidak dapat dimundurkan.` A stale secondary-verification attempt also showed `Verifikasi sekunder tidak dapat disimpan karena tahap kasus sudah berubah.` State did not regress. |
+| E — Secondary verification | **PASS** | `Panggilan Telepon` with notes `Verifikasi browser D1.1` moved the case to `REVIEWING`, hid the verification form, exposed clinical classification, and appeared in verification/audit history. |
+| F — T0 confirmation/referral separation | **PASS** | `T0 Terkonfirmasi` moved the case to `CONFIRMED` without creating a referral. `Tindak Lanjut Darurat`, the no-referral-yet message, and explicit `BUAT RUJUKAN` appeared. `/healthcare/referrals` had no referral before explicit creation. |
+| G — Explicit T0 referral | **PASS** | Selecting `RSUD Candi` and pressing `BUAT RUJUKAN` created exactly one referral; destination was `RSUD Candi`, status was `Aktif`, and the creation form disappeared. |
+| H — Referral cross-view visibility | **PASS** | The same referral appeared in `/healthcare/referrals` and patient detail/history with destination `RSUD Candi`, status `Aktif`, provenance `Darurat T0`, and its initial history/audit entry. |
+| I — Downgrade does not create T0 referral | **PASS** | `Bambang Wijaya D1` followed `PENDING → ACKNOWLEDGED → REVIEWING → DOWNGRADED` using T1 downgrade. No T0 `BUAT RUJUKAN` action or emergency-origin referral appeared. |
+| J — Empty Admin analytics | **NOT DIRECTLY VERIFIED** | Dataset was non-empty and was deliberately not wiped. Direct browser evidence still showed truthful missing-result presentation: `BELUM ADA HASIL`, score `-`, screening time `-`, and no false T3 fallback. Automated all-zero dataset evidence remains recorded. |
+| K — Real assessment analytics | **PASS** | `Cahyo Utomo GateK` produced SRQ `8/20 YA`, Q17 `TIDAK`, risk `0/8`, function `0/9`, total `8 / 37`, and recommendation `T2`. Admin showed the new T2 distribution count, today’s T2 bucket `1`, patient category `T2`, score `8 / 37`, and screening date `2/10/2026`. |
+| L — Refresh stability | **PASS** | Multiple successive `/admin/analytics` reloads preserved identical 30-day trend values, category distribution, and aggregate patient rows. |
+
+No browser defects were found during the D1.1 browser verification scope. This does not generalize to production correctness.
+
+The browser verification does not claim production concurrency/load, security hardening, clinical validation, or full E2E coverage outside the selected path.
+
+### Focused browser gate still required
+
+1. Healthcare queue receives a fresh T0.
+2. Classification is unavailable before acknowledgement and secondary verification.
+3. Acknowledge succeeds once without duplicate audit behavior.
+4. Secondary verification moves the case to review.
+5. Clinical classification becomes available only afterward.
+6. T0 confirmation creates no referral automatically.
+7. Explicit `BUAT RUJUKAN` creates one referral.
+8. The referral appears in Rujukan and patient history.
+9. T1/T2 downgrade creates no T0 referral.
+10. Empty Admin analytics shows genuine zero/empty state.
+11. Newly completed real assessments update Admin analytics correctly.
+12. Repeated refresh does not randomly change the 30-day chart.
+
+Deferred and unclaimed: separate dispatch model/schema, referral/dispatch redesign, Admin realtime subscription, Faskes map markers, full geospatial heatmap, continuous STT, WebGPU/Whisper performance, complete offline Whisper, broad accessibility, and D2/D3 responsive gates. The current referral lifecycle still carries movement-like states and is a known post-demo model mismatch, not a dedicated dispatch implementation.
+
 `docs/workflow.md` was not modified by this checkpoint.
