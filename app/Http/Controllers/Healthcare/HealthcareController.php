@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Healthcare;
 
+use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\ReferralStatus;
 use App\Enums\TriageCategory;
 use App\Enums\VerificationMethod;
+use App\Events\EmergencyUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AuditLog;
@@ -136,6 +138,10 @@ final class HealthcareController extends Controller
             );
         }
 
+        if (isset($result['updated'])) {
+            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($emergencyId));
+        }
+
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Kasus berhasil diakui.']);
         }
@@ -199,6 +205,10 @@ final class HealthcareController extends Controller
                 'Verifikasi sekunder tidak dapat disimpan karena tahap kasus sudah berubah.',
                 $result['current'],
             );
+        }
+
+        if (isset($result['updated'])) {
+            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($emergencyId));
         }
 
         if ($request->wantsJson()) {
@@ -277,6 +287,10 @@ final class HealthcareController extends Controller
             );
         }
 
+        if (isset($result['updated'])) {
+            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($emergencyId));
+        }
+
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Status klinis darurat berhasil diperbarui.']);
         }
@@ -346,6 +360,10 @@ final class HealthcareController extends Controller
                 'Rujukan untuk kasus ini sudah tercatat ke Faskes lain dan tidak dapat diubah.',
                 EmergencyStatus::CONFIRMED,
             );
+        }
+
+        if (isset($result['created'])) {
+            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($emergencyId));
         }
 
         if ($request->wantsJson()) {
@@ -554,7 +572,10 @@ final class HealthcareController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            return ['updated' => true];
+            return [
+                'updated' => true,
+                'emergency_id' => $referral->emergency_event_id,
+            ];
         });
 
         if (isset($result['conflict'])) {
@@ -563,6 +584,10 @@ final class HealthcareController extends Controller
                 return response()->json(['message' => $message, 'current_status' => $result['current']->value], 409);
             }
             return back()->withErrors(['conflict' => $message]);
+        }
+
+        if (isset($result['updated'], $result['emergency_id']) && $result['emergency_id']) {
+            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($result['emergency_id']));
         }
 
         if ($request->wantsJson()) {
@@ -575,7 +600,10 @@ final class HealthcareController extends Controller
     {
         $patients = Patient::with([
             'shelter',
-            'assessments' => fn($query) => $query->orderByDesc('completed_at')->orderByDesc('id'),
+            'assessments' => fn($query) => $query
+                ->where('status', AssessmentStatus::COMPLETED)
+                ->orderByDesc('completed_at')
+                ->orderByDesc('id'),
             'assessments.triageResult',
             'assessments.clinicalValidation',
             'emergencyEvents' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
@@ -598,7 +626,10 @@ final class HealthcareController extends Controller
     {
         $patient = Patient::with([
             'shelter',
-            'assessments' => fn($query) => $query->orderByDesc('completed_at')->orderByDesc('id'),
+            'assessments' => fn($query) => $query
+                ->where('status', AssessmentStatus::COMPLETED)
+                ->orderByDesc('completed_at')
+                ->orderByDesc('id'),
             'assessments.user:id,name',
             'assessments.srqResponses',
             'assessments.riskAssessment',
@@ -670,7 +701,7 @@ final class HealthcareController extends Controller
             }
         }
         foreach ($patient->assessments as $assessment) {
-            if ($assessment->clinicalValidation) {
+            if ($assessment->clinicalValidation?->clinical_result) {
                 $validation = $assessment->clinicalValidation;
                 $candidates[] = [
                     'label' => $validation->clinical_result->value,

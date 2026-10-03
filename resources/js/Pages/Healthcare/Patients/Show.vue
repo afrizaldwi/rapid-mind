@@ -460,7 +460,7 @@ const validationItems = computed(() => {
     const items: any[] = [];
     for (const assessment of patient.value.assessments ?? []) {
         const validation = assessment.clinical_validation;
-        if (validation)
+        if (validation?.clinical_result)
             items.push({
                 key: `assessment-${validation.id}`,
                 result: validation.clinical_result,

@@ -9,6 +9,7 @@ use App\Enums\RedFlagType;
 use App\Enums\ReferralStatus;
 use App\Enums\TriageCategory;
 use App\Enums\UserRole;
+use App\Events\EmergencyUpdated;
 use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\EmergencyVerification;
@@ -18,6 +19,7 @@ use App\Models\Referral;
 use App\Models\ReferralStatusHistory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 final class HealthcareEmergencyLifecycleTest extends TestCase
@@ -159,11 +161,13 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
             $this->assertSame(0, $emergency->verifications()->count());
         }
 
-        foreach ([
-            TriageCategory::T0_CONFIRMED->value => EmergencyStatus::CONFIRMED,
-            TriageCategory::T1->value => EmergencyStatus::DOWNGRADED,
-            TriageCategory::T2->value => EmergencyStatus::DOWNGRADED,
-        ] as $result => $expectedStatus) {
+        foreach (
+            [
+                TriageCategory::T0_CONFIRMED->value => EmergencyStatus::CONFIRMED,
+                TriageCategory::T1->value => EmergencyStatus::DOWNGRADED,
+                TriageCategory::T2->value => EmergencyStatus::DOWNGRADED,
+            ] as $result => $expectedStatus
+        ) {
             $emergency = $this->emergency(EmergencyStatus::REVIEWING);
             $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
                 'clinical_result' => $result,
@@ -235,5 +239,81 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
 
         $this->assertSame(0, Referral::count());
         $this->assertSame(0, ReferralStatusHistory::count());
+    }
+
+    public function test_successful_lifecycle_changes_broadcast_updates_but_replays_and_conflicts_do_not(): void
+    {
+        Event::fake([EmergencyUpdated::class]);
+
+        $acknowledged = $this->emergency();
+        $acknowledgeUrl = "/healthcare/emergencies/{$acknowledged->id}/acknowledge";
+        $this->postJson($acknowledgeUrl)->assertOk();
+        $this->postJson($acknowledgeUrl)->assertOk();
+        $conflictingAcknowledgement = $this->emergency(EmergencyStatus::REVIEWING);
+        $this->postJson("/healthcare/emergencies/{$conflictingAcknowledgement->id}/acknowledge")
+            ->assertConflict();
+
+        $reviewing = $this->emergency(EmergencyStatus::ACKNOWLEDGED);
+        $verifyUrl = "/healthcare/emergencies/{$reviewing->id}/verify";
+        $verification = ['method' => 'PHONE', 'notes' => 'Tetap'];
+        $this->postJson($verifyUrl, $verification)->assertOk();
+        $this->postJson($verifyUrl, $verification)->assertOk();
+
+        foreach ([TriageCategory::T0_CONFIRMED, TriageCategory::T1] as $result) {
+            $classified = $this->emergency(EmergencyStatus::REVIEWING);
+            $classifyUrl = "/healthcare/emergencies/{$classified->id}/classify";
+            $this->postJson($classifyUrl, ['clinical_result' => $result->value])->assertOk();
+            $this->postJson($classifyUrl, ['clinical_result' => $result->value])->assertOk();
+        }
+
+        $referred = $this->emergency(EmergencyStatus::CONFIRMED);
+        $referralUrl = "/healthcare/emergencies/{$referred->id}/referrals";
+        $payload = ['facility_id' => $this->facility->id];
+        $this->postJson($referralUrl, $payload)->assertOk();
+        $this->postJson($referralUrl, $payload)->assertOk();
+
+        Event::assertDispatchedTimes(EmergencyUpdated::class, 5);
+    }
+
+    public function test_emergency_update_broadcast_uses_private_id_only_contract(): void
+    {
+        $emergency = $this->emergency();
+        $event = new EmergencyUpdated($emergency);
+
+        $this->assertSame('private-emergencies', $event->broadcastOn()->name);
+        $this->assertSame(['emergency' => ['id' => $emergency->id]], $event->broadcastWith());
+    }
+
+    public function test_only_emergency_origin_referral_status_changes_broadcast_an_emergency_update(): void
+    {
+        Event::fake([EmergencyUpdated::class]);
+
+        $emergency = $this->emergency(EmergencyStatus::CONFIRMED);
+        $emergencyReferral = Referral::create([
+            'emergency_event_id' => $emergency->id,
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::ACTIVE,
+        ]);
+        $assessmentReferral = Referral::create([
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::ACTIVE,
+        ]);
+
+        foreach ([$emergencyReferral, $assessmentReferral] as $referral) {
+            $url = "/healthcare/referrals/{$referral->id}/status";
+            $payload = ['expected_status' => 'ACTIVE', 'status' => 'EN_ROUTE'];
+            $this->postJson($url, $payload)->assertOk();
+            $this->postJson($url, $payload)->assertOk();
+        }
+
+        Event::assertDispatchedTimes(EmergencyUpdated::class, 1);
+        Event::assertDispatched(
+            EmergencyUpdated::class,
+            fn(EmergencyUpdated $event): bool => $event->emergency->is($emergency),
+        );
     }
 }

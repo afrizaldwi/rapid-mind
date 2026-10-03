@@ -196,6 +196,53 @@ final class HealthcareOperationalCompletionTest extends TestCase
             ->where('patients.0.emergency_events.0.id', $active->id)->etc());
     }
 
+    public function test_patient_history_excludes_newer_in_progress_assessment_shells(): void
+    {
+        $completed = $this->assessment(TriageCategory::T2, 60);
+        $inProgress = Assessment::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'status' => AssessmentStatus::IN_PROGRESS,
+            'mode' => AssessmentMode::VERBAL,
+        ]);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->has('patients.0.assessments', 1)
+            ->where('patients.0.assessments.0.id', $completed->id)
+            ->where('patients.0.latest_clinical_status.label', 'T2')
+            ->where('patients.0.latest_clinical_status.source', 'system_recommendation')
+            ->etc());
+
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->has('patient.assessments', 1)
+            ->where('patient.assessments.0.id', $completed->id)
+            ->where('patient.assessments', fn($assessments): bool => ! $assessments->contains('id', $inProgress->id))
+            ->etc());
+    }
+
+    public function test_nullable_historical_validation_falls_back_without_fabricating_a_status(): void
+    {
+        $older = $this->assessment(TriageCategory::T2, 60);
+        $newer = $this->assessment(TriageCategory::T1, 30);
+        ClinicalValidation::create([
+            'assessment_id' => $newer->id,
+            'validated_by' => $this->healthcare->id,
+            'clinical_result' => null,
+            'diagnosis_notes' => 'Catatan historis tanpa klasifikasi.',
+        ]);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T1')
+            ->where('patients.0.latest_clinical_status.source', 'system_recommendation')
+            ->where('patients.0.assessments.0.id', $newer->id)
+            ->where('patients.0.assessments.1.id', $older->id)
+            ->etc());
+
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patient.assessments.0.clinical_validation.clinical_result', null)
+            ->etc());
+    }
+
     public function test_emergency_worklist_contains_only_active_operational_t0_cases(): void
     {
         foreach ([EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING] as $status) {
@@ -279,7 +326,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         krsort($categoriesById, SORT_STRING);
         $expected = reset($categoriesById);
 
-        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
             ->where('patients', function ($patients) use ($patient, $expected): bool {
                 $projected = $patients->firstWhere('id', $patient->id);
 
