@@ -346,15 +346,10 @@
                   </div>
                 </div>
 
-                <div class="pt-1.5 border-t border-slate-100 space-y-1 text-[9px] text-slate-600">
-                  <label class="flex items-center gap-1 cursor-pointer">
-                    <input type="checkbox" checked class="rounded text-teal-700 focus:ring-0 w-3 h-3" />
-                    <span>Heatmap</span>
-                  </label>
-                  <label class="flex items-center gap-1 cursor-pointer">
-                    <input type="checkbox" class="rounded text-teal-700 focus:ring-0 w-3 h-3" />
-                    <span>Batas Wilayah</span>
-                  </label>
+                <div class="pt-1.5 border-t border-slate-100 text-[9px]">
+                  <Link href="/admin/map" class="font-bold text-teal-700 hover:text-teal-900">
+                    Buka Peta Geospasial →
+                  </Link>
                 </div>
               </div>
             </div>
@@ -494,7 +489,7 @@
                 </h3>
               </div>
               <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                {{ shelters?.length || 4 }} Sektor Operasional ▾
+                {{ shelters?.length ?? 0 }} Sektor Operasional ▾
               </span>
             </div>
 
@@ -663,7 +658,7 @@
                   </span>
                 </td>
                 <td class="py-3.5 px-5 text-slate-600 text-xs">
-                  {{ s.address || 'Kawasan Merapi, Sleman' }}
+                  {{ s.address || 'Alamat tidak tersedia' }}
                 </td>
                 <td class="py-3.5 px-5 text-center font-bold text-slate-900 text-xs">
                   <span class="px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200/60 font-black">

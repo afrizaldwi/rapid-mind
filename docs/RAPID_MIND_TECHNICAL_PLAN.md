@@ -3272,3 +3272,16 @@ Recommended discussion order:
 ```
 
 The UI should be designed around the actual workflow and operational risk, not merely around conventional dashboard patterns.
+
+---
+
+# 26. Daffa Repair Checkpoint (3 October 2026)
+
+The Daffa repair is implemented and automated-verified on baseline `771143fb00268f7f671f3e31597befacbf3a17ca`.
+
+- Healthcare assessment evidence uses the emergency-linked assessment and a single snake_case-compatible normalization boundary.
+- Healthcare displays canonical R1–R5 and F1–F3 data without turning missing evidence into negative evidence or inventing SRQ/Red Flag interpretations.
+- `HealthcareLayout.vue` is the sole emergency subscription owner. Event IDs are deduplicated with a bounded cache; Inertia reconciliations are serialized/coalesced; reconnect catch-up does not play new-event audio; refresh time advances only after successful reconciliation.
+- Admin uses one active-T0 definition: `PENDING`, `ACKNOWLEDGED`, `REVIEWING`, and `CONFIRMED`; `DOWNGRADED` is excluded from active counts.
+
+Automated evidence: TypeScript validation passed, production frontend build passed, focused feature tests passed (8 tests / 149 assertions), and the complete Docker Laravel suite passed (138 tests / 1,638 assertions). Browser gates were intentionally skipped and remain NDV; therefore live Reverb, audio, outage/recovery, and rendered interaction behavior are not claimed as browser verified.

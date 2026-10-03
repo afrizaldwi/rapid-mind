@@ -553,7 +553,7 @@
                       {{ detectedRedFlags.length }} Indikator Terdeteksi
                     </span>
                     <span v-else class="text-[10px] font-semibold text-slate-400">
-                      Evaluasi Multi-Domain
+                      Data Red Flag tidak tersedia
                     </span>
                   </div>
 
@@ -577,10 +577,10 @@
                   <!-- Quiet State when No Red Flag Detected -->
                   <div v-else class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs">
                     <span class="text-slate-600">
-                      {{ selectedItem.srqResponses?.length || selectedItem.hasAssessment ? 'Tidak ada indikator bahaya terdeteksi' : 'Data skrining indikator bahaya belum tersedia' }}
+                      {{ selectedItem.hasAssessment ? 'Tidak ada Red Flag terstruktur yang tercatat' : 'Data skrining indikator bahaya belum tersedia' }}
                     </span>
                     <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-white text-slate-500 border border-slate-200 shrink-0">
-                      Negatif / Bersih
+                      Tidak tersedia
                     </span>
                   </div>
                 </div>
@@ -599,8 +599,8 @@
                         <span class="text-xs text-slate-400 font-semibold">/ 20</span>
                       </div>
                       <div v-else class="text-lg font-bold text-slate-400">-</div>
-                      <span v-if="selectedItem.srqScore !== null" class="text-[11px] font-bold block" :class="selectedItem.srqScore >= 6 ? 'text-rose-600' : 'text-slate-600'">
-                        {{ selectedItem.srqScore >= 6 ? 'Di atas ambang penapisan (≥ 6)' : 'Dalam batas normal (< 6)' }}
+                      <span v-if="selectedItem.srqScore !== null" class="text-[11px] font-bold block text-slate-600">
+                        Skor SRQ-20: {{ selectedItem.srqScore }} / 20
                       </span>
                       <span v-else class="text-[11px] text-slate-400 block font-medium">Data SRQ-20 tidak tersedia</span>
                     </div>
@@ -717,8 +717,8 @@
                         Skor: <strong class="text-slate-800">{{ selectedItem.srqScore !== null ? `${selectedItem.srqScore} / 20` : 'Data SRQ-20 tidak tersedia' }}</strong>
                       </p>
                     </div>
-                    <span v-if="selectedItem.srqScore !== null" class="px-2 py-0.5 rounded text-[10px] font-bold" :class="selectedItem.srqScore >= 6 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'">
-                      {{ selectedItem.srqScore >= 6 ? 'Skrining Positif (≥ 6)' : 'Skrining Negatif (< 6)' }}
+                    <span v-if="selectedItem.srqScore !== null" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                      Skor SRQ-20: {{ selectedItem.srqScore }} / 20
                     </span>
                   </div>
 
@@ -768,22 +768,10 @@
                       Faktor Risiko Kejadian Bencana
                     </h4>
                     <ul class="space-y-1.5 text-xs text-slate-700">
-                      <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <span>Kehilangan anggota keluarga terdekat</span>
-                        <span class="font-bold text-[11px]" :class="isRiskYes('R1') ? 'text-rose-600' : 'text-slate-400'">
-                          {{ isRiskYes('R1') ? 'YA' : 'TIDAK' }}
-                        </span>
-                      </li>
-                      <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <span>Kerusakan rumah / kehilangan tempat tinggal</span>
-                        <span class="font-bold text-[11px]" :class="isRiskYes('R2') ? 'text-rose-600' : 'text-slate-400'">
-                          {{ isRiskYes('R2') ? 'YA' : 'TIDAK' }}
-                        </span>
-                      </li>
-                      <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-                        <span>Riwayat gangguan psikiatri sebelum bencana</span>
-                        <span class="font-bold text-[11px]" :class="isRiskYes('R3') ? 'text-rose-600' : 'text-slate-400'">
-                          {{ isRiskYes('R3') ? 'YA' : 'TIDAK' }}
+                      <li v-for="risk in riskItems" :key="risk.code" class="flex items-center justify-between gap-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                        <span><strong>{{ risk.code }} — {{ risk.title }}</strong><span class="block text-[10px] text-slate-500">{{ risk.description }}</span></span>
+                        <span class="font-bold text-[11px] shrink-0" :class="getRiskAnswer(risk.code) === true ? 'text-rose-600' : 'text-slate-500'">
+                          {{ formatRiskAnswer(getRiskAnswer(risk.code)) }}
                         </span>
                       </li>
                     </ul>
@@ -798,19 +786,19 @@
                       <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                         <span>Perawatan Diri (Makan, Mandi, Tidur)</span>
                         <span class="font-bold text-[11px] text-slate-800">
-                          {{ getFunctionLabel('CARE') }}
+                          {{ getFunctionLabel('F1') }}
                         </span>
                       </li>
                       <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                         <span>Fungsi Sosial & Interaksi Pengungsian</span>
                         <span class="font-bold text-[11px] text-slate-800">
-                          {{ getFunctionLabel('SOCIAL') }}
+                          {{ getFunctionLabel('F2') }}
                         </span>
                       </li>
                       <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                         <span>Aktivitas Sehari-hari / Bekerja</span>
                         <span class="font-bold text-[11px] text-slate-800">
-                          {{ getFunctionLabel('WORK') }}
+                          {{ getFunctionLabel('F3') }}
                         </span>
                       </li>
                     </ul>
@@ -1014,36 +1002,36 @@
                   </div>
 
                   <div class="relative pl-6 space-y-4 text-xs before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    <!-- Step 1: Pendaftaran -->
-                    <div class="relative space-y-0.5">
+                    <!-- Patient context is shown only when a patient record exists. -->
+                    <div v-if="selectedItem.hasPatient" class="relative space-y-0.5">
                       <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-600 ring-4 ring-white"></span>
-                      <span class="text-[10px] font-bold text-teal-800 block">Registrasi Korban</span>
-                      <p class="font-bold text-slate-800">Pendaftaran Data Pasien di {{ selectedItem.shelterName }}</p>
-                      <p class="text-[11px] text-slate-500">Terdaftar dengan NIK {{ selectedItem.maskedNik }} oleh {{ selectedItem.volunteerName }}.</p>
+                      <span class="text-[10px] font-bold text-teal-800 block">Konteks Penyintas</span>
+                      <p class="font-bold text-slate-800">Data penyintas terkait di {{ selectedItem.shelterName }}</p>
+                      <p class="text-[11px] text-slate-500">NIK {{ selectedItem.maskedNik }}.</p>
                     </div>
 
                     <!-- Step 2: Asesmen Skrining -->
-                    <div class="relative space-y-0.5">
+                    <div v-if="selectedItem.hasAssessment" class="relative space-y-0.5">
                       <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-900 ring-4 ring-white"></span>
                       <span class="text-[10px] font-bold text-slate-500 block">Skrining Awal</span>
                       <p class="font-bold text-slate-800">Asesmen Skrining Psikologis {{ selectedItem.rmCode }}</p>
-                      <p class="text-[11px] text-slate-500">Skor SRQ-20: {{ selectedItem.srqScore }}/20 • Rekomendasi: {{ selectedItem.semanticPriorityLabel }}</p>
+                      <p class="text-[11px] text-slate-500">{{ selectedItem.srqScore === null ? 'Skor SRQ-20 tidak tersedia' : `Skor SRQ-20: ${selectedItem.srqScore}/20` }} • {{ selectedItem.assessmentCreatedAt ? formatDateTime(selectedItem.assessmentCreatedAt) : 'Waktu asesmen tidak tersedia' }}</p>
                     </div>
 
                     <!-- Step 3: Red Flag (if any) -->
-                    <div v-if="selectedItem.hasRedFlag" class="relative space-y-0.5">
+                    <div class="relative space-y-0.5">
                       <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-rose-600 ring-4 ring-white"></span>
-                      <span class="text-[10px] font-bold text-rose-700 block">Eskalasi Gawat Darurat</span>
-                      <p class="font-bold text-slate-800">Pemicu Red Flag: {{ selectedItem.redFlagLabel }}</p>
-                      <p class="text-[11px] text-slate-600">Laporan darurat diteruskan langsung ke komando medis PSC 119 Sleman.</p>
+                      <span class="text-[10px] font-bold text-rose-700 block">T0-Suspect Dilaporkan</span>
+                      <p class="font-bold text-slate-800">{{ selectedItem.redFlagLabel }}</p>
+                      <p class="text-[11px] text-slate-600">{{ formatDateTime(selectedItem.createdAt) }} • Dilaporkan oleh {{ selectedItem.volunteerName }}</p>
                     </div>
 
                     <!-- Verifications from DB -->
                     <div v-for="(v, idx) in selectedItem.verifications" :key="idx" class="relative space-y-0.5">
                       <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white"></span>
-                      <span class="text-[10px] font-bold text-amber-700 block">Audit Verifikasi Medis</span>
-                      <p class="font-bold text-slate-800">Verifikasi oleh {{ v.verifier?.name || 'Tenaga medis tidak tersedia' }}</p>
-                      <p class="text-[11px] text-slate-500">Metode: {{ v.method || 'Tidak tersedia' }} • "{{ v.notes || 'Catatan tidak tersedia.' }}"</p>
+                      <span class="text-[10px] font-bold text-amber-700 block">{{ v.clinical_result ? 'Keputusan Klinis' : 'Verifikasi Sekunder' }}</span>
+                      <p class="font-bold text-slate-800">{{ v.clinical_result ? `Hasil: ${v.clinical_result}` : `Metode: ${v.method || 'Tidak tersedia'}` }} • {{ v.verifier?.name || 'Tenaga medis tidak tersedia' }}</p>
+                      <p class="text-[11px] text-slate-500">{{ formatDateTime(v.created_at) }} • {{ v.notes || 'Catatan tidak tersedia.' }}</p>
                     </div>
 
                     <!-- Referrals from DB -->
@@ -1160,6 +1148,27 @@ const srqQuestionList = [
 ];
 const srqQuestions = srqQuestionList.map((text, index) => ({ number: index + 1, text }));
 
+const riskItems = [
+  { code: 'R1', title: 'Kehilangan Berat', description: 'Kehilangan keluarga inti atau rumah hancur total.' },
+  { code: 'R2', title: 'Pengalaman Traumatik Langsung', description: 'Tertimbun, hanyut, terjebak, atau menyaksikan langsung kematian.' },
+  { code: 'R3', title: 'Kelompok Rentan', description: 'Lansia, hamil/menyusui, disabilitas, atau anak tanpa orang tua.' },
+  { code: 'R4', title: 'Riwayat Gangguan Jiwa', description: 'Riwayat perawatan atau obat gangguan jiwa.' },
+  { code: 'R5', title: 'Terputus Obat Kronis', description: 'Penyakit fisik kronis dengan akses obat terputus.' },
+] as const;
+
+function normalizeAssessment(rawAssessment: any) {
+  if (!rawAssessment) return null;
+
+  return {
+    ...rawAssessment,
+    triageResult: rawAssessment.triage_result ?? rawAssessment.triageResult ?? null,
+    srqResponses: rawAssessment.srq_responses ?? rawAssessment.srqResponses ?? [],
+    riskResponses: rawAssessment.risk_assessment ?? rawAssessment.riskAssessment ?? [],
+    functionResponses: rawAssessment.function_assessment ?? rawAssessment.functionAssessment ?? [],
+    clinicalValidation: rawAssessment.clinical_validation ?? rawAssessment.clinicalValidation ?? null,
+  };
+}
+
 // Helper: Format RM Code (Assessment Record Identifier, NEVER Person ID)
 function formatRmCode(record: any): string {
   if (record?.rm_code) return record.rm_code;
@@ -1186,11 +1195,20 @@ function timeAgo(dateStr?: string): string {
   return `${Math.round(diffHours / 24)} hari lalu`;
 }
 
+function formatDateTime(dateStr?: string): string {
+  if (!dateStr) return 'Waktu tidak tersedia';
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Jakarta',
+  }).format(new Date(dateStr));
+}
+
 // Normalize Queue Item (Strictly real data only — no fabricated clinical numbers or patient info)
 function normalizeQueueItem(raw: any, isEmergency: boolean) {
   const patient = raw.patient;
-  const assessment = isEmergency ? raw.assessment || raw.patient?.assessments?.[0] : raw;
-  const triage = assessment?.triageResult || raw.triage_result;
+  const assessment = normalizeAssessment(isEmergency ? raw.assessment : raw);
+  const triage = assessment?.triageResult ?? raw.triage_result ?? null;
 
   let priority: 'T0' | 'T1' | 'T2' | 'T3' = 'T2';
   let priorityLabel = 'T2 Terjadwal';
@@ -1219,8 +1237,9 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
   const redFlag = raw.red_flag_type || (triage?.is_red_flag_override ? triage.red_flag_source || null : null);
   let redFlagLabel = null;
   if (redFlag === 'SUICIDAL_IDEATION') redFlagLabel = 'Ideasi Bunuh Diri (Q17)';
-  else if (redFlag === 'PSYCHOSIS') redFlagLabel = 'Psikosis Akut & Disorientasi';
-  else if (redFlag === 'SEVERE_AGITATION') redFlagLabel = 'Amuk / Agitasi Fisik Berat';
+  else if (redFlag === 'PSYCHOSIS') redFlagLabel = 'Gejala Psikosis Akut';
+  else if (redFlag === 'SEVERE_AGITATION') redFlagLabel = 'Agitasi / Perilaku Berbahaya';
+  else if (redFlag === 'MEDICAL_CRISIS') redFlagLabel = 'Krisis Medis Akut';
   else if (redFlag) redFlagLabel = `Kedaruratan: ${redFlag}`;
   else redFlagLabel = 'Tanda Bahaya Lapangan';
 
@@ -1277,7 +1296,7 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     emergencyId: isEmergency ? raw.id : null,
     assessmentId: assessment?.id || null,
     rmCode: formatRmCode(isEmergency ? raw : assessment),
-    survivorName: patient?.name || 'Penyintas Tanpa Nama',
+    survivorName: patient?.name || 'Penyintas tanpa identitas tercatat',
     maskedNik: maskNik(patient?.nik),
     age: patient?.age !== undefined && patient?.age !== null ? patient.age : null,
     gender: patient?.gender || 'Jenis kelamin tidak tersedia',
@@ -1291,6 +1310,12 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     status,
     statusLabel,
     hasRedFlag: Boolean(redFlag),
+    hasPatient: Boolean(patient),
+    hasAssessment: Boolean(assessment),
+    hasTriageResult: Boolean(triage),
+    hasSrqResponses: Boolean(assessment?.srqResponses.length),
+    hasRiskResponses: Boolean(assessment?.riskResponses.length),
+    hasFunctionResponses: Boolean(assessment?.functionResponses.length),
     redFlagType: redFlag,
     redFlagLabel,
     clinicalSummary: srqScore !== null ? `SRQ: ${srqScore}/20 • Risiko: ${riskScore ?? '-'} • ADL: ${functionScore ?? '-'}` : 'Skrining Langsung Lapangan',
@@ -1301,9 +1326,10 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     srqScore,
     riskScore,
     functionScore,
+    assessmentCreatedAt: assessment?.completed_at || assessment?.created_at || null,
     srqResponses: assessment?.srqResponses || [],
-    riskResponses: assessment?.riskAssessment || [],
-    functionResponses: assessment?.functionAssessment || [],
+    riskResponses: assessment?.riskResponses || [],
+    functionResponses: assessment?.functionResponses || [],
     verifications: raw.verifications || [],
     referrals: raw.referrals || [],
     hasReferral: Boolean(raw.referrals?.length),
@@ -1322,7 +1348,8 @@ const queueList = computed(() => {
 
 // KPI Counts
 const totalSurvivorsCount = computed(() => queueList.value.length);
-const criticalT0Count = computed(() => queueList.value.filter(q => q.priority === 'T0').length);
+const activeT0Statuses = new Set(['PENDING', 'ACKNOWLEDGED', 'REVIEWING', 'CONFIRMED']);
+const criticalT0Count = computed(() => queueList.value.filter(q => activeT0Statuses.has(q.status)).length);
 
 // Filtered Queue
 const filteredQueue = computed(() => {
@@ -1408,19 +1435,25 @@ function getSrqAnswer(questionNumber: number): boolean | null {
   return Boolean(resp.answer);
 }
 
-function isRiskYes(indicator: string): boolean {
-  if (!selectedItem.value?.riskResponses?.length) return false;
+function getRiskAnswer(indicator: string): boolean | null {
+  if (!selectedItem.value?.riskResponses?.length) return null;
   const resp = selectedItem.value.riskResponses.find((r: any) => r.indicator === indicator);
-  if (resp !== undefined && resp !== null) return Boolean(resp.answer);
-  return false;
+  if (resp === undefined || resp === null) return null;
+  return Boolean(resp.answer);
+}
+
+function formatRiskAnswer(answer: boolean | null): string {
+  if (answer === true) return 'YA';
+  if (answer === false) return 'TIDAK';
+  return 'Tidak tersedia';
 }
 
 function getFunctionLabel(domain: string): string {
   if (!selectedItem.value?.functionResponses?.length) return 'Data fungsi tidak tersedia';
   const resp = selectedItem.value.functionResponses.find((r: any) => r.domain === domain);
-  if (resp?.level === 2) return 'Sangat Terganggu';
-  if (resp?.level === 1) return 'Terganggu Sedang';
-  if (resp?.level === 0) return 'Tidak Terganggu';
+  if (resp?.level === 3) return 'Gangguan berat';
+  if (resp?.level === 1) return 'Gangguan ringan-sedang / perlu dukungan';
+  if (resp?.level === 0) return 'Tidak terganggu / mandiri';
   return 'Data fungsi tidak tersedia';
 }
 
@@ -1510,35 +1543,6 @@ function selectNextCase() {
   }
 }
 
-function isRedFlagIndicatorDetected(indicatorKey: string): boolean {
-  if (!selectedItem.value) return false;
-  const item = selectedItem.value;
-  const rawType = String(item.redFlagType || '').toUpperCase();
-  const notes = String(item.notes || '').toLowerCase();
-  const label = String(item.redFlagLabel || '').toLowerCase();
-
-  if (indicatorKey === 'SUICIDAL_IDEATION') {
-    return rawType.includes('SUICIDAL') || notes.includes('bunuh diri') || notes.includes('menyakiti diri') || label.includes('bunuh diri') || getSrqAnswer(17) === true;
-  }
-  if (indicatorKey === 'PSYCHOSIS') {
-    return rawType.includes('PSYCHOS') || notes.includes('halusinasi') || notes.includes('waham') || label.includes('psikotik') || getSrqAnswer(18) === true;
-  }
-  if (indicatorKey === 'SEVERE_AGITATION') {
-    return rawType.includes('AGITAT') || notes.includes('amuk') || notes.includes('agresif') || notes.includes('kekerasan') || label.includes('agitasi');
-  }
-  if (indicatorKey === 'SOMATIC_EMERGENCY') {
-    return rawType.includes('SOMATIC') || notes.includes('kejang') || notes.includes('penurunan kesadaran') || notes.includes('somatik');
-  }
-  return false;
-}
-
-const lastUpdatedTime = ref('10:30 WIB');
-onMounted(() => {
-  const now = new Date();
-  lastUpdatedTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
-});
-
-
 const pendingValidationCount = computed(() => {
   return queueList.value.filter(item => ['ACKNOWLEDGED', 'REVIEWING'].includes(item.status)).length;
 });
@@ -1566,43 +1570,39 @@ const detectedRedFlags = computed(() => {
   const list: Array<{ key: string; title: string; evidence: string }> = [];
   const item = selectedItem.value;
 
-  if (isRedFlagIndicatorDetected('SUICIDAL_IDEATION')) {
-    let evidence = item.redFlagEvidence || item.redFlagLabel || '';
+  if (item.redFlagType === 'SUICIDAL_IDEATION' || getSrqAnswer(17) === true) {
+    let evidence = item.redFlagType === 'SUICIDAL_IDEATION' ? 'Jenis Red Flag tercatat: SUICIDAL_IDEATION' : '';
     if (getSrqAnswer(17) === true) {
       evidence = (evidence ? evidence + ' • ' : '') + 'Jawaban Ya pada SRQ #17 (Pikiran mengakhiri hidup)';
     }
     list.push({
       key: 'SUICIDAL_IDEATION',
       title: 'Risiko keamanan jiwa spesifik',
-      evidence: evidence || 'Terdeteksi indikasi risiko bunuh diri atau menyakiti diri aktif'
+      evidence: evidence || 'Jawaban YA pada SRQ #17'
     });
   }
 
-  if (isRedFlagIndicatorDetected('PSYCHOSIS')) {
-    let evidence = item.redFlagEvidence || item.redFlagLabel || '';
-    if (getSrqAnswer(18) === true) {
-      evidence = (evidence ? evidence + ' • ' : '') + 'Jawaban Ya pada SRQ #18 (Gejala gangguan persepsi / realitas)';
-    }
+  if (item.redFlagType === 'PSYCHOSIS') {
     list.push({
       key: 'PSYCHOSIS',
       title: 'Gejala psikotik akut',
-      evidence: evidence || 'Terdeteksi indikasi gangguan realitas, halusinasi, atau waham paranoid'
+      evidence: 'Jenis Red Flag tercatat: PSYCHOSIS. Detail bukti lapangan tidak tersedia.'
     });
   }
 
-  if (isRedFlagIndicatorDetected('SEVERE_AGITATION')) {
+  if (item.redFlagType === 'SEVERE_AGITATION') {
     list.push({
       key: 'SEVERE_AGITATION',
       title: 'Perilaku agresif & gangguan kontrol impuls',
-      evidence: item.redFlagEvidence || item.redFlagLabel || 'Terdeteksi agitasi ekstrem atau perilaku membahayakan sekitar'
+      evidence: 'Jenis Red Flag tercatat: SEVERE_AGITATION. Detail bukti lapangan tidak tersedia.'
     });
   }
 
-  if (isRedFlagIndicatorDetected('SOMATIC_EMERGENCY')) {
+  if (item.redFlagType === 'MEDICAL_CRISIS') {
     list.push({
-      key: 'SOMATIC_EMERGENCY',
-      title: 'Kegawatdaruratan medis somatik akut',
-      evidence: item.redFlagEvidence || item.redFlagLabel || 'Terdeteksi ancaman kondisi fisik / somatik komorbid'
+      key: 'MEDICAL_CRISIS',
+      title: 'Krisis medis akut',
+      evidence: 'Jenis Red Flag tercatat: MEDICAL_CRISIS. Detail bukti lapangan tidak tersedia.'
     });
   }
 
@@ -1610,7 +1610,7 @@ const detectedRedFlags = computed(() => {
     list.push({
       key: 'GENERAL_EMERGENCY',
       title: item.redFlagLabel || 'Kedaruratan Medis Terlapor',
-      evidence: item.redFlagEvidence || item.notes || 'Terdeteksi kondisi gawat darurat oleh relawan lapangan'
+      evidence: 'Tanda bahaya lapangan dilaporkan. Detail bukti lapangan tidak tersedia.'
     });
   }
 

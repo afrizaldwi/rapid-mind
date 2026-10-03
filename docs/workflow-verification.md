@@ -1284,6 +1284,25 @@ Whisper model files were observed in the Transformers browser cache. The Relawan
 
 ---
 
+## 19. Daffa Repair Verification — 3 October 2026
+
+**Status:** **IMPLEMENTED / AUTOMATED VERIFIED / BROWSER NDV**.
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Emergency assessment payload | **PASS — AUTOMATED** | Linked assessment serializes `triage_result`, 20 `srq_responses`, 5 `risk_assessment` rows, and 3 `function_assessment` rows; unidentified emergency renders with null patient/assessment. |
+| Canonical Healthcare clinical rendering | **PASS — SOURCE + TYPECHECK** | One normalization boundary, R1–R5 tri-state display, F1–F3 levels 0/1/3, neutral missing states, and raw SRQ score without an unsupported binary threshold. |
+| Red Flag integrity | **PASS — SOURCE + TYPECHECK** | Stored enum and actual Q17 are the only structured sources; Q18 and note keywords cannot create psychosis or other categories; `MEDICAL_CRISIS` is recognized. |
+| Active T0 consistency | **PASS — AUTOMATED** | Summary KPI, shelter aggregate, Summary map, early-warning list, and dedicated map count four active cases across PENDING/ACKNOWLEDGED/REVIEWING/CONFIRMED and exclude DOWNGRADED. |
+| Realtime integrity implementation | **PASS — SOURCE + TYPECHECK** | Single subscription owner, bounded 100-ID dedup cache, serialized reload with one queued follow-up, reconnect reconciliation without alert audio, and success-backed refresh timestamp. |
+| Frontend type/build | **PASS — AUTOMATED** | `npx vue-tsc --noEmit` and `npm run build` exited 0. |
+| Complete Laravel regression | **PASS — AUTOMATED** | 138 tests, 1,638 assertions, 0 failures against the guarded Docker test database. |
+| Browser gates A–T | **NDV** | Explicitly skipped by user instruction. Source and automated checks do not prove rendered behavior, live Reverb delivery/deduplication, audio count, outage recovery, native call handoff, or interactive Admin map behavior. |
+
+Known evidence boundary: the repair is not clinical certification or production-readiness evidence. Realtime behavior is source/type/build covered but was not exercised through a browser or a live duplicate/reconnect/outage scenario in this checkpoint.
+
+---
+
 ## 17. Phase C2 — Conservative SRQ Transcript Interpretation
 
 **Checkpoint:** 2 October 2026. **Status:** **IMPLEMENTED / AUTOMATED VERIFIED / DEMO-CRITICAL BROWSER PATHS PASS**. This checkpoint adds deterministic transcript interpretation and answer ownership; it does not claim universal browser/language coverage, offline Whisper, WebGPU, continuous-recording, performance, clinical-validation, or production readiness.

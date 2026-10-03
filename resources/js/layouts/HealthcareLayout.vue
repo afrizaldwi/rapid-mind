@@ -118,7 +118,7 @@
     </header>
 
       <div v-if="connectionStatus.stale" role="status" class="border-b border-slate-300 bg-slate-100 px-4 py-2 text-center text-xs font-medium text-slate-700">
-        Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin tidak terbaru.
+        Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin tidak terbaru.<span v-if="lastRefreshedLabel"> Terakhir diperbarui {{ lastRefreshedLabel }}.</span>
       </div>
 
       <!-- Main Shell: Sidebar + Content -->
@@ -268,6 +268,7 @@ const isOnline = ref(typeof window !== 'undefined' ? window.navigator.onLine : t
 
 function handleOnline() {
   isOnline.value = true;
+  void probeServer();
 }
 
 function handleOffline() {
@@ -292,6 +293,17 @@ const connectionStatus = computed(() => {
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 let healthProbeInFlight = false;
 let mounted = false;
+let reloadInFlight = false;
+let reloadRequested = false;
+const seenIds = new Set<string>();
+const seenOrder: string[] = [];
+const seenIdLimit = 100;
+const lastRefreshedAt = ref<Date | null>(null);
+const lastRefreshedLabel = computed(() => lastRefreshedAt.value?.toLocaleTimeString('id-ID', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Asia/Jakarta',
+}) ?? '');
 
 function isRoute(path: string) {
   return page.url.startsWith(path);
@@ -302,16 +314,37 @@ function logout() {
 }
 
 function onEmergencyCreated(event: { emergency: { id: string } }) {
-  if (!event.emergency?.id) return;
+  const emergencyId = event.emergency?.id;
+  if (!emergencyId || seenIds.has(emergencyId)) return;
+  seenIds.add(emergencyId);
+  seenOrder.push(emergencyId);
+  if (seenOrder.length > seenIdLimit) {
+    const expiredId = seenOrder.shift();
+    if (expiredId) seenIds.delete(expiredId);
+  }
   playAudioNotification();
-  router.reload({
-    only: ['emergencies', 'pendingT0Count'],
-  });
+  requestReconciliation();
 }
 
 function requestReconciliation() {
+  if (reloadInFlight) {
+    reloadRequested = true;
+    return;
+  }
+
+  reloadInFlight = true;
   router.reload({
     only: ['emergencies', 'pendingT0Count'],
+    onSuccess: () => {
+      lastRefreshedAt.value = new Date();
+    },
+    onFinish: () => {
+      reloadInFlight = false;
+      if (reloadRequested && mounted) {
+        reloadRequested = false;
+        requestReconciliation();
+      }
+    },
   });
 }
 

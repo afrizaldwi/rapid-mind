@@ -22,10 +22,17 @@ use Inertia\Response as InertiaResponse;
 
 final class AdminController extends Controller
 {
+    private const ACTIVE_T0_STATUSES = [
+        EmergencyStatus::PENDING->value,
+        EmergencyStatus::ACKNOWLEDGED->value,
+        EmergencyStatus::REVIEWING->value,
+        EmergencyStatus::CONFIRMED->value,
+    ];
+
     public function summary(): InertiaResponse
     {
         $totalSurvivors = Patient::count();
-        $countT0 = EmergencyEvent::whereIn('status', [EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING, EmergencyStatus::CONFIRMED])->count();
+        $countT0 = EmergencyEvent::whereIn('status', self::ACTIVE_T0_STATUSES)->count();
         $countT1 = TriageResult::where('system_recommendation', TriageCategory::T1)->count();
         $countT2 = TriageResult::where('system_recommendation', TriageCategory::T2)->count();
         $countT3 = TriageResult::where('system_recommendation', TriageCategory::T3)->count();
@@ -43,7 +50,7 @@ final class AdminController extends Controller
 
         $shelterEmergencyCounts = DB::table('emergency_events')
             ->whereNotNull('shelter_id')
-            ->whereIn('status', [EmergencyStatus::PENDING->value, EmergencyStatus::ACKNOWLEDGED->value, EmergencyStatus::CONFIRMED->value, EmergencyStatus::REVIEWING->value])
+            ->whereIn('status', self::ACTIVE_T0_STATUSES)
             ->selectRaw('shelter_id, count(*) as aggregate')
             ->groupBy('shelter_id')
             ->get()
@@ -63,22 +70,23 @@ final class AdminController extends Controller
             'shelter',
             'user:id,name',
         ])
-            ->whereIn('status', [EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING, EmergencyStatus::CONFIRMED])
+            ->whereIn('status', self::ACTIVE_T0_STATUSES)
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->latest('created_at')
             ->take(6)
             ->get();
 
         // 2. Geospatial map shelter points
+        $activeT0Placeholders = implode(', ', array_fill(0, count(self::ACTIVE_T0_STATUSES), '?'));
         $mapShelters = DB::select("
             SELECT s.id, s.name, s.address, s.is_active,
                    ST_X(s.location::geometry) as longitude,
                    ST_Y(s.location::geometry) as latitude,
                    (SELECT COUNT(*) FROM patients p WHERE p.shelter_id = s.id) as patient_count,
                    (SELECT COUNT(*) FROM users u WHERE u.shelter_id = s.id AND u.role = 'RELAWAN') as volunteer_count,
-                   (SELECT COUNT(*) FROM emergency_events e WHERE e.shelter_id = s.id AND e.status IN ('PENDING', 'ACKNOWLEDGED', 'CONFIRMED')) as t0_count
+                   (SELECT COUNT(*) FROM emergency_events e WHERE e.shelter_id = s.id AND e.status IN ({$activeT0Placeholders})) as t0_count
             FROM shelters s
-        ");
+        ", self::ACTIVE_T0_STATUSES);
 
         // 3. Triage distribution
         $completedTriage = TriageResult::query()
@@ -158,15 +166,16 @@ final class AdminController extends Controller
     public function map(): InertiaResponse
     {
         // Fetch shelters with PostGIS coordinates
+        $activeT0Placeholders = implode(', ', array_fill(0, count(self::ACTIVE_T0_STATUSES), '?'));
         $shelters = DB::select("
             SELECT s.id, s.name, s.address, s.is_active,
                    ST_X(s.location::geometry) as longitude,
                    ST_Y(s.location::geometry) as latitude,
                    (SELECT COUNT(*) FROM patients p WHERE p.shelter_id = s.id) as patient_count,
                    (SELECT COUNT(*) FROM users u WHERE u.shelter_id = s.id) as volunteer_count,
-                   (SELECT COUNT(*) FROM emergency_events e WHERE e.shelter_id = s.id AND e.status IN ('PENDING', 'ACKNOWLEDGED', 'CONFIRMED')) as t0_count
+                   (SELECT COUNT(*) FROM emergency_events e WHERE e.shelter_id = s.id AND e.status IN ({$activeT0Placeholders})) as t0_count
             FROM shelters s
-        ");
+        ", self::ACTIVE_T0_STATUSES);
 
         $facilities = HealthcareFacility::where('is_active', true)->get();
 

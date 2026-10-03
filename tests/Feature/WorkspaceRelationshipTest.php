@@ -160,6 +160,100 @@ final class WorkspaceRelationshipTest extends TestCase
             ->etc());
     }
 
+    public function test_healthcare_emergency_payload_uses_linked_assessment_and_snake_case_relations(): void
+    {
+        $shelter = $this->shelter();
+        $relawan = User::factory()->create(['role' => UserRole::RELAWAN, 'shelter_id' => $shelter->id]);
+        $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Pasien Darurat', 'created_by' => $relawan->id, 'shelter_id' => $shelter->id]);
+        $assessment = Assessment::create([
+            'patient_id' => $patient->id,
+            'user_id' => $relawan->id,
+            'status' => AssessmentStatus::COMPLETED,
+            'mode' => AssessmentMode::VERBAL,
+            'completed_at' => now(),
+        ]);
+        TriageResult::create([
+            'assessment_id' => $assessment->id,
+            'srq_score' => 1,
+            'risk_score' => 3,
+            'function_score' => 4,
+            'total_score' => 8,
+            'system_recommendation' => TriageCategory::T0_SUSPECT,
+        ]);
+        foreach (range(1, 20) as $questionNumber) {
+            $assessment->srqResponses()->create(['question_number' => $questionNumber, 'answer' => $questionNumber === 17]);
+        }
+        foreach (range(1, 5) as $indicator) {
+            $assessment->riskAssessment()->create(['indicator' => "R{$indicator}", 'answer' => $indicator === 3, 'weight' => $indicator === 3 ? 1 : 2]);
+        }
+        foreach ([0, 1, 3] as $index => $level) {
+            $assessment->functionAssessment()->create(['domain' => 'F'.($index + 1), 'level' => $level]);
+        }
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $patient->id,
+            'assessment_id' => $assessment->id,
+            'user_id' => $relawan->id,
+            'shelter_id' => $shelter->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+
+        $this->actingAs($healthcare)->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Healthcare/Emergencies/Index', false)
+            ->where('emergencies.0.id', $emergency->id)
+            ->where('emergencies.0.assessment.id', $assessment->id)
+            ->where('emergencies.0.assessment.triage_result.system_recommendation', TriageCategory::T0_SUSPECT->value)
+            ->has('emergencies.0.assessment.srq_responses', 20)
+            ->has('emergencies.0.assessment.risk_assessment', 5)
+            ->has('emergencies.0.assessment.function_assessment', 3)
+            ->missing('emergencies.0.assessment.triageResult')
+            ->etc());
+    }
+
+    public function test_healthcare_emergency_workspace_accepts_unidentified_emergency(): void
+    {
+        $relawan = User::factory()->create(['role' => UserRole::RELAWAN]);
+        $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $emergency = EmergencyEvent::create([
+            'user_id' => $relawan->id,
+            'red_flag_type' => RedFlagType::MEDICAL_CRISIS,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+
+        $this->actingAs($healthcare)->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('emergencies.0.id', $emergency->id)
+            ->where('emergencies.0.patient', null)
+            ->where('emergencies.0.assessment', null)
+            ->etc());
+    }
+
+    public function test_admin_summary_and_map_share_the_active_t0_status_set(): void
+    {
+        $shelter = $this->shelter();
+        $admin = User::factory()->create(['role' => UserRole::ADMIN, 'is_active' => true]);
+        $relawan = User::factory()->create(['role' => UserRole::RELAWAN, 'shelter_id' => $shelter->id]);
+        foreach ([EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING, EmergencyStatus::CONFIRMED, EmergencyStatus::DOWNGRADED] as $status) {
+            EmergencyEvent::create([
+                'user_id' => $relawan->id,
+                'shelter_id' => $shelter->id,
+                'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+                'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($admin)->get('/admin/summary')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('kpis.countT0', 4)
+            ->where('shelters.0.t0_count', 4)
+            ->where('mapShelters.0.t0_count', 4)
+            ->has('t0Emergencies', 4)
+            ->etc());
+
+        $this->get('/admin/map')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('shelters.0.t0_count', 4)
+            ->etc());
+    }
+
     public function test_healthcare_patient_detail_includes_assessment_validation_and_validator(): void
     {
         [$patient, $assessment, $validation, $validator] = $this->validatedAssessment();
