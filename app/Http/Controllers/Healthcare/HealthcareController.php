@@ -35,7 +35,23 @@ final class HealthcareController extends Controller
     {
         $user = Auth::user();
 
-        $emergencies = EmergencyEvent::with(['patient', 'shelter', 'user:id,name', 'verifications.verifier'])
+        $emergencies = EmergencyEvent::with([
+            'patient.shelter',
+            'patient.assessments.triageResult',
+            'patient.assessments.srqResponses',
+            'patient.assessments.riskAssessment',
+            'patient.assessments.functionAssessment',
+            'patient.assessments.clinicalValidation.validator:id,name',
+            'assessment.triageResult',
+            'assessment.srqResponses',
+            'assessment.riskAssessment',
+            'assessment.functionAssessment',
+            'shelter',
+            'user:id,name',
+            'verifications.verifier:id,name',
+            'referrals.facility',
+            'referrals.statusHistory.changer:id,name',
+        ])
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN created_at END ASC")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN id END ASC")
@@ -43,10 +59,26 @@ final class HealthcareController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        $assessments = Assessment::with([
+            'patient.shelter',
+            'triageResult',
+            'srqResponses',
+            'riskAssessment',
+            'functionAssessment',
+            'clinicalValidation.validator:id,name',
+            'user:id,name',
+        ])
+            ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+            ->orderByDesc('completed_at')
+            ->get();
+
+        $facilities = HealthcareFacility::where('is_active', true)->get();
         $facility = $user->facility_id ? HealthcareFacility::find($user->facility_id) : null;
 
         return Inertia::render('Healthcare/Emergencies/Index', [
             'emergencies' => $emergencies,
+            'assessments' => $assessments,
+            'facilities' => $facilities,
             'facility' => $facility,
         ]);
     }
