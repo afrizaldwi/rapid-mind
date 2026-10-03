@@ -29,6 +29,10 @@ final class DemoSeeder extends Seeder
 {
     private const SITI_ASSESSMENT_ID = '6c000387-12cc-5435-a880-6b4967b08031';
     private const BAMBANG_EMERGENCY_ID = '81b5391a-9632-528b-a211-12a907125561';
+    private const NANDO_ASSESSMENT_ID = 'a0000089-12cc-5435-a880-6b4967b00089';
+    private const NANDO_EMERGENCY_ID = 'e0000089-12cc-5435-a880-6b4967b00089';
+    private const DEWI_ASSESSMENT_ID = 'a0000042-12cc-5435-a880-6b4967b00042';
+    private const SURYA_ASSESSMENT_ID = 'a0000015-12cc-5435-a880-6b4967b00015';
 
     public function run(): void
     {
@@ -262,5 +266,166 @@ final class DemoSeeder extends Seeder
             $emergency->id = self::BAMBANG_EMERGENCY_ID;
             $emergency->save();
         }
+
+        // 8. Seed Nando Pratama (T0 Kritis - RM-2026-000089)
+        $pNando = Patient::firstOrCreate([
+            'nik' => '3404012808980089',
+        ], [
+            'name' => 'Nando Pratama',
+            'age' => 28,
+            'gender' => 'Laki-laki',
+            'shelter_id' => $shelterCandi->id,
+            'created_by' => $relawan->id,
+        ]);
+
+        $aNando = Assessment::find(self::NANDO_ASSESSMENT_ID);
+        if (!$aNando) {
+            $aNando = new Assessment([
+                'patient_id' => $pNando->id,
+                'user_id' => $relawan->id,
+                'status' => AssessmentStatus::COMPLETED,
+                'mode' => AssessmentMode::VERBAL,
+                'started_at' => now()->subMinutes(35),
+                'completed_at' => now()->subMinutes(20),
+            ]);
+            $aNando->id = self::NANDO_ASSESSMENT_ID;
+            $aNando->save();
+        }
+
+        for ($i = 1; $i <= 20; $i++) {
+            SrqResponse::firstOrCreate(
+                ['assessment_id' => $aNando->id, 'question_number' => $i],
+                ['answer' => in_array($i, [1, 2, 3, 4, 6, 7, 9, 10, 11, 13, 14, 15, 16, 17])],
+            );
+        }
+
+        RiskResponse::firstOrCreate(['assessment_id' => $aNando->id, 'indicator' => 'R1'], ['answer' => true, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aNando->id, 'indicator' => 'R2'], ['answer' => true, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aNando->id, 'indicator' => 'R3'], ['answer' => true, 'weight' => 1]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aNando->id, 'indicator' => 'R4'], ['answer' => false, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aNando->id, 'indicator' => 'R5'], ['answer' => false, 'weight' => 1]);
+
+        FunctionResponse::firstOrCreate(['assessment_id' => $aNando->id, 'domain' => 'F1'], ['level' => 2]);
+        FunctionResponse::firstOrCreate(['assessment_id' => $aNando->id, 'domain' => 'F2'], ['level' => 2]);
+        FunctionResponse::firstOrCreate(['assessment_id' => $aNando->id, 'domain' => 'F3'], ['level' => 1]);
+
+        TriageResult::firstOrCreate(['assessment_id' => $aNando->id], [
+            'srq_score' => 14,
+            'risk_score' => 5,
+            'function_score' => 5,
+            'total_score' => 24,
+            'system_recommendation' => TriageCategory::T0_SUSPECT,
+            'is_red_flag_override' => true,
+            'red_flag_source' => 'SUICIDAL_IDEATION',
+        ]);
+
+        $eNando = EmergencyEvent::find(self::NANDO_EMERGENCY_ID);
+        if (!$eNando) {
+            $eNando = new EmergencyEvent([
+                'patient_id' => $pNando->id,
+                'assessment_id' => $aNando->id,
+                'user_id' => $relawan->id,
+                'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+                'status' => EmergencyStatus::PENDING,
+                'latitude' => -7.6895,
+                'longitude' => 110.4238,
+                'shelter_id' => $shelterCandi->id,
+                'notes' => 'Pikiran bunuh diri aktif pasca kehilangan seluruh keluarga dan tempat tinggal di lereng Merapi. Agitasi tinggi dan menolak kontak sosial.',
+            ]);
+            $eNando->id = self::NANDO_EMERGENCY_ID;
+            $eNando->save();
+        }
+
+        // 9. Seed T1 Assessment for Dewi Lestari (RM-2026-000042)
+        $aDewi = Assessment::find(self::DEWI_ASSESSMENT_ID);
+        if (!$aDewi) {
+            $aDewi = new Assessment([
+                'patient_id' => $p3->id,
+                'user_id' => $relawan->id,
+                'status' => AssessmentStatus::COMPLETED,
+                'mode' => AssessmentMode::VERBAL,
+                'started_at' => now()->subHours(2),
+                'completed_at' => now()->subHours(1),
+            ]);
+            $aDewi->id = self::DEWI_ASSESSMENT_ID;
+            $aDewi->save();
+        }
+
+        for ($i = 1; $i <= 20; $i++) {
+            SrqResponse::firstOrCreate(
+                ['assessment_id' => $aDewi->id, 'question_number' => $i],
+                ['answer' => in_array($i, [1, 2, 4, 6, 8, 9, 10, 12, 13])],
+            );
+        }
+
+        RiskResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'indicator' => 'R1'], ['answer' => true, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'indicator' => 'R2'], ['answer' => true, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'indicator' => 'R3'], ['answer' => false, 'weight' => 1]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'indicator' => 'R4'], ['answer' => false, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'indicator' => 'R5'], ['answer' => false, 'weight' => 1]);
+
+        FunctionResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'domain' => 'F1'], ['level' => 1]);
+        FunctionResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'domain' => 'F2'], ['level' => 2]);
+        FunctionResponse::firstOrCreate(['assessment_id' => $aDewi->id, 'domain' => 'F3'], ['level' => 1]);
+
+        TriageResult::firstOrCreate(['assessment_id' => $aDewi->id], [
+            'srq_score' => 9,
+            'risk_score' => 4,
+            'function_score' => 4,
+            'total_score' => 17,
+            'system_recommendation' => TriageCategory::T1,
+            'is_red_flag_override' => false,
+        ]);
+
+        // 10. Seed T3 Assessment for Surya Saputra (RM-2026-000015)
+        $pSurya = Patient::firstOrCreate([
+            'nik' => '3404011505910015',
+        ], [
+            'name' => 'Surya Saputra',
+            'age' => 35,
+            'gender' => 'Laki-laki',
+            'shelter_id' => $shelterPakem->id,
+            'created_by' => $relawan->id,
+        ]);
+
+        $aSurya = Assessment::find(self::SURYA_ASSESSMENT_ID);
+        if (!$aSurya) {
+            $aSurya = new Assessment([
+                'patient_id' => $pSurya->id,
+                'user_id' => $relawan->id,
+                'status' => AssessmentStatus::COMPLETED,
+                'mode' => AssessmentMode::VERBAL,
+                'started_at' => now()->subHours(5),
+                'completed_at' => now()->subHours(4),
+            ]);
+            $aSurya->id = self::SURYA_ASSESSMENT_ID;
+            $aSurya->save();
+        }
+
+        for ($i = 1; $i <= 20; $i++) {
+            SrqResponse::firstOrCreate(
+                ['assessment_id' => $aSurya->id, 'question_number' => $i],
+                ['answer' => in_array($i, [1, 4, 9])],
+            );
+        }
+
+        RiskResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'indicator' => 'R1'], ['answer' => false, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'indicator' => 'R2'], ['answer' => false, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'indicator' => 'R3'], ['answer' => false, 'weight' => 1]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'indicator' => 'R4'], ['answer' => false, 'weight' => 2]);
+        RiskResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'indicator' => 'R5'], ['answer' => false, 'weight' => 1]);
+
+        FunctionResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'domain' => 'F1'], ['level' => 0]);
+        FunctionResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'domain' => 'F2'], ['level' => 1]);
+        FunctionResponse::firstOrCreate(['assessment_id' => $aSurya->id, 'domain' => 'F3'], ['level' => 0]);
+
+        TriageResult::firstOrCreate(['assessment_id' => $aSurya->id], [
+            'srq_score' => 3,
+            'risk_score' => 0,
+            'function_score' => 1,
+            'total_score' => 4,
+            'system_recommendation' => TriageCategory::T3,
+            'is_red_flag_override' => false,
+        ]);
     }
 }

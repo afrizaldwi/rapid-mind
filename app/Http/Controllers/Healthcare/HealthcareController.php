@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Healthcare;
 
+use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\ReferralStatus;
 use App\Enums\TriageCategory;
 use App\Enums\VerificationMethod;
+use App\Events\EmergencyUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AuditLog;
@@ -35,7 +37,33 @@ final class HealthcareController extends Controller
     {
         $user = Auth::user();
 
-        $emergencies = EmergencyEvent::with(['patient', 'shelter', 'user:id,name', 'verifications.verifier'])
+        $emergencies = EmergencyEvent::with([
+            'patient.shelter',
+            'assessment.triageResult',
+            'assessment.srqResponses',
+            'assessment.riskAssessment',
+            'assessment.functionAssessment',
+            'shelter',
+            'user:id,name',
+            'verifications' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
+            'verifications.verifier:id,name',
+            'referrals.facility',
+            'referrals.statusHistory.changer:id,name',
+        ])
+            ->where(function ($query): void {
+                $query->whereIn('status', [
+                    EmergencyStatus::PENDING,
+                    EmergencyStatus::ACKNOWLEDGED,
+                    EmergencyStatus::REVIEWING,
+                ])->orWhere(function ($confirmed): void {
+                    $confirmed->where('status', EmergencyStatus::CONFIRMED)
+                        ->where(function ($followUp): void {
+                            $followUp->whereDoesntHave('referrals')
+                                ->orWhereHas('referrals', fn ($referral) => $referral
+                                    ->where('status', '!=', ReferralStatus::COMPLETED));
+                        });
+                });
+            })
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN created_at END ASC")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN id END ASC")
@@ -43,10 +71,12 @@ final class HealthcareController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        $facilities = HealthcareFacility::where('is_active', true)->get();
         $facility = $user->facility_id ? HealthcareFacility::find($user->facility_id) : null;
 
         return Inertia::render('Healthcare/Emergencies/Index', [
             'emergencies' => $emergencies,
+            'facilities' => $facilities,
             'facility' => $facility,
         ]);
     }
@@ -54,9 +84,14 @@ final class HealthcareController extends Controller
     public function emergencyDetail(string $emergencyId): InertiaResponse
     {
         $emergency = EmergencyEvent::with([
-            'patient.assessments.triageResult',
+            'patient.shelter',
+            'assessment.triageResult',
+            'assessment.srqResponses',
+            'assessment.riskAssessment',
+            'assessment.functionAssessment',
             'shelter',
             'user:id,name,phone_number',
+            'verifications' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
             'verifications.verifier',
             'referrals.facility',
             'referrals.statusHistory.changer',
@@ -103,11 +138,14 @@ final class HealthcareController extends Controller
             );
         }
 
+        $realtimeDelivered = ! isset($result['updated'])
+            || $this->broadcastEmergencyUpdateBestEffort($emergencyId);
+
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Kasus berhasil diakui.']);
+            return response()->json($this->mutationSuccessPayload('Kasus berhasil diakui.', $realtimeDelivered));
         }
 
-        return back()->with('message', 'Kasus berhasil diakui.');
+        return $this->mutationSuccessRedirect('Kasus berhasil diakui.', $realtimeDelivered);
     }
 
     public function verify(Request $request, string $emergencyId): JsonResponse|RedirectResponse
@@ -168,11 +206,14 @@ final class HealthcareController extends Controller
             );
         }
 
+        $realtimeDelivered = ! isset($result['updated'])
+            || $this->broadcastEmergencyUpdateBestEffort($emergencyId);
+
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Verifikasi sekunder tersimpan.']);
+            return response()->json($this->mutationSuccessPayload('Verifikasi sekunder tersimpan.', $realtimeDelivered));
         }
 
-        return back()->with('message', 'Verifikasi sekunder tersimpan.');
+        return $this->mutationSuccessRedirect('Verifikasi sekunder tersimpan.', $realtimeDelivered);
     }
 
     public function classify(Request $request, string $emergencyId): JsonResponse|RedirectResponse
@@ -244,11 +285,14 @@ final class HealthcareController extends Controller
             );
         }
 
+        $realtimeDelivered = ! isset($result['updated'])
+            || $this->broadcastEmergencyUpdateBestEffort($emergencyId);
+
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Status klinis darurat berhasil diperbarui.']);
+            return response()->json($this->mutationSuccessPayload('Status klinis darurat berhasil diperbarui.', $realtimeDelivered));
         }
 
-        return back()->with('message', 'Status klinis darurat berhasil diperbarui.');
+        return $this->mutationSuccessRedirect('Status klinis darurat berhasil diperbarui.', $realtimeDelivered);
     }
 
     public function createEmergencyReferral(Request $request, string $emergencyId): JsonResponse|RedirectResponse
@@ -315,11 +359,14 @@ final class HealthcareController extends Controller
             );
         }
 
+        $realtimeDelivered = ! isset($result['created'])
+            || $this->broadcastEmergencyUpdateBestEffort($emergencyId);
+
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Rujukan darurat berhasil dibuat.']);
+            return response()->json($this->mutationSuccessPayload('Rujukan darurat berhasil dibuat.', $realtimeDelivered));
         }
 
-        return back()->with('message', 'Rujukan darurat berhasil dibuat.');
+        return $this->mutationSuccessRedirect('Rujukan darurat berhasil dibuat.', $realtimeDelivered);
     }
 
     private function emergencyConflictResponse(
@@ -340,7 +387,7 @@ final class HealthcareController extends Controller
     public function validations(): InertiaResponse
     {
         $assessments = Assessment::with(['patient', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'clinicalValidation.validator'])
-            ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+            ->where('status', AssessmentStatus::COMPLETED)
             ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->get()
             ->sortBy(fn (Assessment $assessment) => sprintf(
@@ -359,16 +406,22 @@ final class HealthcareController extends Controller
     public function validationDetail(string $assessmentId): InertiaResponse
     {
         $assessment = Assessment::with([
-            'patient.shelter', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'srqResponses',
-            'riskAssessment', 'functionAssessment', 'clinicalValidation.validator',
+            'patient.shelter',
+            'user:id,name,shelter_id',
+            'user.shelter',
+            'triageResult',
+            'srqResponses',
+            'riskAssessment',
+            'functionAssessment',
+            'clinicalValidation.validator',
             'clinicalValidation.referral.facility',
-        ])->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+        ])->where('status', AssessmentStatus::COMPLETED)
             ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->findOrFail($assessmentId);
 
         $previousAssessments = Assessment::with(['triageResult', 'clinicalValidation.validator'])
             ->where('patient_id', $assessment->patient_id)
-            ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+            ->where('status', AssessmentStatus::COMPLETED)
             ->where('completed_at', '<', $assessment->completed_at)
             ->orderByDesc('completed_at')->orderByDesc('id')->limit(5)->get();
 
@@ -382,7 +435,7 @@ final class HealthcareController extends Controller
     public function validateAssessment(Request $request, string $assessmentId): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
-        $assessment = Assessment::where('status', \App\Enums\AssessmentStatus::COMPLETED)
+        $assessment = Assessment::where('status', AssessmentStatus::COMPLETED)
             ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->findOrFail($assessmentId);
 
@@ -404,7 +457,7 @@ final class HealthcareController extends Controller
         try {
             DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
                 $assessment = Assessment::whereKey($assessment->id)
-                    ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
+                    ->where('status', AssessmentStatus::COMPLETED)
                     ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
                     ->lockForUpdate()->firstOrFail();
                 if ($assessment->clinicalValidation()->exists()) {
@@ -417,7 +470,7 @@ final class HealthcareController extends Controller
                         'clinical_result' => $clinicalResult,
                         'diagnosis_notes' => $validated['diagnosis_notes'] ?? null,
                         'intervention_plan' => $validated['intervention_plan'] ?? null,
-                        'referral_required' => (bool)($validated['referral_required'] ?? false),
+                        'referral_required' => (bool) ($validated['referral_required'] ?? false),
                     ]
                 );
 
@@ -454,6 +507,7 @@ final class HealthcareController extends Controller
             if ($request->wantsJson()) {
                 throw $exception;
             }
+
             return back()->withErrors(['form' => 'Validasi belum tersimpan karena gangguan server. Coba lagi.']);
         }
 
@@ -515,7 +569,10 @@ final class HealthcareController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            return ['updated' => true];
+            return [
+                'updated' => true,
+                'emergency_id' => $referral->emergency_event_id,
+            ];
         });
 
         if (isset($result['conflict'])) {
@@ -523,20 +580,40 @@ final class HealthcareController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['message' => $message, 'current_status' => $result['current']->value], 409);
             }
+
             return back()->withErrors(['conflict' => $message]);
         }
 
+        $realtimeDelivered = ! (isset($result['updated'], $result['emergency_id']) && $result['emergency_id'])
+            || $this->broadcastEmergencyUpdateBestEffort($result['emergency_id']);
+
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Status rujukan berhasil diperbarui.']);
+            return response()->json($this->mutationSuccessPayload('Status rujukan berhasil diperbarui.', $realtimeDelivered));
         }
-        return back()->with('message', 'Status rujukan berhasil diperbarui.');
+
+        return $this->mutationSuccessRedirect('Status rujukan berhasil diperbarui.', $realtimeDelivered);
     }
 
     public function patients(): InertiaResponse
     {
-        $patients = Patient::with(['shelter', 'assessments.triageResult', 'emergencyEvents'])
+        $patients = Patient::with([
+            'shelter',
+            'assessments' => fn ($query) => $query
+                ->where('status', AssessmentStatus::COMPLETED)
+                ->orderByDesc('completed_at')
+                ->orderByDesc('id'),
+            'assessments.triageResult',
+            'assessments.clinicalValidation',
+            'emergencyEvents' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'emergencyEvents.verifications' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
+            'emergencyEvents.referrals',
+        ])
             ->latest('created_at')
-            ->get();
+            ->get()
+            ->each(fn (Patient $patient) => $patient->setAttribute(
+                'latest_clinical_status',
+                $this->latestPatientClinicalStatus($patient),
+            ));
 
         return Inertia::render('Healthcare/Patients/Index', [
             'patients' => $patients,
@@ -547,16 +624,26 @@ final class HealthcareController extends Controller
     {
         $patient = Patient::with([
             'shelter',
+            'assessments' => fn ($query) => $query
+                ->where('status', AssessmentStatus::COMPLETED)
+                ->orderByDesc('completed_at')
+                ->orderByDesc('id'),
+            'assessments.user:id,name',
             'assessments.srqResponses',
             'assessments.riskAssessment',
             'assessments.functionAssessment',
             'assessments.triageResult',
             'assessments.clinicalValidation.validator',
+            'emergencyEvents' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'emergencyEvents.user:id,name',
+            'emergencyEvents.shelter',
+            'emergencyEvents.verifications' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
             'emergencyEvents.verifications.verifier',
             'emergencyEvents.referrals.facility',
             'referrals' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
             'referrals.facility',
             'referrals.referrer',
+            'referrals.statusHistory' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
             'referrals.statusHistory.changer',
             'referrals.emergencyEvent',
             'referrals.clinicalValidation.assessment.triageResult',
@@ -565,5 +652,130 @@ final class HealthcareController extends Controller
         return Inertia::render('Healthcare/Patients/Show', [
             'patient' => $patient,
         ]);
+    }
+
+    /** @return array{label: string, category: string|null, source: string, occurred_at: mixed}|null */
+    private function latestPatientClinicalStatus(Patient $patient): ?array
+    {
+        $activeEmergency = $patient->emergencyEvents->first(function (EmergencyEvent $emergency): bool {
+            if (in_array($emergency->status, [
+                EmergencyStatus::PENDING,
+                EmergencyStatus::ACKNOWLEDGED,
+                EmergencyStatus::REVIEWING,
+            ], true)) {
+                return true;
+            }
+
+            return $emergency->status === EmergencyStatus::CONFIRMED
+                && ($emergency->referrals->isEmpty()
+                    || $emergency->referrals->contains(
+                        fn (Referral $referral): bool => $referral->status !== ReferralStatus::COMPLETED,
+                    ));
+        });
+
+        if ($activeEmergency) {
+            $confirmed = $activeEmergency->status === EmergencyStatus::CONFIRMED;
+
+            return [
+                'label' => $confirmed ? 'T0-Confirmed Aktif' : 'T0-Suspect Aktif',
+                'category' => $confirmed ? TriageCategory::T0_CONFIRMED->value : TriageCategory::T0_SUSPECT->value,
+                'source' => 'active_emergency',
+                'occurred_at' => $activeEmergency->created_at,
+            ];
+        }
+
+        $candidates = [];
+        foreach ($patient->emergencyEvents as $emergency) {
+            foreach ($emergency->verifications as $verification) {
+                if ($verification->clinical_result) {
+                    $candidates[] = [
+                        'label' => $verification->clinical_result->value,
+                        'category' => $verification->clinical_result->value,
+                        'source' => 'emergency_decision',
+                        'occurred_at' => $verification->created_at,
+                        'tie_break' => "3-{$verification->id}",
+                    ];
+                }
+            }
+        }
+        foreach ($patient->assessments as $assessment) {
+            if ($assessment->clinicalValidation?->clinical_result) {
+                $validation = $assessment->clinicalValidation;
+                $candidates[] = [
+                    'label' => $validation->clinical_result->value,
+                    'category' => $validation->clinical_result->value,
+                    'source' => 'assessment_validation',
+                    'occurred_at' => $validation->created_at,
+                    'tie_break' => "2-{$validation->id}",
+                ];
+            } elseif ($assessment->triageResult) {
+                $triage = $assessment->triageResult;
+                $candidates[] = [
+                    'label' => $triage->system_recommendation->value,
+                    'category' => $triage->system_recommendation->value,
+                    'source' => 'system_recommendation',
+                    'occurred_at' => $assessment->completed_at ?? $triage->created_at,
+                    'tie_break' => "1-{$assessment->id}",
+                ];
+            }
+        }
+
+        usort($candidates, static function (array $left, array $right): int {
+            $timeComparison = $right['occurred_at']->getTimestamp() <=> $left['occurred_at']->getTimestamp();
+            if ($timeComparison === 0) {
+                $timeComparison = strcmp(
+                    $right['occurred_at']->format('u'),
+                    $left['occurred_at']->format('u'),
+                );
+            }
+
+            return $timeComparison !== 0
+                ? $timeComparison
+                : strcmp($right['tie_break'], $left['tie_break']);
+        });
+
+        if (! isset($candidates[0])) {
+            return null;
+        }
+
+        unset($candidates[0]['tie_break']);
+
+        return $candidates[0];
+    }
+
+    private function broadcastEmergencyUpdateBestEffort(string $emergencyId): bool
+    {
+        try {
+            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($emergencyId));
+
+            return true;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
+    }
+
+    /** @return array{message: string, realtime_delivered?: false, warning?: string} */
+    private function mutationSuccessPayload(string $message, bool $realtimeDelivered): array
+    {
+        if ($realtimeDelivered) {
+            return ['message' => $message];
+        }
+
+        return [
+            'message' => $message,
+            'realtime_delivered' => false,
+            'warning' => 'Perubahan tersimpan, tetapi pembaruan realtime ke perangkat lain belum dapat dikonfirmasi.',
+        ];
+    }
+
+    private function mutationSuccessRedirect(string $message, bool $realtimeDelivered): RedirectResponse
+    {
+        $response = back()->with('message', $message);
+
+        return $realtimeDelivered
+            ? $response
+            : $response->with('error', 'Perubahan tersimpan, tetapi pembaruan realtime ke perangkat lain belum dapat dikonfirmasi.');
     }
 }

@@ -53,7 +53,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs">
           <div class="p-3 bg-slate-50 rounded-xl">
             <span class="text-slate-400 block text-[10px] font-bold uppercase">Posko Lapangan</span>
-            <span class="font-bold text-slate-800">{{ emergency.shelter?.name || 'Posko Candi' }}</span>
+            <span class="font-bold text-slate-800">{{ emergency.shelter?.name || 'Posko tidak diketahui' }}</span>
           </div>
           <div class="p-3 bg-slate-50 rounded-xl">
             <span class="text-slate-400 block text-[10px] font-bold uppercase">Relawan Pelapor</span>
