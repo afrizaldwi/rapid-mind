@@ -1,152 +1,286 @@
 <template>
-  <div class="min-h-screen bg-[#F5F7FA] flex text-slate-900 font-sans antialiased">
-    <!-- Desktop Sidebar Navigation (Dark Navy, high contrast, clean) -->
-    <aside class="w-60 bg-slate-900 text-white flex flex-col shrink-0 border-r border-slate-800 select-none">
-      <!-- App Brand & Facility -->
-      <div class="p-5 border-b border-slate-800/80">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-lg bg-teal-600 text-white font-black flex items-center justify-center text-xs tracking-wider shadow-xs">
-            RM
-          </div>
-          <div>
-            <h1 class="text-xs font-black tracking-tight text-white leading-none">
-              RAPID-MIND
-            </h1>
-            <span class="text-[10px] font-semibold text-teal-400 tracking-wider block mt-1">
-              Workspace Medis
-            </span>
-          </div>
-        </div>
-        <div class="mt-3.5 p-2.5 bg-slate-800/70 rounded-lg text-xs text-slate-300 border border-slate-700/50">
-          <p class="font-bold text-white text-[11px] truncate">{{ user?.facility?.name || 'Faskes Layanan' }}</p>
-          <p class="text-[10px] text-slate-400 mt-0.5 truncate">{{ user?.name || 'Tenaga Medis' }}</p>
-        </div>
-      </div>
-
-      <!-- Navigation Links -->
-      <nav class="flex-1 p-3 space-y-1 text-xs font-semibold">
-        <!-- 1. Triase & Darurat (Highlighted primary workspace) -->
-        <Link
-          href="/healthcare/emergencies"
-          class="flex items-center justify-between px-3 py-2.5 rounded-lg transition"
-          :class="isRoute('/healthcare/emergencies')
-            ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-500 shadow-xs'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800/50'"
+  <div class="min-h-screen bg-[#F5F7FA] flex flex-col text-slate-900 font-sans antialiased">
+    <!-- Top Global Header (60-64px high, crisp white, full-width matching Admin) -->
+    <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs shrink-0">
+      <!-- Left Brand & Operational Context -->
+      <div class="flex items-center space-x-3 lg:space-x-4">
+        <!-- Mobile hamburger -->
+        <button
+          type="button"
+          @click="sidebarOpen = !sidebarOpen"
+          class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+          aria-label="Toggle navigation"
         >
-          <div class="flex items-center space-x-2.5">
-            <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
-            <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <!-- Brand Icon -->
+        <Link href="/healthcare/emergencies" class="flex items-center gap-3 group">
+          <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs shrink-0 group-hover:bg-teal-700 transition">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M12 8v8" />
+              <path d="M8 12h8" />
             </svg>
-            <span class="text-xs">Triase & Darurat</span>
           </div>
-          <span
-            v-if="pendingT0Count > 0"
-            class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-rose-600 text-white"
-          >
-            {{ pendingT0Count }}
-          </span>
-        </Link>
-
-        <!-- 2. Validasi Klinis -->
-        <Link
-          href="/healthcare/validations"
-          class="flex items-center space-x-2.5 px-3 py-2.5 rounded-lg transition"
-          :class="isRoute('/healthcare/validations')
-            ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-500 shadow-xs'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800/50'"
-        >
-          <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          <span class="text-xs">Validasi Klinis</span>
-        </Link>
-
-        <!-- 3. Rujukan & Evakuasi -->
-        <Link
-          href="/healthcare/referrals"
-          class="flex items-center space-x-2.5 px-3 py-2.5 rounded-lg transition"
-          :class="isRoute('/healthcare/referrals')
-            ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-500 shadow-xs'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800/50'"
-        >
-          <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-          </svg>
-          <span class="text-xs">Rujukan & Evakuasi</span>
-        </Link>
-
-        <!-- 4. Data Pasien -->
-        <Link
-          href="/healthcare/patients"
-          class="flex items-center space-x-2.5 px-3 py-2.5 rounded-lg transition"
-          :class="isRoute('/healthcare/patients')
-            ? 'bg-slate-800 text-white font-bold border-l-2 border-teal-500 shadow-xs'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800/50'"
-        >
-          <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <span class="text-xs">Data Pasien</span>
-        </Link>
-      </nav>
-
-      <!-- Connection & Logout Footer (Section 27) -->
-      <div class="p-3.5 border-t border-slate-800 space-y-2 text-xs">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-1.5">
-            <span
-              class="w-1.5 h-1.5 rounded-full"
-              :class="serverReachable !== false && realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400'"
-            ></span>
-            <span class="text-[11px] font-medium" :class="serverReachable !== false && realtimeConnected ? 'text-slate-300' : 'text-amber-200'">
-              {{ serverReachable === false ? 'Terputus' : realtimeConnected ? 'Realtime aktif' : 'Reconnecting' }}
-            </span>
-          </div>
-          <button type="button" @click="logout" class="text-[11px] text-slate-400 hover:text-white transition">Keluar</button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Main Workspace Container -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
-      <!-- Top Workspace Bar (Clean, Operational, Polished) -->
-      <header class="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between shadow-2xs shrink-0">
-        <!-- Left: App Brand & Descriptor -->
-        <div class="flex items-center space-x-3">
           <div>
-            <div class="flex items-baseline space-x-2">
-              <h2 class="text-sm font-black text-slate-900 tracking-tight leading-none">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-black tracking-tight text-slate-900 leading-none">
                 RAPID-MIND
-              </h2>
-              <span class="text-xs font-semibold text-slate-700">
-                Workspace Triase Klinis
+              </span>
+              <span class="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200/80 px-2 py-0.5 rounded-full leading-none tracking-wide">
+                PSC 119 / HEALTHCARE
               </span>
             </div>
-            <p class="text-[11px] text-slate-400 mt-0.5 leading-none">
-              Emergency Psychological Triage
-            </p>
+            <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">
+              Clinical Triage & Response
+            </span>
+          </div>
+        </Link>
+
+        <!-- Separator on desktop -->
+        <div class="hidden xl:block h-7 w-[1px] bg-slate-200 mx-1"></div>
+
+        <!-- Center operational title on large screen -->
+        <div class="hidden xl:block">
+          <h2 class="text-xs font-bold text-slate-800 leading-tight">
+            Pusat Komando Medis & Triase Kedaruratan Jiwa
+          </h2>
+          <p class="text-[11px] text-slate-400 leading-tight">
+            Validasi klinis nakes, triase sekunder, evaluasi red flag, dan koordinasi rujukan faskes PSC 119.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Controls & User Profile -->
+      <div class="flex items-center space-x-3">
+        <!-- Canonical Connection Status Badge -->
+        <div
+          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+          :class="isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-slate-100 text-slate-700 border border-slate-300'"
+        >
+          <span
+            class="w-2 h-2 rounded-full"
+            :class="isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"
+          ></span>
+          <span>{{ isOnline ? 'Online • PSC Siaga' : 'Offline' }}</span>
+        </div>
+
+        <!-- Notification Bell (shows badge only when real unread count > 0) -->
+        <div class="relative">
+          <button
+            type="button"
+            class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
+            aria-label="Notifikasi Medis"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span
+              v-if="pendingT0Count > 0"
+              class="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white"
+            >
+              {{ pendingT0Count }}
+            </span>
+          </button>
+        </div>
+
+        <!-- User Profile Pill / Dropdown -->
+        <div class="relative">
+          <button
+            type="button"
+            @click="profileOpen = !profileOpen"
+            class="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-slate-50 transition"
+          >
+            <div class="w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+              {{ userInitials }}
+            </div>
+            <div class="hidden md:block text-left">
+              <span class="text-xs font-bold text-slate-800 block leading-tight">
+                {{ userDisplayName }}
+              </span>
+              <span class="text-[10px] text-slate-400 font-medium block leading-tight">
+                {{ userRoleLabel }}
+              </span>
+            </div>
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            v-if="profileOpen"
+            class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs"
+            @click="profileOpen = false"
+          >
+            <div class="px-3.5 py-2 border-b border-slate-100">
+              <p class="font-bold text-slate-800">{{ userDisplayName }}</p>
+              <p class="text-[11px] text-slate-400">{{ userFacilityName }}</p>
+              <span class="inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                {{ userRoleLabel }}
+              </span>
+            </div>
+
+            <div class="p-1.5 border-b border-slate-100">
+              <div class="px-3 py-1.5 text-[11px] text-slate-600 flex items-center justify-between">
+                <span>Faskes Layanan:</span>
+                <span class="font-bold text-slate-800 truncate max-w-[110px]">{{ userFacilityName }}</span>
+              </div>
+            </div>
+
+            <div class="p-1.5">
+              <button
+                type="button"
+                @click="logout"
+                class="w-full flex items-center space-x-2 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-lg font-medium transition text-left"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Keluar Akun</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Shell: Sidebar + Content -->
+    <div class="flex-1 flex min-h-0 relative">
+      <!-- Mobile sidebar backdrop -->
+      <div
+        v-if="sidebarOpen"
+        @click="sidebarOpen = false"
+        class="fixed inset-0 bg-slate-900/40 z-40 lg:hidden backdrop-blur-xs transition-opacity"
+      ></div>
+
+      <!-- Unified Sidebar (Exact Same Design Foundation as Admin) -->
+      <aside
+        :class="[
+          'w-64 bg-white border-r border-slate-200/80 flex flex-col shrink-0 select-none transition-transform duration-200 ease-in-out z-40',
+          'fixed inset-y-0 left-0 lg:static lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0 top-16 h-[calc(100vh-4rem)]' : '-translate-x-full lg:translate-x-0'
+        ]"
+      >
+        <!-- Nav Sections -->
+        <div class="flex-1 overflow-y-auto px-3.5 py-4 space-y-6">
+          <!-- Group 1: CLINICAL OPERATIONS -->
+          <div>
+            <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              CLINICAL OPERATIONS
+            </div>
+            <div class="space-y-0.5">
+              <Link
+                href="/healthcare/emergencies"
+                class="flex items-center justify-between px-3 py-2 rounded-lg text-xs transition"
+                :class="isRoute('/healthcare/emergencies') ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <svg class="w-4 h-4 shrink-0" :class="isRoute('/healthcare/emergencies') ? 'text-teal-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>Triase & Kedaruratan</span>
+                </div>
+                <span
+                  v-if="pendingT0Count > 0"
+                  class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-rose-600 text-white"
+                >
+                  {{ pendingT0Count }}
+                </span>
+              </Link>
+
+              <Link
+                href="/healthcare/validations"
+                class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
+                :class="isRoute('/healthcare/validations') ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+              >
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/healthcare/validations') ? 'text-teal-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <span>Validasi Klinis</span>
+              </Link>
+            </div>
+          </div>
+
+          <!-- Group 2: RUJUKAN & TRANSPORT -->
+          <div>
+            <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              RUJUKAN & TRANSPORT
+            </div>
+            <div class="space-y-0.5">
+              <Link
+                href="/healthcare/referrals"
+                class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
+                :class="isRoute('/healthcare/referrals') ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+              >
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/healthcare/referrals') ? 'text-teal-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <span>Rujukan & Evakuasi</span>
+              </Link>
+            </div>
+          </div>
+
+          <!-- Group 3: DATA PASIEN -->
+          <div>
+            <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              REKAM MEDIS & DATA
+            </div>
+            <div class="space-y-0.5">
+              <Link
+                href="/healthcare/patients"
+                class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
+                :class="isRoute('/healthcare/patients') ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+              >
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/healthcare/patients') ? 'text-teal-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>Data Pasien & Riwayat</span>
+              </Link>
+            </div>
           </div>
         </div>
 
-        <!-- Right: Doctor profile & status badge -->
-        <div class="flex items-center space-x-4">
-          <!-- Compact status badge -->
-          <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-50 text-slate-700 border border-slate-200">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span>PSC 119 Siaga</span>
-          </div>
-
-          <!-- User info -->
-          <div class="text-right">
-            <p class="text-xs font-bold text-slate-800 leading-tight">{{ user?.name || 'Tenaga Medis' }}</p>
-            <p class="text-[10px] text-slate-500 leading-tight">{{ userRoleDescription }}</p>
+        <!-- Bottom Sidebar Box (Synchronized network status matching Admin design system) -->
+        <div class="p-3 border-t border-slate-100">
+          <div
+            class="rounded-xl p-3 flex items-center justify-between text-xs border"
+            :class="isOnline ? 'bg-slate-50 border-slate-200/80' : 'bg-slate-100 border-slate-200'"
+          >
+            <div class="flex items-center space-x-2.5">
+              <div
+                class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                :class="isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+              >
+                <svg v-if="isOnline" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-6.364 9 9 0 012.828-6.364m2.829 2.828a5 5 0 012.828 3.536m-5.656 0a5 5 0 011.414-3.536L3 3l18 18" />
+                </svg>
+              </div>
+              <div>
+                <span class="font-bold text-slate-800 block leading-tight text-[11px]">
+                  {{ isOnline ? 'Sistem Terhubung' : 'Mode Offline' }}
+                </span>
+                <span class="text-[10px] text-slate-500 block leading-tight">
+                  {{ isOnline ? 'Sinkronisasi PSC 119 aktif' : 'Data tersimpan lokal' }}
+                </span>
+              </div>
+            </div>
+            <span
+              class="w-2 h-2 rounded-full"
+              :class="isOnline ? 'bg-emerald-500' : 'bg-slate-400'"
+            ></span>
           </div>
         </div>
-      </header>
+      </aside>
 
       <!-- Main Workspace Scrollable Body -->
-      <main class="flex-1 p-4 lg:p-5">
+      <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
         <slot />
       </main>
     </div>
@@ -154,32 +288,45 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { echo, useConnectionStatus } from '@laravel/echo-vue';
+import { echo } from '@laravel/echo-vue';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const userRoleDescription = computed(() => {
+const userDisplayName = computed(() => user.value?.name || 'Tenaga Medis');
+const userRoleLabel = computed(() => {
   if (user.value?.role === 'HEALTHCARE') return 'Tenaga Medis • PSC 119';
   return user.value?.role || 'Layanan Medis';
 });
+const userFacilityName = computed(() => user.value?.facility?.name || 'Faskes Rujukan PSC 119');
 const pendingT0Count = computed(() => Number((page.props as any).pendingT0Count ?? 0));
 
-const realtimeConnected = ref(false);
+const sidebarOpen = ref(false);
+const profileOpen = ref(false);
+
+const userInitials = computed(() => {
+  const n = user.value?.name || 'TM';
+  return n.split(' ').map((p: string) => p[0]).slice(0, 2).join('').toUpperCase();
+});
+
+// Canonical network connection status (shared logic with Admin)
+const isOnline = ref(typeof window !== 'undefined' ? window.navigator.onLine : true);
+
+function handleOnline() {
+  isOnline.value = true;
+}
+
+function handleOffline() {
+  isOnline.value = false;
+}
+
 const serverReachable = ref<boolean | null>(null);
 const subscriptionReady = ref(false);
-const lastRefreshedAt = ref<Date | null>(null);
 
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 let healthProbeInFlight = false;
 let mounted = false;
-
-const connectionStatus = computed<'connected' | 'reconnecting' | 'disconnected'>(() => {
-  if (serverReachable.value === false) return 'disconnected';
-  if (subscriptionReady.value) return 'connected';
-  return 'reconnecting';
-});
 
 function isRoute(path: string) {
   return page.url.startsWith(path);
@@ -225,16 +372,11 @@ async function probeServer() {
   }
 }
 
-watch(connectionStatus, (current) => {
-  if (current !== 'connected') {
-    subscriptionReady.value = false;
-    void probeServer();
-  }
-});
-
 onMounted(() => {
   mounted = true;
-  lastRefreshedAt.value = new Date();
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+
   echo().private('emergencies')
     .listen('EmergencyCreated', onEmergencyCreated)
     .subscribed(() => {
@@ -252,6 +394,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   mounted = false;
+  window.removeEventListener('online', handleOnline);
+  window.removeEventListener('offline', handleOffline);
   if (healthTimer) clearInterval(healthTimer);
   echo().private('emergencies').stopListening('EmergencyCreated', onEmergencyCreated);
   echo().leave('emergencies');
