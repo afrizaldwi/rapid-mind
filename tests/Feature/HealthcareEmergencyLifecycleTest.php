@@ -169,6 +169,7 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
                 TriageCategory::T0_CONFIRMED->value => EmergencyStatus::CONFIRMED,
                 TriageCategory::T1->value => EmergencyStatus::DOWNGRADED,
                 TriageCategory::T2->value => EmergencyStatus::DOWNGRADED,
+                TriageCategory::T3->value => EmergencyStatus::DOWNGRADED,
             ] as $result => $expectedStatus
         ) {
             $emergency = $this->emergency(EmergencyStatus::REVIEWING);
@@ -357,7 +358,7 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
         Event::assertDispatchedTimes(EmergencyUpdated::class, 1);
         Event::assertDispatched(
             EmergencyUpdated::class,
-            fn (EmergencyUpdated $event): bool => $event->emergency->is($emergency),
+            fn(EmergencyUpdated $event): bool => $event->emergency->is($emergency),
         );
     }
     public function test_broadcast_failure_on_inertia_acknowledge_sets_both_success_and_warning_flash(): void

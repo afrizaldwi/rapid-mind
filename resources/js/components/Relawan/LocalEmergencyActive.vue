@@ -101,17 +101,23 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { Siren } from 'lucide-vue-next';
+import { Siren } from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
 import { db, type LocalEmergency } from "@/offline/db";
 import { retryEmergency } from "@/offline/emergencyWorkflow";
 import { useRelawanRuntime } from "@/relawan/runtime";
 
-type ServerEmergencyStatus = "PENDING" | "ACKNOWLEDGED" | "REVIEWING" | "CONFIRMED" | "DOWNGRADED" | "RESOLVED";
+type ServerEmergencyStatus =
+    | "PENDING"
+    | "ACKNOWLEDGED"
+    | "REVIEWING"
+    | "CONFIRMED"
+    | "DOWNGRADED"
+    | "RESOLVED";
 type ServerResponse = {
     id: string;
     status: ServerEmergencyStatus;
-    clinical_result: "T0_CONFIRMED" | "T1" | "T2" | null;
+    clinical_result: "T0_CONFIRMED" | "T1" | "T2" | "T3" | null;
     updated_at: string | null;
 };
 
@@ -136,23 +142,39 @@ function updateOnline() {
     online.value = navigator.onLine;
 }
 
-watch([() => props.owner, () => props.id], ([owner, id], _, onCleanup) => {
-    emergency.value = null;
-    serverResponse.value = null;
-    const subscription: Subscription = liveQuery(async () => {
-        const record = await db.emergencies.get(id);
-        return record?.owner_user_id === owner ? record : null;
-    }).subscribe((record) => {
-        emergency.value = record;
-    });
-    onCleanup(() => subscription.unsubscribe());
-}, { immediate: true });
+watch(
+    [() => props.owner, () => props.id],
+    ([owner, id], _, onCleanup) => {
+        emergency.value = null;
+        serverResponse.value = null;
+        const subscription: Subscription = liveQuery(async () => {
+            const record = await db.emergencies.get(id);
+            return record?.owner_user_id === owner ? record : null;
+        }).subscribe((record) => {
+            emergency.value = record;
+        });
+        onCleanup(() => subscription.unsubscribe());
+    },
+    { immediate: true },
+);
 
 watch(
-    [() => props.owner, () => props.id, () => emergency.value?.sync_state, () => runtime.mode, online],
+    [
+        () => props.owner,
+        () => props.id,
+        () => emergency.value?.sync_state,
+        () => runtime.mode,
+        online,
+    ],
     ([owner, id, syncState, mode, isOnline], _, onCleanup) => {
-        if (emergency.value?.id !== id || emergency.value.owner_user_id !== owner ||
-            syncState !== "SYNCED" || mode !== "ONLINE_SERVER" || !isOnline) return;
+        if (
+            emergency.value?.id !== id ||
+            emergency.value.owner_user_id !== owner ||
+            syncState !== "SYNCED" ||
+            mode !== "ONLINE_SERVER" ||
+            !isOnline
+        )
+            return;
 
         let active = true;
         let inFlight = false;
@@ -162,17 +184,25 @@ watch(
             inFlight = true;
             request = new AbortController();
             try {
-                const response = await fetch(`/relawan/emergencies/${encodeURIComponent(id)}/status`, {
-                    credentials: "same-origin",
-                    headers: {
-                        Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
+                const response = await fetch(
+                    `/relawan/emergencies/${encodeURIComponent(id)}/status`,
+                    {
+                        credentials: "same-origin",
+                        headers: {
+                            Accept: "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                        signal: request.signal,
                     },
-                    signal: request.signal,
-                });
+                );
                 if (!response.ok) return;
                 const status = (await response.json()) as ServerResponse;
-                if (active && props.owner === owner && props.id === id && status.id === id)
+                if (
+                    active &&
+                    props.owner === owner &&
+                    props.id === id &&
+                    status.id === id
+                )
                     serverResponse.value = status;
             } catch {
                 // Keep the last known Healthcare response and retry next interval.
@@ -198,25 +228,31 @@ const currentResponse = computed(() =>
 );
 const clinicalStatus = computed(() => {
     const response = currentResponse.value;
-    if (response?.clinical_result === "T0_CONFIRMED" || response?.status === "CONFIRMED")
+    if (
+        response?.clinical_result === "T0_CONFIRMED" ||
+        response?.status === "CONFIRMED"
+    )
         return "T0 dikonfirmasi Healthcare";
-    if (response?.clinical_result === "T1" || response?.clinical_result === "T2")
-        return `${response.clinical_result} — ditetapkan Healthcare`;
-    if (response?.status === "DOWNGRADED") return "Klasifikasi diperbarui Healthcare";
+    const clinicalResult = response?.clinical_result;
+    if (clinicalResult && ["T1", "T2", "T3"].includes(clinicalResult))
+        return `${clinicalResult} — ditetapkan Healthcare`;
+    if (response?.status === "DOWNGRADED")
+        return "Klasifikasi diperbarui Healthcare";
     return "T0-Suspect";
 });
 const healthcareResponse = computed(() => {
-    if (emergency.value?.sync_state !== "SYNCED") return "Belum dapat dipastikan";
+    if (emergency.value?.sync_state !== "SYNCED")
+        return "Belum dapat dipastikan";
     const response = currentResponse.value;
     if (!response) return "Lihat status di server";
-    return ({
+    return {
         PENDING: "Belum diakui Healthcare",
         ACKNOWLEDGED: "Diakui Healthcare",
         REVIEWING: "Sedang ditinjau Healthcare",
         CONFIRMED: "Dikonfirmasi Healthcare",
         DOWNGRADED: "Klasifikasi diperbarui Healthcare",
         RESOLVED: "Insiden selesai",
-    })[response.status];
+    }[response.status];
 });
 
 const transmission = computed(

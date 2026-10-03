@@ -148,7 +148,7 @@ final class RelawanT0SubmissionTest extends TestCase
 
     public function test_broadcast_failure_keeps_one_emergency_and_returns_json_warning(): void
     {
-        Event::listen(EmergencyCreated::class, fn () => throw new RuntimeException('Simulated broadcast failure'));
+        Event::listen(EmergencyCreated::class, fn() => throw new RuntimeException('Simulated broadcast failure'));
 
         $response = $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::MEDICAL_CRISIS->value])
             ->assertCreated()
@@ -165,7 +165,7 @@ final class RelawanT0SubmissionTest extends TestCase
 
     public function test_broadcast_failure_redirects_to_saved_emergency_with_visible_flash_warning(): void
     {
-        Event::listen(EmergencyCreated::class, fn () => throw new RuntimeException('Simulated broadcast failure'));
+        Event::listen(EmergencyCreated::class, fn() => throw new RuntimeException('Simulated broadcast failure'));
 
         $response = $this->post('/relawan/emergencies', ['red_flag_type' => RedFlagType::SEVERE_AGITATION->value]);
 
@@ -174,10 +174,10 @@ final class RelawanT0SubmissionTest extends TestCase
             ->assertSessionHas('error');
         $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
         $this->get("/relawan/emergencies/{$emergency->id}")
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('Relawan/Emergency', false)
                 ->where('emergency.id', $emergency->id)
-                ->where('flash.error', fn ($warning) => str_contains($warning, 'belum dapat dikonfirmasi')));
+                ->where('flash.error', fn($warning) => str_contains($warning, 'belum dapat dikonfirmasi')));
     }
 
     public function test_emergency_detail_is_scoped_to_reporting_relawan(): void
@@ -187,14 +187,14 @@ final class RelawanT0SubmissionTest extends TestCase
             ->assertCreated();
         $id = EmergencyEvent::sole()->id;
 
-        $this->get('/relawan/emergencies/'.$id)
+        $this->get('/relawan/emergencies/' . $id)
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('Relawan/Emergency', false)
                 ->where('emergency.id', $id));
 
         $this->actingAs($otherRelawan)
-            ->get('/relawan/emergencies/'.$id)
+            ->get('/relawan/emergencies/' . $id)
             ->assertNotFound();
     }
 
@@ -227,7 +227,7 @@ final class RelawanT0SubmissionTest extends TestCase
     public function test_status_read_tracks_healthcare_progress_and_classification_results(): void
     {
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
-        foreach (['T0_CONFIRMED' => 'CONFIRMED', 'T1' => 'DOWNGRADED', 'T2' => 'DOWNGRADED'] as $result => $finalStatus) {
+        foreach (['T0_CONFIRMED' => 'CONFIRMED', 'T1' => 'DOWNGRADED', 'T2' => 'DOWNGRADED', 'T3' => 'DOWNGRADED'] as $result => $finalStatus) {
             $emergency = EmergencyEvent::create([
                 'user_id' => $this->relawan->id,
                 'red_flag_type' => RedFlagType::MEDICAL_CRISIS,

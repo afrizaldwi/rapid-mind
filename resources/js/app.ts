@@ -6,8 +6,16 @@ import { createApp, h, type DefineComponent } from "vue";
 import { configureEcho } from "@laravel/echo-vue";
 import { lockRelawanContinuity, type VerifiedRelawan } from "./offline/relawanContinuity";
 
+const realtimeUsesTls = window.location.protocol === "https:";
+const realtimePort = Number(window.location.port || (realtimeUsesTls ? 443 : 80));
+
 configureEcho({
     broadcaster: "reverb",
+    wsHost: window.location.hostname,
+    wsPort: realtimePort,
+    wssPort: realtimePort,
+    forceTLS: realtimeUsesTls,
+    enabledTransports: ["ws", "wss"],
 });
 
 createInertiaApp({
