@@ -198,6 +198,58 @@ final class RelawanT0SubmissionTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_status_read_is_owner_scoped_and_rejects_other_roles_and_guests(): void
+    {
+        $emergency = EmergencyEvent::create([
+            'user_id' => $this->relawan->id,
+            'red_flag_type' => RedFlagType::PSYCHOSIS,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+        $url = "/relawan/emergencies/{$emergency->id}/status";
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('id', $emergency->id)
+            ->assertJsonPath('status', 'PENDING')
+            ->assertJsonPath('clinical_result', null)
+            ->assertJsonStructure(['updated_at']);
+        $this->assertCount(4, $this->getJson($url)->json());
+
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $this->actingAs($other)->getJson($url)->assertNotFound();
+        foreach ([UserRole::HEALTHCARE, UserRole::ADMIN] as $role) {
+            $user = User::factory()->create(['role' => $role, 'is_active' => true]);
+            $this->actingAs($user)->getJson($url)->assertForbidden();
+        }
+        auth()->logout();
+        $this->getJson($url)->assertUnauthorized();
+        $this->assertSame(EmergencyStatus::PENDING, $emergency->fresh()->status);
+    }
+
+    public function test_status_read_tracks_healthcare_progress_and_classification_results(): void
+    {
+        $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        foreach (['T0_CONFIRMED' => 'CONFIRMED', 'T1' => 'DOWNGRADED', 'T2' => 'DOWNGRADED'] as $result => $finalStatus) {
+            $emergency = EmergencyEvent::create([
+                'user_id' => $this->relawan->id,
+                'red_flag_type' => RedFlagType::MEDICAL_CRISIS,
+                'status' => EmergencyStatus::PENDING,
+            ]);
+            $url = "/relawan/emergencies/{$emergency->id}/status";
+            $this->getJson($url)->assertJsonPath('status', 'PENDING')->assertJsonPath('clinical_result', null);
+
+            $this->actingAs($healthcare)->postJson("/healthcare/emergencies/{$emergency->id}/acknowledge")->assertOk();
+            $this->actingAs($this->relawan)->getJson($url)
+                ->assertJsonPath('status', 'ACKNOWLEDGED')->assertJsonPath('clinical_result', null);
+
+            $this->actingAs($healthcare)->postJson("/healthcare/emergencies/{$emergency->id}/verify", ['method' => 'PHONE'])->assertOk();
+            $this->actingAs($this->relawan)->getJson($url)
+                ->assertJsonPath('status', 'REVIEWING')->assertJsonPath('clinical_result', null);
+
+            $this->actingAs($healthcare)->postJson("/healthcare/emergencies/{$emergency->id}/classify", ['clinical_result' => $result])->assertOk();
+            $this->actingAs($this->relawan)->getJson($url)
+                ->assertJsonPath('status', $finalStatus)->assertJsonPath('clinical_result', $result);
+        }
+    }
+
     public function test_emergency_broadcast_is_healthcare_only_and_contains_id_only(): void
     {
         $patient = Patient::create(['name' => 'Rahasia', 'created_by' => $this->relawan->id]);

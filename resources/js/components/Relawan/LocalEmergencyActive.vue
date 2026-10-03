@@ -3,7 +3,7 @@
         <div class="rounded-3xl bg-red-800 p-6 text-white shadow-xl">
             <div class="flex items-center gap-2 text-xs font-bold uppercase">
                 <Siren class="h-4 w-4" aria-hidden="true" />
-                <p>T0-Suspect Aktif</p>
+                <p>Insiden T0-Suspect</p>
             </div>
             <h2 class="mt-2 text-2xl font-black">
                 {{ emergency.patient_name || "Penyintas Tanpa Nama" }}
@@ -15,18 +15,14 @@
             class="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm"
         >
             <div class="flex justify-between gap-3">
-                <span>Status klinis</span><strong>T0-Suspect</strong>
+                <span>Status klinis</span><strong>{{ clinicalStatus }}</strong>
             </div>
             <div class="flex justify-between gap-3">
                 <span>Transmisi</span><strong>{{ transmission }}</strong>
             </div>
             <div class="flex justify-between gap-3">
                 <span>Respons Healthcare</span
-                ><strong>{{
-                    emergency.sync_state === "SYNCED"
-                        ? "Lihat status di server"
-                        : "Belum dapat dipastikan"
-                }}</strong>
+                ><strong>{{ healthcareResponse }}</strong>
             </div>
         </div>
 
@@ -104,27 +100,124 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { Siren } from 'lucide-vue-next';
 import { liveQuery, type Subscription } from "dexie";
 import { db, type LocalEmergency } from "@/offline/db";
 import { retryEmergency } from "@/offline/emergencyWorkflow";
+import { useRelawanRuntime } from "@/relawan/runtime";
+
+type ServerEmergencyStatus = "PENDING" | "ACKNOWLEDGED" | "REVIEWING" | "CONFIRMED" | "DOWNGRADED" | "RESOLVED";
+type ServerResponse = {
+    id: string;
+    status: ServerEmergencyStatus;
+    clinical_result: "T0_CONFIRMED" | "T1" | "T2" | null;
+    updated_at: string | null;
+};
 
 const props = defineProps<{ owner: number; id: string }>();
 defineEmits<{ (e: "close"): void }>();
 const emergency = ref<LocalEmergency | null>(null);
+const serverResponse = ref<ServerResponse | null>(null);
+const online = ref(typeof navigator !== "undefined" && navigator.onLine);
+const runtime = useRelawanRuntime();
 const retryError = ref("");
-let subscription: Subscription | undefined;
 
 onMounted(() => {
-    subscription = liveQuery(async () => {
-        const record = await db.emergencies.get(props.id);
-        return record?.owner_user_id === props.owner ? record : null;
+    window.addEventListener("online", updateOnline);
+    window.addEventListener("offline", updateOnline);
+});
+onUnmounted(() => {
+    window.removeEventListener("online", updateOnline);
+    window.removeEventListener("offline", updateOnline);
+});
+
+function updateOnline() {
+    online.value = navigator.onLine;
+}
+
+watch([() => props.owner, () => props.id], ([owner, id], _, onCleanup) => {
+    emergency.value = null;
+    serverResponse.value = null;
+    const subscription: Subscription = liveQuery(async () => {
+        const record = await db.emergencies.get(id);
+        return record?.owner_user_id === owner ? record : null;
     }).subscribe((record) => {
         emergency.value = record;
     });
+    onCleanup(() => subscription.unsubscribe());
+}, { immediate: true });
+
+watch(
+    [() => props.owner, () => props.id, () => emergency.value?.sync_state, () => runtime.mode, online],
+    ([owner, id, syncState, mode, isOnline], _, onCleanup) => {
+        if (emergency.value?.id !== id || emergency.value.owner_user_id !== owner ||
+            syncState !== "SYNCED" || mode !== "ONLINE_SERVER" || !isOnline) return;
+
+        let active = true;
+        let inFlight = false;
+        let request: AbortController | null = null;
+        async function refresh() {
+            if (!active || inFlight) return;
+            inFlight = true;
+            request = new AbortController();
+            try {
+                const response = await fetch(`/relawan/emergencies/${encodeURIComponent(id)}/status`, {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    signal: request.signal,
+                });
+                if (!response.ok) return;
+                const status = (await response.json()) as ServerResponse;
+                if (active && props.owner === owner && props.id === id && status.id === id)
+                    serverResponse.value = status;
+            } catch {
+                // Keep the last known Healthcare response and retry next interval.
+            } finally {
+                inFlight = false;
+                request = null;
+            }
+        }
+
+        void refresh();
+        const timer = window.setInterval(() => void refresh(), 4000);
+        onCleanup(() => {
+            active = false;
+            window.clearInterval(timer);
+            request?.abort();
+        });
+    },
+    { immediate: true },
+);
+
+const currentResponse = computed(() =>
+    emergency.value?.sync_state === "SYNCED" ? serverResponse.value : null,
+);
+const clinicalStatus = computed(() => {
+    const response = currentResponse.value;
+    if (response?.clinical_result === "T0_CONFIRMED" || response?.status === "CONFIRMED")
+        return "T0 dikonfirmasi Healthcare";
+    if (response?.clinical_result === "T1" || response?.clinical_result === "T2")
+        return `${response.clinical_result} — ditetapkan Healthcare`;
+    if (response?.status === "DOWNGRADED") return "Klasifikasi diperbarui Healthcare";
+    return "T0-Suspect";
 });
-onUnmounted(() => subscription?.unsubscribe());
+const healthcareResponse = computed(() => {
+    if (emergency.value?.sync_state !== "SYNCED") return "Belum dapat dipastikan";
+    const response = currentResponse.value;
+    if (!response) return "Lihat status di server";
+    return ({
+        PENDING: "Belum diakui Healthcare",
+        ACKNOWLEDGED: "Diakui Healthcare",
+        REVIEWING: "Sedang ditinjau Healthcare",
+        CONFIRMED: "Dikonfirmasi Healthcare",
+        DOWNGRADED: "Klasifikasi diperbarui Healthcare",
+        RESOLVED: "Insiden selesai",
+    })[response.status];
+});
 
 const transmission = computed(
     () =>

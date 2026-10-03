@@ -425,6 +425,23 @@ final class RelawanController extends Controller
         ]);
     }
 
+    public function emergencyStatus(string $emergencyId): JsonResponse
+    {
+        $emergency = EmergencyEvent::where('user_id', Auth::id())
+            ->findOrFail($emergencyId);
+        $decision = $emergency->verifications()
+            ->whereNotNull('clinical_result')
+            ->latest('id')
+            ->first();
+
+        return response()->json([
+            'id' => $emergency->id,
+            'status' => $emergency->status->value,
+            'clinical_result' => $decision?->clinical_result?->value,
+            'updated_at' => $emergency->updated_at?->toISOString(),
+        ]);
+    }
+
     public function triggerEmergency(Request $request): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
