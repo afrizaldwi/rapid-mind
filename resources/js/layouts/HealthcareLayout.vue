@@ -44,16 +44,16 @@
 
       <!-- Right Controls & User Profile -->
       <div class="flex items-center space-x-3">
-        <!-- Canonical Connection Status Badge -->
+        <!-- Canonical Connection Status Badge (Phase 6 / Section 12) -->
         <div
-          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-          :class="isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-slate-100 text-slate-700 border border-slate-300'"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border"
+          :class="connectionStatusMeta.colorClass"
         >
           <span
             class="w-2 h-2 rounded-full"
-            :class="isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"
+            :class="connectionStatusMeta.dotClass"
           ></span>
-          <span>{{ isOnline ? 'Online • PSC Siaga' : 'Offline' }}</span>
+          <span>{{ connectionStatusMeta.label }}</span>
         </div>
 
         <!-- User Profile Pill / Dropdown -->
@@ -230,6 +230,24 @@
 
       <!-- Main Workspace Scrollable Body -->
       <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
+        <!-- Stale Data Warning Banner (Phase 6 / Section 12.3) -->
+        <div
+          v-if="isOnline && (!subscriptionReady || serverReachable === false)"
+          class="mb-3 p-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex items-center justify-between"
+        >
+          <div class="flex items-center space-x-2">
+            <span class="text-amber-600 font-bold">ℹ</span>
+            <span>Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin tidak terbaru.</span>
+          </div>
+          <button
+            type="button"
+            @click="requestReconciliation"
+            class="text-[11px] font-bold text-amber-900 underline hover:text-amber-700"
+          >
+            Muat Ulang
+          </button>
+        </div>
+
         <slot />
       </main>
     </div>
@@ -273,6 +291,35 @@ function handleOffline() {
 const serverReachable = ref<boolean | null>(null);
 const subscriptionReady = ref(false);
 
+const connectionStatusMeta = computed(() => {
+  if (!isOnline.value) {
+    return {
+      label: 'Offline',
+      colorClass: 'bg-slate-100 text-slate-700 border-slate-300',
+      dotClass: 'bg-slate-400',
+    };
+  }
+  if (serverReachable.value === false) {
+    return {
+      label: 'Server tidak terjangkau',
+      colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+      dotClass: 'bg-amber-500',
+    };
+  }
+  if (!subscriptionReady.value) {
+    return {
+      label: 'Menghubungkan realtime',
+      colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+      dotClass: 'bg-amber-500',
+    };
+  }
+  return {
+    label: 'Online • Realtime aktif',
+    colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    dotClass: 'bg-emerald-500 animate-pulse',
+  };
+});
+
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 let healthProbeInFlight = false;
 let mounted = false;
@@ -285,7 +332,7 @@ function logout() {
   router.post('/logout');
 }
 
-function onEmergencyCreated(event: { id: string }) {
+function onEmergencyCreated(event: { emergency?: { id: string }; id?: string }) {
   playAudioNotification();
   router.reload({
     only: ['emergencies', 'pendingT0Count'],
