@@ -25,7 +25,7 @@
             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium shadow-xs"
           >
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Kondisi Darurat Terkendali
+            Tidak ada T0 aktif
           </span>
         </div>
       </div>
@@ -35,7 +35,7 @@
         <!-- Card 1: TOTAL ANTREAN -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Antrean</span>
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Antrean T0 Aktif</span>
             <div class="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -47,11 +47,11 @@
               <span class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">{{ totalSurvivorsCount }}</span>
             <span class="text-xs font-semibold text-slate-500">insiden</span>
               <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
-                Terdata aktif
+                Aktif
               </span>
             </div>
             <span class="text-[11px] text-slate-400 block mt-1 font-medium">
-              Insiden T0 yang tercatat
+              Insiden yang masih memerlukan tindak lanjut
             </span>
           </div>
         </div>
@@ -61,7 +61,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-red-800"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 — Darurat Jiwa</span>
+              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 — Kedaruratan Kritis</span>
             </div>
             <div class="w-7 h-7 rounded-lg bg-red-50 text-red-800 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,7 +132,7 @@
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Disposisi RSUD & Faskes Jiwa
+              Rujukan medis diterbitkan
             </span>
           </div>
         </div>
@@ -156,13 +156,13 @@
       <!-- 3. Two-Panel Clinical Operations Workspace (Left ~32%, Right ~68%) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         
-        <!-- LEFT PANEL: ANTREAN KORBAN & SKRINING (~32% width) -->
+        <!-- LEFT PANEL: ANTREAN INSIDEN T0 (~32% width) -->
         <section class="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col overflow-hidden">
           <!-- Queue Header & Filters -->
           <div class="p-3.5 border-b border-slate-100 bg-slate-50/50 space-y-2.5">
             <div class="flex items-center justify-between">
               <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Antrean Korban & Skrining
+                Antrean Insiden T0
               </h3>
               <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                 {{ filteredQueue.length }} Kasus
@@ -202,7 +202,7 @@
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                Semua
+                Semua Aktif
               </button>
               <button
                 type="button"
@@ -213,7 +213,7 @@
                 class="px-2.5 py-1 rounded-md transition shrink-0 flex items-center space-x-1"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                <span>Perlu Diakui</span>
+                <span>Perlu Respons</span>
               </button>
               <button
                 type="button"
@@ -223,7 +223,7 @@
                   : 'bg-white text-orange-700 hover:bg-orange-50 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                Sedang Diverifikasi
+                Sedang Ditangani
               </button>
               <button
                 type="button"
@@ -233,17 +233,7 @@
                   : 'bg-white text-amber-700 hover:bg-amber-50 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                Terkonfirmasi
-              </button>
-              <button
-                type="button"
-                @click="selectedFilter = 'DOWNGRADED'"
-                :class="selectedFilter === 'DOWNGRADED'
-                  ? 'bg-emerald-600 text-white font-bold'
-                  : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-slate-200'"
-                class="px-2.5 py-1 rounded-md transition shrink-0"
-              >
-                Diturunkan
+                Tindak Lanjut
               </button>
             </div>
           </div>
@@ -1098,7 +1088,7 @@ const healthcareFacilityName = computed(() => props.facility?.name || (page.prop
 const flashMessage = computed(() => String((page.props.flash as { message?: string } | undefined)?.message ?? ''));
 const isSubmitting = ref(false);
 const searchQuery = ref('');
-const selectedFilter = ref<'ALL' | 'PENDING' | 'REVIEWING' | 'CONFIRMED' | 'DOWNGRADED'>('ALL');
+const selectedFilter = ref<'ALL' | 'PENDING' | 'REVIEWING' | 'CONFIRMED'>('ALL');
 const activeTab = ref<'overview' | 'assessment' | 'actions' | 'history'>('overview');
 
 const actionErrors = computed(() => {
@@ -1311,6 +1301,7 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     rmCode: formatRmCode(isEmergency ? raw : assessment),
     survivorName: patient?.name || 'Penyintas tanpa identitas tercatat',
     maskedNik: maskNik(patient?.nik),
+    searchNik: String(patient?.nik ?? '').replace(/\D/g, ''),
     age: patient?.age !== undefined && patient?.age !== null ? patient.age : null,
     gender: patient?.gender || 'Jenis kelamin tidak tersedia',
     vulnerabilityStatus,
@@ -1375,9 +1366,10 @@ const filteredQueue = computed(() => {
     }
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase().trim();
+      const nikQuery = q.replace(/\D/g, '');
       const matchName = item.survivorName.toLowerCase().includes(q);
       const matchRm = item.rmCode.toLowerCase().includes(q);
-      const matchNik = item.maskedNik.toLowerCase().includes(q);
+      const matchNik = nikQuery.length > 0 && item.searchNik.includes(nikQuery);
       const matchShelter = item.shelterName.toLowerCase().includes(q);
       return matchName || matchRm || matchNik || matchShelter;
     }

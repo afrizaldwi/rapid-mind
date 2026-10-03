@@ -37,22 +37,31 @@ final class HealthcareController extends Controller
 
         $emergencies = EmergencyEvent::with([
             'patient.shelter',
-            'patient.assessments.triageResult',
-            'patient.assessments.srqResponses',
-            'patient.assessments.riskAssessment',
-            'patient.assessments.functionAssessment',
-            'patient.assessments.clinicalValidation.validator:id,name',
             'assessment.triageResult',
             'assessment.srqResponses',
             'assessment.riskAssessment',
             'assessment.functionAssessment',
             'shelter',
             'user:id,name',
-            'verifications' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
+            'verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'verifications.verifier:id,name',
             'referrals.facility',
             'referrals.statusHistory.changer:id,name',
         ])
+            ->where(function ($query): void {
+                $query->whereIn('status', [
+                    EmergencyStatus::PENDING,
+                    EmergencyStatus::ACKNOWLEDGED,
+                    EmergencyStatus::REVIEWING,
+                ])->orWhere(function ($confirmed): void {
+                    $confirmed->where('status', EmergencyStatus::CONFIRMED)
+                        ->where(function ($followUp): void {
+                            $followUp->whereDoesntHave('referrals')
+                                ->orWhereHas('referrals', fn($referral) => $referral
+                                    ->where('status', '!=', ReferralStatus::COMPLETED));
+                        });
+                });
+            })
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN created_at END ASC")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN id END ASC")
@@ -73,10 +82,14 @@ final class HealthcareController extends Controller
     public function emergencyDetail(string $emergencyId): InertiaResponse
     {
         $emergency = EmergencyEvent::with([
-            'patient.assessments.triageResult',
+            'patient.shelter',
+            'assessment.triageResult',
+            'assessment.srqResponses',
+            'assessment.riskAssessment',
+            'assessment.functionAssessment',
             'shelter',
             'user:id,name,phone_number',
-            'verifications' => fn ($query) => $query->orderBy('created_at')->orderBy('id'),
+            'verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'verifications.verifier',
             'referrals.facility',
             'referrals.statusHistory.changer',
@@ -361,9 +374,9 @@ final class HealthcareController extends Controller
     {
         $assessments = Assessment::with(['patient', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'clinicalValidation.validator'])
             ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
-            ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+            ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->get()
-            ->sortBy(fn (Assessment $assessment) => sprintf(
+            ->sortBy(fn(Assessment $assessment) => sprintf(
                 '%d-%s-%s',
                 $assessment->triageResult->system_recommendation === TriageCategory::T1 ? 1 : 2,
                 $assessment->completed_at?->format('YmdHis.u') ?? $assessment->created_at->format('YmdHis.u'),
@@ -371,19 +384,25 @@ final class HealthcareController extends Controller
             ))->values();
 
         return Inertia::render('Healthcare/Validations/Index', [
-            'pendingAssessments' => $assessments->filter(fn (Assessment $a) => $a->clinicalValidation === null)->values(),
-            'completedAssessments' => $assessments->filter(fn (Assessment $a) => $a->clinicalValidation !== null)->values(),
+            'pendingAssessments' => $assessments->filter(fn(Assessment $a) => $a->clinicalValidation === null)->values(),
+            'completedAssessments' => $assessments->filter(fn(Assessment $a) => $a->clinicalValidation !== null)->values(),
         ]);
     }
 
     public function validationDetail(string $assessmentId): InertiaResponse
     {
         $assessment = Assessment::with([
-            'patient.shelter', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'srqResponses',
-            'riskAssessment', 'functionAssessment', 'clinicalValidation.validator',
+            'patient.shelter',
+            'user:id,name,shelter_id',
+            'user.shelter',
+            'triageResult',
+            'srqResponses',
+            'riskAssessment',
+            'functionAssessment',
+            'clinicalValidation.validator',
             'clinicalValidation.referral.facility',
         ])->where('status', \App\Enums\AssessmentStatus::COMPLETED)
-            ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+            ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->findOrFail($assessmentId);
 
         $previousAssessments = Assessment::with(['triageResult', 'clinicalValidation.validator'])
@@ -403,7 +422,7 @@ final class HealthcareController extends Controller
     {
         $user = Auth::user();
         $assessment = Assessment::where('status', \App\Enums\AssessmentStatus::COMPLETED)
-            ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+            ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->findOrFail($assessmentId);
 
         // Completed decisions are immutable in this MVP; a replay is a successful no-op.
@@ -425,7 +444,7 @@ final class HealthcareController extends Controller
             DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
                 $assessment = Assessment::whereKey($assessment->id)
                     ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
-                    ->whereHas('triageResult', fn ($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
+                    ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
                     ->lockForUpdate()->firstOrFail();
                 if ($assessment->clinicalValidation()->exists()) {
                     return;
@@ -554,9 +573,21 @@ final class HealthcareController extends Controller
 
     public function patients(): InertiaResponse
     {
-        $patients = Patient::with(['shelter', 'assessments.triageResult', 'emergencyEvents'])
+        $patients = Patient::with([
+            'shelter',
+            'assessments' => fn($query) => $query->orderByDesc('completed_at')->orderByDesc('id'),
+            'assessments.triageResult',
+            'assessments.clinicalValidation',
+            'emergencyEvents' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'emergencyEvents.verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
+            'emergencyEvents.referrals',
+        ])
             ->latest('created_at')
-            ->get();
+            ->get()
+            ->each(fn(Patient $patient) => $patient->setAttribute(
+                'latest_clinical_status',
+                $this->latestPatientClinicalStatus($patient),
+            ));
 
         return Inertia::render('Healthcare/Patients/Index', [
             'patients' => $patients,
@@ -567,16 +598,23 @@ final class HealthcareController extends Controller
     {
         $patient = Patient::with([
             'shelter',
+            'assessments' => fn($query) => $query->orderByDesc('completed_at')->orderByDesc('id'),
+            'assessments.user:id,name',
             'assessments.srqResponses',
             'assessments.riskAssessment',
             'assessments.functionAssessment',
             'assessments.triageResult',
             'assessments.clinicalValidation.validator',
+            'emergencyEvents' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'emergencyEvents.user:id,name',
+            'emergencyEvents.shelter',
+            'emergencyEvents.verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'emergencyEvents.verifications.verifier',
             'emergencyEvents.referrals.facility',
-            'referrals' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'referrals' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
             'referrals.facility',
             'referrals.referrer',
+            'referrals.statusHistory' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'referrals.statusHistory.changer',
             'referrals.emergencyEvent',
             'referrals.clinicalValidation.assessment.triageResult',
@@ -585,5 +623,88 @@ final class HealthcareController extends Controller
         return Inertia::render('Healthcare/Patients/Show', [
             'patient' => $patient,
         ]);
+    }
+
+    /** @return array{label: string, category: string|null, source: string, occurred_at: mixed}|null */
+    private function latestPatientClinicalStatus(Patient $patient): ?array
+    {
+        $activeEmergency = $patient->emergencyEvents->first(function (EmergencyEvent $emergency): bool {
+            if (in_array($emergency->status, [
+                EmergencyStatus::PENDING,
+                EmergencyStatus::ACKNOWLEDGED,
+                EmergencyStatus::REVIEWING,
+            ], true)) {
+                return true;
+            }
+
+            return $emergency->status === EmergencyStatus::CONFIRMED
+                && ($emergency->referrals->isEmpty()
+                    || $emergency->referrals->contains(
+                        fn(Referral $referral): bool => $referral->status !== ReferralStatus::COMPLETED,
+                    ));
+        });
+
+        if ($activeEmergency) {
+            $confirmed = $activeEmergency->status === EmergencyStatus::CONFIRMED;
+
+            return [
+                'label' => $confirmed ? 'T0-Confirmed Aktif' : 'T0-Suspect Aktif',
+                'category' => $confirmed ? TriageCategory::T0_CONFIRMED->value : TriageCategory::T0_SUSPECT->value,
+                'source' => 'active_emergency',
+                'occurred_at' => $activeEmergency->created_at,
+            ];
+        }
+
+        $candidates = [];
+        foreach ($patient->emergencyEvents as $emergency) {
+            foreach ($emergency->verifications as $verification) {
+                if ($verification->clinical_result) {
+                    $candidates[] = [
+                        'label' => $verification->clinical_result->value,
+                        'category' => $verification->clinical_result->value,
+                        'source' => 'emergency_decision',
+                        'occurred_at' => $verification->created_at,
+                        'tie_break' => "3-{$verification->id}",
+                    ];
+                }
+            }
+        }
+        foreach ($patient->assessments as $assessment) {
+            if ($assessment->clinicalValidation) {
+                $validation = $assessment->clinicalValidation;
+                $candidates[] = [
+                    'label' => $validation->clinical_result->value,
+                    'category' => $validation->clinical_result->value,
+                    'source' => 'assessment_validation',
+                    'occurred_at' => $validation->created_at,
+                    'tie_break' => "2-{$validation->id}",
+                ];
+            } elseif ($assessment->triageResult) {
+                $triage = $assessment->triageResult;
+                $candidates[] = [
+                    'label' => $triage->system_recommendation->value,
+                    'category' => $triage->system_recommendation->value,
+                    'source' => 'system_recommendation',
+                    'occurred_at' => $assessment->completed_at ?? $triage->created_at,
+                    'tie_break' => "1-{$assessment->id}",
+                ];
+            }
+        }
+
+        usort($candidates, static function (array $left, array $right): int {
+            $timeComparison = $right['occurred_at']->getTimestamp() <=> $left['occurred_at']->getTimestamp();
+
+            return $timeComparison !== 0
+                ? $timeComparison
+                : strcmp($right['tie_break'], $left['tie_break']);
+        });
+
+        if (! isset($candidates[0])) {
+            return null;
+        }
+
+        unset($candidates[0]['tie_break']);
+
+        return $candidates[0];
     }
 }

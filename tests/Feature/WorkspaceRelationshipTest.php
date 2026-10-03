@@ -144,7 +144,7 @@ final class WorkspaceRelationshipTest extends TestCase
         $this->actingAs($healthcare)->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Emergencies/Index', false)
             ->where('pendingT0Count', 2)
-            ->has('emergencies', 6)
+            ->has('emergencies', 5)
             ->etc());
 
         $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page

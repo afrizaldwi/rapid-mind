@@ -13,6 +13,7 @@ use App\Enums\UserRole;
 use App\Models\Assessment;
 use App\Models\ClinicalValidation;
 use App\Models\EmergencyEvent;
+use App\Models\EmergencyVerification;
 use App\Models\HealthcareFacility;
 use App\Models\Patient;
 use App\Models\Referral;
@@ -99,32 +100,192 @@ final class HealthcareOperationalCompletionTest extends TestCase
     public function test_pending_emergencies_are_oldest_first_with_deterministic_ties(): void
     {
         $old = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
         ]);
         $old->forceFill(['created_at' => now()->subHours(2)])->save();
         $new = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
         ]);
         $new->forceFill(['created_at' => now()->subHour()])->save();
         $sameTime = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
         ]);
         $sameTime->forceFill(['created_at' => $new->created_at])->save();
         $tieIds = [$new->id, $sameTime->id];
         sort($tieIds);
         $resolved = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::CONFIRMED,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
         ]);
 
-        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn(Assert $page) => $page
             ->where('emergencies.0.id', $old->id)
             ->where('emergencies.1.id', $tieIds[0])
             ->where('emergencies.2.id', $tieIds[1])
             ->where('emergencies.3.id', $resolved->id)->etc());
+    }
+
+    public function test_patient_latest_status_projection_preserves_missing_zero_and_longitudinal_recency(): void
+    {
+        $withoutResult = Assessment::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'status' => AssessmentStatus::COMPLETED,
+            'mode' => AssessmentMode::VERBAL,
+            'completed_at' => now()->subHours(4),
+        ]);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patients.0.id', $this->patient->id)
+            ->where('patients.0.latest_clinical_status', null)->etc());
+
+        TriageResult::create([
+            'assessment_id' => $withoutResult->id,
+            'srq_score' => 0,
+            'risk_score' => 0,
+            'function_score' => 0,
+            'total_score' => 0,
+            'system_recommendation' => TriageCategory::T3,
+        ]);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T3')
+            ->where('patients.0.assessments.0.triage_result.total_score', 0)->etc());
+
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::DOWNGRADED,
+        ]);
+        $decision = EmergencyVerification::create([
+            'emergency_event_id' => $emergency->id,
+            'verified_by' => $this->healthcare->id,
+            'clinical_result' => TriageCategory::T1,
+        ]);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T1')
+            ->where('patients.0.latest_clinical_status.source', 'emergency_decision')->etc());
+
+        $decision->forceFill(['created_at' => now()->subHours(2)])->save();
+        $newerAssessment = $this->assessment(TriageCategory::T2);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T2')
+            ->where('patients.0.latest_clinical_status.source', 'system_recommendation')
+            ->where('patients.0.assessments.0.id', $newerAssessment->id)->etc());
+
+        $active = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::MEDICAL_CRISIS,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T0-Suspect Aktif')
+            ->where('patients.0.latest_clinical_status.source', 'active_emergency')
+            ->where('patients.0.emergency_events.0.id', $active->id)->etc());
+    }
+
+    public function test_emergency_worklist_contains_only_active_operational_t0_cases(): void
+    {
+        foreach ([EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING] as $status) {
+            EmergencyEvent::create([
+                'patient_id' => $this->patient->id,
+                'user_id' => $this->healthcare->id,
+                'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+                'status' => $status,
+            ]);
+        }
+        EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::DOWNGRADED,
+        ]);
+        EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
+        ]);
+        $openReferralEmergency = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
+        ]);
+        Referral::create([
+            'emergency_event_id' => $openReferralEmergency->id,
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => \App\Enums\ReferralStatus::ACTIVE,
+        ]);
+        $completedReferralEmergency = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
+        ]);
+        Referral::create([
+            'emergency_event_id' => $completedReferralEmergency->id,
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => \App\Enums\ReferralStatus::COMPLETED,
+        ]);
+
+        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->has('emergencies', 5)
+            ->where('emergencies', fn($emergencies) => ! $emergencies->contains('id', $completedReferralEmergency->id)
+                && ! $emergencies->contains('status', EmergencyStatus::DOWNGRADED->value))
+            ->etc());
+
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+            ->has('patient.emergency_events', 7)
+            ->etc());
+    }
+
+    public function test_patient_latest_status_uses_stable_id_tie_break_for_equal_timestamps(): void
+    {
+        $patient = Patient::create(['name' => 'Pasien Tie Break', 'created_by' => $this->healthcare->id]);
+        $timestamp = now()->subHour();
+        $categoriesById = [];
+        foreach ([TriageCategory::T1, TriageCategory::T2] as $category) {
+            $assessment = Assessment::create([
+                'patient_id' => $patient->id,
+                'user_id' => $this->healthcare->id,
+                'status' => AssessmentStatus::COMPLETED,
+                'mode' => AssessmentMode::VERBAL,
+                'completed_at' => $timestamp,
+            ]);
+            TriageResult::create([
+                'assessment_id' => $assessment->id,
+                'total_score' => $category === TriageCategory::T1 ? 15 : 8,
+                'system_recommendation' => $category,
+            ]);
+            $categoriesById[$assessment->id] = $category->value;
+        }
+        krsort($categoriesById, SORT_STRING);
+        $expected = reset($categoriesById);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients', function ($patients) use ($patient, $expected): bool {
+                $projected = $patients->firstWhere('id', $patient->id);
+
+                return $projected['latest_clinical_status']['label'] === $expected
+                    && $projected['latest_clinical_status']['source'] === 'system_recommendation';
+            })->etc());
     }
 
     public function test_worklist_prioritizes_oldest_t1_then_t2_and_keeps_t3_in_patient_history(): void

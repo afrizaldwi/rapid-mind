@@ -3277,7 +3277,7 @@ The UI should be designed around the actual workflow and operational risk, not m
 
 # 26. Daffa Repair Checkpoint (3 October 2026)
 
-The Daffa repair and remaining truthfulness pass are implemented and automated-verified through baseline `37a7fcfd64ecef81915dd599f6f3635c52b71dda`.
+The Daffa repair and final remaining-gap pass are implemented and automated-verified in the uncommitted working tree based on `df4b16379024a2ad0a895e61e7665ecf3ee04f4f`. No final commit reference is claimed because Git mutations remain user-owned.
 
 - Healthcare assessment evidence uses the emergency-linked assessment and a single snake_case-compatible normalization boundary.
 - Healthcare displays canonical R1–R5 and F1–F3 data without turning missing evidence into negative evidence or inventing SRQ/Red Flag interpretations.
@@ -3286,5 +3286,8 @@ The Daffa repair and remaining truthfulness pass are implemented and automated-v
 - Healthcare now uses the canonical Q5/Q6 and F1–F3 labels, derives vulnerability only from assessment R3, and does not attribute a manually selected suicidal-ideation Red Flag to Q17 without an actual affirmative Q17 answer.
 - Missing assessments and triage results are explicit, the referral selector exposes only persisted facility fields, verification rows are chronologically ordered by `created_at` then `id`, and active referrals are not presented as completed work.
 - Healthcare identity is facility-aware. Reverb subscription readiness cannot assert Laravel HTTP health, and each finite alert closes its `AudioContext` after playback.
+- Patient status is projected server-side from active T0 or the newest timestamped stored decision/result; missing results are not converted into T3 or score zero. Patient list identity is masked while name/full-NIK search remains supported.
+- The patient workspace now exposes separate `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` histories with deterministic ordering and preserved original T0-Suspect provenance.
+- Darurat is an active operational queue: DOWNGRADED and CONFIRMED cases whose referral work is complete leave the worklist while remaining in patient history. Emergency payloads no longer expose unused longitudinal patient assessments.
 
-Automated evidence: TypeScript validation passed, production frontend build passed, focused feature tests passed (8 tests / 149 assertions), and the complete Docker Laravel suite passed (138 tests / 1,638 assertions). Browser gates were intentionally skipped and remain NDV; therefore rendered mappings/copy, live Reverb, HTTP/Reverb outage separation, audio cleanup under repeated alerts, reconnect behavior, and interactive referral state are not claimed as browser verified.
+Automated evidence: TypeScript validation passed, production frontend build passed, focused feature tests passed (`WorkspaceRelationshipTest`: 8 tests / 149 assertions; `HealthcareOperationalCompletionTest`: 14 tests / 306 assertions), and the complete Docker Laravel suite passed (141 tests / 1,726 assertions). Browser Gates A–N were intentionally skipped and remain NDV; therefore rendered mappings/copy, list/search interaction, responsive layout, live Reverb, HTTP/Reverb outage separation, audio cleanup under repeated alerts, reconnect behavior, and interactive referral state are not claimed as browser verified.

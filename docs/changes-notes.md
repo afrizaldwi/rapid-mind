@@ -775,7 +775,7 @@ Deferred: dedicated dispatch model/schema, referral/dispatch architecture redesi
 
 ## Daffa Repair — Clinical Rendering, Realtime, and Admin Truthfulness (3 October 2026)
 
-The Daffa visual structure is preserved while the initial and remaining correctness repairs through baseline `37a7fcfd64ecef81915dd599f6f3635c52b71dda` are implemented.
+The Daffa visual structure is preserved while the initial and final remaining-gap repairs are implemented in the uncommitted working tree based on `df4b16379024a2ad0a895e61e7665ecf3ee04f4f`. A final commit reference is intentionally not claimed because the user owns all Git mutations.
 
 - Healthcare Darurat now normalizes Laravel snake_case assessment relations at one boundary and uses only the emergency's linked assessment. It no longer substitutes an arbitrary patient assessment.
 - Risk renders canonical R1–R5 with `YA`, `TIDAK`, or an explicit unavailable state. Function renders F1–F3 using only levels 0, 1, and 3. The unsupported SRQ `>= 6` positive/negative interpretation was removed.
@@ -789,6 +789,10 @@ The Daffa visual structure is preserved while the initial and remaining correctn
 - Verification rows are loaded by `created_at ASC, id ASC`. Healthcare shell/page identity uses the assigned facility or a neutral fallback instead of PSC 119.
 - Reverb subscription state no longer writes Laravel HTTP health; `Realtime aktif` requires online, successful HTTP health, and subscription readiness. Alert audio contexts close after playback.
 - The linked-assessment fixture now uses canonical R1/R3 answers, R1–R5 weights, and a coherent risk score.
+- Patient list status is now a server-derived, timestamped clinical projection. Active T0 has priority; otherwise the newest stored T0 decision, assessment validation, or system recommendation is used. No result remains `Belum ada hasil`, while a genuine T3 score of zero remains zero.
+- Patient list search matches name or full internal NIK while rendering masked NIK. Patient detail now has the required `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` sections with deterministic assessment, incident, verification, referral, and referral-status chronology.
+- The Darurat endpoint now returns only active operational T0: PENDING, ACKNOWLEDGED, REVIEWING, and CONFIRMED while follow-up remains open. DOWNGRADED and CONFIRMED with completed referral work remain in patient history but leave the active queue.
+- Darurat full-NIK search uses a non-rendered normalized value. Unused longitudinal patient-assessment collections were removed from emergency payloads, and the remaining active-queue labels were corrected to factual, facility-neutral language including medical-crisis T0.
 
 No dependency was installed, removed, or updated. Relawan source and `docs/workflow.md` were not changed.
 
@@ -797,6 +801,7 @@ No dependency was installed, removed, or updated. Relawan source and `docs/workf
 - `npx vue-tsc --noEmit`: passed.
 - `npm run build`: passed; 1,280 modules transformed and 24 PWA precache entries generated. Existing large-chunk and PWA deprecation advisories remain non-fatal.
 - Focused `WorkspaceRelationshipTest`: 8 tests, 149 assertions, 0 failures.
-- Complete Docker Laravel suite: 138 tests, 1,638 assertions, 0 failures.
+- Focused `HealthcareOperationalCompletionTest`: 14 tests, 306 assertions, 0 failures.
+- Complete Docker Laravel suite: 141 tests, 1,726 assertions, 0 failures.
 - `git diff --check`: passed.
-- Browser gates for both Daffa passes, including remaining-plan Gates A–L: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio lifecycle, HTTP/Reverb outage separation, reconnect, facility-identity, or rendered interaction claim is made by this checkpoint.
+- Browser gates for both Daffa passes, including final remaining-plan Gates A–N: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio lifecycle, HTTP/Reverb outage separation, reconnect, facility-identity, search interaction, responsive layout, or rendered interaction claim is made by this checkpoint.

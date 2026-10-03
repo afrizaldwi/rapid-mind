@@ -12,6 +12,16 @@
         </div>
       </div>
 
+      <div class="relative max-w-xl">
+        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 pointer-events-none">⌕</span>
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Cari nama atau NIK..."
+          class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 shadow-xs focus:border-teal-700 focus:outline-none"
+        />
+      </div>
+
       <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -24,12 +34,12 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
-            <tr v-for="p in patients" :key="p.id" class="hover:bg-slate-50/70 transition">
+            <tr v-for="p in filteredPatients" :key="p.id" class="hover:bg-slate-50/70 transition">
               <td class="py-4 px-6 font-bold text-slate-900">
                 {{ p.name }}
               </td>
               <td class="py-4 px-6 text-slate-500">
-                {{ p.nik || '-' }}
+                {{ maskNik(p.nik) }}
               </td>
               <td class="py-4 px-6">
                 {{ p.shelter?.name || 'Posko tidak diketahui' }}
@@ -54,33 +64,53 @@
         <div v-if="!patients || patients.length === 0" class="p-8 text-center text-xs text-slate-400">
           Belum ada data pasien.
         </div>
+        <div v-else-if="filteredPatients.length === 0" class="p-8 text-center text-xs text-slate-400">
+          Tidak ada pasien yang cocok dengan pencarian.
+        </div>
       </div>
     </div>
   </HealthcareLayout>
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import HealthcareLayout from '@/layouts/HealthcareLayout.vue';
 import Badge from '@/components/ui/Badge.vue';
 
-defineProps<{
+const props = defineProps<{
   patients: any[];
 }>();
 
 function latestCategory(patient: any): string {
-  if (patient.emergency_events && patient.emergency_events.length > 0) {
-    return 'T0 (Darurat)';
-  }
-  const lastAss = patient.assessments?.[patient.assessments.length - 1];
-  return lastAss?.triage_result?.system_recommendation || 'T3';
+  return patient.latest_clinical_status?.label || 'Belum ada hasil';
 }
 
-function latestBadge(patient: any) {
-  const cat = latestCategory(patient);
-  if (cat.includes('T0')) return 't0';
+function latestBadge(patient: any): 't0' | 't1' | 't2' | 't3' | 'neutral' {
+  const cat = patient.latest_clinical_status?.category;
+  if (cat?.startsWith('T0')) return 't0';
   if (cat === 'T1') return 't1';
   if (cat === 'T2') return 't2';
-  return 't3';
+  if (cat === 'T3') return 't3';
+  return 'neutral';
 }
+
+function maskNik(nik?: string): string {
+  const normalized = String(nik ?? '').replace(/\D/g, '');
+  if (normalized.length < 8) return 'NIK tidak tersedia';
+  return `${normalized.slice(0, 4)}••••${normalized.slice(-4)}`;
+}
+
+const searchQuery = ref('');
+const filteredPatients = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase('id-ID');
+  const digits = query.replace(/\D/g, '');
+  if (!query) return props.patients ?? [];
+
+  return (props.patients ?? []).filter((patient) => {
+    const name = String(patient.name ?? '').toLocaleLowerCase('id-ID');
+    const nik = String(patient.nik ?? '').replace(/\D/g, '');
+    return name.includes(query) || (digits.length > 0 && nik.includes(digits));
+  });
+});
 </script>
