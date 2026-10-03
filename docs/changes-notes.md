@@ -775,7 +775,7 @@ Deferred: dedicated dispatch model/schema, referral/dispatch architecture redesi
 
 ## Daffa Repair — Clinical Rendering, Realtime, and Admin Truthfulness (3 October 2026)
 
-The Daffa visual structure is preserved while the initial and final remaining-gap repairs are implemented in the uncommitted working tree based on `df4b16379024a2ad0a895e61e7665ecf3ee04f4f`. A final commit reference is intentionally not claimed because the user owns all Git mutations.
+The initial Daffa repair is committed at `2ad64616ce426b3af51b049bf58e81049c7fd0c8`. The final consistency changes below are implemented in the current uncommitted working tree based on that commit. A post-repair commit reference is intentionally not claimed because the user owns all Git mutations.
 
 - Healthcare Darurat now normalizes Laravel snake_case assessment relations at one boundary and uses only the emergency's linked assessment. It no longer substitutes an arbitrary patient assessment.
 - Risk renders canonical R1–R5 with `YA`, `TIDAK`, or an explicit unavailable state. Function renders F1–F3 using only levels 0, 1, and 3. The unsupported SRQ `>= 6` positive/negative interpretation was removed.
@@ -793,6 +793,10 @@ The Daffa visual structure is preserved while the initial and final remaining-ga
 - Patient list search matches name or full internal NIK while rendering masked NIK. Patient detail now has the required `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` sections with deterministic assessment, incident, verification, referral, and referral-status chronology.
 - The Darurat endpoint now returns only active operational T0: PENDING, ACKNOWLEDGED, REVIEWING, and CONFIRMED while follow-up remains open. DOWNGRADED and CONFIRMED with completed referral work remain in patient history but leave the active queue.
 - Darurat full-NIK search uses a non-rendered normalized value. Unused longitudinal patient-assessment collections were removed from emergency payloads, and the remaining active-queue labels were corrected to factual, facility-neutral language including medical-crisis T0.
+- All five Healthcare lifecycle `EmergencyUpdated` dispatch points are best-effort after persistence. A broadcast exception is reported, the successful mutation response remains successful, and JSON/Inertia can communicate that cross-device realtime delivery was not confirmed.
+- Healthcare realtime reconciliation is route-aware while preserving one global subscription and one coalescer: Darurat, Rujukan, patient list, patient detail, and Validasi reload only their relevant canonical props plus the shared pending-T0 count.
+- Patient latest-status ordering preserves microseconds and retains the existing deterministic tie-break only for truly equal timestamps. Active-emergency list copy now says `Insiden sejak` for the incident creation time.
+- Pure emergency normalization/display helpers moved to `resources/js/lib/healthcareEmergency.ts`; no backend contract or intended UI behavior changed. `Emergencies/Index.vue` was reduced from 3,069 to 2,728 lines, but remains a known maintainability target for later coherent component extraction.
 
 No dependency was installed, removed, or updated. Relawan source and `docs/workflow.md` were not changed.
 
@@ -801,7 +805,11 @@ No dependency was installed, removed, or updated. Relawan source and `docs/workf
 - `npx vue-tsc --noEmit`: passed.
 - `npm run build`: passed; 1,280 modules transformed and 24 PWA precache entries generated. Existing large-chunk and PWA deprecation advisories remain non-fatal.
 - Focused `WorkspaceRelationshipTest`: 8 tests, 149 assertions, 0 failures.
-- Focused `HealthcareOperationalCompletionTest`: 14 tests, 306 assertions, 0 failures.
-- Complete Docker Laravel suite: 141 tests, 1,726 assertions, 0 failures.
+- Focused `HealthcareEmergencyLifecycleTest`: 13 tests, 124 assertions, 0 failures.
+- Focused `HealthcareOperationalCompletionTest`: 17 tests, 367 assertions, 0 failures.
+- Focused `WorkspaceRelationshipTest`: 8 tests, 149 assertions, 0 failures.
+- Complete Docker Laravel suite: 149 tests, 1,818 assertions, 0 failures.
+- Browser/runtime gates for this final consistency pass: **NDV — explicitly skipped by user instruction**. Live cross-user Reverb delivery, transport outage/recovery, route-visible updates, and rendered behavior are not claimed.
+- GitHub CI: **no claim**. The evidence above is local automated verification.
 - `git diff --check`: passed.
 - Browser gates for both Daffa passes, including final remaining-plan Gates A–N: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio lifecycle, HTTP/Reverb outage separation, reconnect, facility-identity, search interaction, responsive layout, or rendered interaction claim is made by this checkpoint.

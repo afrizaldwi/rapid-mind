@@ -20,6 +20,7 @@ use App\Models\ReferralStatusHistory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use RuntimeException;
 use Tests\TestCase;
 
 final class HealthcareEmergencyLifecycleTest extends TestCase
@@ -27,7 +28,9 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
     use RefreshDatabase;
 
     private User $healthcare;
+
     private Patient $patient;
+
     private HealthcareFacility $facility;
 
     protected function setUp(): void
@@ -284,6 +287,47 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
         $this->assertSame(['emergency' => ['id' => $emergency->id]], $event->broadcastWith());
     }
 
+    public function test_broadcast_failure_does_not_turn_acknowledgement_into_a_mutation_failure(): void
+    {
+        Event::listen(EmergencyUpdated::class, static function (): never {
+            throw new RuntimeException('Reverb tidak tersedia.');
+        });
+        $emergency = $this->emergency();
+
+        $this->postJson("/healthcare/emergencies/{$emergency->id}/acknowledge")
+            ->assertOk()
+            ->assertJsonPath('realtime_delivered', false)
+            ->assertJsonPath('warning', 'Perubahan tersimpan, tetapi pembaruan realtime ke perangkat lain belum dapat dikonfirmasi.');
+
+        $this->assertSame(EmergencyStatus::ACKNOWLEDGED, $emergency->fresh()->status);
+        $this->assertSame(1, AuditLog::where('entity_id', $emergency->id)->where('action', 'EMERGENCY_ACKNOWLEDGED')->count());
+    }
+
+    public function test_broadcast_failure_does_not_duplicate_emergency_referral_status_mutation(): void
+    {
+        Event::listen(EmergencyUpdated::class, static function (): never {
+            throw new RuntimeException('Reverb tidak tersedia.');
+        });
+        $emergency = $this->emergency(EmergencyStatus::CONFIRMED);
+        $referral = Referral::create([
+            'emergency_event_id' => $emergency->id,
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::ACTIVE,
+        ]);
+        $url = "/healthcare/referrals/{$referral->id}/status";
+        $payload = ['expected_status' => 'ACTIVE', 'status' => 'EN_ROUTE'];
+
+        $this->postJson($url, $payload)
+            ->assertOk()
+            ->assertJsonPath('realtime_delivered', false);
+        $this->postJson($url, $payload)->assertOk()->assertJsonMissing(['realtime_delivered' => false]);
+
+        $this->assertSame(ReferralStatus::EN_ROUTE, $referral->fresh()->status);
+        $this->assertSame(1, $referral->statusHistory()->where('status', ReferralStatus::EN_ROUTE)->count());
+    }
+
     public function test_only_emergency_origin_referral_status_changes_broadcast_an_emergency_update(): void
     {
         Event::fake([EmergencyUpdated::class]);
@@ -313,7 +357,7 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
         Event::assertDispatchedTimes(EmergencyUpdated::class, 1);
         Event::assertDispatched(
             EmergencyUpdated::class,
-            fn(EmergencyUpdated $event): bool => $event->emergency->is($emergency),
+            fn (EmergencyUpdated $event): bool => $event->emergency->is($emergency),
         );
     }
 }

@@ -541,6 +541,28 @@ function onEmergencyUpdated(event: { emergency?: { id?: string } }) {
     requestReconciliation();
 }
 
+function reconciliationProps(): string[] {
+    const path = page.url.split(/[?#]/, 1)[0];
+
+    if (/^\/healthcare\/emergencies\/[^/]+\/?$/.test(path)) {
+        return ["emergency", "facilities", "pendingT0Count"];
+    }
+    if (path === "/healthcare/emergencies" || path === "/healthcare/emergencies/") {
+        return ["emergencies", "pendingT0Count"];
+    }
+    if (path === "/healthcare/referrals" || path === "/healthcare/referrals/") {
+        return ["referrals", "pendingT0Count"];
+    }
+    if (/^\/healthcare\/patients\/[^/]+\/?$/.test(path)) {
+        return ["patient", "pendingT0Count"];
+    }
+    if (path === "/healthcare/patients" || path === "/healthcare/patients/") {
+        return ["patients", "pendingT0Count"];
+    }
+
+    return ["pendingT0Count"];
+}
+
 function requestReconciliation() {
     if (reloadInFlight) {
         reloadRequested = true;
@@ -549,7 +571,7 @@ function requestReconciliation() {
 
     reloadInFlight = true;
     router.reload({
-        only: ["emergencies", "pendingT0Count"],
+        only: reconciliationProps(),
         onSuccess: () => {
             lastRefreshedAt.value = new Date();
         },

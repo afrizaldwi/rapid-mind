@@ -68,11 +68,19 @@
                                     v-if="p.latest_clinical_status"
                                     class="mt-1 text-[11px] text-slate-500"
                                 >
-                                    {{
-                                        latestSource(
-                                            p.latest_clinical_status.source,
-                                        )
-                                    }}
+                                    <template
+                                        v-if="
+                                            p.latest_clinical_status.source ===
+                                            'active_emergency'
+                                        "
+                                    >Insiden sejak</template>
+                                    <template v-else>
+                                        {{
+                                            latestSource(
+                                                p.latest_clinical_status.source,
+                                            )
+                                        }}
+                                    </template>
                                     <span
                                         v-if="
                                             p.latest_clinical_status.occurred_at

@@ -1284,6 +1284,28 @@ Whisper model files were observed in the Transformers browser cache. The Relawan
 
 ---
 
+## 20. Daffa Final Consistency — 3 October 2026
+
+**Baseline:** committed `2ad64616ce426b3af51b049bf58e81049c7fd0c8`, with this checkpoint still uncommitted because Git mutations are user-owned. **Status:** **IMPLEMENTED / AUTOMATED VERIFIED / BROWSER AND LIVE REALTIME NDV**.
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Post-commit broadcast truthfulness | **PASS — AUTOMATED** | A forced `EmergencyUpdated` exception leaves acknowledgement persisted with one audit row and returns HTTP success with `realtime_delivered: false`; an emergency-origin referral transition remains persisted exactly once and its replay creates no duplicate history. |
+| Five lifecycle delivery paths | **PASS — SOURCE + AUTOMATED REGRESSION** | Acknowledge, verify, classify, explicit emergency referral, and emergency-origin referral status update use one best-effort post-commit helper. Conflicts and replays do not dispatch. |
+| Route-aware reconciliation | **PASS — SOURCE + TYPECHECK** | The shared subscription selects current-route props for Darurat index/detail, Rujukan, patient list/detail, and Validasi/shared routes; the existing single in-flight reload plus one queued follow-up remains active and re-evaluates the current URL. |
+| Latest-status precision | **PASS — AUTOMATED** | Same-second candidates at `.100000` and `.900000` select the later candidate regardless of ID; the exact-equal timestamp tie-break regression remains covered. |
+| Active incident timestamp meaning | **PASS — SOURCE + TYPECHECK** | The active-emergency `created_at` is labelled `Insiden sejak`; it is not presented as confirmation time. |
+| Behavior-preserving decomposition | **PASS — TYPECHECK + BUILD** | Pure constants, formatters, mappings, and emergency normalization moved to `resources/js/lib/healthcareEmergency.ts`; the page reduced from 3,069 to 2,728 lines. Further component extraction remains maintainability debt. |
+| Frontend type/build | **PASS — AUTOMATED** | `npx vue-tsc --noEmit` and `npm run build` exited 0; the existing large-chunk and PWA deprecation advisories remain non-fatal. |
+| Focused Laravel suites | **PASS — AUTOMATED** | Lifecycle: 13 tests / 124 assertions; operational completion: 17 / 367; workspace relationships: 8 / 149. |
+| Complete Laravel suite | **PASS — AUTOMATED** | 149 tests, 1,818 assertions, 0 failures against the guarded Docker test database. |
+| Browser A/B and runtime outage/recovery | **NDV — SKIPPED BY USER** | No claim is made for rendered route updates, live Reverb delivery, two-session behavior, audio, transport failure against a real Reverb outage, or reconnect recovery. |
+| GitHub checks | **NO CLAIM** | Local tests/build are not represented as GitHub CI. |
+
+`EmergencyUpdated` covers the T0/emergency lifecycle. Assessment-origin referral updates are outside this event domain and are not claimed as realtime. Relawan and Admin source were unchanged. No dependency was installed, removed, or updated. `docs/workflow.md` was not modified.
+
+---
+
 ## 19. Daffa Repair Verification — 3 October 2026
 
 **Status:** **IMPLEMENTED / AUTOMATED VERIFIED / BROWSER NDV**.
