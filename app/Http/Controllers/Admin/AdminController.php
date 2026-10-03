@@ -32,6 +32,30 @@ final class AdminController extends Controller
 
         $shelters = Shelter::withCount(['patients', 'volunteers'])->get();
 
+        $shelterTriageCounts = DB::table('triage_results')
+            ->join('assessments', 'assessments.id', '=', 'triage_results.assessment_id')
+            ->join('patients', 'patients.id', '=', 'assessments.patient_id')
+            ->where('assessments.status', AssessmentStatus::COMPLETED->value)
+            ->whereNotNull('patients.shelter_id')
+            ->selectRaw('patients.shelter_id, triage_results.system_recommendation, count(*) as aggregate')
+            ->groupBy('patients.shelter_id', 'triage_results.system_recommendation')
+            ->get();
+
+        $shelterEmergencyCounts = DB::table('emergency_events')
+            ->whereNotNull('shelter_id')
+            ->whereIn('status', [EmergencyStatus::PENDING->value, EmergencyStatus::ACKNOWLEDGED->value, EmergencyStatus::CONFIRMED->value, EmergencyStatus::REVIEWING->value])
+            ->selectRaw('shelter_id, count(*) as aggregate')
+            ->groupBy('shelter_id')
+            ->get()
+            ->keyBy('shelter_id');
+
+        $shelters->each(function ($shelter) use ($shelterTriageCounts, $shelterEmergencyCounts) {
+            $shelter->setAttribute('t0_count', (int) ($shelterEmergencyCounts->get($shelter->id)?->aggregate ?? 0));
+            $shelter->setAttribute('t1_count', (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T1->value)->first()?->aggregate ?? 0));
+            $shelter->setAttribute('t2_count', (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T2->value)->first()?->aggregate ?? 0));
+            $shelter->setAttribute('t3_count', (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T3->value)->first()?->aggregate ?? 0));
+        });
+
         // 1. T0 Early Warning active cases (max 6)
         $t0Emergencies = EmergencyEvent::with([
             'patient.shelter',
@@ -51,7 +75,7 @@ final class AdminController extends Controller
                    ST_X(s.location::geometry) as longitude,
                    ST_Y(s.location::geometry) as latitude,
                    (SELECT COUNT(*) FROM patients p WHERE p.shelter_id = s.id) as patient_count,
-                   (SELECT COUNT(*) FROM users u WHERE u.shelter_id = s.id) as volunteer_count,
+                   (SELECT COUNT(*) FROM users u WHERE u.shelter_id = s.id AND u.role = 'RELAWAN') as volunteer_count,
                    (SELECT COUNT(*) FROM emergency_events e WHERE e.shelter_id = s.id AND e.status IN ('PENDING', 'ACKNOWLEDGED', 'CONFIRMED')) as t0_count
             FROM shelters s
         ");
@@ -83,16 +107,33 @@ final class AdminController extends Controller
             ->get()
             ->keyBy(fn ($row) => $row->completion_date.'|'.$row->system_recommendation->value);
 
+        $emergencyTrendCounts = DB::table('emergency_events')
+            ->whereBetween('created_at', [$trendStart, $today->copy()->endOfDay()])
+            ->selectRaw('DATE(created_at) AS event_date, COUNT(*) AS aggregate')
+            ->groupByRaw('DATE(created_at)')
+            ->get()
+            ->keyBy('event_date');
+
         $trendData = [];
         for ($i = 29; $i >= 0; $i--) {
             $date = $today->copy()->subDays($i)->format('Y-m-d');
             $trendData[] = [
                 'date' => $date,
+                't0' => (int) ($emergencyTrendCounts->get($date)?->aggregate ?? 0),
                 't1' => (int) ($trendCounts->get($date.'|'.TriageCategory::T1->value)?->aggregate ?? 0),
                 't2' => (int) ($trendCounts->get($date.'|'.TriageCategory::T2->value)?->aggregate ?? 0),
                 't3' => (int) ($trendCounts->get($date.'|'.TriageCategory::T3->value)?->aggregate ?? 0),
             ];
         }
+
+        $yesterday = $today->copy()->subDay()->format('Y-m-d');
+        $todayStr = $today->format('Y-m-d');
+        $kpiTrends = [
+            't0Change' => (int) (($emergencyTrendCounts->get($todayStr)?->aggregate ?? 0) - ($emergencyTrendCounts->get($yesterday)?->aggregate ?? 0)),
+            't1Change' => (int) (($trendCounts->get($todayStr.'|'.TriageCategory::T1->value)?->aggregate ?? 0) - ($trendCounts->get($yesterday.'|'.TriageCategory::T1->value)?->aggregate ?? 0)),
+            't2Change' => (int) (($trendCounts->get($todayStr.'|'.TriageCategory::T2->value)?->aggregate ?? 0) - ($trendCounts->get($yesterday.'|'.TriageCategory::T2->value)?->aggregate ?? 0)),
+            't3Change' => (int) (($trendCounts->get($todayStr.'|'.TriageCategory::T3->value)?->aggregate ?? 0) - ($trendCounts->get($yesterday.'|'.TriageCategory::T3->value)?->aggregate ?? 0)),
+        ];
 
         $totalAssessments = Assessment::count();
 
@@ -105,6 +146,7 @@ final class AdminController extends Controller
                 'countT3' => $countT3,
                 'totalAssessments' => $totalAssessments,
             ],
+            'kpiTrends' => $kpiTrends,
             'shelters' => $shelters,
             'mapShelters' => $mapShelters,
             't0Emergencies' => $t0Emergencies,

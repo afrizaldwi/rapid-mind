@@ -18,8 +18,8 @@
           </div>
         </div>
         <div class="mt-3.5 p-2.5 bg-slate-800/70 rounded-lg text-xs text-slate-300 border border-slate-700/50">
-          <p class="font-bold text-white text-[11px] truncate">{{ user?.facility?.name || 'RSUD Candi' }}</p>
-          <p class="text-[10px] text-slate-400 mt-0.5 truncate">{{ user?.name || 'dr. Rina Suryani, Sp.KJ' }}</p>
+          <p class="font-bold text-white text-[11px] truncate">{{ user?.facility?.name || 'Faskes Layanan' }}</p>
+          <p class="text-[10px] text-slate-400 mt-0.5 truncate">{{ user?.name || 'Tenaga Medis' }}</p>
         </div>
       </div>
 
@@ -139,8 +139,8 @@
 
           <!-- User info -->
           <div class="text-right">
-            <p class="text-xs font-bold text-slate-800 leading-tight">{{ user?.name || 'dr. Rina Suryani, Sp.KJ' }}</p>
-            <p class="text-[10px] text-slate-500 leading-tight">Dokter Jaga • PSC 119</p>
+            <p class="text-xs font-bold text-slate-800 leading-tight">{{ user?.name || 'Tenaga Medis' }}</p>
+            <p class="text-[10px] text-slate-500 leading-tight">{{ userRoleDescription }}</p>
           </div>
         </div>
       </header>
@@ -160,6 +160,10 @@ import { echo, useConnectionStatus } from '@laravel/echo-vue';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
+const userRoleDescription = computed(() => {
+  if (user.value?.role === 'HEALTHCARE') return 'Tenaga Medis • PSC 119';
+  return user.value?.role || 'Layanan Medis';
+});
 const pendingT0Count = computed(() => Number((page.props as any).pendingT0Count ?? 0));
 
 const realtimeConnected = ref(false);

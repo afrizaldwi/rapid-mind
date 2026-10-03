@@ -311,12 +311,12 @@
               <div class="sm:pr-2">
                 <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">NIK</span>
                 <strong class="font-mono text-slate-800 text-xs mt-0.5 block">{{ selectedItem.maskedNik }}</strong>
-                <span class="text-[10px] text-teal-700 font-medium block mt-0.5">✓ Identitas terverifikasi</span>
+                <span v-if="selectedItem.maskedNik !== 'NIK tidak tersedia'" class="text-[10px] text-teal-700 font-medium block mt-0.5">✓ Terdaftar</span>
+                <span v-else class="text-[10px] text-slate-400 font-medium block mt-0.5">Tidak tersedia</span>
               </div>
               <div class="pt-2 sm:pt-0 sm:px-3">
                 <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Usia</span>
-                <strong class="text-slate-800 text-xs mt-0.5 block">{{ selectedItem.age }} tahun</strong>
-                <span class="text-[10px] text-slate-400 block mt-0.5">Dewasa</span>
+                <strong class="text-slate-800 text-xs mt-0.5 block">{{ selectedItem.age !== null ? `${selectedItem.age} tahun` : 'Usia tidak tersedia' }}</strong>
               </div>
               <div class="pt-2 sm:pt-0 sm:px-3">
                 <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Jenis Kelamin</span>
@@ -331,6 +331,15 @@
                 <strong class="text-slate-800 text-xs mt-0.5 block truncate">{{ selectedItem.shelterName }}</strong>
                 <span class="text-[10px] text-slate-500 block truncate mt-0.5">Relawan: {{ selectedItem.volunteerName }}</span>
               </div>
+            </div>
+
+            <!-- Action Feedback Notification Banner -->
+            <div v-if="actionFeedback" class="mx-5 mt-3 p-3 rounded-lg text-xs font-semibold flex items-center justify-between" :class="actionFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'">
+              <div class="flex items-center space-x-2">
+                <span>{{ actionFeedback.type === 'success' ? '✓' : '⚠' }}</span>
+                <span>{{ actionFeedback.message }}</span>
+              </div>
+              <button type="button" @click="actionFeedback = null" class="text-slate-400 hover:text-slate-600 text-sm font-bold">&times;</button>
             </div>
 
             <!-- Surface 3: Clean Clinical Tab Navigation Bar -->
@@ -421,7 +430,7 @@
                   
                   <div class="p-2.5 bg-white rounded-lg border border-rose-200/80 text-xs text-slate-800">
                     <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Catatan Laporan Lapangan</span>
-                    <p class="mt-0.5 text-slate-700 italic">"{{ selectedItem.notes || 'Penyintas mengalami krisis psikologis akut dan memerlukan stabilisasi darurat.' }}"</p>
+                    <p class="mt-0.5 text-slate-700 italic">"{{ selectedItem.notes || 'Catatan laporan lapangan tidak tersedia.' }}"</p>
                   </div>
 
                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px]">
@@ -439,46 +448,52 @@
                   </div>
                 </div>
 
-                <!-- B. Compact 3-Column Clinical Score Summary (Flat on subtle slate, NOT separate heavy cards) -->
+                <!-- B. Compact 3-Column Clinical Score Summary (Real values only, no fabricated numbers per Section 4 & 5) -->
                 <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-3">
-                    Ringkasan Skor Klinis
+                    Ringkasan Hasil Skrining
                   </span>
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
                     <!-- Col 1: SRQ-20 -->
                     <div class="space-y-1">
                       <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">SRQ-20</span>
-                      <div class="flex items-baseline space-x-1">
+                      <div v-if="selectedItem.srqScore !== null" class="flex items-baseline space-x-1">
                         <span class="text-2xl font-black text-slate-900">{{ selectedItem.srqScore }}</span>
                         <span class="text-xs text-slate-400 font-semibold">/ 20</span>
                       </div>
-                      <span class="text-[11px] font-bold block" :class="selectedItem.srqScore >= 6 ? 'text-rose-600' : 'text-slate-600'">
-                        {{ selectedItem.srqScore >= 6 ? 'Di atas ambang klinis (≥ 6)' : 'Dalam batas normal (< 6)' }}
+                      <div v-else class="text-lg font-bold text-slate-400">-</div>
+                      <span v-if="selectedItem.srqScore !== null" class="text-[11px] font-bold block" :class="selectedItem.srqScore >= 6 ? 'text-rose-600' : 'text-slate-600'">
+                        {{ selectedItem.srqScore >= 6 ? 'Di atas ambang penapisan (≥ 6)' : 'Dalam batas normal (< 6)' }}
                       </span>
+                      <span v-else class="text-[11px] text-slate-400 block font-medium">Data SRQ-20 tidak tersedia</span>
                     </div>
 
                     <!-- Col 2: Faktor Risiko -->
                     <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
                       <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Faktor Risiko Bencana</span>
-                      <div class="flex items-baseline space-x-1">
+                      <div v-if="selectedItem.riskScore !== null" class="flex items-baseline space-x-1">
                         <span class="text-2xl font-black text-slate-900">{{ selectedItem.riskScore }}</span>
                         <span class="text-xs text-slate-400 font-semibold">Bobot</span>
                       </div>
-                      <span class="text-[11px] font-bold block text-slate-700">
+                      <div v-else class="text-lg font-bold text-slate-400">-</div>
+                      <span v-if="selectedItem.riskScore !== null" class="text-[11px] font-bold block text-slate-700">
                         {{ selectedItem.riskScore >= 3 ? 'Risiko Tinggi' : 'Risiko Rendah' }}
                       </span>
+                      <span v-else class="text-[11px] text-slate-400 block font-medium">Data faktor risiko tidak tersedia</span>
                     </div>
 
                     <!-- Col 3: Fungsi / ADL -->
                     <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
                       <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fungsi / ADL</span>
-                      <div class="flex items-baseline space-x-1">
+                      <div v-if="selectedItem.functionScore !== null" class="flex items-baseline space-x-1">
                         <span class="text-2xl font-black text-slate-900">{{ selectedItem.functionScore }}</span>
                         <span class="text-xs text-slate-400 font-semibold">Tingkat</span>
                       </div>
-                      <span class="text-[11px] font-bold block text-slate-700">
+                      <div v-else class="text-lg font-bold text-slate-400">-</div>
+                      <span v-if="selectedItem.functionScore !== null" class="text-[11px] font-bold block text-slate-700">
                         {{ selectedItem.functionScore >= 3 ? 'Terganggu Berat' : 'Terganggu Ringan' }}
                       </span>
+                      <span v-else class="text-[11px] text-slate-400 block font-medium">Data fungsi tidak tersedia</span>
                     </div>
                   </div>
                 </div>
@@ -536,7 +551,7 @@
                         </span>
                       </div>
                       <p class="font-bold text-slate-800 text-[11px]">Klasifikasi Triase</p>
-                      <p class="text-[10px] text-slate-400">Diagnosis nakes</p>
+                      <p class="text-[10px] text-slate-400">Validasi klinis nakes</p>
                     </div>
 
                     <!-- Step 4 -->
@@ -595,19 +610,33 @@
                     <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Hasil Skrining SRQ-20</h4>
                     <p class="text-[11px] text-slate-500">20 Pertanyaan standar WHO untuk deteksi distres psikologis bencana.</p>
                   </div>
-                  <span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                  <span v-if="selectedItem.srqScore !== null" class="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
                     Skor Ya: {{ selectedItem.srqScore }} / 20
+                  </span>
+                  <span v-else class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                    Skor: Belum tersedia
                   </span>
                 </div>
 
-                <!-- SRQ-20 Questions Table/List -->
-                <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 text-xs">
+                <!-- Empty State if no SRQ answers exist (Explicit empty state per Section 4 & 5) -->
+                <div v-if="!selectedItem.srqResponses || selectedItem.srqResponses.length === 0" class="py-8 px-4 text-center bg-white rounded-xl border border-slate-200 space-y-2">
+                  <div class="w-10 h-10 mx-auto rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  </div>
+                  <h5 class="text-xs font-bold text-slate-800">Data SRQ-20 tidak tersedia</h5>
+                  <p class="text-[11px] text-slate-500 max-w-sm mx-auto">
+                    Penyintas ini masuk antrean melalui penapisan tanda bahaya darurat (Red Flag) langsung di posko atau kuesioner SRQ-20 belum diadministrasikan secara lengkap.
+                  </p>
+                </div>
+
+                <!-- SRQ-20 Questions Table/List if answers exist -->
+                <div v-else class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 text-xs">
                   <div
                     v-for="(q, idx) in srqQuestionList"
                     :key="idx"
                     :class="[
                       'p-2.5 flex items-center justify-between gap-3',
-                      isSrqYes(idx + 1)
+                      getSrqAnswer(idx + 1) === true
                         ? (idx + 1 === 17 ? 'bg-rose-50/70 text-rose-950 font-bold' : 'bg-slate-50/50 text-slate-900 font-medium')
                         : 'text-slate-600'
                     ]"
@@ -615,7 +644,7 @@
                     <div class="flex items-start space-x-2">
                       <span
                         class="w-4 h-4 rounded text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5"
-                        :class="isSrqYes(idx + 1) ? (idx + 1 === 17 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white') : 'bg-slate-200 text-slate-600'"
+                        :class="getSrqAnswer(idx + 1) === true ? (idx + 1 === 17 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white') : 'bg-slate-200 text-slate-600'"
                       >
                         {{ idx + 1 }}
                       </span>
@@ -623,9 +652,9 @@
                     </div>
                     <span
                       class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
-                      :class="isSrqYes(idx + 1) ? (idx + 1 === 17 ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white') : 'bg-slate-100 text-slate-400'"
+                      :class="getSrqAnswer(idx + 1) === true ? (idx + 1 === 17 ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white') : (getSrqAnswer(idx + 1) === false ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-400 border border-dashed border-slate-200')"
                     >
-                      {{ isSrqYes(idx + 1) ? 'YA' : 'TIDAK' }}
+                      {{ getSrqAnswer(idx + 1) === true ? 'YA' : (getSrqAnswer(idx + 1) === false ? 'TIDAK' : 'Belum diisi') }}
                     </span>
                   </div>
                 </div>
@@ -780,14 +809,18 @@
                     </form>
                   </div>
 
-                  <!-- Section C: Perintah Rujukan & Dispatch PSC 119 -->
+                  <!-- Section C: Penerbitan Rujukan Medis ke Faskes (Separated from dispatch per Section 14) -->
                   <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div class="flex items-center space-x-2">
                         <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">3</span>
-                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Perintah Rujukan & Evakuasi PSC 119</h4>
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Penerbitan Rujukan Medis ke Faskes</h4>
                       </div>
-                      <span class="text-[10px] text-slate-400">Integrasi Armada</span>
+                      <span class="text-[10px] text-slate-400">Disposisi Rujukan Medis</span>
+                    </div>
+
+                    <div v-if="selectedItem.status !== 'CONFIRMED'" class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium">
+                      Rujukan medis darurat hanya dapat diterbitkan setelah status T0 dikonfirmasi oleh tenaga medis pada tahap klasifikasi.
                     </div>
 
                     <form @submit.prevent="submitReferral" class="space-y-3 text-xs">
@@ -804,11 +837,11 @@
                       </div>
 
                       <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Instruksi Medis untuk Tim Evakuasi</label>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Instruksi Medis untuk Tim Rujukan</label>
                         <textarea
                           v-model="referralForm.notes"
                           rows="2"
-                          placeholder="Contoh: Dampingi oleh 2 relawan terlatih, pasang restrain jika agitasi membahayakan diri..."
+                          placeholder="Instruksi medis saat transport / penanganan awal di faskes..."
                           class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
                         ></textarea>
                       </div>
@@ -816,10 +849,10 @@
                       <div class="flex justify-end">
                         <button
                           type="submit"
-                          :disabled="isSubmitting"
-                          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition"
+                          :disabled="isSubmitting || selectedItem.status !== 'CONFIRMED'"
+                          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg shadow-xs transition"
                         >
-                          Kirim Perintah Rujukan & Dispatch
+                          Terbitkan Rujukan Medis
                         </button>
                       </div>
                     </form>
@@ -844,7 +877,7 @@
                       </div>
 
                       <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Diagnosis / Resume Medis</label>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Validasi Klinis / Resume Asesmen</label>
                         <textarea
                           v-model="validationForm.diagnosis_notes"
                           rows="2"
@@ -1066,13 +1099,14 @@ const srqQuestionList = [
 function formatRmCode(record: any): string {
   if (record?.rm_code) return record.rm_code;
   const raw = record?.assessment_id || record?.assessment?.id || record?.id || '';
-  const hex = raw.replace(/-/g, '').slice(-6).toUpperCase();
-  return `RM-2026-${hex || '000089'}`;
+  if (!raw) return 'RM-BELUM-TERBIT';
+  const hex = String(raw).replace(/-/g, '').slice(-6).toUpperCase();
+  return `RM-2026-${hex.padStart(6, '0')}`;
 }
 
-// Helper: Mask NIK (3404••••0089)
+// Helper: Mask NIK (Real mask or explicit empty state)
 function maskNik(nik?: string): string {
-  if (!nik || nik.length < 8) return '3404••••0089';
+  if (!nik || nik.length < 8) return 'NIK tidak tersedia';
   return nik.slice(0, 4) + '••••' + nik.slice(-4);
 }
 
@@ -1087,7 +1121,7 @@ function timeAgo(dateStr?: string): string {
   return `${Math.round(diffHours / 24)} hari lalu`;
 }
 
-// Normalize Queue Item
+// Normalize Queue Item (Strictly real data only — no fabricated clinical numbers or patient info)
 function normalizeQueueItem(raw: any, isEmergency: boolean) {
   const patient = raw.patient;
   const assessment = isEmergency ? raw.assessment || raw.patient?.assessments?.[0] : raw;
@@ -1116,15 +1150,16 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     }
   }
 
-  // Red Flag
-  const redFlag = raw.red_flag_type || (triage?.is_red_flag_override ? triage.red_flag_source || 'SUICIDAL_IDEATION' : null);
+  // Red Flag: Real evidence only (no automatic fallback to suicidal ideation)
+  const redFlag = raw.red_flag_type || (triage?.is_red_flag_override ? triage.red_flag_source || null : null);
   let redFlagLabel = null;
   if (redFlag === 'SUICIDAL_IDEATION') redFlagLabel = 'Ideasi Bunuh Diri (Q17)';
   else if (redFlag === 'PSYCHOSIS') redFlagLabel = 'Psikosis Akut & Disorientasi';
   else if (redFlag === 'SEVERE_AGITATION') redFlagLabel = 'Amuk / Agitasi Fisik Berat';
-  else if (redFlag) redFlagLabel = 'Kegawatdaruratan Medis';
+  else if (redFlag) redFlagLabel = `Kedaruratan: ${redFlag}`;
+  else redFlagLabel = 'Tanda Bahaya Lapangan';
 
-  // Status & Explicit T0 Semantics (Section 9 of Polish specification)
+  // Status & Explicit T0 Semantics
   const status = isEmergency ? raw.status : (assessment?.clinicalValidation ? 'COMPLETED' : 'PENDING');
   let statusLabel = 'Menunggu';
   if (status === 'PENDING') statusLabel = isEmergency ? 'Perlu Diakui' : 'Menunggu Validasi';
@@ -1160,10 +1195,10 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     semanticStatusDescription = 'Dukungan komunitas';
   }
 
-  // Scores
-  const srqScore = triage?.srq_score ?? (isEmergency ? 14 : 6);
-  const riskScore = triage?.risk_score ?? (isEmergency ? 5 : 3);
-  const functionScore = triage?.function_score ?? (isEmergency ? 5 : 2);
+  // Scores: strictly real values, null if absent
+  const srqScore = triage?.srq_score !== undefined && triage?.srq_score !== null ? Number(triage.srq_score) : null;
+  const riskScore = triage?.risk_score !== undefined && triage?.risk_score !== null ? Number(triage.risk_score) : null;
+  const functionScore = triage?.function_score !== undefined && triage?.function_score !== null ? Number(triage.function_score) : null;
 
   return {
     key: `${isEmergency ? 'emg' : 'asm'}-${raw.id}`,
@@ -1174,10 +1209,10 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     rmCode: formatRmCode(isEmergency ? raw : assessment),
     survivorName: patient?.name || 'Penyintas Tanpa Nama',
     maskedNik: maskNik(patient?.nik),
-    age: patient?.age || 28,
-    gender: patient?.gender || 'Laki-laki',
-    vulnerabilityStatus: patient?.age >= 55 ? 'Lansia Rentan' : 'Kepala Keluarga',
-    shelterName: raw.shelter?.name || patient?.shelter?.name || 'Posko Candi',
+    age: patient?.age !== undefined && patient?.age !== null ? patient.age : null,
+    gender: patient?.gender || 'Jenis kelamin tidak tersedia',
+    vulnerabilityStatus: patient?.age && patient.age >= 55 ? 'Lansia Rentan' : (patient?.age && patient.age < 18 ? 'Anak Rentan' : 'Umum'),
+    shelterName: raw.shelter?.name || patient?.shelter?.name || 'Posko tidak diketahui',
     priority,
     priorityLabel,
     semanticPriority,
@@ -1188,12 +1223,12 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     hasRedFlag: Boolean(redFlag),
     redFlagType: redFlag,
     redFlagLabel,
-    clinicalSummary: `SRQ: ${srqScore}/20 • Risiko: ${riskScore} • ADL: ${functionScore}`,
+    clinicalSummary: srqScore !== null ? `SRQ: ${srqScore}/20 • Risiko: ${riskScore ?? '-'} • ADL: ${functionScore ?? '-'}` : 'Skrining Langsung Lapangan',
     timeAgo: timeAgo(raw.created_at || assessment?.completed_at),
     createdAt: raw.created_at || assessment?.completed_at,
     notes: raw.notes || assessment?.clinicalValidation?.diagnosis_notes || '',
-    volunteerName: raw.user?.name || assessment?.user?.name || 'Relawan Lapangan Budi',
-    volunteerPhone: raw.user?.phone_number || assessment?.user?.phone_number || '+6281234567890',
+    volunteerName: raw.user?.name || assessment?.user?.name || 'Relawan tidak tersedia',
+    volunteerPhone: raw.user?.phone_number || assessment?.user?.phone_number || null,
     srqScore,
     riskScore,
     functionScore,
@@ -1207,26 +1242,25 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
   };
 }
 
-// Unified Queue List
+// Unified Queue List (DO NOT dedup assessments by person per Section 13)
 const queueList = computed(() => {
   const list: any[] = [];
-  const seenPatients = new Set<string>();
+  const linkedAssessmentIds = new Set<string>();
 
   // 1. Add emergency events
   if (props.emergencies) {
     for (const em of props.emergencies) {
       const item = normalizeQueueItem(em, true);
       list.push(item);
-      if (em.patient_id) seenPatients.add(em.patient_id);
+      if (em.assessment_id) linkedAssessmentIds.add(em.assessment_id);
     }
   }
 
-  // 2. Add completed assessments (if patient not already in active emergency)
+  // 2. Add completed assessments (keep all individual assessment RM records distinct)
   if (props.assessments) {
     for (const asm of props.assessments) {
-      if (!seenPatients.has(asm.patient_id)) {
+      if (!linkedAssessmentIds.has(asm.id)) {
         list.push(normalizeQueueItem(asm, false));
-        if (asm.patient_id) seenPatients.add(asm.patient_id);
       }
     }
   }
@@ -1317,48 +1351,34 @@ function priorityBadgeClasses(priorityOrSemantic: string) {
   }
 }
 
-function isSrqYes(questionNumber: number): boolean {
-  if (!selectedItem.value) return false;
-  if (selectedItem.value.srqResponses?.length) {
-    const resp = selectedItem.value.srqResponses.find((r: any) => r.question_number === questionNumber);
-    if (resp !== undefined) return Boolean(resp.answer);
-  }
-  if (selectedItem.value.priority === 'T0') {
-    return [1, 2, 3, 4, 6, 7, 9, 10, 11, 13, 14, 15, 16, 17].includes(questionNumber);
-  } else if (selectedItem.value.priority === 'T1') {
-    return [1, 2, 4, 6, 8, 9, 10, 12, 13].includes(questionNumber);
-  } else if (selectedItem.value.priority === 'T2') {
-    return [1, 2, 3, 4, 6, 9].includes(questionNumber);
-  }
-  return [1, 4, 9].includes(questionNumber);
+// Getter for SRQ answers (Strictly real data — returns null if answer not present per Section 5)
+function getSrqAnswer(questionNumber: number): boolean | null {
+  if (!selectedItem.value?.srqResponses?.length) return null;
+  const resp = selectedItem.value.srqResponses.find((r: any) => r.question_number === questionNumber);
+  if (resp === undefined || resp === null) return null;
+  return Boolean(resp.answer);
 }
 
 function isRiskYes(indicator: string): boolean {
-  if (!selectedItem.value) return false;
-  if (selectedItem.value.riskResponses?.length) {
-    const resp = selectedItem.value.riskResponses.find((r: any) => r.indicator === indicator);
-    if (resp !== undefined) return Boolean(resp.answer);
-  }
-  if (selectedItem.value.priority === 'T0') return ['R1', 'R2', 'R3'].includes(indicator);
-  if (selectedItem.value.priority === 'T1') return ['R1', 'R2'].includes(indicator);
-  if (selectedItem.value.priority === 'T2') return ['R1', 'R3'].includes(indicator);
+  if (!selectedItem.value?.riskResponses?.length) return false;
+  const resp = selectedItem.value.riskResponses.find((r: any) => r.indicator === indicator);
+  if (resp !== undefined && resp !== null) return Boolean(resp.answer);
   return false;
 }
 
 function getFunctionLabel(domain: string): string {
-  if (!selectedItem.value) return 'Terganggu Ringan';
-  if (selectedItem.value.functionResponses?.length) {
-    const resp = selectedItem.value.functionResponses.find((r: any) => r.domain === domain);
-    if (resp?.level === 2) return 'Sangat Terganggu';
-    if (resp?.level === 1) return 'Terganggu Sedang';
-    if (resp?.level === 0) return 'Tidak Terganggu';
-  }
-  if (selectedItem.value.priority === 'T0') return 'Sangat Terganggu';
-  if (selectedItem.value.priority === 'T1') return 'Terganggu Sedang';
-  return 'Terganggu Ringan';
+  if (!selectedItem.value?.functionResponses?.length) return 'Data fungsi tidak tersedia';
+  const resp = selectedItem.value.functionResponses.find((r: any) => r.domain === domain);
+  if (resp?.level === 2) return 'Sangat Terganggu';
+  if (resp?.level === 1) return 'Terganggu Sedang';
+  if (resp?.level === 0) return 'Tidak Terganggu';
+  return 'Data fungsi tidak tersedia';
 }
 
-// Clinical Notes Computed List
+// Action notification banner feedback
+const actionFeedback = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+
+// Clinical Notes Computed List (Real author identities only)
 const clinicalNotesList = computed(() => {
   const baseNotes: Array<{ author: string; role: string; time: string; content: string }> = [];
   if (!selectedItem.value) return baseNotes;
@@ -1374,8 +1394,8 @@ const clinicalNotesList = computed(() => {
 
   for (const v of selectedItem.value.verifications) {
     baseNotes.push({
-      author: v.verifier?.name || 'dr. Rina Suryani, Sp.KJ',
-      role: 'Dokter Jaga PSC 119',
+      author: v.verifier?.name || (page.props.auth as any)?.user?.name || 'Tenaga Medis',
+      role: 'Tenaga Medis Verifikator',
       time: timeAgo(v.created_at),
       content: v.notes || `Verifikasi sekunder via ${v.method || 'telepon'}.`,
     });
@@ -1390,23 +1410,28 @@ function addLocalNote() {
   const key = selectedItem.value.key;
   if (!localNotes.value[key]) localNotes.value[key] = [];
   localNotes.value[key].unshift({
-    author: 'dr. Rina Suryani, Sp.KJ',
-    role: 'Dokter Jaga PSC 119',
+    author: (page.props.auth as any)?.user?.name || 'Tenaga Medis',
+    role: 'Tenaga Medis • PSC 119',
     time: 'Baru saja',
     content: newClinicalNote.value.trim(),
   });
   newClinicalNote.value = '';
 }
 
-// ACTION DISPATCH HANDLERS
+// ACTION DISPATCH HANDLERS (Section 15: Never update canonical state in onFinish!)
 function acknowledgeCase(item: any) {
   if (!item.emergencyId) return;
   isSubmitting.value = true;
+  actionFeedback.value = null;
   router.post(`/healthcare/emergencies/${item.emergencyId}/acknowledge`, {}, {
+    onSuccess: () => {
+      actionFeedback.value = { type: 'success', message: 'Kasus darurat berhasil diakui.' };
+    },
+    onError: (errors) => {
+      actionFeedback.value = { type: 'error', message: (Object.values(errors)[0] as string) || 'Gagal mengakui kasus.' };
+    },
     onFinish: () => {
       isSubmitting.value = false;
-      item.status = 'ACKNOWLEDGED';
-      item.statusLabel = 'Sudah Diakui';
     },
   });
 }
@@ -1414,11 +1439,16 @@ function acknowledgeCase(item: any) {
 function submitVerification(item: any) {
   if (!item.emergencyId) return;
   isSubmitting.value = true;
+  actionFeedback.value = null;
   router.post(`/healthcare/emergencies/${item.emergencyId}/verify`, verificationForm.value, {
+    onSuccess: () => {
+      actionFeedback.value = { type: 'success', message: 'Verifikasi medis berhasil disimpan.' };
+    },
+    onError: (errors) => {
+      actionFeedback.value = { type: 'error', message: (Object.values(errors)[0] as string) || 'Gagal menyimpan verifikasi.' };
+    },
     onFinish: () => {
       isSubmitting.value = false;
-      item.status = 'REVIEWING';
-      item.statusLabel = 'Sedang Ditinjau';
     },
   });
 }
@@ -1426,15 +1456,16 @@ function submitVerification(item: any) {
 function submitClassification(item: any) {
   if (!item.emergencyId) return;
   isSubmitting.value = true;
+  actionFeedback.value = null;
   router.post(`/healthcare/emergencies/${item.emergencyId}/classify`, decisionForm.value, {
+    onSuccess: () => {
+      actionFeedback.value = { type: 'success', message: 'Klasifikasi triase berhasil ditetapkan.' };
+    },
+    onError: (errors) => {
+      actionFeedback.value = { type: 'error', message: (Object.values(errors)[0] as string) || 'Gagal menetapkan klasifikasi.' };
+    },
     onFinish: () => {
       isSubmitting.value = false;
-      const isConfirmed = decisionForm.value.clinical_result === 'T0_CONFIRMED';
-      item.status = isConfirmed ? 'CONFIRMED' : 'DOWNGRADED';
-      item.statusLabel = isConfirmed ? 'T0 Terkonfirmasi' : 'Diturunkan';
-      item.semanticPriority = isConfirmed ? 'T0-CONFIRMED' : decisionForm.value.clinical_result;
-      item.semanticPriorityLabel = isConfirmed ? 'T0-CONFIRMED' : decisionForm.value.clinical_result;
-      item.semanticStatusDescription = isConfirmed ? 'Terkonfirmasi medis' : 'Diturunkan kategori';
     },
   });
 }
@@ -1442,10 +1473,16 @@ function submitClassification(item: any) {
 function submitReferral(item: any) {
   if (!item.emergencyId) return;
   isSubmitting.value = true;
+  actionFeedback.value = null;
   router.post(`/healthcare/emergencies/${item.emergencyId}/referrals`, referralForm.value, {
+    onSuccess: () => {
+      actionFeedback.value = { type: 'success', message: 'Rujukan medis berhasil diterbitkan.' };
+    },
+    onError: (errors) => {
+      actionFeedback.value = { type: 'error', message: (Object.values(errors)[0] as string) || 'Gagal menerbitkan rujukan.' };
+    },
     onFinish: () => {
       isSubmitting.value = false;
-      item.hasReferral = true;
     },
   });
 }
@@ -1453,11 +1490,16 @@ function submitReferral(item: any) {
 function submitValidation(item: any) {
   if (!item.assessmentId) return;
   isSubmitting.value = true;
+  actionFeedback.value = null;
   router.post(`/healthcare/validations/${item.assessmentId}`, validationForm.value, {
+    onSuccess: () => {
+      actionFeedback.value = { type: 'success', message: 'Validasi klinis berhasil disimpan.' };
+    },
+    onError: (errors) => {
+      actionFeedback.value = { type: 'error', message: (Object.values(errors)[0] as string) || 'Gagal menyimpan validasi.' };
+    },
     onFinish: () => {
       isSubmitting.value = false;
-      item.status = 'COMPLETED';
-      item.statusLabel = 'Selesai Tervalidasi';
     },
   });
 }

@@ -32,7 +32,7 @@
                 {{ p.nik || '-' }}
               </td>
               <td class="py-4 px-6">
-                {{ p.shelter?.name || 'Posko Candi' }}
+                {{ p.shelter?.name || 'Posko tidak diketahui' }}
               </td>
               <td class="py-4 px-6">
                 <Badge :variant="latestBadge(p)">

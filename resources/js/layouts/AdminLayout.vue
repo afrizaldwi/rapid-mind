@@ -56,27 +56,33 @@
 
       <!-- Right Controls & User Profile -->
       <div class="flex items-center space-x-3">
-        <!-- Online Connection Badge -->
-        <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Online</span>
-          <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
+        <!-- Canonical Connection Status Badge -->
+        <div
+          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+          :class="isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-slate-100 text-slate-700 border border-slate-300'"
+        >
+          <span
+            class="w-2 h-2 rounded-full"
+            :class="isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"
+          ></span>
+          <span>{{ isOnline ? 'Online' : 'Offline' }}</span>
         </div>
 
-        <!-- Notification Bell with Count Badge -->
+        <!-- Notification Bell (shows badge only when real unread count > 0) -->
         <div class="relative">
           <button
             type="button"
             class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-            aria-label="Notifikasi Darurat"
+            aria-label="Notifikasi Operasional"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <span class="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
-              2
+            <span
+              v-if="unreadNotificationsCount > 0"
+              class="absolute top-1.5 right-1.5 w-4 h-4 bg-teal-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white"
+            >
+              {{ unreadNotificationsCount }}
             </span>
           </button>
         </div>
@@ -270,23 +276,37 @@
           </div>
         </div>
 
-        <!-- Bottom Sidebar Box (Offline / Sync Status indicator matching reference) -->
+        <!-- Bottom Sidebar Box (Synchronized network status, neutral styling for offline per Section 23) -->
         <div class="p-3 border-t border-slate-100">
-          <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div
+            class="rounded-xl p-3 flex items-center justify-between text-xs border"
+            :class="isOnline ? 'bg-slate-50 border-slate-200/80' : 'bg-slate-100 border-slate-200'"
+          >
             <div class="flex items-center space-x-2.5">
-              <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div
+                class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                :class="isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+              >
+                <svg v-if="isOnline" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-6.364 9 9 0 012.828-6.364m2.829 2.828a5 5 0 012.828 3.536m-5.656 0a5 5 0 011.414-3.536L3 3l18 18" />
                 </svg>
               </div>
               <div>
-                <span class="font-bold text-rose-700 block leading-tight text-[11px]">Mode Offline</span>
-                <span class="text-[10px] text-slate-500 block leading-tight">Data tersimpan lokal</span>
+                <span class="font-bold text-slate-800 block leading-tight text-[11px]">
+                  {{ isOnline ? 'Sistem Terhubung' : 'Mode Offline' }}
+                </span>
+                <span class="text-[10px] text-slate-500 block leading-tight">
+                  {{ isOnline ? 'Sinkronisasi data aktif' : 'Data tersimpan lokal' }}
+                </span>
               </div>
             </div>
-            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
+            <span
+              class="w-2 h-2 rounded-full"
+              :class="isOnline ? 'bg-emerald-500' : 'bg-slate-400'"
+            ></span>
           </div>
         </div>
       </aside>
@@ -300,21 +320,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
+const unreadNotificationsCount = computed(() => Number((page.props as any).unreadNotificationsCount ?? 0));
 
 const sidebarOpen = ref(false);
 const profileOpen = ref(false);
 
+// Canonical network connection status
+const isOnline = ref(typeof window !== 'undefined' ? window.navigator.onLine : true);
+
+function handleOnline() {
+  isOnline.value = true;
+}
+
+function handleOffline() {
+  isOnline.value = false;
+}
+
+onMounted(() => {
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('online', handleOnline);
+  window.removeEventListener('offline', handleOffline);
+});
+
+// Role-correct identity (Section 20 & 21: Admin is NOT a doctor)
 const userDisplayName = computed(() => {
-  return user.value?.name || 'dr. Sarah Amanda, Sp.KJ';
+  return user.value?.name || 'Admin BPBD / Dinkes';
 });
 
 const userRoleLabel = computed(() => {
-  return 'Incident Psychological Coordinator';
+  return 'Admin BPBD / Dinkes';
 });
 
 const userInitials = computed(() => {

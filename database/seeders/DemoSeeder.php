@@ -314,7 +314,7 @@ final class DemoSeeder extends Seeder
             'risk_score' => 5,
             'function_score' => 5,
             'total_score' => 24,
-            'system_recommendation' => TriageCategory::T0_CONFIRMED,
+            'system_recommendation' => TriageCategory::T0_SUSPECT,
             'is_red_flag_override' => true,
             'red_flag_source' => 'SUICIDAL_IDEATION',
         ]);

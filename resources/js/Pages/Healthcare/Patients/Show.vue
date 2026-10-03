@@ -23,7 +23,7 @@
             NIK: {{ patient.nik || 'Tidak Terdata' }} • Usia: {{ patient.age || '-' }} tahun • {{ patient.gender || '-' }}
           </p>
           <p class="text-xs text-slate-500">
-            Posko Pengungsian: <strong class="text-slate-700">{{ patient.shelter?.name || 'Posko Candi' }}</strong>
+            Posko Pengungsian: <strong class="text-slate-700">{{ patient.shelter?.name || 'Posko tidak diketahui' }}</strong>
           </p>
         </div>
       </div>

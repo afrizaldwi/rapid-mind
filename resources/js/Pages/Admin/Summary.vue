@@ -36,12 +36,12 @@
             <div class="flex items-baseline gap-2">
               <span class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">{{ kpis.totalSurvivors }}</span>
               <span class="text-xs font-semibold text-slate-500">jiwa</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                ↗ +12% kemarin
+              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
+                Terpantau
               </span>
             </div>
             <span class="text-[11px] text-slate-400 block mt-1 font-medium">
-              {{ kpis.totalAssessments || (kpis.totalSurvivors * 2) }} rekam skrining aktif
+              {{ kpis.totalAssessments || kpis.totalSurvivors }} rekam skrining aktif
             </span>
           </div>
         </div>
@@ -63,8 +63,12 @@
             <div class="flex items-baseline gap-1.5">
               <span class="text-2xl lg:text-3xl font-black text-rose-600 tracking-tight">{{ kpis.countT0 }}</span>
               <span class="text-xs font-semibold text-rose-600">({{ percentage(kpis.countT0) }}%)</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                ↗ +1 hari ini
+              <span
+                v-if="kpiTrends?.t0Change !== undefined"
+                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                :class="kpiTrends.t0Change > 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
+              >
+                {{ kpiTrends.t0Change > 0 ? `↗ +${kpiTrends.t0Change} hari ini` : (kpiTrends.t0Change < 0 ? `↘ ${kpiTrends.t0Change} hari ini` : '— stabil') }}
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
@@ -90,12 +94,16 @@
             <div class="flex items-baseline gap-1.5">
               <span class="text-2xl lg:text-3xl font-black text-orange-600 tracking-tight">{{ kpis.countT1 }}</span>
               <span class="text-xs font-semibold text-orange-600">({{ percentage(kpis.countT1) }}%)</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
-                — sama
+              <span
+                v-if="kpiTrends?.t1Change !== undefined"
+                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                :class="kpiTrends.t1Change > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
+              >
+                {{ kpiTrends.t1Change > 0 ? `↗ +${kpiTrends.t1Change} hari ini` : (kpiTrends.t1Change < 0 ? `↘ ${kpiTrends.t1Change} hari ini` : '— stabil') }}
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              SRQ > 15 · Rujuk Sp.KJ
+              Risiko Tinggi · Konsultasi Faskes
             </span>
           </div>
         </div>
@@ -117,12 +125,16 @@
             <div class="flex items-baseline gap-1.5">
               <span class="text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{{ kpis.countT2 }}</span>
               <span class="text-xs font-semibold text-amber-600">({{ percentage(kpis.countT2) }}%)</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                ↘ -2 kemarin
+              <span
+                v-if="kpiTrends?.t2Change !== undefined"
+                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                :class="kpiTrends.t2Change > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
+              >
+                {{ kpiTrends.t2Change > 0 ? `↗ +${kpiTrends.t2Change} hari ini` : (kpiTrends.t2Change < 0 ? `↘ ${kpiTrends.t2Change} hari ini` : '— stabil') }}
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              SRQ 7–14 · Pendampingan PFA
+              Risiko Sedang · Pendampingan PFA
             </span>
           </div>
         </div>
@@ -144,12 +156,16 @@
             <div class="flex items-baseline gap-1.5">
               <span class="text-2xl lg:text-3xl font-black text-emerald-600 tracking-tight">{{ kpis.countT3 }}</span>
               <span class="text-xs font-semibold text-emerald-600">({{ percentage(kpis.countT3) }}%)</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                ↗ +1 kemarin
+              <span
+                v-if="kpiTrends?.t3Change !== undefined"
+                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                :class="kpiTrends.t3Change > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
+              >
+                {{ kpiTrends.t3Change > 0 ? `↗ +${kpiTrends.t3Change} hari ini` : (kpiTrends.t3Change < 0 ? `↘ ${kpiTrends.t3Change} hari ini` : '— stabil') }}
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              SRQ 0–6 · Komunitas/Stabil
+              Risiko Rendah · Penguatan Komunitas
             </span>
           </div>
         </div>
@@ -177,18 +193,23 @@
               </div>
 
               <Link
-                href="/healthcare/emergencies"
+                href="/admin/operations/posko"
                 class="text-xs font-semibold text-slate-500 hover:text-slate-900 transition flex items-center gap-1"
               >
-                Lihat Semua
+                Lihat Posko
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
             </div>
 
-            <!-- T0 Emergency Cards Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <!-- T0 Emergency Cards Grid / Empty State -->
+            <div v-if="activeT0List.length === 0" class="py-6 px-4 bg-white rounded-lg border border-slate-200 text-center mt-3 space-y-1">
+              <span class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 font-bold inline-flex items-center justify-center text-xs">✓</span>
+              <p class="text-xs font-bold text-slate-800">Tidak ada kedaruratan aktif (T0)</p>
+              <p class="text-[11px] text-slate-500">Seluruh posko terpantau aman dan terkendali.</p>
+            </div>
+            <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
               <div
                 v-for="e in activeT0List"
                 :key="e.id"
@@ -200,8 +221,11 @@
                     <h4 class="font-bold text-slate-900 text-xs truncate max-w-[120px]">
                       {{ e.patient?.name || 'Penyintas' }}
                     </h4>
-                    <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white tracking-wide">
-                      T0
+                    <span
+                      class="px-1.5 py-0.5 rounded text-[9px] font-black tracking-wide"
+                      :class="e.status === 'CONFIRMED' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-800 border border-amber-300'"
+                    >
+                      {{ e.status === 'CONFIRMED' ? 'T0-CONFIRMED' : 'T0-SUSPECT' }}
                     </span>
                   </div>
 
@@ -223,7 +247,7 @@
                       <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       </svg>
-                      {{ e.shelter?.name || 'Posko A' }}
+                      {{ e.shelter?.name || 'Posko tidak diketahui' }}
                     </span>
                   </div>
 
@@ -236,16 +260,16 @@
                   </div>
                 </div>
 
-                <!-- Footer Status & CTA -->
+                <!-- Footer Status & CTA (RBAC correct: Admin monitors posko, does NOT clinically review) -->
                 <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
                   <span class="text-[9px] font-black text-rose-600 tracking-wider uppercase">
-                    RED FLAG TRIGGERED
+                    {{ e.status === 'CONFIRMED' ? 'TERKONFIRMASI FASKES' : 'MENUNGGU VALIDASI FASKES' }}
                   </span>
                   <Link
-                    href="/healthcare/emergencies"
-                    class="text-[11px] font-bold text-slate-700 hover:text-rose-600 flex items-center gap-0.5 transition"
+                    :href="e.shelter_id ? `/admin/operations/posko/${e.shelter_id}` : '/admin/operations/posko'"
+                    class="text-[11px] font-bold text-slate-700 hover:text-teal-700 flex items-center gap-0.5 transition"
                   >
-                    Tinjau →
+                    Pantau Posko →
                   </Link>
                 </div>
               </div>
@@ -482,18 +506,21 @@
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> T3</span>
             </div>
 
-            <!-- Posko Bars List -->
+            <!-- Posko Bars List (Real aggregates, no fake distribution) -->
             <div class="space-y-3.5 pt-2">
               <div v-for="s in shelterCaseloadList" :key="s.id" class="space-y-1">
                 <div class="flex items-center justify-between text-xs">
                   <span class="font-bold text-slate-800">{{ s.name }}</span>
                   <span class="text-[11px] text-slate-500 font-semibold">{{ s.total }} jiwa ({{ s.volunteers }} relawan)</span>
                 </div>
-                <div class="w-full h-3 rounded-full bg-slate-100 flex overflow-hidden">
+                <div v-if="s.totalTriage > 0" class="w-full h-3 rounded-full bg-slate-100 flex overflow-hidden" :title="`T0: ${s.t0} | T1: ${s.t1} | T2: ${s.t2} | T3: ${s.t3}`">
                   <div :style="{ width: `${s.t0Pct}%` }" class="bg-rose-600 h-full"></div>
                   <div :style="{ width: `${s.t1Pct}%` }" class="bg-orange-500 h-full"></div>
                   <div :style="{ width: `${s.t2Pct}%` }" class="bg-amber-500 h-full"></div>
                   <div :style="{ width: `${s.t3Pct}%` }" class="bg-emerald-500 h-full"></div>
+                </div>
+                <div v-else class="w-full h-3 rounded-full bg-slate-100 flex items-center px-2 text-[9px] text-slate-400 font-medium">
+                  Belum ada data skrining
                 </div>
               </div>
             </div>
@@ -527,10 +554,15 @@
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> T3</span>
             </div>
 
-            <!-- Clean Trend Line Chart Graphic -->
+            <!-- Real Dynamic Trend Line Chart Graphic bound to trendData -->
             <div class="pt-2 pb-2">
-              <div class="h-44 w-full relative flex items-end">
-                <svg class="w-full h-full overflow-visible" viewBox="0 0 300 120" preserveAspectRatio="none">
+              <div class="h-44 w-full relative flex items-center justify-center">
+                <div v-if="!hasTrendData" class="flex flex-col items-center justify-center text-slate-400 text-xs font-medium space-y-1">
+                  <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                  <span>Belum ada data tren 30 hari</span>
+                  <span class="text-[10px] text-slate-400">Data terakumulasi seiring pelaksanaan skrining</span>
+                </div>
+                <svg v-else class="w-full h-full overflow-visible" viewBox="0 0 300 120" preserveAspectRatio="none">
                   <!-- Grid lines -->
                   <line x1="0" y1="30" x2="300" y2="30" stroke="#F1F5F9" stroke-width="1" />
                   <line x1="0" y1="60" x2="300" y2="60" stroke="#F1F5F9" stroke-width="1" />
@@ -538,7 +570,7 @@
 
                   <!-- Trend T3 line (green) -->
                   <path
-                    d="M0,90 Q40,80 80,75 T160,65 T240,55 T300,45"
+                    :d="trendPathT3"
                     fill="none"
                     stroke="#10B981"
                     stroke-width="2.5"
@@ -546,7 +578,7 @@
                   />
                   <!-- Trend T2 line (amber) -->
                   <path
-                    d="M0,105 Q40,95 80,90 T160,80 T240,75 T300,70"
+                    :d="trendPathT2"
                     fill="none"
                     stroke="#F59E0B"
                     stroke-width="2.5"
@@ -554,7 +586,7 @@
                   />
                   <!-- Trend T1 line (orange) -->
                   <path
-                    d="M0,110 Q40,105 80,100 T160,95 T240,90 T300,85"
+                    :d="trendPathT1"
                     fill="none"
                     stroke="#F97316"
                     stroke-width="2.2"
@@ -562,7 +594,7 @@
                   />
                   <!-- Trend T0 line (red) -->
                   <path
-                    d="M0,115 Q40,110 80,108 T160,102 T240,98 T300,92"
+                    :d="trendPathT0"
                     fill="none"
                     stroke="#DC2626"
                     stroke-width="2"
@@ -687,6 +719,12 @@ interface KPIProps {
 
 const props = defineProps<{
   kpis: KPIProps;
+  kpiTrends?: {
+    t0Change?: number;
+    t1Change?: number;
+    t2Change?: number;
+    t3Change?: number;
+  };
   shelters: any[];
   mapShelters?: any[];
   t0Emergencies?: any[];
@@ -715,77 +753,98 @@ const t1Dash = computed(() => percentage(props.kpis.countT1));
 const t2Dash = computed(() => percentage(props.kpis.countT2));
 const t3Dash = computed(() => percentage(props.kpis.countT3));
 
-// Emergency T0 cards list
+// Emergency T0 cards list (Strictly real data only — NO fake mock objects)
 const activeT0List = computed(() => {
-  if (props.t0Emergencies && props.t0Emergencies.length > 0) {
-    return props.t0Emergencies;
-  }
-  // Fallback demo items from seeder if props are not passed
-  return [
-    {
-      id: 'demo-t0-1',
-      assessment_id: '000089',
-      patient: { name: 'Nando Pratama' },
-      shelter: { name: 'Posko Candi' },
-      created_at: new Date(Date.now() - 35 * 60000).toISOString(),
-      notes: 'Pikiran bunuh diri aktif pasca kehilangan keluarga. Agitasi tinggi.',
-    },
-    {
-      id: 'demo-t0-2',
-      assessment_id: '000028',
-      patient: { name: 'Daffa Fairuz' },
-      shelter: { name: 'Posko Pakem' },
-      created_at: new Date(Date.now() - 75 * 60000).toISOString(),
-      notes: 'Risiko Keamanan Jiwa Spesifik: Ideasi bunuh diri (Q17).',
-    },
-    {
-      id: 'demo-t0-3',
-      assessment_id: '000021',
-      patient: { name: 'Bambang Wijaya' },
-      shelter: { name: 'Posko Candi' },
-      created_at: new Date(Date.now() - 120 * 60000).toISOString(),
-      notes: 'Gejala Psikotik Akut Bencana: Halusinasi suara aktif.',
-    },
-  ];
+  return props.t0Emergencies || [];
 });
 
 function formatRecordId(id: string | number): string {
   const str = String(id || '');
-  if (str.length >= 6) return str.slice(-6);
-  return str.padStart(6, '0');
+  if (str.length >= 6) return str.slice(-6).toUpperCase();
+  return str ? str.padStart(6, '0') : '000000';
 }
 
 function formatTime(iso: string): string {
-  if (!iso) return '18:21';
+  if (!iso) return '-';
   try {
     const d = new Date(iso);
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} WIB`;
   } catch {
-    return '18:21';
+    return '-';
   }
 }
 
 function getRedFlagSummary(e: any): string {
   if (e.notes) return e.notes;
-  if (e.red_flag_type) return `Red Flag: ${e.red_flag_type}`;
-  return 'Risiko Keamanan Jiwa: Ideasi bunuh diri atau agitasi psikotik';
+  if (e.red_flag_type) {
+    if (e.red_flag_type === 'SUICIDAL_IDEATION') return 'Ideasi Bunuh Diri (Q17)';
+    if (e.red_flag_type === 'PSYCHOSIS') return 'Gejala Psikotik Akut Bencana';
+    if (e.red_flag_type === 'SEVERE_AGITATION') return 'Agitasi Fisik / Perilaku Membahayakan';
+    return `Red Flag: ${e.red_flag_type}`;
+  }
+  return 'Tanda bahaya kedaruratan jiwa lapangan';
 }
 
+// Shelter Caseload distribution calculated from actual records
 const shelterCaseloadList = computed(() => {
-  return (props.shelters || []).map((s) => {
-    const total = s.patients_count || 1;
+  return (props.shelters || []).map((s: any) => {
+    const t0 = Number(s.t0_count || 0);
+    const t1 = Number(s.t1_count || 0);
+    const t2 = Number(s.t2_count || 0);
+    const t3 = Number(s.t3_count || 0);
+    const totalTriage = t0 + t1 + t2 + t3;
+
+    const t0Pct = totalTriage > 0 ? Math.round((t0 / totalTriage) * 100) : 0;
+    const t1Pct = totalTriage > 0 ? Math.round((t1 / totalTriage) * 100) : 0;
+    const t2Pct = totalTriage > 0 ? Math.round((t2 / totalTriage) * 100) : 0;
+    const t3Pct = totalTriage > 0 ? Math.max(0, 100 - (t0Pct + t1Pct + t2Pct)) : 0;
+
     return {
       id: s.id,
       name: s.name,
       total: s.patients_count || 0,
       volunteers: s.volunteers_count || 0,
-      t0Pct: 20,
-      t1Pct: 25,
-      t2Pct: 30,
-      t3Pct: 25,
+      totalTriage,
+      t0, t1, t2, t3,
+      t0Pct, t1Pct, t2Pct, t3Pct,
     };
   });
 });
+
+// Dynamic Trend Chart derived from props.trendData
+const hasTrendData = computed(() => {
+  if (!props.trendData || props.trendData.length === 0) return false;
+  return props.trendData.some((d: any) => (d.t0 || 0) + (d.t1 || 0) + (d.t2 || 0) + (d.t3 || 0) > 0);
+});
+
+const maxTrendVal = computed(() => {
+  if (!props.trendData || props.trendData.length === 0) return 1;
+  let max = 1;
+  for (const d of props.trendData) {
+    max = Math.max(max, d.t0 || 0, d.t1 || 0, d.t2 || 0, d.t3 || 0);
+  }
+  return max;
+});
+
+function buildTrendPath(category: 't0' | 't1' | 't2' | 't3'): string {
+  if (!props.trendData || props.trendData.length === 0) return '';
+  const totalPoints = props.trendData.length;
+  const max = maxTrendVal.value;
+
+  const points = props.trendData.map((d: any, idx: number) => {
+    const x = Math.round((idx / (totalPoints - 1 || 1)) * 300);
+    const val = Number(d[category] || 0);
+    const y = Math.round(110 - (val / max) * 85);
+    return `${x},${y}`;
+  });
+
+  return `M${points.join(' L')}`;
+}
+
+const trendPathT0 = computed(() => buildTrendPath('t0'));
+const trendPathT1 = computed(() => buildTrendPath('t1'));
+const trendPathT2 = computed(() => buildTrendPath('t2'));
+const trendPathT3 = computed(() => buildTrendPath('t3'));
 
 onMounted(() => {
   if (!mapContainer.value) return;
@@ -821,8 +880,13 @@ onMounted(() => {
 
     const points = props.mapShelters || props.shelters || [];
     for (const s of points) {
-      const lng = Number(s.longitude || 110.41 + Math.random() * 0.05);
-      const lat = Number(s.latitude || -7.68 - Math.random() * 0.04);
+      // Real coordinates ONLY — NEVER Math.random() per Section 9
+      const rawLng = s.longitude !== null && s.longitude !== undefined ? Number(s.longitude) : null;
+      const rawLat = s.latitude !== null && s.latitude !== undefined ? Number(s.latitude) : null;
+
+      if (rawLng === null || rawLat === null || isNaN(rawLng) || isNaN(rawLat)) {
+        continue;
+      }
 
       const el = document.createElement('div');
       el.className = 'w-7 h-7 rounded-full border-2 border-white shadow-md flex items-center justify-center text-[10px] font-black cursor-pointer';
@@ -833,7 +897,7 @@ onMounted(() => {
       el.innerText = s.name ? s.name.charAt(0) : 'P';
 
       new maplibregl.Marker(el)
-        .setLngLat([lng, lat])
+        .setLngLat([rawLng, rawLat])
         .addTo(map);
     }
   } catch (err) {
