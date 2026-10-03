@@ -1,19 +1,19 @@
 <template>
   <HealthcareLayout>
     <div class="space-y-4">
-      <!-- 1. TOP KPI SUMMARY ROW (Compact, Restrained, High Information Hierarchy) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <!-- 1. TOP KPI SUMMARY ROW (Shorter Vertically, Minimalist, High Contrast) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- KPI 1: Total Antrean -->
-        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div class="bg-white rounded-xl p-3 border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">TOTAL ANTREAN</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">TOTAL ANTREAN</span>
             <div class="flex items-baseline space-x-1.5 mt-0.5">
               <span class="text-2xl font-black text-slate-900 tracking-tight">{{ totalSurvivorsCount }}</span>
               <span class="text-xs font-semibold text-slate-500">Penyintas</span>
             </div>
-            <span class="text-[11px] text-slate-400 font-medium block mt-0.5">Tersebar di 3 posko Merapi</span>
+            <span class="text-[10px] text-slate-400 font-medium block mt-0.5">Terdata aktif</span>
           </div>
-          <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shrink-0">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
@@ -21,16 +21,16 @@
         </div>
 
         <!-- KPI 2: Sedang Aktif -->
-        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div class="bg-white rounded-xl p-3 border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">SEDANG AKTIF</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">SEDANG AKTIF</span>
             <div class="flex items-baseline space-x-1.5 mt-0.5">
-              <span class="text-2xl font-black text-amber-700 tracking-tight">{{ activeCasesCount }}</span>
+              <span class="text-2xl font-black text-amber-600 tracking-tight">{{ activeCasesCount }}</span>
               <span class="text-xs font-semibold text-slate-500">Kasus</span>
             </div>
-            <span class="text-[11px] text-amber-700 font-medium block mt-0.5">Memerlukan atensi nakes</span>
+            <span class="text-[10px] text-amber-700 font-medium block mt-0.5">Atensi operasional nakes</span>
           </div>
-          <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-700 border border-amber-200 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shrink-0">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -38,16 +38,16 @@
         </div>
 
         <!-- KPI 3: Zona Merah -->
-        <div class="bg-white rounded-xl p-3.5 border border-red-200 shadow-2xs flex items-center justify-between bg-red-50/15">
+        <div class="bg-white rounded-xl p-3 border border-rose-200/90 shadow-2xs flex items-center justify-between bg-rose-50/20">
           <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-red-700 block">ZONA MERAH</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">ZONA MERAH</span>
             <div class="flex items-baseline space-x-1.5 mt-0.5">
-              <span class="text-2xl font-black text-red-700 tracking-tight">{{ criticalT0Count }}</span>
-              <span class="text-xs font-semibold text-red-700">T0 / prioritas tinggi</span>
+              <span class="text-2xl font-black text-rose-600 tracking-tight">{{ criticalT0Count }}</span>
+              <span class="text-xs font-semibold text-rose-700">T0 / prioritas tinggi</span>
             </div>
-            <span class="text-[11px] text-red-700 font-medium block mt-0.5">Prioritas evaluasi medis</span>
+            <span class="text-[10px] text-rose-700 font-medium block mt-0.5">Prioritas evaluasi medis</span>
           </div>
-          <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center text-red-800 border border-red-200 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-700 border border-rose-200 shrink-0">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -55,16 +55,16 @@
         </div>
 
         <!-- KPI 4: Waktu Respons Medis -->
-        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div class="bg-white rounded-xl p-3 border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">WAKTU RESPONS MEDIS</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">WAKTU RESPONS MEDIS</span>
             <div class="flex items-baseline space-x-1 mt-0.5">
               <span class="text-2xl font-black text-slate-900 tracking-tight">6.8</span>
               <span class="text-xs font-semibold text-slate-500">menit</span>
             </div>
-            <span class="text-[11px] text-slate-500 font-medium block mt-0.5">Target SLA PSC &lt; 15 menit</span>
+            <span class="text-[10px] text-slate-500 font-medium block mt-0.5">Target SLA PSC &lt; 15 menit</span>
           </div>
-          <div class="w-9 h-9 rounded-lg bg-teal-50 flex items-center justify-center text-teal-800 border border-teal-200 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-700 border border-teal-100 shrink-0">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
@@ -81,18 +81,18 @@
         <button @click="$page.props.flash.message = null" class="text-emerald-700 hover:text-emerald-900 font-bold">&times;</button>
       </div>
 
-      <div v-if="actionErrors.length > 0" class="p-3 bg-red-50 border border-red-300 rounded-lg text-xs font-medium text-red-900 space-y-1">
+      <div v-if="actionErrors.length > 0" class="p-3 bg-rose-50 border border-rose-300 rounded-lg text-xs font-medium text-rose-900 space-y-1">
         <p class="font-bold">Perhatian pada tindakan medis:</p>
         <ul class="list-disc pl-4 space-y-0.5">
           <li v-for="err in actionErrors" :key="err.key">{{ err.message }}</li>
         </ul>
       </div>
 
-      <!-- 2. TWO-PANEL WORKSPACE (Ratio: Left ~34%, Right ~66%) -->
+      <!-- 2. TWO-PANEL WORKSPACE (Ratio: Left ~32%, Right ~68%) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         
-        <!-- LEFT PANEL: ANTREAN TRIASE & DARURAT (approx 34% width) -->
-        <section class="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col overflow-hidden">
+        <!-- LEFT PANEL: ANTREAN TRIASE & DARURAT (~32% width) -->
+        <section class="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-col overflow-hidden">
           <!-- Queue Header & Filters -->
           <div class="p-3.5 border-b border-slate-100 bg-slate-50/50 space-y-2.5">
             <div class="flex items-center justify-between">
@@ -119,14 +119,15 @@
               />
               <button
                 v-if="searchQuery"
+                type="button"
                 @click="searchQuery = ''"
-                class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600 text-xs"
+                class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
               >
-                ✕
+                &times;
               </button>
             </div>
 
-            <!-- Filter Buttons -->
+            <!-- Priority Filter Pills -->
             <div class="flex items-center gap-1 overflow-x-auto pb-0.5 text-[11px] font-semibold scrollbar-none">
               <button
                 type="button"
@@ -134,120 +135,114 @@
                 :class="selectedFilter === 'ALL'
                   ? 'bg-slate-900 text-white font-bold'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
-                class="px-2 py-1 rounded-md transition shrink-0"
+                class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                Semua ({{ queueList.length }})
+                Semua
               </button>
               <button
                 type="button"
                 @click="selectedFilter = 'T0'"
                 :class="selectedFilter === 'T0'
-                  ? 'bg-red-700 text-white font-bold'
-                  : 'bg-red-50 text-red-800 hover:bg-red-100 border border-red-200'"
-                class="px-2 py-1 rounded-md transition shrink-0"
+                  ? 'bg-rose-600 text-white font-bold'
+                  : 'bg-white text-rose-700 hover:bg-rose-50 border border-slate-200'"
+                class="px-2.5 py-1 rounded-md transition shrink-0 flex items-center space-x-1"
               >
-                T0 Darurat ({{ countT0 }})
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                <span>T0 Darurat</span>
               </button>
               <button
                 type="button"
                 @click="selectedFilter = 'T1'"
                 :class="selectedFilter === 'T1'
-                  ? 'bg-orange-700 text-white font-bold'
-                  : 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200'"
-                class="px-2 py-1 rounded-md transition shrink-0"
+                  ? 'bg-orange-600 text-white font-bold'
+                  : 'bg-white text-orange-700 hover:bg-orange-50 border border-slate-200'"
+                class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                T1 Mendesak ({{ countT1 }})
+                T1 Mendesak
               </button>
               <button
                 type="button"
                 @click="selectedFilter = 'T2'"
                 :class="selectedFilter === 'T2'
                   ? 'bg-amber-600 text-white font-bold'
-                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'"
-                class="px-2 py-1 rounded-md transition shrink-0"
+                  : 'bg-white text-amber-700 hover:bg-amber-50 border border-slate-200'"
+                class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                T2 Terjadwal ({{ countT2 }})
+                T2 Terjadwal
               </button>
               <button
                 type="button"
                 @click="selectedFilter = 'T3'"
                 :class="selectedFilter === 'T3'
-                  ? 'bg-emerald-700 text-white font-bold'
-                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'"
-                class="px-2 py-1 rounded-md transition shrink-0"
+                  ? 'bg-emerald-600 text-white font-bold'
+                  : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-slate-200'"
+                class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                T3 Stabil ({{ countT3 }})
+                T3 Stabil
               </button>
             </div>
           </div>
 
-          <!-- Queue List -->
-          <div class="divide-y divide-slate-100 overflow-y-auto max-h-[calc(100vh-270px)] min-h-[480px] p-2 space-y-1.5">
+          <!-- Queue List Items (Scannable Cards with Left Severity Indicator) -->
+          <div class="divide-y divide-slate-100 overflow-y-auto max-h-[660px]">
             <div
               v-for="item in filteredQueue"
-              :key="item.key"
-              @click="selectItem(item)"
+              :key="item.queueId"
+              @click="selectQueueItem(item.queueId)"
+              class="p-3 transition cursor-pointer text-xs space-y-1.5 relative border-l-4"
               :class="[
-                'p-3 rounded-lg border transition cursor-pointer relative',
-                selectedItem?.key === item.key
-                  ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900/10 shadow-2xs'
-                  : 'bg-white hover:bg-slate-50/60 border-slate-200'
+                getSeverityBorderClass(item.semanticPriority),
+                selectedQueueId === item.queueId
+                  ? 'bg-white ring-2 ring-teal-600/20 shadow-xs'
+                  : 'bg-white/90 hover:bg-white hover:border-slate-300'
               ]"
             >
-              <!-- Left Accent Strip for Severity -->
-              <span
-                class="absolute left-0 inset-y-2 w-1 rounded-r"
-                :class="{
-                  'bg-red-600': item.priority === 'T0',
-                  'bg-orange-500': item.priority === 'T1',
-                  'bg-amber-500': item.priority === 'T2',
-                  'bg-emerald-500': item.priority === 'T3'
-                }"
-              ></span>
+              <!-- Card Line 1: Status & Time -->
+              <div class="flex items-center justify-between">
+                <span
+                  class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                  :class="priorityBadgeClasses(item.semanticPriority)"
+                >
+                  {{ item.semanticPriorityLabel }}
+                </span>
+                <span class="text-[10px] text-slate-400 font-medium">
+                  {{ item.timeAgo }}
+                </span>
+              </div>
 
-              <div class="pl-2 space-y-1">
-                <!-- Top Row: Triage Status & Time -->
-                <div class="flex items-center justify-between">
-                  <span
-                    class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                    :class="priorityBadgeClasses(item.semanticPriority)"
-                  >
-                    {{ item.semanticPriorityLabel }}
-                  </span>
-                  <span class="text-[11px] text-slate-400 font-medium">
-                    {{ item.timeAgo }}
-                  </span>
-                </div>
+              <!-- Card Line 2: Survivor Name & RM Code -->
+              <div class="flex items-baseline justify-between gap-1.5">
+                <h4 class="text-xs font-bold text-slate-900 truncate">
+                  {{ item.survivorName }}
+                </h4>
+                <span class="text-[10px] font-mono font-medium text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 shrink-0">
+                  {{ item.rmCode }}
+                </span>
+              </div>
 
-                <!-- Survivor Name & RM Assessment Code -->
-                <div class="flex items-baseline justify-between gap-1.5">
-                  <h4 class="text-xs font-bold text-slate-900 truncate">
-                    {{ item.survivorName }}
-                  </h4>
-                  <span class="text-[10px] font-mono font-medium text-slate-600 bg-slate-100 px-1 py-0.2 rounded border border-slate-200 shrink-0">
-                    {{ item.rmCode }}
-                  </span>
-                </div>
+              <!-- Card Line 3: Clinical Reason -->
+              <p v-if="item.redFlagLabel" class="text-[11px] font-medium text-rose-700 truncate">
+                {{ item.redFlagLabel }}
+              </p>
+              <p v-else class="text-[11px] text-slate-500 truncate">
+                {{ item.clinicalSummary }}
+              </p>
 
-                <!-- Clinical Reason / Red Flag -->
-                <p v-if="item.redFlagLabel" class="text-[11px] font-medium text-red-700 truncate">
-                  {{ item.redFlagLabel }}
-                </p>
-                <p v-else class="text-[11px] text-slate-500 truncate">
-                  {{ item.clinicalSummary }}
-                </p>
-
-                <!-- Location & Validation Status -->
-                <div class="pt-1 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100">
-                  <span class="truncate">{{ item.shelterName }}</span>
-                  <span class="font-medium text-[10px] text-slate-700">
-                    {{ item.statusLabel }}
-                  </span>
-                </div>
+              <!-- Card Line 4: Location & Status Action -->
+              <div class="pt-1 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100">
+                <span class="truncate flex items-center gap-1">
+                  <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  {{ item.shelterName }}
+                </span>
+                <span class="font-semibold text-[10px]" :class="item.status === 'PENDING' ? 'text-rose-600 font-bold' : 'text-slate-600'">
+                  {{ item.status === 'PENDING' ? 'Perlu Diakui' : item.statusLabel }}
+                </span>
               </div>
             </div>
 
-            <!-- Empty State -->
+            <!-- Empty Queue State -->
             <div v-if="filteredQueue.length === 0" class="p-8 text-center text-xs text-slate-400 space-y-1">
               <p class="font-bold text-slate-600">Tidak ada antrean yang cocok</p>
               <p class="text-slate-400 text-[11px]">Ubah filter prioritas atau kata kunci pencarian.</p>
@@ -255,227 +250,231 @@
           </div>
         </section>
 
-        <!-- RIGHT PANEL: DETAIL KASUS TRIASE (approx 66% width) -->
-        <main class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col overflow-hidden min-h-[580px]">
-          
+        <!-- RIGHT PANEL: ONE LARGE UNIFIED CASE WORKSPACE (~68% width) -->
+        <main class="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col overflow-hidden min-h-[660px]">
           <template v-if="selectedItem">
-            <!-- 1. DETAIL HEADER BAR (Strictly Polished Hierarchy) -->
-            <div class="p-5 border-b border-slate-200 bg-slate-50/40 space-y-4">
-              <!-- Primary Header Row: Survivor, RM, Status, & Main Action -->
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="space-y-1">
-                  <div class="flex items-center space-x-2">
-                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">
-                      {{ selectedItem.survivorName }}
-                    </h2>
-                    <span class="text-xs font-mono font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      {{ selectedItem.rmCode }}
-                    </span>
-                  </div>
-
-                  <div class="flex items-center space-x-2">
-                    <span
-                      class="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider"
-                      :class="priorityBadgeClasses(selectedItem.semanticPriority)"
-                    >
-                      {{ selectedItem.semanticPriorityLabel }}
-                    </span>
-                    <span class="text-xs text-slate-500 font-medium">
-                      • {{ selectedItem.semanticStatusDescription }}
-                    </span>
-                  </div>
+            <!-- Surface 1: Unified Header Bar (Survivor, RM, Status & Prominent Action CTA) -->
+            <div class="p-5 border-b border-slate-200/80 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <h2 class="text-xl font-black text-slate-900 tracking-tight">
+                    {{ selectedItem.survivorName }}
+                  </h2>
+                  <span class="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
+                    {{ selectedItem.rmCode }}
+                  </span>
                 </div>
 
-                <!-- Primary Action CTA -->
-                <div>
-                  <button
-                    v-if="selectedItem.isEmergency && selectedItem.status === 'PENDING'"
-                    type="button"
-                    @click="acknowledgeCase(selectedItem)"
-                    :disabled="isSubmitting"
-                    class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-lg shadow-xs transition"
+                <div class="flex items-center space-x-2">
+                  <span
+                    class="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider"
+                    :class="priorityBadgeClasses(selectedItem.semanticPriority)"
                   >
-                    AKUI KASUS
-                  </button>
-                  <button
-                    v-else
-                    type="button"
-                    @click="activeTab = 'actions'"
-                    class="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs rounded-lg shadow-xs transition"
-                  >
-                    Tindak Lanjuti Kasus
-                  </button>
+                    {{ selectedItem.semanticPriorityLabel }}
+                  </span>
+                  <span class="text-xs text-slate-500 font-medium">
+                    • {{ selectedItem.semanticStatusDescription }}
+                  </span>
                 </div>
               </div>
 
-              <!-- Secondary Metadata Row (Clean, Restrained) -->
-              <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs text-slate-700 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <div>
-                  <span class="text-[10px] font-bold text-slate-400 block uppercase">NIK</span>
-                  <div class="flex items-center space-x-1 mt-0.5">
-                    <strong class="font-mono text-slate-800">{{ selectedItem.maskedNik }}</strong>
-                  </div>
-                  <span class="text-[10px] text-emerald-700 font-medium block">✓ Identitas terverifikasi</span>
-                </div>
-                <div>
-                  <span class="text-[10px] font-bold text-slate-400 block uppercase">Usia</span>
-                  <strong class="text-slate-800 mt-0.5 block">{{ selectedItem.age }} tahun</strong>
-                </div>
-                <div>
-                  <span class="text-[10px] font-bold text-slate-400 block uppercase">Jenis Kelamin</span>
-                  <strong class="text-slate-800 mt-0.5 block">{{ selectedItem.gender }}</strong>
-                </div>
-                <div>
-                  <span class="text-[10px] font-bold text-slate-400 block uppercase">Status Kerentanan</span>
-                  <strong class="text-slate-800 mt-0.5 block">{{ selectedItem.vulnerabilityStatus }}</strong>
-                </div>
-                <div>
-                  <span class="text-[10px] font-bold text-slate-400 block uppercase">Lokasi Posko</span>
-                  <strong class="text-slate-800 mt-0.5 block truncate">{{ selectedItem.shelterName }}</strong>
-                </div>
-              </div>
-
-              <!-- WORKSPACE TABS BAR (Clean, Dark Indicator, No Giant Colored Pills) -->
-              <nav class="flex items-center space-x-6 border-b border-slate-200 text-xs font-semibold pt-1">
+              <!-- Primary Emergency CTA (Right next to status, highly visible) -->
+              <div>
                 <button
+                  v-if="selectedItem.isEmergency && selectedItem.status === 'PENDING'"
                   type="button"
-                  @click="activeTab = 'overview'"
-                  :class="activeTab === 'overview'
-                    ? 'text-slate-900 border-b-2 border-slate-900 font-bold pb-2'
-                    : 'text-slate-500 hover:text-slate-700 font-medium pb-2'"
-                  class="transition"
+                  @click="acknowledgeCase(selectedItem)"
+                  :disabled="isSubmitting"
+                  class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg shadow-xs transition tracking-wide flex items-center gap-1.5"
                 >
-                  Ringkasan
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>AKUI KASUS</span>
                 </button>
-
                 <button
-                  type="button"
-                  @click="activeTab = 'assessment'"
-                  :class="activeTab === 'assessment'
-                    ? 'text-slate-900 border-b-2 border-slate-900 font-bold pb-2'
-                    : 'text-slate-500 hover:text-slate-700 font-medium pb-2'"
-                  class="transition"
-                >
-                  Asesmen (SRQ-20)
-                </button>
-
-                <button
-                  type="button"
-                  @click="activeTab = 'notes'"
-                  :class="activeTab === 'notes'
-                    ? 'text-slate-900 border-b-2 border-slate-900 font-bold pb-2'
-                    : 'text-slate-500 hover:text-slate-700 font-medium pb-2'"
-                  class="transition"
-                >
-                  Catatan Medis
-                </button>
-
-                <button
+                  v-else
                   type="button"
                   @click="activeTab = 'actions'"
-                  :class="activeTab === 'actions'
-                    ? 'text-slate-900 border-b-2 border-slate-900 font-bold pb-2'
-                    : 'text-slate-500 hover:text-slate-700 font-medium pb-2'"
-                  class="transition"
+                  class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5"
                 >
-                  Tindakan & Rujukan
+                  <span>Buka Form Tindakan</span>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
-
-                <button
-                  type="button"
-                  @click="activeTab = 'history'"
-                  :class="activeTab === 'history'
-                    ? 'text-slate-900 border-b-2 border-slate-900 font-bold pb-2'
-                    : 'text-slate-500 hover:text-slate-700 font-medium pb-2'"
-                  class="transition"
-                >
-                  Riwayat
-                </button>
-              </nav>
+              </div>
             </div>
 
-            <!-- 2. TAB CONTENTS -->
-            <div class="p-5 space-y-5 flex-1 overflow-y-auto">
-              
+            <!-- Surface 2: Flatter Integrated Metadata Row (NO separate card boxes) -->
+            <div class="px-5 py-3 bg-slate-50/70 border-b border-slate-200/80 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs divide-y sm:divide-y-0 sm:divide-x divide-slate-200/70">
+              <div class="sm:pr-2">
+                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">NIK</span>
+                <strong class="font-mono text-slate-800 text-xs mt-0.5 block">{{ selectedItem.maskedNik }}</strong>
+                <span class="text-[10px] text-teal-700 font-medium block mt-0.5">✓ Identitas terverifikasi</span>
+              </div>
+              <div class="pt-2 sm:pt-0 sm:px-3">
+                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Usia</span>
+                <strong class="text-slate-800 text-xs mt-0.5 block">{{ selectedItem.age }} tahun</strong>
+                <span class="text-[10px] text-slate-400 block mt-0.5">Dewasa</span>
+              </div>
+              <div class="pt-2 sm:pt-0 sm:px-3">
+                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Jenis Kelamin</span>
+                <strong class="text-slate-800 text-xs mt-0.5 block">{{ selectedItem.gender }}</strong>
+              </div>
+              <div class="pt-2 sm:pt-0 sm:px-3">
+                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Status Kerentanan</span>
+                <strong class="text-slate-800 text-xs mt-0.5 block">{{ selectedItem.vulnerabilityStatus }}</strong>
+              </div>
+              <div class="pt-2 sm:pt-0 sm:pl-3">
+                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Lokasi Posko</span>
+                <strong class="text-slate-800 text-xs mt-0.5 block truncate">{{ selectedItem.shelterName }}</strong>
+                <span class="text-[10px] text-slate-500 block truncate mt-0.5">Relawan: {{ selectedItem.volunteerName }}</span>
+              </div>
+            </div>
+
+            <!-- Surface 3: Clean Clinical Tab Navigation Bar -->
+            <nav class="px-5 border-b border-slate-200/80 flex items-center space-x-6 text-xs font-semibold bg-white">
+              <button
+                type="button"
+                @click="activeTab = 'overview'"
+                :class="activeTab === 'overview'
+                  ? 'text-slate-900 border-b-2 border-slate-900 font-bold py-3 -mb-px'
+                  : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                class="transition"
+              >
+                Ringkasan
+              </button>
+
+              <button
+                type="button"
+                @click="activeTab = 'assessment'"
+                :class="activeTab === 'assessment'
+                  ? 'text-slate-900 border-b-2 border-slate-900 font-bold py-3 -mb-px'
+                  : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                class="transition"
+              >
+                Asesmen (SRQ-20)
+              </button>
+
+              <button
+                type="button"
+                @click="activeTab = 'notes'"
+                :class="activeTab === 'notes'
+                  ? 'text-slate-900 border-b-2 border-slate-900 font-bold py-3 -mb-px'
+                  : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                class="transition"
+              >
+                Catatan Medis
+              </button>
+
+              <button
+                type="button"
+                @click="activeTab = 'actions'"
+                :class="activeTab === 'actions'
+                  ? 'text-slate-900 border-b-2 border-slate-900 font-bold py-3 -mb-px'
+                  : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                class="transition"
+              >
+                Tindakan & Rujukan
+              </button>
+
+              <button
+                type="button"
+                @click="activeTab = 'history'"
+                :class="activeTab === 'history'
+                  ? 'text-slate-900 border-b-2 border-slate-900 font-bold py-3 -mb-px'
+                  : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                class="transition"
+              >
+                Riwayat
+              </button>
+            </nav>
+
+            <!-- Surface 4: Unified Content Area -->
+            <div class="p-5 space-y-4 flex-1 overflow-y-auto">
               <!-- ══════════════════════════════════════════════ -->
               <!-- TAB 1: RINGKASAN (OVERVIEW) -->
               <!-- ══════════════════════════════════════════════ -->
               <div v-if="activeTab === 'overview'" class="space-y-4">
                 
-                <!-- Red Flag Alert Box (Restrained Red, Left Border Accent) -->
+                <!-- A. Red Flag Alert Box (Restrained Red, Left Border Accent) -->
                 <div
                   v-if="selectedItem.hasRedFlag"
-                  class="rounded-xl border border-red-200 border-l-4 border-l-red-600 bg-red-50/50 p-4 space-y-2"
+                  class="rounded-xl border border-rose-200/90 border-l-4 border-l-rose-600 bg-rose-50/50 p-4 space-y-2.5 shadow-2xs"
                 >
                   <div class="flex items-center justify-between">
-                    <h4 class="text-xs font-bold text-red-900 uppercase tracking-wide">
-                      Tanda Bahaya Klinis (Red Flag Terdeteksi)
-                    </h4>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                    <div class="flex items-center gap-2">
+                      <span class="text-rose-600 font-black">⚠</span>
+                      <h4 class="text-xs font-bold text-rose-900 uppercase tracking-wide">
+                        TANDA BAHAYA KLINIS (RED FLAG TERDETEKSI)
+                      </h4>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-rose-800 border border-rose-200 shadow-2xs">
                       {{ selectedItem.semanticPriorityLabel }}
                     </span>
                   </div>
 
-                  <p class="text-xs text-red-950 font-semibold">
+                  <p class="text-xs text-rose-950 font-bold">
                     Kategori Bahaya: {{ selectedItem.redFlagLabel }}
                   </p>
                   
-                  <div class="p-2.5 bg-white rounded-lg border border-red-200 text-xs text-slate-800">
-                    <span class="text-[10px] font-bold text-slate-400 block uppercase">Catatan Laporan Lapangan</span>
+                  <div class="p-2.5 bg-white rounded-lg border border-rose-200/80 text-xs text-slate-800">
+                    <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Catatan Laporan Lapangan</span>
                     <p class="mt-0.5 text-slate-700 italic">"{{ selectedItem.notes || 'Penyintas mengalami krisis psikologis akut dan memerlukan stabilisasi darurat.' }}"</p>
                   </div>
 
-                  <div class="flex items-center justify-between pt-1">
-                    <span class="text-[11px] text-red-800 font-medium">
-                      Penyintas tidak boleh ditinggal sendirian. Prioritaskan stabilisasi dan rujukan.
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px]">
+                    <span class="text-rose-800 font-medium">
+                      Penyintas tidak boleh ditinggal sendiri. Prioritaskan stabilisasi dan rujukan.
                     </span>
                     <button
                       v-if="selectedItem.status === 'PENDING'"
                       type="button"
                       @click="acknowledgeCase(selectedItem)"
-                      class="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-md shadow-xs transition"
+                      class="self-start sm:self-auto px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-md shadow-xs transition"
                     >
                       AKUI KASUS
                     </button>
                   </div>
                 </div>
 
-                <!-- Clinical Score Summary (Compact 3 Cards) -->
-                <div class="space-y-1.5">
-                  <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <!-- B. Compact 3-Column Clinical Score Summary (Flat on subtle slate, NOT separate heavy cards) -->
+                <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-3">
                     Ringkasan Skor Klinis
-                  </h4>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <!-- Score 1: SRQ-20 -->
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase block">SRQ-20</span>
+                  </span>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
+                    <!-- Col 1: SRQ-20 -->
+                    <div class="space-y-1">
+                      <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">SRQ-20</span>
                       <div class="flex items-baseline space-x-1">
                         <span class="text-2xl font-black text-slate-900">{{ selectedItem.srqScore }}</span>
-                        <span class="text-xs text-slate-400">/ 20</span>
+                        <span class="text-xs text-slate-400 font-semibold">/ 20</span>
                       </div>
-                      <span class="text-[11px] font-bold block" :class="selectedItem.srqScore >= 6 ? 'text-red-700' : 'text-slate-600'">
+                      <span class="text-[11px] font-bold block" :class="selectedItem.srqScore >= 6 ? 'text-rose-600' : 'text-slate-600'">
                         {{ selectedItem.srqScore >= 6 ? 'Di atas ambang klinis (≥ 6)' : 'Dalam batas normal (< 6)' }}
                       </span>
                     </div>
 
-                    <!-- Score 2: Faktor Risiko -->
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase block">Faktor Risiko Bencana</span>
+                    <!-- Col 2: Faktor Risiko -->
+                    <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
+                      <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Faktor Risiko Bencana</span>
                       <div class="flex items-baseline space-x-1">
                         <span class="text-2xl font-black text-slate-900">{{ selectedItem.riskScore }}</span>
-                        <span class="text-xs text-slate-400">Bobot</span>
+                        <span class="text-xs text-slate-400 font-semibold">Bobot</span>
                       </div>
                       <span class="text-[11px] font-bold block text-slate-700">
                         {{ selectedItem.riskScore >= 3 ? 'Risiko Tinggi' : 'Risiko Rendah' }}
                       </span>
                     </div>
 
-                    <!-- Score 3: Gangguan Fungsi / ADL -->
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase block">Fungsi / ADL</span>
+                    <!-- Col 3: Fungsi / ADL -->
+                    <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
+                      <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fungsi / ADL</span>
                       <div class="flex items-baseline space-x-1">
                         <span class="text-2xl font-black text-slate-900">{{ selectedItem.functionScore }}</span>
-                        <span class="text-xs text-slate-400">Tingkat</span>
+                        <span class="text-xs text-slate-400 font-semibold">Tingkat</span>
                       </div>
                       <span class="text-[11px] font-bold block text-slate-700">
                         {{ selectedItem.functionScore >= 3 ? 'Terganggu Berat' : 'Terganggu Ringan' }}
@@ -484,20 +483,20 @@
                   </div>
                 </div>
 
-                <!-- Emergency Response Workflow Stepper (Compact, Clean, Calm) -->
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                <!-- C. Emergency Response Workflow Stepper (Horizontal & Compact) -->
+                <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                   <div class="flex items-center justify-between">
                     <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                       Alur Respons Medis & Komando PSC 119
                     </h4>
-                    <span class="text-[10px] font-semibold text-slate-500">
+                    <span class="text-[10px] font-semibold text-slate-400">
                       SOP Tanggap Medis Bencana
                     </span>
                   </div>
 
                   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     <!-- Step 1 -->
-                    <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-0.5">
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 space-y-0.5">
                       <div class="flex items-center justify-between text-[10px] font-bold text-emerald-700">
                         <span>1. Laporan</span>
                         <span>✓</span>
@@ -510,11 +509,11 @@
                     <div
                       class="p-2.5 rounded-lg border space-y-0.5"
                       :class="['ACKNOWLEDGED', 'REVIEWING', 'CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status)
-                        ? 'border-slate-300 bg-white'
+                        ? 'border-slate-300 bg-white ring-1 ring-teal-500/20'
                         : 'border-slate-200 bg-slate-50/30 opacity-60'"
                     >
                       <div class="flex items-center justify-between text-[10px] font-bold">
-                        <span class="text-slate-600">2. Verifikasi</span>
+                        <span class="text-slate-700">2. Verifikasi</span>
                         <span :class="['REVIEWING', 'CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'text-emerald-700' : 'text-amber-600'">
                           {{ ['REVIEWING', 'CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? '✓' : 'Proses' }}
                         </span>
@@ -527,11 +526,11 @@
                     <div
                       class="p-2.5 rounded-lg border space-y-0.5"
                       :class="['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status)
-                        ? 'border-slate-300 bg-white'
+                        ? 'border-slate-300 bg-white ring-1 ring-teal-500/20'
                         : 'border-slate-200 bg-slate-50/30 opacity-60'"
                     >
                       <div class="flex items-center justify-between text-[10px] font-bold">
-                        <span class="text-slate-600">3. Klasifikasi</span>
+                        <span class="text-slate-700">3. Klasifikasi</span>
                         <span :class="['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'text-emerald-700' : 'text-slate-400'">
                           {{ ['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? '✓' : 'Menunggu' }}
                         </span>
@@ -544,11 +543,11 @@
                     <div
                       class="p-2.5 rounded-lg border space-y-0.5"
                       :class="selectedItem.hasReferral
-                        ? 'border-slate-300 bg-white'
+                        ? 'border-slate-300 bg-white ring-1 ring-teal-500/20'
                         : 'border-slate-200 bg-slate-50/30 opacity-60'"
                     >
                       <div class="flex items-center justify-between text-[10px] font-bold">
-                        <span class="text-slate-600">4. Rujukan</span>
+                        <span class="text-slate-700">4. Rujukan</span>
                         <span :class="selectedItem.hasReferral ? 'text-emerald-700' : 'text-slate-400'">
                           {{ selectedItem.hasReferral ? '✓' : 'Disposisi' }}
                         </span>
@@ -559,11 +558,11 @@
                   </div>
                 </div>
 
-                <!-- Action Footer (Section 17) -->
-                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <!-- D. Action Footer (Tindakan Segera) -->
+                <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div>
-                    <h5 class="font-bold text-slate-900 uppercase tracking-wide text-[11px]">TINDAKAN SEGERA</h5>
-                    <p class="text-slate-600 text-[11px] mt-0.5">Ambil tindakan klinis atau buat rujukan langsung untuk penyintas ini.</p>
+                    <h5 class="font-bold text-slate-900 uppercase tracking-wider text-[11px]">TINDAKAN SEGERA</h5>
+                    <p class="text-slate-500 text-[11px] mt-0.5">Ambil tindakan klinis atau buat rujukan langsung untuk penyintas ini.</p>
                   </div>
                   <div class="flex items-center space-x-2">
                     <button
@@ -576,9 +575,12 @@
                     <button
                       type="button"
                       @click="activeTab = 'actions'"
-                      class="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-bold shadow-xs transition"
+                      class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold shadow-xs transition flex items-center gap-1.5"
                     >
-                      Buka Form Tindakan →
+                      <span>Buka Form Tindakan</span>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -606,86 +608,25 @@
                     :class="[
                       'p-2.5 flex items-center justify-between gap-3',
                       isSrqYes(idx + 1)
-                        ? (idx + 1 === 17 ? 'bg-red-50/70 text-red-950 font-bold' : 'bg-slate-50/50 text-slate-900 font-medium')
+                        ? (idx + 1 === 17 ? 'bg-rose-50/70 text-rose-950 font-bold' : 'bg-slate-50/50 text-slate-900 font-medium')
                         : 'text-slate-600'
                     ]"
                   >
                     <div class="flex items-start space-x-2">
                       <span
                         class="w-4 h-4 rounded text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5"
-                        :class="isSrqYes(idx + 1) ? (idx + 1 === 17 ? 'bg-red-700 text-white' : 'bg-slate-800 text-white') : 'bg-slate-200 text-slate-600'"
+                        :class="isSrqYes(idx + 1) ? (idx + 1 === 17 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white') : 'bg-slate-200 text-slate-600'"
                       >
                         {{ idx + 1 }}
                       </span>
-                      <span>
-                        {{ q }}
-                        <span v-if="idx + 1 === 17" class="ml-1.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-200 text-red-900">
-                          Red Flag Kritis
-                        </span>
-                      </span>
+                      <span>{{ q }}</span>
                     </div>
-
                     <span
-                      class="px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
-                      :class="isSrqYes(idx + 1)
-                        ? (idx + 1 === 17 ? 'bg-red-700 text-white' : 'bg-slate-900 text-white')
-                        : 'bg-slate-100 text-slate-400'"
+                      class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
+                      :class="isSrqYes(idx + 1) ? (idx + 1 === 17 ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white') : 'bg-slate-100 text-slate-400'"
                     >
                       {{ isSrqYes(idx + 1) ? 'YA' : 'TIDAK' }}
                     </span>
-                  </div>
-                </div>
-
-                <!-- Risk Factors & Functional Domains Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                  <!-- Risk Checklist -->
-                  <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
-                    <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                      Faktor Risiko Bencana (R1 - R5)
-                    </h5>
-                    <div class="space-y-1.5 text-xs">
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>R1. Kehilangan keluarga / kerabat</span>
-                        <strong :class="isRiskYes('R1') ? 'text-red-700' : 'text-slate-400'">{{ isRiskYes('R1') ? 'YA (Bobot 2)' : 'TIDAK' }}</strong>
-                      </div>
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>R2. Kehilangan tempat tinggal / usaha</span>
-                        <strong :class="isRiskYes('R2') ? 'text-red-700' : 'text-slate-400'">{{ isRiskYes('R2') ? 'YA (Bobot 2)' : 'TIDAK' }}</strong>
-                      </div>
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>R3. Riwayat gangguan emosional masa lalu</span>
-                        <strong :class="isRiskYes('R3') ? 'text-red-700' : 'text-slate-400'">{{ isRiskYes('R3') ? 'YA (Bobot 1)' : 'TIDAK' }}</strong>
-                      </div>
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>R4. Disabilitas atau cedera fisik</span>
-                        <strong :class="isRiskYes('R4') ? 'text-red-700' : 'text-slate-400'">{{ isRiskYes('R4') ? 'YA (Bobot 2)' : 'TIDAK' }}</strong>
-                      </div>
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>R5. Sendirian tanpa pendamping</span>
-                        <strong :class="isRiskYes('R5') ? 'text-red-700' : 'text-slate-400'">{{ isRiskYes('R5') ? 'YA (Bobot 1)' : 'TIDAK' }}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Functional Checklist -->
-                  <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
-                    <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                      Asesmen Gangguan Fungsi (F1 - F3)
-                    </h5>
-                    <div class="space-y-1.5 text-xs">
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>F1. Perawatan Diri & Higienitas</span>
-                        <strong class="text-slate-800">{{ getFunctionLabel('F1') }}</strong>
-                      </div>
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>F2. Aktivitas Harian Produktif</span>
-                        <strong class="text-slate-800">{{ getFunctionLabel('F2') }}</strong>
-                      </div>
-                      <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                        <span>F3. Hubungan Sosial & Interaksi</span>
-                        <strong class="text-slate-800">{{ getFunctionLabel('F3') }}</strong>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -694,57 +635,48 @@
               <!-- TAB 3: CATATAN MEDIS -->
               <!-- ══════════════════════════════════════════════ -->
               <div v-if="activeTab === 'notes'" class="space-y-4">
-                <div>
-                  <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Catatan Klinis & Observasi</h4>
-                  <p class="text-[11px] text-slate-500">Dokumentasi hasil observasi relawan posko dan dokter jaga PSC 119.</p>
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Catatan Klinis & Observasi Nakes</h4>
+                  <span class="text-[11px] text-slate-400">Audit Trail Terenkripsi</span>
                 </div>
 
                 <!-- Input Catatan Baru -->
-                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
-                  <label class="block text-xs font-bold text-slate-800">
-                    Tambah Catatan Medis Baru:
-                  </label>
+                <div class="p-4 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
+                  <label class="text-[11px] font-bold text-slate-700 block">Tambah Catatan Observasi / Konsultasi Telemedis</label>
                   <textarea
                     v-model="newClinicalNote"
-                    rows="2"
-                    placeholder="Tuliskan catatan observasi pasien, respon intervensi, atau instruksi klinis..."
-                    class="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
+                    rows="3"
+                    placeholder="Tuliskan hasil evaluasi klinis, observasi emosional, atau instruksi khusus untuk relawan di posko..."
+                    class="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
                   ></textarea>
                   <div class="flex justify-end">
                     <button
                       type="button"
-                      @click="addLocalNote"
+                      @click="submitNote"
                       :disabled="!newClinicalNote.trim()"
-                      class="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-bold text-xs rounded-lg shadow-xs transition"
+                      class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition"
                     >
                       Simpan Catatan
                     </button>
                   </div>
                 </div>
 
-                <!-- Timeline Catatan -->
-                <div class="space-y-2.5 pt-1">
-                  <h5 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    Daftar Catatan Tersimpan
-                  </h5>
-
+                <!-- Riwayat Catatan -->
+                <div class="space-y-2.5">
                   <div
-                    v-for="(n, idx) in clinicalNotesList"
-                    :key="idx"
-                    class="p-3.5 bg-white rounded-xl border border-slate-200 space-y-1 shadow-2xs"
+                    v-for="(n, nIdx) in combinedNotes"
+                    :key="nIdx"
+                    class="p-3 bg-white rounded-xl border border-slate-200 space-y-1 text-xs"
                   >
-                    <div class="flex items-center justify-between text-xs">
-                      <div class="flex items-center space-x-2">
-                        <span class="font-bold text-slate-900">{{ n.author }}</span>
-                        <span class="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                          {{ n.role }}
-                        </span>
+                    <div class="flex items-center justify-between text-[11px] text-slate-500">
+                      <div class="flex items-center space-x-1.5">
+                        <strong class="text-slate-800">{{ n.author }}</strong>
+                        <span>•</span>
+                        <span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium text-[10px]">{{ n.role }}</span>
                       </div>
-                      <span class="text-slate-400 text-[11px]">{{ n.time }}</span>
+                      <span>{{ n.time }}</span>
                     </div>
-                    <p class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
-                      "{{ n.content }}"
-                    </p>
+                    <p class="text-slate-700 mt-1 whitespace-pre-line">{{ n.content }}</p>
                   </div>
                 </div>
               </div>
@@ -752,221 +684,197 @@
               <!-- ══════════════════════════════════════════════ -->
               <!-- TAB 4: TINDAKAN & RUJUKAN -->
               <!-- ══════════════════════════════════════════════ -->
-              <div v-if="activeTab === 'actions'" class="space-y-4">
-                <!-- If this is an EmergencyEvent case -->
+              <div v-if="activeTab === 'actions'" class="space-y-5">
+                <!-- If T0 Emergency Workflow -->
                 <template v-if="selectedItem.isEmergency">
-                  <!-- ACTION 1: ACKNOWLEDGE -->
-                  <div
-                    class="bg-white p-4 rounded-xl border space-y-2.5 shadow-2xs"
-                    :class="selectedItem.status === 'PENDING' ? 'border-red-300 bg-red-50/20' : 'border-slate-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-900 uppercase">1. Pengakuan Kasus (Acknowledge)</h4>
-                        <p class="text-[11px] text-slate-500">Konfirmasikan penerimaan laporan kegawatdaruratan oleh dokter nakes.</p>
+                  <!-- Section A: Verifikasi Medis Sekunder -->
+                  <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <div class="flex items-center space-x-2">
+                        <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">1</span>
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Verifikasi Medis Sekunder (Tele-Triase)</h4>
                       </div>
-                      <span
-                        class="px-2 py-0.5 rounded text-[10px] font-bold"
-                        :class="selectedItem.status !== 'PENDING' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'"
-                      >
-                        {{ selectedItem.status !== 'PENDING' ? 'Sudah Diakui' : 'Menunggu Akui' }}
-                      </span>
+                      <span class="text-[10px] text-slate-400">Tahap Wajib T0</span>
                     </div>
 
-                    <div v-if="selectedItem.status === 'PENDING'">
-                      <button
-                        type="button"
-                        @click="acknowledgeCase(selectedItem)"
-                        :disabled="isSubmitting"
-                        class="w-full py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-lg shadow-xs transition"
-                      >
-                        AKUI KASUS
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- ACTION 2: SECONDARY VERIFICATION -->
-                  <div
-                    class="bg-white p-4 rounded-xl border space-y-3 shadow-2xs"
-                    :class="selectedItem.status === 'ACKNOWLEDGED' ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200'"
-                  >
-                    <div class="flex items-center justify-between">
+                    <form @submit.prevent="submitVerification" class="space-y-3 text-xs">
                       <div>
-                        <h4 class="text-xs font-bold text-slate-900 uppercase">2. Verifikasi Medis</h4>
-                        <p class="text-[11px] text-slate-500">Hubungi posko untuk konfirmasi tanda bahaya sebelum penetapan klasifikasi.</p>
-                      </div>
-                      <span
-                        class="px-2 py-0.5 rounded text-[10px] font-bold"
-                        :class="['REVIEWING', 'CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'"
-                      >
-                        {{ ['REVIEWING', 'CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'Terverifikasi' : 'Tahap Ini' }}
-                      </span>
-                    </div>
-
-                    <form
-                      v-if="selectedItem.status === 'ACKNOWLEDGED'"
-                      @submit.prevent="submitVerification(selectedItem)"
-                      class="space-y-2.5"
-                    >
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Metode Verifikasi:</label>
-                        <div class="grid grid-cols-3 gap-2">
-                          <button
-                            type="button"
-                            @click="verificationForm.method = 'PHONE'"
-                            :class="verificationForm.method === 'PHONE' ? 'bg-slate-900 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                            class="py-1.5 rounded-lg text-xs transition"
-                          >
-                            Telepon Posko
-                          </button>
-                          <button
-                            type="button"
-                            @click="verificationForm.method = 'VIDEO'"
-                            :class="verificationForm.method === 'VIDEO' ? 'bg-slate-900 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                            class="py-1.5 rounded-lg text-xs transition"
-                          >
-                            Video Call
-                          </button>
-                          <button
-                            type="button"
-                            @click="verificationForm.method = 'FIELD_TEAM'"
-                            :class="verificationForm.method === 'FIELD_TEAM' ? 'bg-slate-900 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                            class="py-1.5 rounded-lg text-xs transition"
-                          >
-                            Tim Lapangan
-                          </button>
-                        </div>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Metode Kontak Posko / Relawan</label>
+                        <select
+                          v-model="verificationForm.method"
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                        >
+                          <option value="PHONE">Telepon Seluler (Voice Call)</option>
+                          <option value="RADIO">Radio Komunikasi Darurat / HT</option>
+                          <option value="VIDEO">Video Call / WhatsApp Telemedis</option>
+                          <option value="IN_PERSON">Kunjungan Langsung Tim Nakes Lapangan</option>
+                        </select>
                       </div>
 
                       <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Catatan Hasil Verifikasi:</label>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Hasil Verifikasi Langsung</label>
                         <textarea
                           v-model="verificationForm.notes"
                           rows="2"
-                          placeholder="Hasil kontak atau pengamatan penyintas..."
-                          class="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
+                          placeholder="Konfirmasi kondisi fisik, tingkat kesadaran, saturasi, atau intensitas ideasi bunuh diri dari relawan..."
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
                         ></textarea>
                       </div>
 
-                      <button
-                        type="submit"
-                        :disabled="isSubmitting"
-                        class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-xs transition"
-                      >
-                        SIMPAN HASIL VERIFIKASI
-                      </button>
+                      <div class="flex justify-end">
+                        <button
+                          type="submit"
+                          :disabled="isSubmitting"
+                          class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                        >
+                          Simpan Verifikasi
+                        </button>
+                      </div>
                     </form>
                   </div>
 
-                  <!-- ACTION 3: CLASSIFY DECISION -->
-                  <div
-                    class="bg-white p-4 rounded-xl border space-y-3 shadow-2xs"
-                    :class="selectedItem.status === 'REVIEWING' ? 'border-teal-400 bg-teal-50/20' : 'border-slate-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-900 uppercase">3. Penetapan Klasifikasi Triase</h4>
-                        <p class="text-[11px] text-slate-500">Konfirmasi T0 atau turunkan kategori ke T1 / T2.</p>
+                  <!-- Section B: Keputusan Klasifikasi Nakes -->
+                  <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <div class="flex items-center space-x-2">
+                        <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">2</span>
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Keputusan Klasifikasi Triase</h4>
                       </div>
-                      <span
-                        class="px-2 py-0.5 rounded text-[10px] font-bold"
-                        :class="['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'"
-                      >
-                        {{ selectedItem.status === 'CONFIRMED' ? 'T0 Terkonfirmasi' : selectedItem.status === 'DOWNGRADED' ? 'Diturunkan' : 'Menunggu' }}
-                      </span>
+                      <span class="text-[10px] text-slate-400">Konfirmasi / Penyesuaian</span>
                     </div>
 
-                    <form
-                      v-if="selectedItem.status === 'REVIEWING'"
-                      @submit.prevent="submitClassification(selectedItem)"
-                      class="space-y-2.5"
-                    >
-                      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          @click="decisionForm.clinical_result = 'T0_CONFIRMED'"
-                          class="p-2.5 rounded-lg border text-left transition"
-                          :class="decisionForm.clinical_result === 'T0_CONFIRMED' ? 'border-red-600 bg-red-50 text-red-950 font-bold' : 'border-slate-200 text-slate-700'"
+                    <form @submit.prevent="submitClassification" class="space-y-3 text-xs">
+                      <div class="grid grid-cols-2 gap-2">
+                        <label
+                          class="p-3 rounded-lg border cursor-pointer flex flex-col space-y-1 transition"
+                          :class="decisionForm.clinical_result === 'T0_CONFIRMED' ? 'border-rose-500 bg-rose-50/50' : 'border-slate-200 hover:bg-slate-50'"
                         >
-                          <span class="block text-xs font-bold text-red-800">T0 Konfirmasi</span>
-                          <span class="text-[10px] text-slate-500">Ancaman nyawa aktif</span>
-                        </button>
+                          <div class="flex items-center justify-between">
+                            <span class="font-bold text-rose-700">T0 — Terkonfirmasi</span>
+                            <input type="radio" value="T0_CONFIRMED" v-model="decisionForm.clinical_result" class="text-rose-600" />
+                          </div>
+                          <p class="text-[10px] text-slate-500">Kedaruratan jiwa terbukti, butuh evakuasi segera ke RS Jiwa / Faskes Rujukan.</p>
+                        </label>
 
-                        <button
-                          type="button"
-                          @click="decisionForm.clinical_result = 'T1'"
-                          class="p-2.5 rounded-lg border text-left transition"
-                          :class="decisionForm.clinical_result === 'T1' ? 'border-orange-500 bg-orange-50 text-orange-950 font-bold' : 'border-slate-200 text-slate-700'"
+                        <label
+                          class="p-3 rounded-lg border cursor-pointer flex flex-col space-y-1 transition"
+                          :class="decisionForm.clinical_result === 'DOWNGRADED' ? 'border-teal-500 bg-teal-50/50' : 'border-slate-200 hover:bg-slate-50'"
                         >
-                          <span class="block text-xs font-bold text-orange-800">Turunkan ke T1</span>
-                          <span class="text-[10px] text-slate-500">Mendesak pos medis</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          @click="decisionForm.clinical_result = 'T2'"
-                          class="p-2.5 rounded-lg border text-left transition"
-                          :class="decisionForm.clinical_result === 'T2' ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold' : 'border-slate-200 text-slate-700'"
-                        >
-                          <span class="block text-xs font-bold text-amber-800">Turunkan ke T2</span>
-                          <span class="text-[10px] text-slate-500">Konseling terjadwal</span>
-                        </button>
+                          <div class="flex items-center justify-between">
+                            <span class="font-bold text-teal-700">Turunkan Status (T1)</span>
+                            <input type="radio" value="DOWNGRADED" v-model="decisionForm.clinical_result" class="text-teal-600" />
+                          </div>
+                          <p class="text-[10px] text-slate-500">Kondisi stabil, dapat ditangani melalui konsultasi terjadwal di posko.</p>
+                        </label>
                       </div>
 
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Catatan Justifikasi Medis:</label>
-                        <textarea
-                          v-model="decisionForm.notes"
-                          rows="2"
-                          placeholder="Dasar pertimbangan klinis penetapan status..."
-                          class="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
-                        ></textarea>
+                      <div class="flex justify-end">
+                        <button
+                          type="submit"
+                          :disabled="isSubmitting"
+                          class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                        >
+                          Tetapkan Klasifikasi
+                        </button>
                       </div>
-
-                      <button
-                        type="submit"
-                        :disabled="isSubmitting"
-                        class="w-full py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg shadow-xs transition"
-                      >
-                        SIMPAN KEPUTUSAN TRIASE
-                      </button>
                     </form>
                   </div>
 
-                  <!-- ACTION 4: REFERRAL & DISPATCH -->
-                  <div
-                    class="bg-white p-4 rounded-xl border space-y-3 shadow-2xs"
-                    :class="selectedItem.status === 'CONFIRMED' ? 'border-red-300 bg-red-50/20' : 'border-slate-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-900 uppercase">4. Rujukan Faskes & Armada PSC 119</h4>
-                        <p class="text-[11px] text-slate-500">Kirim instruksi ambulans atau rujukan fasilitas kesehatan rujukan.</p>
+                  <!-- Section C: Perintah Rujukan & Dispatch PSC 119 -->
+                  <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <div class="flex items-center space-x-2">
+                        <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">3</span>
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Perintah Rujukan & Evakuasi PSC 119</h4>
                       </div>
-                      <span
-                        v-if="selectedItem.referrals?.length"
-                        class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-900"
-                      >
-                        Rujukan Aktif
-                      </span>
+                      <span class="text-[10px] text-slate-400">Integrasi Armada</span>
                     </div>
 
-                    <div v-if="selectedItem.referrals?.length" class="p-3 bg-teal-50 rounded-lg border border-teal-200 text-xs space-y-1">
-                      <p class="font-bold text-teal-950">Surat Rujukan Telah Diterbitkan</p>
-                      <p class="text-teal-900">Tujuan: <strong>{{ selectedItem.referrals[0].facility?.name || 'RSUD Rujukan Candi' }}</strong></p>
-                      <p class="text-teal-900">Status Armada: <strong>{{ formatReferralStatus(selectedItem.referrals[0].status) }}</strong></p>
-                    </div>
-
-                    <form
-                      v-else-if="selectedItem.status === 'CONFIRMED'"
-                      @submit.prevent="submitReferral(selectedItem)"
-                      class="space-y-2.5"
-                    >
+                    <form @submit.prevent="submitReferral" class="space-y-3 text-xs">
                       <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Pilih Faskes Rujukan Tujuan:</label>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Rumah Sakit / Faskes Tujuan</label>
                         <select
                           v-model="referralForm.facility_id"
-                          class="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                        >
+                          <option v-for="f in facilities" :key="f.id" :value="f.id">
+                            {{ f.name }} ({{ f.type }}) — Sisa Bed: {{ f.bed_capacity || 4 }}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Instruksi Medis untuk Tim Evakuasi</label>
+                        <textarea
+                          v-model="referralForm.notes"
+                          rows="2"
+                          placeholder="Contoh: Dampingi oleh 2 relawan terlatih, pasang restrain jika agitasi membahayakan diri..."
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                        ></textarea>
+                      </div>
+
+                      <div class="flex justify-end">
+                        <button
+                          type="submit"
+                          :disabled="isSubmitting"
+                          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition"
+                        >
+                          Kirim Perintah Rujukan & Dispatch
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </template>
+
+                <!-- If Non-T0 Assessment Validation -->
+                <template v-else>
+                  <div class="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Validasi Hasil Skrining Asesmen</h4>
+                    <form @submit.prevent="submitValidation" class="space-y-3 text-xs">
+                      <div>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Konfirmasi Kategori Triase Nakes</label>
+                        <select
+                          v-model="validationForm.clinical_result"
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                        >
+                          <option value="T1">T1 — Butuh Perhatian Khusus / Rujuk Medis</option>
+                          <option value="T2">T2 — Dukungan Psikologis Terjadwal (PFA)</option>
+                          <option value="T3">T3 — Stabil / Penguatan Komunitas</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Diagnosis / Resume Medis</label>
+                        <textarea
+                          v-model="validationForm.diagnosis_notes"
+                          rows="2"
+                          placeholder="Catatan hasil validasi klinis..."
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                        ></textarea>
+                      </div>
+
+                      <div>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Rencana Intervensi Lanjutan</label>
+                        <textarea
+                          v-model="validationForm.intervention_plan"
+                          rows="2"
+                          placeholder="Rencana konseling lanjutan atau intervensi posko..."
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                        ></textarea>
+                      </div>
+
+                      <div class="pt-1">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                          <input type="checkbox" v-model="validationForm.referral_required" class="rounded text-teal-600" />
+                          <span class="text-xs font-bold text-slate-800">Rekomendasikan Rujukan ke Rumah Sakit</span>
+                        </label>
+                      </div>
+
+                      <div v-if="validationForm.referral_required">
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Faskes Rujukan</label>
+                        <select
+                          v-model="validationForm.facility_id"
+                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
                         >
                           <option v-for="f in facilities" :key="f.id" :value="f.id">
                             {{ f.name }} ({{ f.type }})
@@ -974,127 +882,31 @@
                         </select>
                       </div>
 
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Catatan Rujukan & Kebutuhan Transportasi:</label>
-                        <textarea
-                          v-model="referralForm.notes"
-                          rows="2"
-                          placeholder="Kondisi pasien, kebutuhan ambulans gawat darurat, pendamping..."
-                          class="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
-                        ></textarea>
-                      </div>
-
-                      <button
-                        type="submit"
-                        :disabled="isSubmitting || !referralForm.facility_id"
-                        class="w-full py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-lg shadow-xs transition"
-                      >
-                        BUAT RUJUKAN & PANGGIL ARMADA PSC 119
-                      </button>
-                    </form>
-                  </div>
-                </template>
-
-                <!-- Regular Assessment Validation (T1/T2) -->
-                <template v-else>
-                  <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-2xs">
-                    <div>
-                      <h4 class="text-xs font-bold text-slate-900 uppercase">Validasi Klinis Asesmen (T1 / T2)</h4>
-                      <p class="text-[11px] text-slate-500">Validasikan rekomendasi sistem untuk tindakan lanjutan non-gawat darurat.</p>
-                    </div>
-
-                    <div v-if="selectedItem.clinicalValidation" class="p-3 bg-teal-50 rounded-lg border border-teal-200 text-xs space-y-1">
-                      <p class="font-bold text-teal-950">Asesmen Telah Divalidasi</p>
-                      <p class="text-teal-900">Hasil: {{ selectedItem.clinicalValidation.clinical_result }}</p>
-                      <p class="text-teal-900">Dokter: {{ selectedItem.clinicalValidation.validator?.name || 'dr. Rina Suryani' }}</p>
-                    </div>
-
-                    <form
-                      v-else
-                      @submit.prevent="submitValidation(selectedItem)"
-                      class="space-y-2.5"
-                    >
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Kategori Klinis Hasil Validasi:</label>
-                        <div class="grid grid-cols-3 gap-2">
-                          <button
-                            type="button"
-                            @click="validationForm.clinical_result = 'T1'"
-                            :class="validationForm.clinical_result === 'T1' ? 'bg-orange-700 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                            class="py-1.5 rounded-lg text-xs transition"
-                          >
-                            T1 Mendesak
-                          </button>
-                          <button
-                            type="button"
-                            @click="validationForm.clinical_result = 'T2'"
-                            :class="validationForm.clinical_result === 'T2' ? 'bg-amber-600 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                            class="py-1.5 rounded-lg text-xs transition"
-                          >
-                            T2 Terjadwal
-                          </button>
-                          <button
-                            type="button"
-                            @click="validationForm.clinical_result = 'T3'"
-                            :class="validationForm.clinical_result === 'T3' ? 'bg-emerald-700 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                            class="py-1.5 rounded-lg text-xs transition"
-                          >
-                            T3 Stabil
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Diagnosis & Rencana Intervensi:</label>
-                        <textarea
-                          v-model="validationForm.diagnosis_notes"
-                          rows="2"
-                          placeholder="Penjelasan diagnosis dan rencana intervensi konseling..."
-                          class="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
-                        ></textarea>
-                      </div>
-
-                      <div class="flex items-center space-x-2">
-                        <input
-                          v-model="validationForm.referral_required"
-                          type="checkbox"
-                          id="referralCheck"
-                          class="rounded border-slate-300 text-teal-800"
-                        />
-                        <label for="referralCheck" class="text-xs font-semibold text-slate-700">Perlu rujukan ke faskes rawat jalan?</label>
-                      </div>
-
-                      <div v-if="validationForm.referral_required">
-                        <select
-                          v-model="validationForm.facility_id"
-                          class="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800"
+                      <div class="flex justify-end">
+                        <button
+                          type="submit"
+                          :disabled="isSubmitting"
+                          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition"
                         >
-                          <option v-for="f in facilities" :key="f.id" :value="f.id">{{ f.name }} ({{ f.type }})</option>
-                        </select>
+                          Simpan Validasi Klinis
+                        </button>
                       </div>
-
-                      <button
-                        type="submit"
-                        :disabled="isSubmitting"
-                        class="w-full py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg shadow-xs transition"
-                      >
-                        SIMPAN VALIDASI KLINIS
-                      </button>
                     </form>
                   </div>
                 </template>
               </div>
 
               <!-- ══════════════════════════════════════════════ -->
-              <!-- TAB 5: RIWAYAT (LONGITUDINAL HISTORY) -->
+              <!-- TAB 5: RIWAYAT KASUS -->
               <!-- ══════════════════════════════════════════════ -->
               <div v-if="activeTab === 'history'" class="space-y-4">
-                <div>
-                  <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Rekam Jejak Longitudinal Pasien</h4>
-                  <p class="text-[11px] text-slate-500">Perjalanan riwayat skrining, eskalasi darurat, dan audit penanganan medis.</p>
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Rekam Jejak Operasional Kasus</h4>
+                  <span class="text-[11px] text-slate-400">ID Rekam: {{ selectedItem.rmCode }}</span>
                 </div>
 
-                <div class="relative pl-5 space-y-4 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                <!-- Timeline Audit Trail -->
+                <div class="border-l-2 border-slate-200 ml-3 pl-4 space-y-4 text-xs">
                   <!-- Timeline Item 1 -->
                   <div class="relative space-y-0.5">
                     <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-600 ring-4 ring-white"></span>
@@ -1113,9 +925,9 @@
 
                   <!-- Timeline Item 3 (if Red Flag) -->
                   <div v-if="selectedItem.hasRedFlag" class="relative space-y-0.5">
-                    <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-red-600 ring-4 ring-white"></span>
-                    <span class="text-[10px] font-bold text-red-700 block">Eskalasi Gawat Darurat</span>
-                    <p class="text-xs font-bold text-red-900">Pemicu Red Flag: {{ selectedItem.redFlagLabel }}</p>
+                    <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-rose-600 ring-4 ring-white"></span>
+                    <span class="text-[10px] font-bold text-rose-700 block">Eskalasi Gawat Darurat</span>
+                    <p class="text-xs font-bold text-rose-900">Pemicu Red Flag: {{ selectedItem.redFlagLabel }}</p>
                     <p class="text-[11px] text-slate-600">Laporan darurat diteruskan langsung ke komando medis PSC 119 Sleman.</p>
                   </div>
 
@@ -1157,6 +969,23 @@
 </template>
 
 <script setup lang="ts">
+function getSeverityBorderClass(priority: string): string {
+  switch (priority) {
+    case 'T0_CONFIRMED':
+    case 'T0_SUSPECT':
+    case 'T0':
+      return 'border-l-rose-600';
+    case 'T1':
+      return 'border-l-orange-500';
+    case 'T2':
+      return 'border-l-amber-500';
+    case 'T3':
+      return 'border-l-emerald-500';
+    default:
+      return 'border-l-slate-300';
+  }
+}
+
 import { computed, ref, watch, onMounted } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import HealthcareLayout from '@/layouts/HealthcareLayout.vue';

@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-slate-50 flex text-slate-900 font-sans antialiased">
-    <!-- Desktop Sidebar Navigation -->
+  <div class="min-h-screen bg-[#F5F7FA] flex text-slate-900 font-sans antialiased">
+    <!-- Desktop Sidebar Navigation (Dark Navy, high contrast, clean) -->
     <aside class="w-60 bg-slate-900 text-white flex flex-col shrink-0 border-r border-slate-800 select-none">
       <!-- App Brand & Facility -->
       <div class="p-5 border-b border-slate-800/80">
@@ -34,14 +34,15 @@
             : 'text-slate-400 hover:text-white hover:bg-slate-800/50'"
         >
           <div class="flex items-center space-x-2.5">
-            <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+            <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <span class="text-xs">Triase & Darurat</span>
           </div>
           <span
             v-if="pendingT0Count > 0"
-            class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-red-600 text-white"
+            class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-rose-600 text-white"
           >
             {{ pendingT0Count }}
           </span>
@@ -90,7 +91,7 @@
         </Link>
       </nav>
 
-      <!-- Connection & Logout Footer -->
+      <!-- Connection & Logout Footer (Section 27) -->
       <div class="p-3.5 border-t border-slate-800 space-y-2 text-xs">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-1.5">
@@ -138,18 +139,14 @@
 
           <!-- User info -->
           <div class="text-right">
-            <span class="text-xs font-bold text-slate-900 block leading-tight">
-              {{ user?.name || 'dr. Rina Suryani, Sp.KJ' }}
-            </span>
-            <span class="text-[11px] text-slate-500 block leading-tight mt-0.5">
-              Dokter Jaga • PSC 119
-            </span>
+            <p class="text-xs font-bold text-slate-800 leading-tight">{{ user?.name || 'dr. Rina Suryani, Sp.KJ' }}</p>
+            <p class="text-[10px] text-slate-500 leading-tight">Dokter Jaga • PSC 119</p>
           </div>
         </div>
       </header>
 
-      <!-- Dynamic Page Content -->
-      <main class="flex-1 p-5 lg:p-6 bg-slate-50/70">
+      <!-- Main Workspace Scrollable Body -->
+      <main class="flex-1 p-4 lg:p-5">
         <slot />
       </main>
     </div>
@@ -157,26 +154,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { echo, useConnectionStatus } from '@laravel/echo-vue';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const pendingT0Count = computed(() => Number(page.props.pendingT0Count ?? 0));
-const connectionStatus = useConnectionStatus();
-const subscriptionReady = ref(false);
-const realtimeConnected = computed(() => connectionStatus.value === 'connected' && subscriptionReady.value);
+const pendingT0Count = computed(() => Number((page.props as any).pendingT0Count ?? 0));
+
+const realtimeConnected = ref(false);
 const serverReachable = ref<boolean | null>(null);
+const subscriptionReady = ref(false);
 const lastRefreshedAt = ref<Date | null>(null);
-const lastRefreshedLabel = computed(() => lastRefreshedAt.value?.toLocaleTimeString('id-ID') ?? 'belum diketahui');
-const seenIds = new Set<string>();
-const seenOrder: string[] = [];
-let reloadInFlight = false;
-let reloadRequested = false;
-let healthTimer: ReturnType<typeof setInterval> | undefined;
+
+let healthTimer: ReturnType<typeof setInterval> | null = null;
 let healthProbeInFlight = false;
 let mounted = false;
+
+const connectionStatus = computed<'connected' | 'reconnecting' | 'disconnected'>(() => {
+  if (serverReachable.value === false) return 'disconnected';
+  if (subscriptionReady.value) return 'connected';
+  return 'reconnecting';
+});
 
 function isRoute(path: string) {
   return page.url.startsWith(path);
@@ -186,41 +185,29 @@ function logout() {
   router.post('/logout');
 }
 
-function requestReconciliation() {
-  reloadRequested = true;
-  if (reloadInFlight || !mounted) return;
-  reloadInFlight = true;
-  reloadRequested = false;
+function onEmergencyCreated(event: { id: string }) {
+  playAudioNotification();
   router.reload({
-    only: page.component === 'Healthcare/Emergencies/Index'
-      ? ['pendingT0Count', 'emergencies', 'assessments']
-      : ['pendingT0Count'],
-    onSuccess: () => {
-      lastRefreshedAt.value = new Date();
-      serverReachable.value = true;
-    },
-    onFinish: () => {
-      reloadInFlight = false;
-      if (reloadRequested) requestReconciliation();
-    },
+    only: ['emergencies', 'pendingT0Count'],
+    preserveScroll: true,
+    preserveState: true,
   });
 }
 
-function onEmergencyCreated(payload: { emergency?: { id?: string } }) {
-  const id = payload?.emergency?.id;
-  if (typeof id !== 'string' || !id || seenIds.has(id)) return;
-  seenIds.add(id);
-  seenOrder.push(id);
-  if (seenOrder.length > 100) seenIds.delete(seenOrder.shift()!);
-  playAudioNotification();
-  requestReconciliation();
+function requestReconciliation() {
+  router.reload({
+    only: ['emergencies', 'pendingT0Count'],
+    preserveScroll: true,
+    preserveState: true,
+  });
 }
 
 async function probeServer() {
-  if (healthProbeInFlight) return;
+  if (!mounted || healthProbeInFlight) return;
   healthProbeInFlight = true;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeout = setTimeout(() => controller.abort(), 4000);
+
   try {
     const response = await fetch('/up', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal });
     const wasUnavailable = serverReachable.value === false;
