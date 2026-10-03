@@ -1,67 +1,55 @@
 <template>
   <HealthcareLayout>
     <div class="space-y-4">
-      <!-- 1. Page Title & Operational Context (Minimalist, Calm) -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 class="text-lg lg:text-xl font-black text-slate-900 tracking-tight">
-            Pusat Triase & Kedaruratan Medis
-          </h2>
-          <p class="text-xs text-slate-500 mt-0.5">
-            Antrean insiden T0 untuk verifikasi dan respons medis.
-          </p>
-        </div>
+      <!-- 1. Page Title & Operational Context (Section 7) -->
+      <div>
+        <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+          Pusat Triase & Kedaruratan Medis
+        </h1>
+        <p class="text-xs text-slate-500 mt-1 font-normal">
+          Antrean insiden T0 untuk verifikasi dan respons medis.
+        </p>
       </div>
 
-      <!-- 2. Essential KPI Summary Row (Compact, No Giant Icons, No Fake Trends) -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <!-- KPI 1: Antrean Aktif -->
-        <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Antrean Aktif</span>
-          <div class="mt-1 flex items-baseline gap-1.5">
-            <span class="text-2xl font-black text-slate-900 tracking-tight">{{ totalSurvivorsCount }}</span>
-            <span class="text-xs text-slate-400 font-medium">kasus</span>
+      <!-- 2. Small Operational Summary (Compact Horizontal Strip, Sections 8 & 9) -->
+      <div class="bg-white rounded-xl border border-slate-200/80 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+        <!-- Metric 1: ANTREAN AKTIF -->
+        <div class="flex-1 min-w-[130px] sm:pr-4">
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Antrean Aktif</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-2xl font-bold text-slate-900 tracking-tight">{{ totalSurvivorsCount }}</span>
+            <span class="text-xs text-slate-400 font-normal">kasus</span>
           </div>
-          <span class="text-[11px] text-slate-400 mt-0.5">Menunggu tindak lanjut</span>
         </div>
 
-        <!-- KPI 2: T0 Darurat -->
-        <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 border-t-2 border-t-rose-600 shadow-2xs flex flex-col justify-between">
+        <!-- Metric 2: T0 DARURAT -->
+        <div class="flex-1 min-w-[130px] pt-3 sm:pt-0 sm:px-4">
           <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-            <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 Darurat</span>
+            <span v-if="criticalT0Count > 0" class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">T0 Darurat</span>
           </div>
-          <div class="mt-1 flex items-baseline gap-1.5">
-            <span class="text-2xl font-black text-slate-900 tracking-tight">{{ criticalT0Count }}</span>
-            <span class="text-xs text-slate-400 font-medium">kasus</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-2xl font-bold tracking-tight" :class="criticalT0Count > 0 ? 'text-rose-600' : 'text-slate-900'">{{ criticalT0Count }}</span>
+            <span class="text-xs text-slate-400 font-normal">kasus</span>
           </div>
-          <span class="text-[11px] text-rose-600 font-medium mt-0.5">Prioritas tinggi</span>
         </div>
 
-        <!-- KPI 3: Dalam Verifikasi -->
-        <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 border-t-2 border-t-amber-500 shadow-2xs flex flex-col justify-between">
-          <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Dalam Verifikasi</span>
+        <!-- Metric 3: DALAM VERIFIKASI -->
+        <div class="flex-1 min-w-[130px] pt-3 sm:pt-0 sm:px-4">
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Dalam Verifikasi</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-2xl font-bold text-slate-900 tracking-tight">{{ pendingValidationCount }}</span>
+            <span class="text-xs text-slate-400 font-normal">kasus</span>
           </div>
-          <div class="mt-1 flex items-baseline gap-1.5">
-            <span class="text-2xl font-black text-slate-900 tracking-tight">{{ pendingValidationCount }}</span>
-            <span class="text-xs text-slate-400 font-medium">kasus</span>
-          </div>
-          <span class="text-[11px] text-slate-400 mt-0.5">Sedang ditinjau medis</span>
         </div>
 
-        <!-- KPI 4: Rujukan Aktif -->
-        <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 border-t-2 border-t-teal-600 shadow-2xs flex flex-col justify-between">
-          <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
-            <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Rujukan Aktif</span>
+        <!-- Metric 4: RUJUKAN AKTIF -->
+        <div class="flex-1 min-w-[130px] pt-3 sm:pt-0 sm:pl-4">
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Rujukan Aktif</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-2xl font-bold text-slate-900 tracking-tight">{{ referralsIssuedCount }}</span>
+            <span class="text-xs text-slate-400 font-normal">kasus</span>
           </div>
-          <div class="mt-1 flex items-baseline gap-1.5">
-            <span class="text-2xl font-black text-slate-900 tracking-tight">{{ referralsIssuedCount }}</span>
-            <span class="text-xs text-slate-400 font-medium">kasus</span>
-          </div>
-          <span class="text-[11px] text-slate-400 mt-0.5">Rujukan telah diterbitkan</span>
         </div>
       </div>
 
@@ -89,15 +77,15 @@
       </div>
 
       <!-- 3. Main Workspace: Two-Panel Clinical Hierarchy (Queue Left, Selected Case Right) -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <!-- LEFT PANEL: CASE QUEUE (~33% width / lg:col-span-4) -->
-        <section class="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 shadow-2xs flex flex-col overflow-hidden">
-          <div class="p-3.5 border-b border-slate-100 bg-slate-50/50 space-y-2.5">
+        <section class="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden">
+          <div class="p-4 border-b border-slate-100 space-y-3">
             <div class="flex items-center justify-between">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900">
                 Antrean Darurat
-              </h3>
-              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+              </h2>
+              <span class="text-[11px] font-semibold text-slate-500">
                 {{ filteredQueue.length }} kasus
               </span>
             </div>
@@ -113,7 +101,7 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Cari nama, NIK, ID RM..."
-                class="w-full pl-8 pr-7 py-1.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 transition"
+                class="w-full pl-8 pr-7 py-1.5 bg-slate-50/70 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 focus:bg-white transition"
               />
               <button
                 v-if="searchQuery"
@@ -126,11 +114,11 @@
             </div>
 
             <!-- Filter Buttons: Semua, T0-Suspect, T0-Confirmed -->
-            <div class="flex items-center gap-1.5 text-xs font-semibold">
+            <div class="flex items-center gap-1.5 text-xs">
               <button
                 type="button"
                 @click="selectedFilter = 'ALL'"
-                :class="selectedFilter === 'ALL' ? 'bg-slate-900 text-white font-bold' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'"
+                :class="selectedFilter === 'ALL' ? 'bg-slate-900 text-white font-semibold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'"
                 class="px-2.5 py-1 rounded-lg transition"
               >
                 Semua
@@ -138,7 +126,7 @@
               <button
                 type="button"
                 @click="selectedFilter = 'PENDING'"
-                :class="selectedFilter === 'PENDING' ? 'bg-rose-700 text-white font-bold' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'"
+                :class="selectedFilter === 'PENDING' ? 'bg-rose-700 text-white font-semibold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'"
                 class="px-2.5 py-1 rounded-lg transition"
               >
                 T0-Suspect
@@ -146,7 +134,7 @@
               <button
                 type="button"
                 @click="selectedFilter = 'CONFIRMED'"
-                :class="selectedFilter === 'CONFIRMED' ? 'bg-slate-900 text-white font-bold' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'"
+                :class="selectedFilter === 'CONFIRMED' ? 'bg-slate-900 text-white font-semibold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'"
                 class="px-2.5 py-1 rounded-lg transition"
               >
                 T0-Confirmed
@@ -154,63 +142,57 @@
             </div>
           </div>
 
-          <!-- Queue List Items -->
-          <div class="p-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-280px)]">
+          <!-- Queue List Items (Inbox style, thin dividers, Sections 10, 11, 12) -->
+          <div class="divide-y divide-slate-100 overflow-y-auto max-h-[calc(100vh-280px)]">
             <div
               v-for="item in filteredQueue"
               :key="item.key"
               @click="selectItem(item)"
-              class="p-3 rounded-lg border transition cursor-pointer text-xs space-y-1.5 select-none"
+              class="p-3.5 transition cursor-pointer text-xs space-y-1 select-none hover:bg-slate-50/70"
               :class="[
                 selectedItem?.key === item.key
-                  ? 'bg-teal-50/40 border-teal-500 shadow-2xs ring-1 ring-teal-500/20'
-                  : 'bg-white border-slate-200/80 hover:bg-slate-50/70 hover:border-slate-300'
+                  ? 'bg-teal-50/50 border-l-2 border-l-teal-600 pl-3'
+                  : 'bg-white pl-3.5'
               ]"
             >
-              <!-- Line 1: Priority Badge + Time -->
+              <!-- Line 1: Priority Indicator + Time -->
               <div class="flex items-center justify-between">
-                <span
-                  class="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase"
-                  :class="priorityBadgeClasses(item.semanticPriority)"
-                >
-                  {{ item.semanticPriorityLabel }}
-                </span>
-                <span class="text-[11px] text-slate-400 font-medium">
+                <div class="flex items-center gap-1.5">
+                  <span
+                    v-if="item.semanticPriority.startsWith('T0')"
+                    class="w-1.5 h-1.5 rounded-full bg-rose-600"
+                  ></span>
+                  <span
+                    class="text-[10px] font-bold tracking-wide uppercase"
+                    :class="item.semanticPriority === 'T0_CONFIRMED' ? 'text-rose-700' : 'text-amber-700'"
+                  >
+                    {{ item.semanticPriorityLabel }}
+                  </span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-normal">
                   {{ item.timeAgo }}
                 </span>
               </div>
 
               <!-- Line 2: Patient Name + RM Code -->
               <div class="flex items-baseline justify-between gap-1">
-                <h4 class="font-bold text-slate-900 text-xs truncate">
+                <h3 class="font-bold text-slate-900 text-xs truncate">
                   {{ item.survivorName }}
-                </h4>
+                </h3>
                 <span class="font-mono text-[10px] text-slate-400 shrink-0">
                   {{ item.rmCode }}
                 </span>
               </div>
 
-              <!-- Line 3: Location + Status + Red indicator -->
+              <!-- Line 3: Posko + Status description -->
               <div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                <span class="truncate flex items-center gap-1">
-                  <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                  {{ item.shelterName }}
+                <span class="truncate">{{ item.shelterName }}</span>
+                <span
+                  class="font-medium text-[10px] shrink-0"
+                  :class="item.status === 'PENDING' ? 'text-rose-600 font-semibold' : 'text-slate-500'"
+                >
+                  {{ item.status === 'PENDING' ? 'Menunggu validasi medis' : item.statusLabel }}
                 </span>
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <span
-                    v-if="item.hasRedFlag"
-                    class="w-1.5 h-1.5 rounded-full bg-rose-600"
-                    title="Indikator bahaya terdeteksi"
-                  ></span>
-                  <span
-                    class="font-medium text-[10px]"
-                    :class="item.status === 'PENDING' ? 'text-rose-600 font-bold' : 'text-slate-600'"
-                  >
-                    {{ item.status === 'PENDING' ? 'Menunggu validasi medis' : item.statusLabel }}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -230,40 +212,39 @@
         </section>
 
         <!-- RIGHT PANEL: SELECTED CASE DETAIL WORKSPACE (~67% width / lg:col-span-8) -->
-        <main class="lg:col-span-8 bg-white rounded-xl border border-slate-200/80 shadow-2xs flex flex-col overflow-hidden min-h-[620px]">
+        <main class="lg:col-span-8 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden min-h-[620px]">
           <template v-if="selectedItem">
-            <!-- 1. PATIENT HEADER (Section 4, 5: Name, Identifier, Status, ONE Primary CTA) -->
-            <div class="p-4 sm:p-5 border-b border-slate-200/80 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <!-- 1. PATIENT HEADER (Section 13, 14, 24: Name, Identifier, ONE Primary CTA) -->
+            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="space-y-1">
                 <div class="flex items-center gap-2.5">
-                  <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  <h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                     {{ selectedItem.survivorName }}
                   </h2>
-                  <span class="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  <span class="text-xs font-mono font-medium text-slate-500">
                     {{ selectedItem.rmCode }}
                   </span>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500">
                   <span
-                    class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                    :class="priorityBadgeClasses(selectedItem.semanticPriority)"
+                    class="font-bold text-[10px] uppercase tracking-wider"
+                    :class="selectedItem.semanticPriority === 'T0_CONFIRMED' ? 'text-rose-700' : 'text-amber-700'"
                   >
                     {{ selectedItem.semanticPriorityLabel }}
                   </span>
-                  <span class="text-xs text-slate-500 font-medium">
-                    • {{ selectedItem.semanticStatusDescription }}
-                  </span>
+                  <span>·</span>
+                  <span>{{ selectedItem.semanticStatusDescription }}</span>
                 </div>
               </div>
 
-              <!-- ONE Primary Action CTA on Top Right (Section 5, 24: No duplicate buttons!) -->
+              <!-- ONE Primary Action CTA on Top Right (Section 14: No duplicate buttons!) -->
               <div class="shrink-0">
                 <button
                   v-if="selectedItem.isEmergency && selectedItem.status === 'PENDING'"
                   type="button"
                   @click="acknowledgeCase(selectedItem)"
                   :disabled="isSubmitting"
-                  class="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-xs"
+                  class="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition"
                 >
                   Akui Kasus
                 </button>
@@ -271,7 +252,7 @@
                   v-else-if="['ACKNOWLEDGED', 'REVIEWING'].includes(selectedItem.status)"
                   type="button"
                   @click="activeTab = 'actions'"
-                  class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition shadow-xs"
+                  class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
                 >
                   Lanjutkan Verifikasi Medis
                 </button>
@@ -279,51 +260,45 @@
                   v-else-if="selectedItem.status === 'CONFIRMED' && !selectedItem.hasReferral"
                   type="button"
                   @click="activeTab = 'actions'"
-                  class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg transition shadow-xs"
+                  class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg transition"
                 >
                   Terbitkan Rujukan Medis
                 </button>
                 <span
-                  v-else
-                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold"
+                  v-else-if="selectedItem.hasReferral"
+                  class="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold"
                 >
-                  ✓ {{ getFinalActionLabel(selectedItem) }}
+                  Rujukan Medis Diterbitkan
                 </span>
               </div>
             </div>
 
-            <!-- 2. PATIENT METADATA (Sections 7, 8: Single clean horizontal bar, no separate cards) -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 px-4 py-3 bg-slate-50/50 border-b border-slate-200/80 text-xs divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60">
-              <div class="sm:pr-2">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">NIK</span>
-                <span class="font-mono text-xs sm:text-sm font-semibold text-slate-900 block mt-0.5">{{ selectedItem.maskedNik }}</span>
+            <!-- 2. PATIENT METADATA STRIP (Section 15: Clean strip, subtle dividers, NO nested boxes) -->
+            <div class="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center gap-y-2 text-xs divide-x divide-slate-100 text-slate-600">
+              <div class="pr-4">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">NIK</span>
+                <span class="font-mono text-slate-800 font-semibold">{{ selectedItem.maskedNik || '••••' }}</span>
               </div>
-              <div class="pt-2 sm:pt-0 sm:px-3">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Usia</span>
-                <span class="text-xs sm:text-sm font-semibold text-slate-900 block mt-0.5">
-                  {{ selectedItem.age !== null ? `${selectedItem.age} tahun` : "Data tidak tersedia" }}
-                </span>
+              <div class="px-4">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Usia</span>
+                <span class="text-slate-800 font-semibold">{{ selectedItem.age !== null ? `${selectedItem.age} tahun` : '-' }}</span>
               </div>
-              <div class="pt-2 sm:pt-0 sm:px-3">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Jenis Kelamin</span>
-                <span class="text-xs sm:text-sm font-semibold text-slate-900 block mt-0.5">{{ selectedItem.gender }}</span>
+              <div class="px-4">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Jenis Kelamin</span>
+                <span class="text-slate-800 font-semibold">{{ selectedItem.genderLabel || '-' }}</span>
               </div>
-              <div class="pt-2 sm:pt-0 sm:px-3">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Lokasi</span>
-                <span class="text-xs sm:text-sm font-semibold text-slate-900 block mt-0.5 truncate" :title="selectedItem.shelterName">{{ selectedItem.shelterName }}</span>
-              </div>
-              <div class="pt-2 sm:pt-0 sm:pl-3">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pelapor</span>
-                <span class="text-xs sm:text-sm font-semibold text-slate-900 block mt-0.5 truncate" :title="selectedItem.volunteerName">{{ selectedItem.volunteerName }}</span>
+              <div class="pl-4">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Lokasi Posko</span>
+                <span class="text-slate-800 font-semibold">{{ selectedItem.shelterName }}</span>
               </div>
             </div>
 
-            <!-- 3. TABS (Section 9: Clean underline tabs matching Admin page) -->
-            <nav class="px-4 border-b border-slate-200/80 flex items-center space-x-6 text-xs font-semibold bg-white">
+            <!-- 3. NAVIGATION TABS (Section 17: Text + thin bottom indicator, NO pills) -->
+            <nav class="flex items-center space-x-6 border-b border-slate-100 px-5 text-xs">
               <button
                 type="button"
                 @click="activeTab = 'overview'"
-                :class="activeTab === 'overview' ? 'text-teal-700 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                :class="activeTab === 'overview' ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
                 class="transition"
               >
                 Ringkasan
@@ -331,7 +306,7 @@
               <button
                 type="button"
                 @click="activeTab = 'assessment'"
-                :class="activeTab === 'assessment' ? 'text-teal-700 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                :class="activeTab === 'assessment' ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
                 class="transition"
               >
                 Asesmen
@@ -339,7 +314,7 @@
               <button
                 type="button"
                 @click="activeTab = 'actions'"
-                :class="activeTab === 'actions' ? 'text-teal-700 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                :class="activeTab === 'actions' ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
                 class="transition"
               >
                 Tindakan
@@ -347,7 +322,7 @@
               <button
                 type="button"
                 @click="activeTab = 'history'"
-                :class="activeTab === 'history' ? 'text-teal-700 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
+                :class="activeTab === 'history' ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px' : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
                 class="transition"
               >
                 Riwayat
@@ -357,7 +332,7 @@
             <!-- Action Feedback Notification Banner -->
             <div
               v-if="actionFeedback"
-              class="mx-4 mt-3 p-2.5 rounded-lg text-xs font-semibold flex items-center justify-between"
+              class="mx-5 mt-3 p-2.5 rounded-lg text-xs font-semibold flex items-center justify-between"
               :class="actionFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'"
             >
               <div class="flex items-center space-x-2">
@@ -373,31 +348,30 @@
               </button>
             </div>
 
-            <!-- Dynamic Tab Content -->
-            <div class="p-4 sm:p-5 flex-1 overflow-y-auto space-y-4">
-              <!-- TAB 1: RINGKASAN (Overview Hierarchy: Critical Status -> Red Flag -> Clinical Summary -> Workflow) -->
-              <div v-if="activeTab === 'overview'" class="space-y-4">
-                <!-- 4. CRITICAL STATUS BANNER (Section 10: Compact, pale red, NO duplicate action button) -->
+            <!-- Dynamic Tab Content (Continuous Workspace, Section 3) -->
+            <div class="p-5 flex-1 overflow-y-auto space-y-5">
+              <!-- TAB 1: RINGKASAN (Overview: Status -> Red Flag -> Clinical Summary -> Workflow) -->
+              <div v-if="activeTab === 'overview'" class="space-y-5">
+                <!-- Status Kritis (Section 18: Much quieter, very pale red, thin border, small dot) -->
                 <div
                   v-if="selectedItem.hasRedFlag || selectedItem.semanticPriority.startsWith('T0')"
-                  class="p-3 rounded-lg border border-rose-200/80 bg-rose-50/50 flex items-center gap-2.5 text-xs text-rose-900"
+                  class="py-2.5 px-3.5 rounded-lg border border-rose-200/80 bg-rose-50/40 flex items-center gap-2 text-xs text-rose-900"
                 >
-                  <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <span class="font-bold text-rose-950">STATUS KRITIS — {{ selectedItem.semanticPriorityLabel }}</span>
-                    <span class="text-rose-700 ml-1.5">• {{ selectedItem.semanticStatusDescription }}</span>
-                  </div>
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>
+                  <span class="font-bold text-rose-950">STATUS KRITIS</span>
+                  <span class="text-rose-700">·</span>
+                  <span class="font-medium text-rose-800">{{ selectedItem.semanticPriorityLabel }} — {{ selectedItem.semanticStatusDescription }}</span>
                 </div>
 
-                <!-- 5. RED FLAG SECTION (Sections 11, 12: Subtle row separators, small badge, no nested cards) -->
-                <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
-                  <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-900">Indikator Bahaya</span>
+                <!-- Indikator Bahaya / Red Flag (Sections 19, 20: Real data, thin dividers, NO giant red container) -->
+                <div class="pt-2">
+                  <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      Indikator Bahaya
+                    </h3>
                     <span
                       v-if="detectedRedFlags.length > 0"
-                      class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 uppercase tracking-wider"
+                      class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200/70 uppercase tracking-wider"
                     >
                       {{ detectedRedFlags.length }} Terdeteksi
                     </span>
@@ -408,39 +382,35 @@
                     <div
                       v-for="rf in detectedRedFlags"
                       :key="rf.key"
-                      class="p-3 flex items-start justify-between gap-3 text-xs"
+                      class="py-3 flex items-start justify-between gap-3 text-xs"
                     >
                       <div class="space-y-0.5">
                         <p class="font-bold text-slate-900 text-xs">{{ rf.title }}</p>
-                        <p class="text-[11px] text-slate-600 leading-relaxed">{{ rf.evidence }}</p>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">{{ rf.evidence }}</p>
                       </div>
                       <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
                         ✓ Terdeteksi
                       </span>
                     </div>
                   </div>
-                  <div
-                    v-else
-                    class="p-3 text-xs text-slate-500"
-                  >
-                    Tidak ada indikator bahaya terdeteksi
-                  </div>
                 </div>
 
-                <!-- 6. CLINICAL SUMMARY (Sections 13, 14: ONE shared container, 3 equal columns with subtle separators) -->
-                <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
-                  <div class="p-3.5 border-b border-slate-100">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-900">Ringkasan Hasil Skrining</span>
+                <!-- Clinical Summary (Sections 21, 22: ONE compact strip, 3 equal columns, subtle vertical dividers) -->
+                <div class="pt-2">
+                  <div class="pb-2.5 border-b border-slate-100">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      Ringkasan Hasil Skrining
+                    </h3>
                   </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 p-3.5 text-xs">
+                  <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 pt-3 pb-1 text-xs">
                     <!-- Column 1: SRQ-20 -->
-                    <div class="space-y-0.5 sm:pr-3">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SRQ-20</span>
+                    <div class="sm:pr-4">
+                      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">SRQ-20</span>
                       <div class="mt-1 flex items-baseline gap-1">
-                        <span class="text-xl font-black text-slate-900">
+                        <span class="text-xl font-bold text-slate-900">
                           {{ selectedItem.srqScore !== null ? selectedItem.srqScore : '-' }}
                         </span>
-                        <span class="text-xs text-slate-400 font-semibold">/ 20</span>
+                        <span class="text-xs text-slate-400 font-normal">/ 20</span>
                       </div>
                       <span class="text-[11px] text-slate-500 block mt-0.5">
                         {{ selectedItem.srqScore !== null ? (selectedItem.srqScore >= 6 ? 'Skor Positif (≥6)' : 'Skor Negatif (<6)') : 'Data tidak tersedia' }}
@@ -448,13 +418,13 @@
                     </div>
 
                     <!-- Column 2: Faktor Risiko -->
-                    <div class="pt-2 sm:pt-0 sm:px-3 space-y-0.5">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Faktor Risiko</span>
+                    <div class="pt-3 sm:pt-0 sm:px-4">
+                      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Faktor Risiko</span>
                       <div class="mt-1 flex items-baseline gap-1">
-                        <span class="text-xl font-black text-slate-900">
+                        <span class="text-xl font-bold text-slate-900">
                           {{ selectedItem.riskScore !== null ? selectedItem.riskScore : '-' }}
                         </span>
-                        <span class="text-xs text-slate-400 font-semibold">/ 8</span>
+                        <span class="text-xs text-slate-400 font-normal">/ 8</span>
                       </div>
                       <span class="text-[11px] text-slate-500 block mt-0.5">
                         {{ selectedItem.riskScore !== null ? (selectedItem.riskScore >= 3 ? 'Risiko Tinggi' : 'Risiko Rendah') : 'Data tidak tersedia' }}
@@ -462,13 +432,13 @@
                     </div>
 
                     <!-- Column 3: Fungsi / ADL -->
-                    <div class="pt-2 sm:pt-0 sm:pl-3 space-y-0.5">
-                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Fungsi / ADL</span>
+                    <div class="pt-3 sm:pt-0 sm:pl-4">
+                      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Fungsi / ADL</span>
                       <div class="mt-1 flex items-baseline gap-1">
-                        <span class="text-xl font-black text-slate-900">
+                        <span class="text-xl font-bold text-slate-900">
                           {{ selectedItem.functionScore !== null ? selectedItem.functionScore : '-' }}
                         </span>
-                        <span class="text-xs text-slate-400 font-semibold">/ 9</span>
+                        <span class="text-xs text-slate-400 font-normal">/ 9</span>
                       </div>
                       <span class="text-[11px] text-slate-500 block mt-0.5">
                         {{ selectedItem.functionScore !== null ? (selectedItem.functionScore >= 3 ? 'Terganggu Berat' : 'Terganggu Ringan') : 'Data tidak tersedia' }}
@@ -477,27 +447,29 @@
                   </div>
                 </div>
 
-                <!-- 7. WORKFLOW STEPPER (Section 15: Compact horizontal stepper, no heavy cards) -->
-                <div class="rounded-xl border border-slate-200/80 bg-white p-3.5 space-y-2.5">
-                  <span class="text-xs font-bold uppercase tracking-wider text-slate-900 block">
-                    Alur Penanganan Medis
-                  </span>
-                  <div class="flex items-center justify-between text-xs pt-1">
+                <!-- Workflow Stepper (Section 23: Lightweight horizontal timeline, small circles, thin line) -->
+                <div class="pt-2">
+                  <div class="pb-2.5 border-b border-slate-100">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      Alur Penanganan
+                    </h3>
+                  </div>
+                  <div class="flex items-center justify-between text-xs pt-3 py-1">
                     <!-- Step 1: Laporan -->
-                    <div class="flex items-center gap-1.5 font-semibold text-teal-800">
-                      <span class="w-5 h-5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-teal-50 border border-teal-200 text-teal-700 shrink-0">
+                        ✓
+                      </span>
                       <div>
-                        <p class="leading-tight">Laporan</p>
+                        <p class="font-semibold text-slate-800 leading-tight text-xs">Laporan</p>
                         <span class="text-[10px] text-slate-400 block font-normal">Terdata</span>
                       </div>
                     </div>
 
-                    <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <div class="flex-1 h-px bg-slate-200 mx-3"></div>
 
                     <!-- Step 2: Verifikasi -->
-                    <div class="flex items-center gap-1.5 font-semibold" :class="selectedItem.status !== 'PENDING' ? 'text-teal-800' : 'text-slate-700'">
+                    <div class="flex items-center gap-2">
                       <span
                         class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                         :class="selectedItem.status !== 'PENDING' ? 'bg-teal-50 border border-teal-200 text-teal-700' : 'bg-slate-100 text-slate-500 border border-slate-200'"
@@ -505,17 +477,15 @@
                         {{ selectedItem.status !== 'PENDING' ? '✓' : '2' }}
                       </span>
                       <div>
-                        <p class="leading-tight">Verifikasi</p>
+                        <p class="font-semibold text-slate-800 leading-tight text-xs">Verifikasi</p>
                         <span class="text-[10px] text-slate-400 block font-normal">{{ selectedItem.status === 'PENDING' ? 'Menunggu' : 'Selesai' }}</span>
                       </div>
                     </div>
 
-                    <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <div class="flex-1 h-px bg-slate-200 mx-3"></div>
 
                     <!-- Step 3: Klasifikasi -->
-                    <div class="flex items-center gap-1.5 font-semibold" :class="['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'text-teal-800' : 'text-slate-700'">
+                    <div class="flex items-center gap-2">
                       <span
                         class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                         :class="['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'bg-teal-50 border border-teal-200 text-teal-700' : 'bg-slate-100 text-slate-500 border border-slate-200'"
@@ -523,17 +493,15 @@
                         {{ ['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? '✓' : '3' }}
                       </span>
                       <div>
-                        <p class="leading-tight">Klasifikasi</p>
+                        <p class="font-semibold text-slate-800 leading-tight text-xs">Klasifikasi</p>
                         <span class="text-[10px] text-slate-400 block font-normal">{{ ['CONFIRMED', 'DOWNGRADED'].includes(selectedItem.status) ? 'Ditetapkan' : 'Menunggu' }}</span>
                       </div>
                     </div>
 
-                    <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <div class="flex-1 h-px bg-slate-200 mx-3"></div>
 
                     <!-- Step 4: Rujukan -->
-                    <div class="flex items-center gap-1.5 font-semibold" :class="selectedItem.hasReferral ? 'text-teal-800' : 'text-slate-700'">
+                    <div class="flex items-center gap-2">
                       <span
                         class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                         :class="selectedItem.hasReferral ? 'bg-teal-50 border border-teal-200 text-teal-700' : 'bg-slate-100 text-slate-500 border border-slate-200'"
@@ -541,7 +509,7 @@
                         {{ selectedItem.hasReferral ? '✓' : '4' }}
                       </span>
                       <div>
-                        <p class="leading-tight">Rujukan</p>
+                        <p class="font-semibold text-slate-800 leading-tight text-xs">Rujukan</p>
                         <span class="text-[10px] text-slate-400 block font-normal">{{ selectedItem.hasReferral ? 'Diterbitkan' : 'Menunggu' }}</span>
                       </div>
                     </div>
@@ -549,34 +517,34 @@
                 </div>
               </div>
 
-              <!-- TAB 2: ASESMEN LENGKAP (SRQ-20, Risk, Functioning) -->
-              <div v-if="activeTab === 'assessment'" class="space-y-4">
-                <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
-                  <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
+              <!-- TAB 2: ASESMEN LENGKAP -->
+              <div v-if="activeTab === 'assessment'" class="space-y-5">
+                <div>
+                  <div class="pb-2.5 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                      <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Hasil Pemeriksaan Instrumen SRQ-20 (20 Pertanyaan)
-                      </h4>
+                      <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                        Instrumen SRQ-20 (20 Pertanyaan)
+                      </h3>
                       <p class="text-[11px] text-slate-400 mt-0.5">
                         Skor: <strong class="text-slate-800">{{ selectedItem.srqScore !== null ? `${selectedItem.srqScore} / 20` : "Data SRQ-20 tidak tersedia" }}</strong>
                       </p>
                     </div>
                     <span
                       v-if="selectedItem.srqScore !== null"
-                      class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700"
+                      class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700"
                     >
-                      Skor SRQ-20: {{ selectedItem.srqScore }} / 20
+                      Skor: {{ selectedItem.srqScore }} / 20
                     </span>
                   </div>
 
                   <div
                     v-if="selectedItem.srqResponses && selectedItem.srqResponses.length > 0"
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 text-xs"
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 text-xs"
                   >
                     <div
                       v-for="q in srqQuestions"
                       :key="q.number"
-                      class="p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2"
+                      class="p-2 rounded-lg border text-xs flex items-start justify-between gap-2"
                       :class="
                         getSrqAnswer(q.number) === true
                           ? 'border-rose-200 bg-rose-50/40 text-rose-950 font-medium'
@@ -611,17 +579,17 @@
                   </div>
                   <div
                     v-else
-                    class="p-6 text-center text-xs text-slate-400"
+                    class="py-6 text-center text-xs text-slate-400"
                   >
                     Data rincian pertanyaan SRQ-20 belum tercatat.
                   </div>
                 </div>
 
                 <!-- Risk Factors & Functioning Breakdown -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <!-- Risk factors -->
-                  <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
-                    <div class="p-3 border-b border-slate-100">
+                  <div>
+                    <div class="pb-2 border-b border-slate-100">
                       <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         Faktor Risiko Bencana
                       </h4>
@@ -630,39 +598,35 @@
                       <div
                         v-for="item in riskItems"
                         :key="item.code"
-                        class="p-2.5 flex items-center justify-between text-[11px]"
+                        class="py-2 flex items-center justify-between text-[11px]"
                       >
                         <span class="text-slate-700">{{ item.label }}</span>
                         <span class="font-bold text-slate-900">{{ formatRiskAnswer(getRiskAnswer(item.code)) }}</span>
                       </div>
                     </div>
-                    <div v-else class="p-4 text-center text-xs text-slate-400">
+                    <div v-else class="py-4 text-center text-xs text-slate-400">
                       Data faktor risiko belum tersedia
                     </div>
                   </div>
 
                   <!-- Functioning -->
-                  <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
-                    <div class="p-3 border-b border-slate-100">
+                  <div>
+                    <div class="pb-2 border-b border-slate-100">
                       <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         Penilaian Fungsi & ADL
                       </h4>
                     </div>
                     <div v-if="selectedItem.functionResponses?.length" class="divide-y divide-slate-100 text-xs">
-                      <div class="p-2.5 flex items-center justify-between text-[11px]">
-                        <span class="text-slate-700">Perawatan Diri</span>
-                        <span class="font-bold text-slate-900">{{ getFunctionLabel('SELF_CARE') }}</span>
-                      </div>
-                      <div class="p-2.5 flex items-center justify-between text-[11px]">
-                        <span class="text-slate-700">Aktivitas Harian / Pekerjaan</span>
-                        <span class="font-bold text-slate-900">{{ getFunctionLabel('WORK_STUDY') }}</span>
-                      </div>
-                      <div class="p-2.5 flex items-center justify-between text-[11px]">
-                        <span class="text-slate-700">Relasi Sosial</span>
-                        <span class="font-bold text-slate-900">{{ getFunctionLabel('SOCIAL_RELATION') }}</span>
+                      <div
+                        v-for="domain in ['SELF_CARE', 'WORK_PRODUCTIVITY', 'FAMILY_SOCIAL', 'MOBILITY']"
+                        :key="domain"
+                        class="py-2 flex items-center justify-between text-[11px]"
+                      >
+                        <span class="text-slate-700">{{ domain.replace('_', ' ') }}</span>
+                        <span class="font-bold text-slate-900">{{ getFunctionLabel(domain) }}</span>
                       </div>
                     </div>
-                    <div v-else class="p-4 text-center text-xs text-slate-400">
+                    <div v-else class="py-4 text-center text-xs text-slate-400">
                       Data fungsi belum tersedia
                     </div>
                   </div>
@@ -670,23 +634,22 @@
               </div>
 
               <!-- TAB 3: TINDAKAN & RUJUKAN -->
-              <div v-if="activeTab === 'actions'" class="space-y-4">
+              <div v-if="activeTab === 'actions'" class="space-y-5">
                 <!-- Section A: Tele-Verification Form -->
                 <div
                   v-if="['PENDING', 'ACKNOWLEDGED'].includes(selectedItem.status)"
-                  class="rounded-xl border border-slate-200/80 bg-white overflow-hidden"
                 >
-                  <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
-                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <div class="pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Verifikasi Medis Sekunder (Tele-Verifikasi)
-                    </h4>
-                    <span class="text-[10px] font-bold text-slate-400">Tahap 1</span>
+                    </h3>
+                    <span class="text-[10px] font-semibold text-slate-400">Tahap 1</span>
                   </div>
 
-                  <form @submit.prevent="submitVerification(selectedItem)" class="p-4 space-y-3 text-xs">
+                  <form @submit.prevent="submitVerification(selectedItem)" class="pt-3 space-y-3 text-xs">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                        <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                           Metode Verifikasi
                         </label>
                         <select
@@ -699,7 +662,7 @@
                         </select>
                       </div>
                       <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                        <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                           Pelapor Lapangan
                         </label>
                         <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-semibold truncate">
@@ -709,7 +672,7 @@
                     </div>
 
                     <div>
-                      <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                      <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                         Catatan Hasil Verifikasi Sekunder Nakes
                       </label>
                       <textarea
@@ -735,18 +698,17 @@
                 <!-- Section B: Triage Classification Form -->
                 <div
                   v-if="selectedItem.status === 'REVIEWING'"
-                  class="rounded-xl border border-slate-200/80 bg-white overflow-hidden"
                 >
-                  <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
-                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <div class="pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Penetapan Klasifikasi Triase Klinis Nakes
-                    </h4>
-                    <span class="text-[10px] font-bold text-slate-400">Tahap 2</span>
+                    </h3>
+                    <span class="text-[10px] font-semibold text-slate-400">Tahap 2</span>
                   </div>
 
-                  <form @submit.prevent="submitClassification(selectedItem)" class="p-4 space-y-3 text-xs">
+                  <form @submit.prevent="submitClassification(selectedItem)" class="pt-3 space-y-3 text-xs">
                     <div>
-                      <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                      <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                         Keputusan Klasifikasi
                       </label>
                       <select
@@ -760,7 +722,7 @@
                     </div>
 
                     <div>
-                      <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                      <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                         Pertimbangan Klinis Keputusan
                       </label>
                       <textarea
@@ -786,18 +748,17 @@
                 <!-- Section C: Referral Dispatch Form -->
                 <div
                   v-if="selectedItem.status === 'CONFIRMED' && !selectedItem.hasReferral"
-                  class="rounded-xl border border-slate-200/80 bg-white overflow-hidden"
                 >
-                  <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
-                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <div class="pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Terbitkan Rujukan Medis Darurat
-                    </h4>
-                    <span class="text-[10px] text-teal-700 font-bold">Rujukan</span>
+                    </h3>
+                    <span class="text-[10px] text-teal-700 font-semibold">Rujukan</span>
                   </div>
 
-                  <form @submit.prevent="submitReferral(selectedItem)" class="p-4 space-y-3 text-xs">
+                  <form @submit.prevent="submitReferral(selectedItem)" class="pt-3 space-y-3 text-xs">
                     <div>
-                      <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                      <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                         Fasilitas Kesehatan Tujuan Rujukan
                       </label>
                       <select
@@ -812,7 +773,7 @@
                     </div>
 
                     <div>
-                      <label class="text-[11px] font-bold text-slate-700 block mb-1">
+                      <label class="text-[11px] font-semibold text-slate-700 block mb-1">
                         Instruksi Medis untuk Tim Transport / Faskes
                       </label>
                       <textarea
@@ -827,7 +788,7 @@
                       <button
                         type="submit"
                         :disabled="isSubmitting || !referralForm.facility_id"
-                        class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg shadow-xs transition"
+                        class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg transition"
                       >
                         Terbitkan Rujukan Medis
                       </button>
@@ -838,7 +799,7 @@
                 <!-- Section D: If Referral already issued -->
                 <div
                   v-if="selectedItem.hasReferral"
-                  class="p-4 rounded-xl bg-teal-50/50 border border-teal-200 text-xs space-y-2"
+                  class="p-4 rounded-xl bg-teal-50/50 border border-teal-200 text-xs space-y-1.5"
                 >
                   <div class="flex items-center justify-between">
                     <span class="font-bold text-teal-900">Rujukan Medis Diterbitkan</span>
@@ -857,67 +818,65 @@
 
               <!-- TAB 4: RIWAYAT -->
               <div v-if="activeTab === 'history'" class="space-y-4">
-                <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
-                  <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
-                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Rekam Jejak Operasional Kasus
-                    </h4>
-                    <span class="text-[11px] font-mono text-slate-400">
-                      ID: {{ selectedItem.rmCode }}
-                    </span>
-                  </div>
+                <div class="pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Rekam Jejak Operasional Kasus
+                  </h3>
+                  <span class="text-[11px] font-mono text-slate-400">
+                    ID: {{ selectedItem.rmCode }}
+                  </span>
+                </div>
 
-                  <div class="p-4">
-                    <div class="relative pl-6 space-y-3.5 text-xs before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                      <!-- Step 1: Shelter report -->
-                      <div class="relative space-y-0.5">
-                        <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-600 ring-4 ring-white"></span>
-                        <span class="text-[10px] font-bold text-teal-800 block">Laporan Kedaruratan Lapangan</span>
-                        <p class="font-bold text-slate-800">{{ selectedItem.shelterName }}</p>
-                        <p class="text-[11px] text-slate-500">
-                          Dilaporkan oleh {{ selectedItem.volunteerName }} • {{ formatDateTime(selectedItem.createdAt) }}
-                        </p>
-                      </div>
+                <div class="pt-2">
+                  <div class="relative pl-6 space-y-4 text-xs before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                    <!-- Step 1: Shelter report -->
+                    <div class="relative space-y-0.5">
+                      <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-700 ring-4 ring-white"></span>
+                      <span class="text-[10px] font-bold text-teal-800 block">Laporan Kedaruratan Lapangan</span>
+                      <p class="font-bold text-slate-800">{{ selectedItem.shelterName }}</p>
+                      <p class="text-[11px] text-slate-500">
+                        Dilaporkan oleh {{ selectedItem.volunteerName }} • {{ formatDateTime(selectedItem.createdAt) }}
+                      </p>
+                    </div>
 
-                      <!-- Step 2: Assessment if present -->
-                      <div v-if="selectedItem.hasAssessment" class="relative space-y-0.5">
-                        <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-900 ring-4 ring-white"></span>
-                        <span class="text-[10px] font-bold text-slate-500 block">Skrining Awal</span>
-                        <p class="font-bold text-slate-800">Instrumen Psikologis {{ selectedItem.rmCode }}</p>
-                        <p class="text-[11px] text-slate-500">
-                          {{ selectedItem.srqScore !== null ? `Skor SRQ-20: ${selectedItem.srqScore}/20` : "Skor tidak tersedia" }}
-                        </p>
-                      </div>
+                    <!-- Step 2: Assessment if present -->
+                    <div v-if="selectedItem.hasAssessment" class="relative space-y-0.5">
+                      <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-900 ring-4 ring-white"></span>
+                      <span class="text-[10px] font-bold text-slate-500 block">Skrining Awal</span>
+                      <p class="font-bold text-slate-800">Instrumen Psikologis {{ selectedItem.rmCode }}</p>
+                      <p class="text-[11px] text-slate-500">
+                        {{ selectedItem.srqScore !== null ? `Skor SRQ-20: ${selectedItem.srqScore}/20` : "Skor tidak tersedia" }}
+                      </p>
+                    </div>
 
-                      <!-- Step 3: Verifications -->
-                      <div
-                        v-for="(v, idx) in selectedItem.verifications"
-                        :key="`ver-${idx}`"
-                        class="relative space-y-0.5"
-                      >
-                        <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white"></span>
-                        <span class="text-[10px] font-bold text-amber-800 block">Verifikasi Sekunder Nakes</span>
-                        <p class="font-bold text-slate-800">
-                          Metode: {{ v.method }} • Hasil: {{ v.clinical_result || 'Dalam Peninjauan' }}
-                        </p>
-                        <p v-if="v.notes" class="text-[11px] text-slate-500 italic">"{{ v.notes }}"</p>
-                      </div>
+                    <!-- Step 3: Verifications -->
+                    <div
+                      v-for="(v, idx) in selectedItem.verifications"
+                      :key="`ver-${idx}`"
+                      class="relative space-y-0.5"
+                    >
+                      <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white"></span>
+                      <span class="text-[10px] font-bold text-amber-800 block">Verifikasi Sekunder Nakes</span>
+                      <p class="font-bold text-slate-800">
+                        Metode: {{ v.method }} • Hasil: {{ v.clinical_result || 'Dalam Peninjauan' }}
+                      </p>
+                      <p v-if="v.notes" class="text-[11px] text-slate-500 italic">"{{ v.notes }}"</p>
+                    </div>
 
-                      <!-- Step 4: Referrals -->
-                      <div
-                        v-for="(r, idx) in selectedItem.referrals"
-                        :key="`ref-${idx}`"
-                        class="relative space-y-0.5"
-                      >
-                        <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-700 ring-4 ring-white"></span>
-                        <span class="text-[10px] font-bold text-teal-800 block">Rujukan Medis</span>
-                        <p class="font-bold text-slate-800">
-                          Tujuan: {{ r.facility?.name || "Fasilitas Rujukan" }}
-                        </p>
-                        <p class="text-[11px] text-slate-500">
-                          Status: {{ formatReferralStatus(r.status) }}
-                        </p>
-                      </div>
+                    <!-- Step 4: Referrals -->
+                    <div
+                      v-for="(r, idx) in selectedItem.referrals"
+                      :key="`ref-${idx}`"
+                      class="relative space-y-0.5"
+                    >
+                      <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-700 ring-4 ring-white"></span>
+                      <span class="text-[10px] font-bold text-teal-800 block">Rujukan Medis</span>
+                      <p class="font-bold text-slate-800">
+                        Tujuan: {{ r.facility?.name || "Fasilitas Rujukan" }}
+                      </p>
+                      <p class="text-[11px] text-slate-500">
+                        Status: {{ formatReferralStatus(r.status) }}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -933,7 +892,7 @@
             <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h4 class="text-sm font-bold text-slate-700">Pilih Insiden dari Antrean</h4>
+            <h3 class="text-sm font-bold text-slate-700">Pilih Insiden dari Antrean</h3>
             <p class="text-xs text-slate-400 max-w-xs">
               Klik salah satu kasus di panel antrean kiri untuk memeriksa identitas, bukti asesmen, dan tindakan klinis.
             </p>
@@ -953,7 +912,6 @@ import {
   formatDateTime,
   formatRiskAnswer,
   normalizeQueueItem,
-  priorityBadgeClasses,
   riskItems,
   srqQuestions,
 } from '@/lib/healthcareEmergency';
@@ -1005,7 +963,7 @@ const queueList = computed(() => {
     });
 });
 
-// 4 Essential KPI Counts (Sections 10, 11)
+// 4 Essential KPI Counts (Sections 8 & 9)
 const totalSurvivorsCount = computed(() => queueList.value.length);
 const criticalT0Count = computed(() => {
   return queueList.value.filter((q) => ['PENDING', 'ACKNOWLEDGED', 'REVIEWING', 'CONFIRMED'].includes(q.status)).length;
@@ -1101,22 +1059,6 @@ function getFunctionLabel(domain: string): string {
   if (resp?.level === 1) return 'Gangguan ringan-sedang / perlu dukungan';
   if (resp?.level === 0) return 'Tidak terganggu / mandiri';
   return 'Data fungsi tidak tersedia';
-}
-
-function getFinalActionLabel(item: any): string {
-  if (item.status === 'DOWNGRADED') {
-    const decision = (item.verifications || []).find((verification: any) => verification.clinical_result);
-    return decision?.clinical_result
-      ? `Klasifikasi Selesai — Diturunkan ke ${decision.clinical_result}`
-      : 'Klasifikasi Selesai — Diturunkan';
-  }
-
-  if (item.status === 'CONFIRMED' && item.hasReferral) {
-    const status = item.referrals.find((referral: any) => referral.status === 'ACTIVE')?.status ?? item.referrals[0]?.status;
-    return status === 'ACTIVE' ? 'Rujukan Aktif' : `Rujukan ${formatReferralStatus(status)}`;
-  }
-
-  return item.statusLabel;
 }
 
 // Action Feedback State
