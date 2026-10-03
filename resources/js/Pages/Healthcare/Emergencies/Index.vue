@@ -1,26 +1,36 @@
 <template>
   <HealthcareLayout>
     <div class="space-y-4">
-      <!-- 1. Operational Workspace Title Bar (Admin Design System Match) -->
+      <!-- 1. Operational Workspace Title Bar (Minimalist, Functional, Clean) -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg lg:text-xl font-black text-slate-900 tracking-tight">
             Pusat Triase & Kedaruratan Medis PSC 119
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            Antrean skrining lapangan terpadu, respon red flag T0, validasi klinis nakes, dan koordinasi rujukan faskes.
+            Antrean skrining lapangan terpadu, validasi klinis nakes, dan respon cepat rujukan faskes.
           </p>
         </div>
 
         <div class="flex items-center gap-2 text-xs">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 font-medium shadow-xs">
+          <span
+            v-if="criticalT0Count > 0"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-bold shadow-xs"
+          >
+            <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+            {{ criticalT0Count }} Kasus Kedaruratan T0 Aktif
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium shadow-xs"
+          >
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Sistem Siaga: {{ lastUpdatedTime }}
+            Kondisi Darurat Terkendali
           </span>
         </div>
       </div>
 
-      <!-- 2. KPI Summary Grid (4 Compact Cards matching Admin Summary KPI system) -->
+      <!-- 2. KPI Summary Grid (4 100% Real Backend Metrics - Zero Fabricated Data per Section 12) -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <!-- Card 1: TOTAL ANTREAN -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
@@ -51,7 +61,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-rose-600"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 — Emergency</span>
+              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 — Darurat Jiwa</span>
             </div>
             <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,62 +83,62 @@
           </div>
         </div>
 
-        <!-- Card 3: SEDANG DITINJAU -->
+        <!-- Card 3: MENUNGGU VALIDASI -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-amber-500 shadow-xs flex flex-col justify-between space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Sedang Ditinjau</span>
+              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Menunggu Validasi</span>
             </div>
             <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
             </div>
           </div>
           <div>
             <div class="flex items-baseline gap-2">
-              <span class="text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{{ activeCasesCount }}</span>
-              <span class="text-xs font-semibold text-amber-600">kasus</span>
+              <span class="text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{{ pendingValidationCount }}</span>
+              <span class="text-xs font-semibold text-amber-600">asesmen</span>
               <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                Proses Triase
+                Skrining T1 / T2
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Verifikasi & Klasifikasi nakes
+              Verifikasi klinis lanjutan nakes
             </span>
           </div>
         </div>
 
-        <!-- Card 4: WAKTU RESPONS PSC 119 -->
+        <!-- Card 4: RUJUKAN DITERBITKAN -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-teal-600 shadow-xs flex flex-col justify-between space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-teal-600"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Respons Medis</span>
+              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Rujukan Faskes</span>
             </div>
             <div class="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
             </div>
           </div>
           <div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">6.8</span>
-              <span class="text-xs font-semibold text-slate-500">menit</span>
+            <div class="flex items-baseline gap-2">
+              <span class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">{{ referralsIssuedCount }}</span>
+              <span class="text-xs font-semibold text-slate-500">kasus</span>
               <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
-                Target &lt; 15 m
+                Terbit
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              SLA Tanggap Darurat PSC 119
+              Disposisi RSUD & Faskes Jiwa
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Action & Error Notifications (Admin Alert System Match) -->
+      <!-- Action & Error Notifications -->
       <div v-if="$page.props.flash?.message" class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-900 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <span>✓</span>
@@ -239,7 +249,7 @@
             </div>
           </div>
 
-          <!-- Queue List Items (Scannable Cards with Left Severity Indicator) -->
+          <!-- Queue List Items (Focused, Clean, Non-Redundant per Section 13 & 14) -->
           <div class="divide-y divide-slate-100 overflow-y-auto max-h-[680px]">
             <div
               v-for="item in filteredQueue"
@@ -253,7 +263,7 @@
                   : 'bg-white hover:bg-slate-50/80'
               ]"
             >
-              <!-- Card Line 1: Status Badge & Time -->
+              <!-- Card Line 1: Priority Badge & Time -->
               <div class="flex items-center justify-between">
                 <span
                   class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
@@ -266,7 +276,7 @@
                 </span>
               </div>
 
-              <!-- Card Line 2: Survivor Name & RM Code (RM = Record ID, never person ID) -->
+              <!-- Card Line 2: Survivor Name & RM Code (RM = Record ID, longitudinal record preserved) -->
               <div class="flex items-baseline justify-between gap-1.5">
                 <h4 class="text-xs font-bold text-slate-900 truncate">
                   {{ item.survivorName }}
@@ -276,7 +286,7 @@
                 </span>
               </div>
 
-              <!-- Card Line 3: Clinical Reason / Red Flag Snippet -->
+              <!-- Card Line 3: Clinical Evidence Snippet -->
               <p v-if="item.redFlagLabel" class="text-[11px] font-medium text-rose-700 truncate">
                 RED FLAG: {{ item.redFlagLabel }}
               </p>
@@ -284,7 +294,7 @@
                 {{ item.clinicalSummary }}
               </p>
 
-              <!-- Card Line 4: Location & Status Action -->
+              <!-- Card Line 4: Posko Location & Current Workflow State -->
               <div class="pt-1 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100">
                 <span class="truncate flex items-center gap-1">
                   <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,19 +316,20 @@
           </div>
         </section>
 
-        <!-- RIGHT PANEL: ONE LARGE UNIFIED CASE WORKSPACE (~68% width) -->
+        <!-- RIGHT PANEL: CASE DETAIL WORKSPACE (~68% width) -->
         <main class="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col overflow-hidden min-h-[680px]">
           <template v-if="selectedItem">
-            <!-- Header Bar: Survivor, RM, Status & Prominent Action CTA -->
+            <!-- Header Bar: Survivor, RM, Status & Single Clear Primary Action CTA per Section 7 & 29 -->
             <div class="p-5 border-b border-slate-200/80 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="space-y-1">
                 <div class="flex items-center space-x-2">
-                  <!-- Prev / Next navigation buttons -->
+                  <!-- Accessible Prev / Next buttons -->
                   <div class="flex items-center space-x-1 mr-1">
                     <button
                       type="button"
                       @click="selectPrevCase"
                       class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 text-xs transition"
+                      aria-label="Kasus Sebelumnya"
                       title="Kasus Sebelumnya"
                     >
                       ←
@@ -327,6 +338,7 @@
                       type="button"
                       @click="selectNextCase"
                       class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-600 text-xs transition"
+                      aria-label="Kasus Berikutnya"
                       title="Kasus Berikutnya"
                     >
                       →
@@ -354,8 +366,9 @@
                 </div>
               </div>
 
-              <!-- Primary Action CTA (Admin Button System Match) -->
+              <!-- SINGLE PRIMARY ACTION CTA (Workflow-Driven, No Duplicate Buttons per Section 6 & 7) -->
               <div>
+                <!-- Case 1: T0 Pending -> Acknowledge -->
                 <button
                   v-if="selectedItem.isEmergency && selectedItem.status === 'PENDING'"
                   type="button"
@@ -368,21 +381,60 @@
                   </svg>
                   <span>AKUI KASUS DARURAT</span>
                 </button>
+
+                <!-- Case 2: T0 Acknowledged or Reviewing -> Verify / Classify -->
                 <button
-                  v-else
+                  v-else-if="selectedItem.isEmergency && ['ACKNOWLEDGED', 'REVIEWING'].includes(selectedItem.status)"
                   type="button"
                   @click="activeTab = 'actions'"
-                  class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5"
+                  class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5"
                 >
-                  <span>Buka Form Tindakan</span>
+                  <span>Lanjutkan Verifikasi Medis</span>
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
+
+                <!-- Case 3: T0 Confirmed without Referral -> Issue Referral -->
+                <button
+                  v-else-if="selectedItem.isEmergency && selectedItem.status === 'CONFIRMED' && !selectedItem.hasReferral"
+                  type="button"
+                  @click="activeTab = 'actions'"
+                  class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5"
+                >
+                  <span>Terbitkan Rujukan Medis</span>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <!-- Case 4: Non-Emergency (T1/T2) Awaiting Validation -->
+                <button
+                  v-else-if="!selectedItem.isEmergency && selectedItem.status !== 'COMPLETED'"
+                  type="button"
+                  @click="activeTab = 'actions'"
+                  class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5"
+                >
+                  <span>Validasi Asesmen</span>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <!-- Case 5: Completed or Stabil (T3) -> Neutral status, no emergency button -->
+                <span
+                  v-else
+                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold"
+                >
+                  <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Tindakan Selesai / Terdata</span>
+                </span>
               </div>
             </div>
 
-            <!-- Integrated Flat Metadata Row (Admin Design System Match) -->
+            <!-- Integrated Flat Metadata Row -->
             <div class="px-5 py-3 bg-slate-50/70 border-b border-slate-200/80 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs divide-y sm:divide-y-0 sm:divide-x divide-slate-200/70">
               <div class="sm:pr-2">
                 <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">NIK</span>
@@ -418,7 +470,7 @@
               <button type="button" @click="actionFeedback = null" class="text-slate-400 hover:text-slate-600 text-sm font-bold">&times;</button>
             </div>
 
-            <!-- Tab Navigation Bar (Admin Tab System Match) -->
+            <!-- 4 Focused Functional Tabs (Merged fake local notes tab into Action & Riwayat per Section 18 & 19) -->
             <nav class="px-5 border-b border-slate-200/80 flex items-center space-x-6 text-xs font-semibold bg-white">
               <button
                 type="button"
@@ -444,17 +496,6 @@
 
               <button
                 type="button"
-                @click="activeTab = 'notes'"
-                :class="activeTab === 'notes'
-                  ? 'text-teal-700 border-b-2 border-teal-600 font-bold py-3 -mb-px'
-                  : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
-                class="transition"
-              >
-                Catatan Medis
-              </button>
-
-              <button
-                type="button"
                 @click="activeTab = 'actions'"
                 :class="activeTab === 'actions'
                   ? 'text-teal-700 border-b-2 border-teal-600 font-bold py-3 -mb-px'
@@ -472,7 +513,7 @@
                   : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'"
                 class="transition"
               >
-                Riwayat
+                Riwayat Operasional
               </button>
             </nav>
 
@@ -482,10 +523,10 @@
               <!-- TAB 1: RINGKASAN (OVERVIEW) -->
               <div v-if="activeTab === 'overview'" class="space-y-4">
                 
-                <!-- A. Status Kritis Banner (Admin Alert Component System Match) -->
+                <!-- A. Status Kritis Banner (NO duplicate Akui button per Section 6) -->
                 <div
                   v-if="selectedItem.hasRedFlag || selectedItem.semanticPriority.startsWith('T0')"
-                  class="rounded-xl border border-rose-200/90 border-l-4 border-l-rose-600 bg-rose-50/50 p-4 space-y-2.5 shadow-2xs"
+                  class="rounded-xl border border-rose-200/90 border-l-4 border-l-rose-600 bg-rose-50/50 p-4 space-y-2 shadow-2xs"
                 >
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -508,19 +549,9 @@
                     <p class="mt-0.5 text-slate-700 italic">"{{ selectedItem.notes || 'Catatan laporan lapangan tidak tersedia.' }}"</p>
                   </div>
 
-                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px]">
-                    <span class="text-rose-800 font-medium">
-                      Penyintas tidak boleh ditinggal sendiri. Prioritaskan stabilisasi dan rujukan.
-                    </span>
-                    <button
-                      v-if="selectedItem.status === 'PENDING'"
-                      type="button"
-                      @click="acknowledgeCase(selectedItem)"
-                      class="self-start sm:self-auto px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-md shadow-xs transition"
-                    >
-                      AKUI KASUS
-                    </button>
-                  </div>
+                  <p class="text-[11px] text-rose-800 font-medium pt-0.5">
+                    Penyintas tidak boleh ditinggal sendiri. Prioritaskan stabilisasi dan rujukan faskes.
+                  </p>
                 </div>
 
                 <!-- B. Structured Red Flag List (Sections 20, 21: Real evidence only) -->
@@ -529,91 +560,42 @@
                     <div class="flex items-center gap-1.5">
                       <span class="text-rose-600 text-xs font-bold">⚠️</span>
                       <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Indikator Bahaya (Red Flag Kegawatdaruratan)
+                        Indikator Bahaya (Red Flag)
                       </h4>
                     </div>
-                    <span class="text-xs text-slate-400">
-                      Evaluasi Multi-Domain Lapangan
+                    <span v-if="detectedRedFlags.length > 0" class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                      {{ detectedRedFlags.length }} Indikator Terdeteksi
+                    </span>
+                    <span v-else class="text-[10px] font-semibold text-slate-400">
+                      Evaluasi Multi-Domain
                     </span>
                   </div>
 
-                  <!-- 4 Structured Rows using Admin Card Language -->
-                  <div class="space-y-2 text-xs">
-                    <!-- Row 1: Suicide / Self-Harm -->
-                    <div class="p-3 rounded-lg border border-slate-200/80 flex items-center justify-between bg-white hover:bg-slate-50/50 transition">
-                      <span class="font-medium text-slate-700 pr-2">
-                        1. Risiko keamanan jiwa spesifik: rencana/ungkapan ingin mati (SRQ-17) atau tindakan menyakiti diri aktif
-                      </span>
-                      <span
-                        v-if="isRedFlagIndicatorDetected('SUICIDAL_IDEATION')"
-                        class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0"
-                      >
+                  <!-- Only show actual detected red flags (Section 20: Do NOT automatically show all 4 categories) -->
+                  <div v-if="detectedRedFlags.length > 0" class="space-y-2 text-xs">
+                    <div
+                      v-for="(rf, idx) in detectedRedFlags"
+                      :key="rf.key"
+                      class="p-3 rounded-lg border border-rose-200 bg-rose-50/40 flex items-start justify-between gap-3"
+                    >
+                      <div class="space-y-0.5">
+                        <p class="font-bold text-slate-900">{{ idx + 1 }}. {{ rf.title }}</p>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">{{ rf.evidence }}</p>
+                      </div>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0">
                         ✓ Terdeteksi
                       </span>
-                      <span
-                        v-else
-                        class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-200 shrink-0"
-                      >
-                        Tidak Terdeteksi
-                      </span>
                     </div>
+                  </div>
 
-                    <!-- Row 2: Psychosis -->
-                    <div class="p-3 rounded-lg border border-slate-200/80 flex items-center justify-between bg-white hover:bg-slate-50/50 transition">
-                      <span class="font-medium text-slate-700 pr-2">
-                        2. Gejala psikotik akut: halusinasi visual/auditori, waham paranoid, atau disorganisasi/ucapan tidak terkontrol
-                      </span>
-                      <span
-                        v-if="isRedFlagIndicatorDetected('PSYCHOSIS')"
-                        class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0"
-                      >
-                        ✓ Terdeteksi
-                      </span>
-                      <span
-                        v-else
-                        class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-200 shrink-0"
-                      >
-                        Tidak Terdeteksi
-                      </span>
-                    </div>
-
-                    <!-- Row 3: Agitation -->
-                    <div class="p-3 rounded-lg border border-slate-200/80 flex items-center justify-between bg-white hover:bg-slate-50/50 transition">
-                      <span class="font-medium text-slate-700 pr-2">
-                        3. Perilaku agresif & gangguan kontrol impuls: amuk/agresif fisik merusak atau ancaman pada sekitar
-                      </span>
-                      <span
-                        v-if="isRedFlagIndicatorDetected('SEVERE_AGITATION')"
-                        class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0"
-                      >
-                        ✓ Terdeteksi
-                      </span>
-                      <span
-                        v-else
-                        class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-200 shrink-0"
-                      >
-                        Tidak Terdeteksi
-                      </span>
-                    </div>
-
-                    <!-- Row 4: Somatic Emergency -->
-                    <div class="p-3 rounded-lg border border-slate-200/80 flex items-center justify-between bg-white hover:bg-slate-50/50 transition">
-                      <span class="font-medium text-slate-700 pr-2">
-                        4. Kegawatdaruratan medis & somatik akut: penurunan kesadaran, kejang, hipertermia, atau cedera berat lainnya
-                      </span>
-                      <span
-                        v-if="isRedFlagIndicatorDetected('SOMATIC_EMERGENCY')"
-                        class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0"
-                      >
-                        ✓ Terdeteksi
-                      </span>
-                      <span
-                        v-else
-                        class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-200 shrink-0"
-                      >
-                        Tidak Terdeteksi
-                      </span>
-                    </div>
+                  <!-- Quiet State when No Red Flag Detected -->
+                  <div v-else class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs">
+                    <span class="text-slate-600">
+                      {{ selectedItem.srqResponses?.length || selectedItem.hasAssessment ? 'Tidak ada indikator bahaya terdeteksi' : 'Data skrining indikator bahaya belum tersedia' }}
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-white text-slate-500 border border-slate-200 shrink-0">
+                      Negatif / Bersih
+                    </span>
                   </div>
                 </div>
 
@@ -667,7 +649,7 @@
                   </div>
                 </div>
 
-                <!-- D. Emergency Response Workflow Stepper (Admin Stepper System Match) -->
+                <!-- D. Emergency Response Workflow Stepper (Reflecting Real Database State) -->
                 <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                   <div class="flex items-center justify-between">
                     <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -756,7 +738,7 @@
 
                   <div v-if="selectedItem.srqResponses && selectedItem.srqResponses.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <div
-                      v-for="(q, idx) in srqQuestions"
+                      v-for="q in srqQuestions"
                       :key="q.number"
                       class="p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2"
                       :class="getSrqAnswer(q.number) === true
@@ -850,59 +832,7 @@
                 </div>
               </div>
 
-              <!-- TAB 3: CATATAN MEDIS -->
-              <div v-if="activeTab === 'notes'" class="space-y-4">
-                <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
-                  <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                    Catatan Klinis & Komunikasi Tim Medis
-                  </h4>
-
-                  <!-- Timeline notes -->
-                  <div class="space-y-2.5">
-                    <div
-                      v-for="(n, idx) in clinicalNotesList"
-                      :key="idx"
-                      class="p-3 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1 text-xs"
-                    >
-                      <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-1.5">
-                          <strong class="text-slate-800">{{ n.author }}</strong>
-                          <span class="text-[10px] text-slate-400">• {{ n.role }}</span>
-                        </div>
-                        <span class="text-[10px] text-slate-400">{{ n.time }}</span>
-                      </div>
-                      <p class="text-slate-700">{{ n.content }}</p>
-                    </div>
-
-                    <div v-if="clinicalNotesList.length === 0" class="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-lg">
-                      Belum ada catatan klinis tambahan untuk kasus ini.
-                    </div>
-                  </div>
-
-                  <!-- Input catatan baru -->
-                  <div class="pt-2 border-t border-slate-100 space-y-2">
-                    <label class="text-[11px] font-bold text-slate-700 block">Tambah Catatan Observasi Nakes</label>
-                    <textarea
-                      v-model="newClinicalNote"
-                      rows="2"
-                      placeholder="Tuliskan catatan observasi gejala, respons terapi awal, atau instruksi..."
-                      class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition"
-                    ></textarea>
-                    <div class="flex justify-end">
-                      <button
-                        type="button"
-                        @click="addLocalNote"
-                        :disabled="!newClinicalNote.trim()"
-                        class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition"
-                      >
-                        Simpan Catatan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- TAB 4: TINDAKAN & RUJUKAN -->
+              <!-- TAB 3: TINDAKAN & RUJUKAN (Actual Functional Actions) -->
               <div v-if="activeTab === 'actions'" class="space-y-4">
                 
                 <!-- IF EMERGENCY (T0) WORKFLOW -->
@@ -1071,7 +1001,7 @@
                 </template>
 
                 <!-- IF NORMAL ASSESSMENT VALIDATION WORKFLOW -->
-                <template v-else>
+                <template v-else-if="selectedItem.priority !== 'T3'">
                   <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                     <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Validasi Hasil Skrining Asesmen
@@ -1135,9 +1065,19 @@
                     </form>
                   </div>
                 </template>
+
+                <!-- IF T3 STABIL -->
+                <template v-else>
+                  <div class="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1">
+                    <p class="font-bold text-slate-800">Kasus Berada dalam Kategori T3 (Stabil)</p>
+                    <p class="text-slate-400 max-w-md mx-auto">
+                      Pasien tidak memerlukan tindakan kedaruratan atau rujukan faskes rujukan. Pendampingan psikososial berbasis komunitas dan PFA posko dianjurkan.
+                    </p>
+                  </div>
+                </template>
               </div>
 
-              <!-- TAB 5: RIWAYAT OPERASIONAL -->
+              <!-- TAB 4: RIWAYAT OPERASIONAL (Audit Trail of Real Persistent Events) -->
               <div v-if="activeTab === 'history'" class="space-y-4">
                 <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                   <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -1753,6 +1693,85 @@ const lastUpdatedTime = ref('10:30 WIB');
 onMounted(() => {
   const now = new Date();
   lastUpdatedTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
+});
+
+
+const pendingValidationCount = computed(() => {
+  return (props.assessments || []).filter((a: any) => !a.clinical_validation).length;
+});
+
+const referralsIssuedCount = computed(() => {
+  let count = 0;
+  for (const e of props.emergencies || []) {
+    count += (e.referrals || []).length;
+  }
+  return count;
+});
+
+function handlePrimaryAction(item: any) {
+  if (!item) return;
+  if (item.isEmergency && item.status === 'PENDING') {
+    acknowledgeCase(item);
+    return;
+  }
+  activeTab.value = 'actions';
+}
+
+
+const detectedRedFlags = computed(() => {
+  if (!selectedItem.value) return [];
+  const list: Array<{ key: string; title: string; evidence: string }> = [];
+  const item = selectedItem.value;
+
+  if (isRedFlagIndicatorDetected('SUICIDAL_IDEATION')) {
+    let evidence = item.redFlagEvidence || item.redFlagLabel || '';
+    if (getSrqAnswer(17) === true) {
+      evidence = (evidence ? evidence + ' • ' : '') + 'Jawaban Ya pada SRQ #17 (Pikiran mengakhiri hidup)';
+    }
+    list.push({
+      key: 'SUICIDAL_IDEATION',
+      title: 'Risiko keamanan jiwa spesifik',
+      evidence: evidence || 'Terdeteksi indikasi risiko bunuh diri atau menyakiti diri aktif'
+    });
+  }
+
+  if (isRedFlagIndicatorDetected('PSYCHOSIS')) {
+    let evidence = item.redFlagEvidence || item.redFlagLabel || '';
+    if (getSrqAnswer(18) === true) {
+      evidence = (evidence ? evidence + ' • ' : '') + 'Jawaban Ya pada SRQ #18 (Gejala gangguan persepsi / realitas)';
+    }
+    list.push({
+      key: 'PSYCHOSIS',
+      title: 'Gejala psikotik akut',
+      evidence: evidence || 'Terdeteksi indikasi gangguan realitas, halusinasi, atau waham paranoid'
+    });
+  }
+
+  if (isRedFlagIndicatorDetected('SEVERE_AGITATION')) {
+    list.push({
+      key: 'SEVERE_AGITATION',
+      title: 'Perilaku agresif & gangguan kontrol impuls',
+      evidence: item.redFlagEvidence || item.redFlagLabel || 'Terdeteksi agitasi ekstrem atau perilaku membahayakan sekitar'
+    });
+  }
+
+  if (isRedFlagIndicatorDetected('SOMATIC_EMERGENCY')) {
+    list.push({
+      key: 'SOMATIC_EMERGENCY',
+      title: 'Kegawatdaruratan medis somatik akut',
+      evidence: item.redFlagEvidence || item.redFlagLabel || 'Terdeteksi ancaman kondisi fisik / somatik komorbid'
+    });
+  }
+
+  if (list.length === 0 && item.hasRedFlag) {
+    list.push({
+      key: 'GENERAL_EMERGENCY',
+      title: item.redFlagLabel || 'Kedaruratan Medis Terlapor',
+      evidence: item.redFlagEvidence || item.notes || 'Terdeteksi kondisi gawat darurat oleh relawan lapangan'
+    });
+  }
+
+  return list;
 });
 
 </script>

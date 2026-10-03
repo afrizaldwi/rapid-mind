@@ -40,19 +40,7 @@
           </div>
         </Link>
 
-        <!-- Separator on desktop -->
-        <div class="hidden xl:block h-7 w-[1px] bg-slate-200 mx-1"></div>
-
-        <!-- Center operational title on large screen -->
-        <div class="hidden xl:block">
-          <h2 class="text-xs font-bold text-slate-800 leading-tight">
-            Pusat Komando Medis & Triase Kedaruratan Jiwa
-          </h2>
-          <p class="text-[11px] text-slate-400 leading-tight">
-            Validasi klinis nakes, triase sekunder, evaluasi red flag, dan koordinasi rujukan faskes PSC 119.
-          </p>
         </div>
-      </div>
 
       <!-- Right Controls & User Profile -->
       <div class="flex items-center space-x-3">
@@ -66,25 +54,6 @@
             :class="isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"
           ></span>
           <span>{{ isOnline ? 'Online • PSC Siaga' : 'Offline' }}</span>
-        </div>
-
-        <!-- Notification Bell (shows badge only when real unread count > 0) -->
-        <div class="relative">
-          <button
-            type="button"
-            class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-            aria-label="Notifikasi Medis"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span
-              v-if="pendingT0Count > 0"
-              class="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white"
-            >
-              {{ pendingT0Count }}
-            </span>
-          </button>
         </div>
 
         <!-- User Profile Pill / Dropdown -->
@@ -244,38 +213,18 @@
           </div>
         </div>
 
-        <!-- Bottom Sidebar Box (Synchronized network status matching Admin design system) -->
-        <div class="p-3 border-t border-slate-100">
-          <div
-            class="rounded-xl p-3 flex items-center justify-between text-xs border"
-            :class="isOnline ? 'bg-slate-50 border-slate-200/80' : 'bg-slate-100 border-slate-200'"
-          >
-            <div class="flex items-center space-x-2.5">
-              <div
-                class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                :class="isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
-              >
-                <svg v-if="isOnline" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-6.364 9 9 0 012.828-6.364m2.829 2.828a5 5 0 012.828 3.536m-5.656 0a5 5 0 011.414-3.536L3 3l18 18" />
-                </svg>
-              </div>
-              <div>
-                <span class="font-bold text-slate-800 block leading-tight text-[11px]">
-                  {{ isOnline ? 'Sistem Terhubung' : 'Mode Offline' }}
-                </span>
-                <span class="text-[10px] text-slate-500 block leading-tight">
-                  {{ isOnline ? 'Sinkronisasi PSC 119 aktif' : 'Data tersimpan lokal' }}
-                </span>
-              </div>
-            </div>
+        <!-- Quiet Minimal System Status at bottom of sidebar per Section 10 -->
+        <div class="p-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2">
             <span
               class="w-2 h-2 rounded-full"
-              :class="isOnline ? 'bg-emerald-500' : 'bg-slate-400'"
+              :class="isOnline ? 'bg-emerald-500' : 'bg-rose-500'"
             ></span>
+            <span class="text-[11px] font-medium text-slate-600">
+              {{ isOnline ? 'Sistem Terhubung' : 'Terputus' }}
+            </span>
           </div>
+          <span class="text-[10px] text-slate-400 font-semibold tracking-wider">PSC 119</span>
         </div>
       </aside>
 
