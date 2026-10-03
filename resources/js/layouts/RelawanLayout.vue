@@ -112,7 +112,7 @@
         <!-- Persistent Floating Red Flag Button -->
         <T0Button
             :focused="isFocusedAssessment"
-            @trigger="showEmergencyModal = true"
+            @trigger="openEmergencyModal"
         />
 
         <!-- T0 Verification Task Sheet Modal -->
@@ -221,6 +221,8 @@ import T0Button from "@/components/Relawan/T0Button.vue";
 import T0Verification from "@/components/Relawan/T0Verification.vue";
 import LocalEmergencyActive from "@/components/Relawan/LocalEmergencyActive.vue";
 import { emergencyRepository } from "@/offline/emergencyRepository";
+import { assessmentRepository } from "@/offline/assessmentRepository";
+import { patientRepository } from "@/offline/patientRepository";
 import RelawanStatusDataSheet from "@/components/Relawan/RelawanStatusDataSheet.vue";
 import { useRelawanOperationalStatus } from "@/composables/useRelawanOperationalStatus";
 import {
@@ -362,12 +364,13 @@ const recoveryMessage = computed(() => {
     }
 });
 
-const t0AssessmentContext = computed(() => {
-    const route = runtime.path
-        .split("?")[0]
-        .match(
-            /^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/,
-        );
+const assessmentRoute = computed(() =>
+    runtime.path.split("?")[0].match(
+        /^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/,
+    ),
+);
+const serverAssessmentContext = computed(() => {
+    const route = assessmentRoute.value;
     const assessment = runtime.pageProps.assessment as
         | { id?: unknown; patient_id?: unknown; user_id?: unknown }
         | undefined;
@@ -394,7 +397,54 @@ const t0AssessmentContext = computed(() => {
     };
 });
 
+type T0AssessmentContext = NonNullable<typeof serverAssessmentContext.value>;
+const t0AssessmentContext = ref<T0AssessmentContext | null>(null);
 const showEmergencyModal = ref(false);
+let emergencyOpenCheck = 0;
+async function openEmergencyModal() {
+    const check = ++emergencyOpenCheck;
+    const path = runtime.path;
+    const owner = currentOwner.value;
+    t0AssessmentContext.value = null;
+    if (!owner) return;
+
+    const route = assessmentRoute.value;
+    let context: T0AssessmentContext | null = null;
+    if (route) {
+        if (serverAssessmentContext.value) {
+            context = serverAssessmentContext.value;
+        } else {
+            try {
+                const assessment = await assessmentRepository.get(
+                    owner,
+                    decodeURIComponent(route[1]),
+                );
+                const patient = assessment
+                    ? await patientRepository.get(owner, assessment.patient_id)
+                    : null;
+                if (assessment && patient) {
+                    context = {
+                        assessmentId: assessment.id,
+                        patientId: patient.id,
+                        patientName: patient.name,
+                    };
+                }
+            } catch {
+                // Emergency access remains available if local context cannot be read.
+            }
+        }
+    }
+    if (check !== emergencyOpenCheck || path !== runtime.path || owner !== currentOwner.value) {
+        return;
+    }
+    t0AssessmentContext.value = context;
+    showEmergencyModal.value = true;
+}
+watch([() => runtime.path, currentOwner], () => {
+    ++emergencyOpenCheck;
+    showEmergencyModal.value = false;
+    t0AssessmentContext.value = null;
+});
 function isRoute(path: string) {
     return runtime.path.startsWith(path);
 }

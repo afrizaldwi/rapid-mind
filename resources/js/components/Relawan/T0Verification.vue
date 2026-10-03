@@ -276,24 +276,23 @@ const runtime = useRelawanRuntime();
 const chosenPatientId = ref("");
 const patientSearch = ref("");
 const availablePatients = ref<LocalPatient[]>([]);
+type ServerPatientOption = Pick<LocalPatient, "id" | "name"> & Partial<LocalPatient>;
+const fetchedPatients = ref<ServerPatientOption[]>([]);
 const serverPatients = computed(
     () =>
         (runtime.pageProps.patients as
-            | Array<{
-                  id: string;
-                  name: string;
-                  nik?: string;
-                  age?: number;
-                  gender?: string;
-                  shelter_id?: number;
-              }>
+            | ServerPatientOption[]
             | undefined) ?? [],
 );
+const serverPatientOptions = computed(() => [
+    ...serverPatients.value,
+    ...fetchedPatients.value,
+]);
 const selectablePatients = computed(() => {
     const byId = new Map(
         availablePatients.value.map((patient) => [patient.id, patient]),
     );
-    for (const patient of serverPatients.value)
+    for (const patient of serverPatientOptions.value)
         if (!byId.has(patient.id))
             byId.set(patient.id, {
                 ...patient,
@@ -368,9 +367,11 @@ function acquireGps() {
     }
 }
 
+let patientLoadCheck = 0;
 watch(
     () => props.show,
     (show) => {
+        const check = ++patientLoadCheck;
         if (!show) return;
         selectedRedFlag.value =
             props.suggestedRedFlag === "SUICIDAL_IDEATION"
@@ -381,14 +382,37 @@ watch(
             ? (props.patientId ?? "")
             : "";
         patientSearch.value = "";
+        availablePatients.value = [];
+        fetchedPatients.value = [];
         void patientRepository
             .list(owner)
             .then((patients) => {
-                if (props.show) availablePatients.value = patients;
+                if (props.show && check === patientLoadCheck)
+                    availablePatients.value = patients;
             })
             .catch(() => {
-                availablePatients.value = [];
+                if (check === patientLoadCheck) availablePatients.value = [];
             });
+        if (runtime.mode === "ONLINE_SERVER" && navigator.onLine) {
+            void fetch("/relawan/patients/options", {
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            })
+                .then(async (response) => {
+                    if (!response.ok) throw new Error("Patient options unavailable");
+                    return (await response.json()) as ServerPatientOption[];
+                })
+                .then((patients) => {
+                    if (props.show && check === patientLoadCheck && Array.isArray(patients))
+                        fetchedPatients.value = patients;
+                })
+                .catch(() => {
+                    // Local patients and existing page snapshots remain usable.
+                });
+        }
         coordinates.value = null;
         submissionError.value = "";
         acquireGps();
@@ -420,7 +444,7 @@ async function submitEmergency() {
             chosenPatientId.value &&
             !(await patientRepository.get(owner, chosenPatientId.value))
         ) {
-            const serverPatient = serverPatients.value.find(
+            const serverPatient = serverPatientOptions.value.find(
                 (patient) => patient.id === chosenPatientId.value,
             );
             if (serverPatient)

@@ -23,6 +23,7 @@ use App\Domain\Triage\TriageCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -85,8 +86,7 @@ final class RelawanController extends Controller
 
         $inProgressAssessments->each(fn (Assessment $assessment) => $resume->attach($assessment));
 
-        $patients = Patient::where(fn ($query) => $query->where('created_by', $user->id)
-            ->when($user->shelter_id, fn ($query) => $query->orWhere('shelter_id', $user->shelter_id)))
+        $patients = $this->eligiblePatients($user)
             ->latest()
             ->get();
 
@@ -94,6 +94,20 @@ final class RelawanController extends Controller
             'inProgressAssessments' => $inProgressAssessments,
             'patients' => $patients,
         ]);
+    }
+
+    public function patientOptions(): JsonResponse
+    {
+        return response()->json($this->eligiblePatients(Auth::user())
+            ->latest()
+            ->get(['id', 'name', 'nik', 'age', 'gender', 'shelter_id']));
+    }
+
+    private function eligiblePatients(\App\Models\User $user): Builder
+    {
+        return Patient::where(fn (Builder $query) => $query
+            ->where('created_by', $user->id)
+            ->when($user->shelter_id, fn (Builder $query) => $query->orWhere('shelter_id', $user->shelter_id)));
     }
 
     public function createAssessment(Request $request): JsonResponse|RedirectResponse
@@ -111,10 +125,7 @@ final class RelawanController extends Controller
 
         $patientId = $validated['patient_id'] ?? null;
 
-        if ($patientId && !Patient::whereKey($patientId)
-            ->where(fn ($query) => $query->where('created_by', $user->id)
-                ->when($user->shelter_id, fn ($query) => $query->orWhere('shelter_id', $user->shelter_id)))
-            ->exists()) {
+        if ($patientId && !$this->eligiblePatients($user)->whereKey($patientId)->exists()) {
             throw ValidationException::withMessages(['patient_id' => 'Penyintas tidak tersedia untuk Relawan ini.']);
         }
 

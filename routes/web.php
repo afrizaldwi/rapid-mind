@@ -29,6 +29,7 @@ Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'
 Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawan.')->group(function () {
     Route::get('/home', [RelawanController::class, 'home'])->name('home');
     Route::get('/pfa', [RelawanController::class, 'pfa'])->name('pfa');
+    Route::get('/patients/options', [RelawanController::class, 'patientOptions'])->name('patients.options');
 
     // Assessment flow
     Route::get('/assessment', [RelawanController::class, 'assessmentIndex'])->name('assessment.index');
