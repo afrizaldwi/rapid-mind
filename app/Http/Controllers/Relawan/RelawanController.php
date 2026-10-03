@@ -84,7 +84,7 @@ final class RelawanController extends Controller
             ->latest()
             ->get();
 
-        $inProgressAssessments->each(fn (Assessment $assessment) => $resume->attach($assessment));
+        $inProgressAssessments->each(fn(Assessment $assessment) => $resume->attach($assessment));
 
         $patients = $this->eligiblePatients($user)
             ->latest()
@@ -104,7 +104,7 @@ final class RelawanController extends Controller
             ->latest('updated_at')
             ->get();
 
-        $inProgressAssessments->each(fn (Assessment $assessment) => $resume->attach($assessment));
+        $inProgressAssessments->each(fn(Assessment $assessment) => $resume->attach($assessment));
 
         return Inertia::render('Relawan/Assessment/Drafts', [
             'inProgressAssessments' => $inProgressAssessments,
@@ -120,9 +120,9 @@ final class RelawanController extends Controller
 
     private function eligiblePatients(\App\Models\User $user): Builder
     {
-        return Patient::where(fn (Builder $query) => $query
+        return Patient::where(fn(Builder $query) => $query
             ->where('created_by', $user->id)
-            ->when($user->shelter_id, fn (Builder $query) => $query->orWhere('shelter_id', $user->shelter_id)));
+            ->when($user->shelter_id, fn(Builder $query) => $query->orWhere('shelter_id', $user->shelter_id)));
     }
 
     public function createAssessment(Request $request): JsonResponse|RedirectResponse
@@ -243,7 +243,7 @@ final class RelawanController extends Controller
 
         $validated = $request->validate([
             'risks' => ['required', 'array:R1,R2,R3,R4,R5', 'size:5'],
-            ...collect(['R1', 'R2', 'R3', 'R4', 'R5'])->mapWithKeys(fn ($code) => ["risks.$code" => ['required', function ($attribute, $value, $fail) {
+            ...collect(['R1', 'R2', 'R3', 'R4', 'R5'])->mapWithKeys(fn($code) => ["risks.$code" => ['required', function ($attribute, $value, $fail) {
                 if (!is_bool($value)) $fail('Jawaban risiko harus Ya atau Tidak.');
             }]])->all(),
         ]);
@@ -281,7 +281,7 @@ final class RelawanController extends Controller
 
         $validated = $request->validate([
             'functions' => ['required', 'array:F1,F2,F3', 'size:3'],
-            ...collect(['F1', 'F2', 'F3'])->mapWithKeys(fn ($code) => ["functions.$code" => ['required', function ($attribute, $value, $fail) {
+            ...collect(['F1', 'F2', 'F3'])->mapWithKeys(fn($code) => ["functions.$code" => ['required', function ($attribute, $value, $fail) {
                 if (!is_int($value) || !in_array($value, [0, 1, 3], true)) $fail('Nilai fungsi harus 0, 1, atau 3.');
             }]])->all(),
         ]);
@@ -315,9 +315,11 @@ final class RelawanController extends Controller
     {
         $assessment = $this->ownedAssessment($assessmentId, ['srqResponses', 'riskAssessment', 'functionAssessment']);
 
-        if (!$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
+        if (
+            !$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
             || !$this->hasExactResponseSet($assessment->riskAssessment, ['R1', 'R2', 'R3', 'R4', 'R5'], 'indicator', 'answer', [true, false])
-            || !$this->hasExactResponseSet($assessment->functionAssessment, ['F1', 'F2', 'F3'], 'domain', 'level', [0, 1, 3])) {
+            || !$this->hasExactResponseSet($assessment->functionAssessment, ['F1', 'F2', 'F3'], 'domain', 'level', [0, 1, 3])
+        ) {
             throw ValidationException::withMessages([
                 'assessment' => 'Asesmen belum lengkap atau memiliki jawaban tidak valid. Periksa SRQ-20, faktor risiko, dan fungsi harian.',
             ]);
@@ -364,17 +366,23 @@ final class RelawanController extends Controller
         sort($expectedKeys);
 
         return $actualKeys === $expectedKeys
-            && $responses->every(fn ($response) => in_array($response->{$value}, $allowedValues, true));
+            && $responses->every(fn($response) => in_array($response->{$value}, $allowedValues, true));
     }
 
     public function assessmentResult(string $assessmentId): InertiaResponse
     {
         $assessment = $this->assessmentShell($assessmentId, ['patient', 'triageResult']);
 
+        $existingEmergency = $assessment?->emergencyEvents()
+            ->where('user_id', Auth::id())
+            ->latest('created_at')
+            ->first(['id', 'assessment_id', 'status']);
+
         return Inertia::render('Relawan/Assessment/Result', [
             'assessment' => $assessment,
             'patient' => $assessment?->patient,
             'triageResult' => $assessment?->triageResult,
+            'existingEmergency' => $existingEmergency,
         ]);
     }
 
@@ -409,7 +417,7 @@ final class RelawanController extends Controller
             ->latest('updated_at')
             ->get();
 
-        $inProgress->each(fn (Assessment $assessment) => $resume->attach($assessment));
+        $inProgress->each(fn(Assessment $assessment) => $resume->attach($assessment));
 
         $completed = Assessment::with(['patient', 'triageResult'])
             ->where('user_id', $user->id)
