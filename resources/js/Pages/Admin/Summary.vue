@@ -26,7 +26,7 @@
         <div class="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Penyintas</span>
-            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <div class="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
@@ -41,7 +41,7 @@
               </span>
             </div>
             <span class="text-[11px] text-slate-400 block mt-1 font-medium">
-              {{ kpis.totalAssessments || kpis.totalSurvivors }} rekam skrining aktif
+              {{ kpis.totalAssessments ?? 0 }} rekam skrining aktif
             </span>
           </div>
         </div>
@@ -283,7 +283,7 @@
             <!-- Module Header -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   </svg>
@@ -299,7 +299,7 @@
               </div>
 
               <div class="flex items-center gap-2">
-                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200/80">
                   {{ kpis.totalSurvivors }} Jiwa
                 </span>
                 <Link
@@ -348,11 +348,11 @@
 
                 <div class="pt-1.5 border-t border-slate-100 space-y-1 text-[9px] text-slate-600">
                   <label class="flex items-center gap-1 cursor-pointer">
-                    <input type="checkbox" checked class="rounded text-blue-600 focus:ring-0 w-3 h-3" />
+                    <input type="checkbox" checked class="rounded text-teal-700 focus:ring-0 w-3 h-3" />
                     <span>Heatmap</span>
                   </label>
                   <label class="flex items-center gap-1 cursor-pointer">
-                    <input type="checkbox" class="rounded text-blue-600 focus:ring-0 w-3 h-3" />
+                    <input type="checkbox" class="rounded text-teal-700 focus:ring-0 w-3 h-3" />
                     <span>Batas Wilayah</span>
                   </label>
                 </div>
@@ -369,7 +369,7 @@
           <div>
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
@@ -484,7 +484,7 @@
           <div>
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
@@ -532,7 +532,7 @@
           <div>
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                   </svg>
@@ -632,7 +632,7 @@
             </span>
             <Link
               href="/admin/operations/posko"
-              class="text-xs font-bold text-blue-600 hover:text-blue-700 transition"
+              class="text-xs font-bold text-teal-700 hover:text-teal-900 transition"
             >
               Kelola Posko →
             </Link>
@@ -666,7 +666,7 @@
                   {{ s.address || 'Kawasan Merapi, Sleman' }}
                 </td>
                 <td class="py-3.5 px-5 text-center font-bold text-slate-900 text-xs">
-                  <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 font-black">
+                  <span class="px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200/60 font-black">
                     {{ s.patients_count }} jiwa
                   </span>
                 </td>
@@ -687,7 +687,7 @@
                 <td class="py-3.5 px-5 text-right">
                   <Link
                     :href="`/admin/operations/posko/${s.id}`"
-                    class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
+                    class="text-xs font-semibold text-teal-700 hover:text-teal-900 transition"
                   >
                     Buka Detail →
                   </Link>
@@ -740,7 +740,7 @@ const lastUpdatedTime = computed(() => {
 });
 
 const totalTriageCount = computed(() => {
-  return (props.kpis.countT0 || 0) + (props.kpis.countT1 || 0) + (props.kpis.countT2 || 0) + (props.kpis.countT3 || 0) || 1;
+  return (props.kpis.countT0 || 0) + (props.kpis.countT1 || 0) + (props.kpis.countT2 || 0) + (props.kpis.countT3 || 0);
 });
 
 function percentage(val: number): number {

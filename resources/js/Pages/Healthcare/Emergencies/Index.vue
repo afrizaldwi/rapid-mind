@@ -8,16 +8,16 @@
             Pusat Triase & Kedaruratan Medis PSC 119
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            Antrean skrining lapangan terpadu, validasi klinis nakes, dan respon cepat rujukan faskes.
+            Antrean insiden T0 untuk pengakuan, verifikasi, klasifikasi klinis, dan rujukan medis.
           </p>
         </div>
 
         <div class="flex items-center gap-2 text-xs">
           <span
             v-if="criticalT0Count > 0"
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-bold shadow-xs"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 border border-red-200 text-red-800 font-bold shadow-xs"
           >
-            <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+            <span class="w-2 h-2 rounded-full bg-red-800"></span>
             {{ criticalT0Count }} Kasus Kedaruratan T0 Aktif
           </span>
           <span
@@ -45,25 +45,25 @@
           <div>
             <div class="flex items-baseline gap-2">
               <span class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">{{ totalSurvivorsCount }}</span>
-              <span class="text-xs font-semibold text-slate-500">penyintas</span>
+            <span class="text-xs font-semibold text-slate-500">insiden</span>
               <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
                 Terdata aktif
               </span>
             </div>
             <span class="text-[11px] text-slate-400 block mt-1 font-medium">
-              Rekam skrining aktif lapangan
+              Insiden T0 yang tercatat
             </span>
           </div>
         </div>
 
         <!-- Card 2: T0 EMERGENCY -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-rose-600 shadow-xs flex flex-col justify-between space-y-3">
+        <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-red-800 shadow-xs flex flex-col justify-between space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+              <span class="w-2 h-2 rounded-full bg-red-800"></span>
               <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 — Darurat Jiwa</span>
             </div>
-            <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+            <div class="w-7 h-7 rounded-lg bg-red-50 text-red-800 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
@@ -71,9 +71,9 @@
           </div>
           <div>
             <div class="flex items-baseline gap-2">
-              <span class="text-2xl lg:text-3xl font-black text-rose-600 tracking-tight">{{ criticalT0Count }}</span>
-              <span class="text-xs font-semibold text-rose-600">kasus</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+              <span class="text-2xl lg:text-3xl font-black text-red-800 tracking-tight">{{ criticalT0Count }}</span>
+              <span class="text-xs font-semibold text-red-800">kasus</span>
+              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200">
                 Prioritas Nakes
               </span>
             </div>
@@ -88,7 +88,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Menunggu Validasi</span>
+              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Dalam Verifikasi</span>
             </div>
             <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,13 +99,13 @@
           <div>
             <div class="flex items-baseline gap-2">
               <span class="text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{{ pendingValidationCount }}</span>
-              <span class="text-xs font-semibold text-amber-600">asesmen</span>
+              <span class="text-xs font-semibold text-amber-600">kasus</span>
               <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                Skrining T1 / T2
+                Tahap klinis T0
               </span>
             </div>
             <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Verifikasi klinis lanjutan nakes
+              Sudah diakui atau sedang ditinjau
             </span>
           </div>
         </div>
@@ -139,12 +139,11 @@
       </div>
 
       <!-- Action & Error Notifications -->
-      <div v-if="$page.props.flash?.message" class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-900 flex items-center justify-between">
+      <div v-if="flashMessage" class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-900 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <span>✓</span>
-          <span>{{ $page.props.flash.message }}</span>
+          <span>{{ flashMessage }}</span>
         </div>
-        <button @click="$page.props.flash.message = null" class="text-emerald-700 hover:text-emerald-900 font-bold">&times;</button>
       </div>
 
       <div v-if="actionErrors.length > 0" class="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs font-medium text-rose-900 space-y-1">
@@ -207,44 +206,44 @@
               </button>
               <button
                 type="button"
-                @click="selectedFilter = 'T0'"
-                :class="selectedFilter === 'T0'
+              @click="selectedFilter = 'PENDING'"
+                :class="selectedFilter === 'PENDING'
                   ? 'bg-rose-600 text-white font-bold'
                   : 'bg-white text-rose-700 hover:bg-rose-50 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0 flex items-center space-x-1"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                <span>T0 Darurat</span>
+                <span>Perlu Diakui</span>
               </button>
               <button
                 type="button"
-                @click="selectedFilter = 'T1'"
-                :class="selectedFilter === 'T1'
+                @click="selectedFilter = 'REVIEWING'"
+                :class="selectedFilter === 'REVIEWING'
                   ? 'bg-orange-600 text-white font-bold'
                   : 'bg-white text-orange-700 hover:bg-orange-50 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                T1 Mendesak
+                Sedang Diverifikasi
               </button>
               <button
                 type="button"
-                @click="selectedFilter = 'T2'"
-                :class="selectedFilter === 'T2'
+                @click="selectedFilter = 'CONFIRMED'"
+                :class="selectedFilter === 'CONFIRMED'
                   ? 'bg-amber-600 text-white font-bold'
                   : 'bg-white text-amber-700 hover:bg-amber-50 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                T2 Terjadwal
+                Terkonfirmasi
               </button>
               <button
                 type="button"
-                @click="selectedFilter = 'T3'"
-                :class="selectedFilter === 'T3'
+                @click="selectedFilter = 'DOWNGRADED'"
+                :class="selectedFilter === 'DOWNGRADED'
                   ? 'bg-emerald-600 text-white font-bold'
                   : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-slate-200'"
                 class="px-2.5 py-1 rounded-md transition shrink-0"
               >
-                T3 Stabil
+                Diturunkan
               </button>
             </div>
           </div>
@@ -253,12 +252,12 @@
           <div class="divide-y divide-slate-100 overflow-y-auto max-h-[680px]">
             <div
               v-for="item in filteredQueue"
-              :key="item.queueId"
-              @click="selectQueueItem(item.queueId)"
+              :key="item.key"
+              @click="selectItem(item)"
               class="p-3.5 transition cursor-pointer text-xs space-y-1.5 relative border-l-4"
               :class="[
                 getSeverityBorderClass(item.semanticPriority),
-                selectedQueueId === item.queueId
+                selectedItem?.key === item.key
                   ? 'bg-teal-50/40 ring-1 ring-teal-500/20 shadow-2xs'
                   : 'bg-white hover:bg-slate-50/80'
               ]"
@@ -408,20 +407,7 @@
                   </svg>
                 </button>
 
-                <!-- Case 4: Non-Emergency (T1/T2) Awaiting Validation -->
-                <button
-                  v-else-if="!selectedItem.isEmergency && selectedItem.status !== 'COMPLETED'"
-                  type="button"
-                  @click="activeTab = 'actions'"
-                  class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5"
-                >
-                  <span>Validasi Asesmen</span>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-
-                <!-- Case 5: Completed or Stabil (T3) -> Neutral status, no emergency button -->
+                <!-- Final states are read-only. -->
                 <span
                   v-else
                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold"
@@ -837,8 +823,12 @@
                 
                 <!-- IF EMERGENCY (T0) WORKFLOW -->
                 <template v-if="selectedItem.isEmergency">
+                  <div v-if="selectedItem.status === 'PENDING'" class="p-4 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-900">
+                    Akui kasus darurat terlebih dahulu sebelum melakukan verifikasi sekunder.
+                  </div>
+
                   <!-- Section A: Tele-Emergency Verifikasi -->
-                  <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
+                  <div v-if="selectedItem.status === 'ACKNOWLEDGED'" class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div class="flex items-center space-x-2">
                         <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">1</span>
@@ -855,18 +845,15 @@
                           <label class="text-[11px] font-bold text-slate-700 block mb-1">Metode Verifikasi</label>
                           <select v-model="verificationForm.method" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
                             <option value="PHONE">Telepon Seluler Langsung</option>
-                            <option value="RADIO">Radio Komunikasi Kebencanaan (HT)</option>
-                            <option value="FIELD">Pemeriksaan Langsung di Posko</option>
+                          <option value="VIDEO">Video Call</option>
+                          <option value="FIELD_TEAM">Tim Lapangan / Pemeriksaan Langsung</option>
                           </select>
                         </div>
                         <div>
-                          <label class="text-[11px] font-bold text-slate-700 block mb-1">Nomor Kontak Relawan Lapangan</label>
-                          <input
-                            type="text"
-                            :value="selectedItem.volunteerPhone || 'Kontak telepon relawan tidak tersedia'"
-                            readonly
-                            class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-mono text-slate-600"
-                          />
+                          <label class="text-[11px] font-bold text-slate-700 block mb-1">Kontak Relawan Pelapor</label>
+                          <a :href="`/healthcare/emergencies/${selectedItem.emergencyId}`" class="inline-flex w-full items-center justify-center rounded-lg border border-teal-200 bg-teal-50 p-2 font-bold text-teal-800 hover:bg-teal-100">
+                            Detail &amp; Kontak Relawan
+                          </a>
                         </div>
                       </div>
 
@@ -893,7 +880,7 @@
                   </div>
 
                   <!-- Section B: Klasifikasi Triase Nakes -->
-                  <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
+                  <div v-if="selectedItem.status === 'REVIEWING'" class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div class="flex items-center space-x-2">
                         <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">2</span>
@@ -908,14 +895,14 @@
                       <div>
                         <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Validasi Klinis Nakes</label>
                         <textarea
-                          v-model="decisionForm.clinical_notes"
+                          v-model="decisionForm.notes"
                           rows="2"
                           placeholder="Catatan justifikasi medis atas penetapan status..."
                           class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
                         ></textarea>
                       </div>
 
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                         <label
                           class="p-3 rounded-lg border cursor-pointer text-xs space-y-1 block transition"
                           :class="decisionForm.clinical_result === 'T0_CONFIRMED' ? 'border-rose-500 bg-rose-50/50' : 'border-slate-200 hover:bg-slate-50'"
@@ -929,13 +916,24 @@
 
                         <label
                           class="p-3 rounded-lg border cursor-pointer text-xs space-y-1 block transition"
-                          :class="decisionForm.clinical_result === 'DOWNGRADED' ? 'border-teal-500 bg-teal-50/50' : 'border-slate-200 hover:bg-slate-50'"
+                          :class="decisionForm.clinical_result === 'T1' ? 'border-orange-500 bg-orange-50/50' : 'border-slate-200 hover:bg-slate-50'"
                         >
                           <div class="flex items-center justify-between">
-                            <span class="font-bold text-teal-700">Turunkan Status (T1)</span>
-                            <input type="radio" value="DOWNGRADED" v-model="decisionForm.clinical_result" class="text-teal-600" />
+                            <span class="font-bold text-orange-700">Turunkan ke T1</span>
+                            <input type="radio" value="T1" v-model="decisionForm.clinical_result" class="text-orange-600" />
                           </div>
                           <p class="text-[10px] text-slate-500">Kondisi stabil, dapat ditangani melalui konsultasi terjadwal di posko.</p>
+                        </label>
+
+                        <label
+                          class="p-3 rounded-lg border cursor-pointer text-xs space-y-1 block transition"
+                          :class="decisionForm.clinical_result === 'T2' ? 'border-amber-500 bg-amber-50/50' : 'border-slate-200 hover:bg-slate-50'"
+                        >
+                          <div class="flex items-center justify-between">
+                            <span class="font-bold text-amber-700">Turunkan ke T2</span>
+                            <input type="radio" value="T2" v-model="decisionForm.clinical_result" class="text-amber-600" />
+                          </div>
+                          <p class="text-[10px] text-slate-500">Kondisi dapat ditindaklanjuti dengan pendampingan terjadwal.</p>
                         </label>
                       </div>
 
@@ -952,7 +950,7 @@
                   </div>
 
                   <!-- Section C: Penerbitan Rujukan Medis -->
-                  <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
+                  <div v-if="selectedItem.status === 'CONFIRMED'" class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div class="flex items-center space-x-2">
                         <span class="w-5 h-5 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center">3</span>
@@ -963,16 +961,19 @@
                       <span class="text-[10px] text-slate-400">Disposisi Rujukan Medis</span>
                     </div>
 
-                    <div v-if="selectedItem.status !== 'CONFIRMED'" class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800">
-                      Rujukan medis darurat hanya dapat diterbitkan setelah status T0 dikonfirmasi oleh tenaga medis pada tahap klasifikasi.
+                    <div v-if="selectedItem.hasReferral" class="rounded-lg border border-teal-200 bg-teal-50 p-3 text-xs text-teal-950">
+                      <p class="font-bold">Rujukan Darurat T0 telah tercatat</p>
+                      <p>Tujuan: {{ selectedItem.referrals[0]?.facility?.name || 'Faskes tidak tersedia' }}</p>
+                      <p>Status: {{ formatReferralStatus(selectedItem.referrals[0]?.status) }}</p>
                     </div>
 
-                    <form @submit.prevent="submitReferral(selectedItem)" class="space-y-3 text-xs">
+                    <form v-else @submit.prevent="submitReferral(selectedItem)" class="space-y-3 text-xs">
                       <div>
                         <label class="text-[11px] font-bold text-slate-700 block mb-1">Rumah Sakit / Faskes Tujuan</label>
                         <select v-model="referralForm.facility_id" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
+                          <option :value="null" disabled>Pilih Faskes aktif</option>
                           <option v-for="f in facilities" :key="f.id" :value="f.id">
-                            {{ f.name }} ({{ f.type }}) — Sisa Bed: {{ f.bed_capacity || 4 }}
+                            {{ f.name }} ({{ f.type }}) — {{ f.bed_capacity == null ? 'Kapasitas bed tidak tersedia' : `Sisa Bed: ${f.bed_capacity}` }}
                           </option>
                         </select>
                       </div>
@@ -990,7 +991,7 @@
                       <div class="flex justify-end">
                         <button
                           type="submit"
-                          :disabled="isSubmitting || selectedItem.status !== 'CONFIRMED'"
+                          :disabled="isSubmitting || !referralForm.facility_id"
                           class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg shadow-xs transition"
                         >
                           Terbitkan Rujukan Medis
@@ -1000,81 +1001,6 @@
                   </div>
                 </template>
 
-                <!-- IF NORMAL ASSESSMENT VALIDATION WORKFLOW -->
-                <template v-else-if="selectedItem.priority !== 'T3'">
-                  <div class="p-4 rounded-xl bg-white border border-slate-200/80 space-y-3">
-                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Validasi Hasil Skrining Asesmen
-                    </h4>
-
-                    <form @submit.prevent="submitValidation(selectedItem)" class="space-y-3 text-xs">
-                      <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Konfirmasi Kategori Triase Nakes</label>
-                        <select v-model="validationForm.clinical_result" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
-                          <option value="T1">T1 — Butuh Perhatian Khusus / Rujuk Medis</option>
-                          <option value="T2">T2 — Dukungan Psikologis Terjadwal (PFA)</option>
-                          <option value="T3">T3 — Stabil / Penguatan Komunitas</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Validasi Klinis / Resume Asesmen</label>
-                        <textarea
-                          v-model="validationForm.diagnosis_notes"
-                          rows="2"
-                          placeholder="Catatan hasil validasi klinis..."
-                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
-                        ></textarea>
-                      </div>
-
-                      <div>
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Rencana Intervensi Lanjutan</label>
-                        <textarea
-                          v-model="validationForm.intervention_plan"
-                          rows="2"
-                          placeholder="Rencana konseling lanjutan atau intervensi posko..."
-                          class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
-                        ></textarea>
-                      </div>
-
-                      <div class="pt-1">
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                          <input type="checkbox" v-model="validationForm.referral_required" class="rounded text-teal-600" />
-                          <span class="text-xs font-bold text-slate-800">Rekomendasikan Rujukan ke Rumah Sakit</span>
-                        </label>
-                      </div>
-
-                      <div v-if="validationForm.referral_required" class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Faskes Rujukan</label>
-                        <select v-model="validationForm.facility_id" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800">
-                          <option v-for="f in facilities" :key="f.id" :value="f.id">
-                            {{ f.name }} ({{ f.type }})
-                          </option>
-                        </select>
-                      </div>
-
-                      <div class="flex justify-end">
-                        <button
-                          type="submit"
-                          :disabled="isSubmitting"
-                          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-xs transition"
-                        >
-                          Simpan Validasi Klinis
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </template>
-
-                <!-- IF T3 STABIL -->
-                <template v-else>
-                  <div class="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1">
-                    <p class="font-bold text-slate-800">Kasus Berada dalam Kategori T3 (Stabil)</p>
-                    <p class="text-slate-400 max-w-md mx-auto">
-                      Pasien tidak memerlukan tindakan kedaruratan atau rujukan faskes rujukan. Pendampingan psikososial berbasis komunitas dan PFA posko dianjurkan.
-                    </p>
-                  </div>
-                </template>
               </div>
 
               <!-- TAB 4: RIWAYAT OPERASIONAL (Audit Trail of Real Persistent Events) -->
@@ -1116,15 +1042,15 @@
                     <div v-for="(v, idx) in selectedItem.verifications" :key="idx" class="relative space-y-0.5">
                       <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white"></span>
                       <span class="text-[10px] font-bold text-amber-700 block">Audit Verifikasi Medis</span>
-                      <p class="font-bold text-slate-800">Verifikasi oleh {{ v.verifier?.name || 'Dokter Jaga PSC 119' }}</p>
-                      <p class="text-[11px] text-slate-500">Metode: {{ v.method || 'Telepon' }} • "{{ v.notes || 'Terverifikasi sesuai SOP.' }}"</p>
+                      <p class="font-bold text-slate-800">Verifikasi oleh {{ v.verifier?.name || 'Tenaga medis tidak tersedia' }}</p>
+                      <p class="text-[11px] text-slate-500">Metode: {{ v.method || 'Tidak tersedia' }} • "{{ v.notes || 'Catatan tidak tersedia.' }}"</p>
                     </div>
 
                     <!-- Referrals from DB -->
                     <div v-for="(r, idx) in selectedItem.referrals" :key="`ref-${idx}`" class="relative space-y-0.5">
                       <span class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-teal-700 ring-4 ring-white"></span>
-                      <span class="text-[10px] font-bold text-teal-800 block">Perintah Rujukan & Evakuasi</span>
-                      <p class="font-bold text-slate-800">Faskes Tujuan: {{ r.facility?.name || 'RSUD Rujukan Candi' }}</p>
+                      <span class="text-[10px] font-bold text-teal-800 block">Rujukan Medis</span>
+                      <p class="font-bold text-slate-800">Faskes Tujuan: {{ r.facility?.name || 'Faskes tidak tersedia' }}</p>
                       <p class="text-[11px] text-slate-500">Status Rujukan: {{ formatReferralStatus(r.status) }}</p>
                     </div>
                   </div>
@@ -1138,9 +1064,9 @@
             <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h4 class="text-sm font-bold text-slate-700">Pilih Penyintas dari Antrean</h4>
+            <h4 class="text-sm font-bold text-slate-700">Pilih Insiden dari Antrean</h4>
             <p class="text-xs text-slate-400 max-w-xs">
-              Klik salah satu kartu antrean di panel kiri untuk membuka detail rekam klinis, skor gejala, dan tindakan tanggap darurat.
+              Klik salah satu kartu antrean di panel kiri untuk membuka detail insiden, bukti asesmen, dan tindakan tanggap darurat.
             </p>
           </div>
         </main>
@@ -1156,7 +1082,7 @@ function getSeverityBorderClass(priority: string): string {
     case 'T0_CONFIRMED':
     case 'T0_SUSPECT':
     case 'T0':
-      return 'border-l-rose-600';
+      return 'border-l-red-800';
     case 'T1':
       return 'border-l-orange-500';
     case 'T2':
@@ -1175,16 +1101,16 @@ import { formatReferralStatus } from '@/lib/referralStatus';
 
 const props = defineProps<{
   emergencies?: any[];
-  assessments?: any[];
   facilities?: any[];
   facility?: any;
 }>();
 
 const page = usePage();
+const flashMessage = computed(() => String((page.props.flash as { message?: string } | undefined)?.message ?? ''));
 const isSubmitting = ref(false);
 const searchQuery = ref('');
-const selectedFilter = ref<'ALL' | 'T0' | 'T1' | 'T2' | 'T3'>('ALL');
-const activeTab = ref<'overview' | 'assessment' | 'notes' | 'actions' | 'history'>('overview');
+const selectedFilter = ref<'ALL' | 'PENDING' | 'REVIEWING' | 'CONFIRMED' | 'DOWNGRADED'>('ALL');
+const activeTab = ref<'overview' | 'assessment' | 'actions' | 'history'>('overview');
 
 const actionErrors = computed(() => {
   return Object.entries(page.props.errors ?? {}).map(([key, message]) => ({
@@ -1205,22 +1131,11 @@ const decisionForm = ref({
 });
 
 const referralForm = ref({
-  facility_id: props.facilities?.[0]?.id ?? null,
+  facility_id: null as number | null,
   notes: '',
 });
 
-const validationForm = ref({
-  clinical_result: 'T1',
-  diagnosis_notes: '',
-  intervention_plan: '',
-  referral_required: false,
-  facility_id: props.facilities?.[0]?.id ?? null,
-});
-
-const newClinicalNote = ref('');
-const localNotes = ref<Record<string, Array<{ author: string; role: string; time: string; content: string }>>>({});
-
-// SRQ 20 Indonesian Questions (Official WHO)
+// SRQ-20 question set used by the current prototype.
 const srqQuestionList = [
   'Apakah Anda sering merasa sakit kepala?',
   'Apakah Anda kehilangan nafsu makan?',
@@ -1243,14 +1158,15 @@ const srqQuestionList = [
   'Apakah Anda sering merasa tidak nyaman di perut?',
   'Apakah Anda mudah merasa lelah dalam beraktivitas?',
 ];
+const srqQuestions = srqQuestionList.map((text, index) => ({ number: index + 1, text }));
 
 // Helper: Format RM Code (Assessment Record Identifier, NEVER Person ID)
 function formatRmCode(record: any): string {
   if (record?.rm_code) return record.rm_code;
   const raw = record?.assessment_id || record?.assessment?.id || record?.id || '';
-  if (!raw) return 'RM-BELUM-TERBIT';
+  if (!raw) return 'ID tidak tersedia';
   const hex = String(raw).replace(/-/g, '').slice(-6).toUpperCase();
-  return `RM-2026-${hex.padStart(6, '0')}`;
+  return `ID-${hex.padStart(6, '0')}`;
 }
 
 // Helper: Mask NIK (Real mask or explicit empty state)
@@ -1261,7 +1177,7 @@ function maskNik(nik?: string): string {
 
 // Helper: Relative Time
 function timeAgo(dateStr?: string): string {
-  if (!dateStr) return 'Baru saja';
+  if (!dateStr) return 'Waktu tidak tersedia';
   const diffMinutes = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
   if (diffMinutes < 1) return 'Baru saja';
   if (diffMinutes < 60) return `${diffMinutes} mnt lalu`;
@@ -1328,6 +1244,11 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
       semanticPriority = 'T0-CONFIRMED';
       semanticPriorityLabel = 'T0-CONFIRMED';
       semanticStatusDescription = 'Terkonfirmasi medis';
+    } else if (status === 'DOWNGRADED') {
+      const savedDecision = (raw.verifications || []).find((verification: any) => verification.clinical_result);
+      semanticPriority = savedDecision?.clinical_result || 'T0-SUSPECT';
+      semanticPriorityLabel = savedDecision?.clinical_result ? `Diturunkan ke ${savedDecision.clinical_result}` : 'Diturunkan';
+      semanticStatusDescription = 'Keputusan klinis tersimpan';
     } else {
       semanticPriority = 'T0-SUSPECT';
       semanticPriorityLabel = 'T0-SUSPECT';
@@ -1377,7 +1298,6 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
     createdAt: raw.created_at || assessment?.completed_at,
     notes: raw.notes || assessment?.clinicalValidation?.diagnosis_notes || '',
     volunteerName: raw.user?.name || assessment?.user?.name || 'Relawan tidak tersedia',
-    volunteerPhone: raw.user?.phone_number || assessment?.user?.phone_number || null,
     srqScore,
     riskScore,
     functionScore,
@@ -1391,33 +1311,9 @@ function normalizeQueueItem(raw: any, isEmergency: boolean) {
   };
 }
 
-// Unified Queue List (DO NOT dedup assessments by person per Section 13)
+// Darurat contains T0 emergency events only. T1/T2 work lives under Validasi.
 const queueList = computed(() => {
-  const list: any[] = [];
-  const linkedAssessmentIds = new Set<string>();
-
-  // 1. Add emergency events
-  if (props.emergencies) {
-    for (const em of props.emergencies) {
-      const item = normalizeQueueItem(em, true);
-      list.push(item);
-      if (em.assessment_id) linkedAssessmentIds.add(em.assessment_id);
-    }
-  }
-
-  // 2. Add completed assessments (keep all individual assessment RM records distinct)
-  if (props.assessments) {
-    for (const asm of props.assessments) {
-      if (!linkedAssessmentIds.has(asm.id)) {
-        list.push(normalizeQueueItem(asm, false));
-      }
-    }
-  }
-
-  // Sort: T0 first, then pending first, then newest
-  return list.sort((a, b) => {
-    if (a.priority === 'T0' && b.priority !== 'T0') return -1;
-    if (a.priority !== 'T0' && b.priority === 'T0') return 1;
+  return (props.emergencies ?? []).map(emergency => normalizeQueueItem(emergency, true)).sort((a, b) => {
     if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
     if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -1426,18 +1322,15 @@ const queueList = computed(() => {
 
 // KPI Counts
 const totalSurvivorsCount = computed(() => queueList.value.length);
-const activeCasesCount = computed(() => queueList.value.filter(q => ['PENDING', 'ACKNOWLEDGED', 'REVIEWING'].includes(q.status) || q.priority === 'T1').length);
 const criticalT0Count = computed(() => queueList.value.filter(q => q.priority === 'T0').length);
-
-const countT0 = computed(() => queueList.value.filter(q => q.priority === 'T0').length);
-const countT1 = computed(() => queueList.value.filter(q => q.priority === 'T1').length);
-const countT2 = computed(() => queueList.value.filter(q => q.priority === 'T2').length);
-const countT3 = computed(() => queueList.value.filter(q => q.priority === 'T3').length);
 
 // Filtered Queue
 const filteredQueue = computed(() => {
   return queueList.value.filter(item => {
-    if (selectedFilter.value !== 'ALL' && item.priority !== selectedFilter.value) {
+    if (selectedFilter.value === 'REVIEWING' && !['ACKNOWLEDGED', 'REVIEWING'].includes(item.status)) {
+      return false;
+    }
+    if (selectedFilter.value !== 'ALL' && selectedFilter.value !== 'REVIEWING' && item.status !== selectedFilter.value) {
       return false;
     }
     if (searchQuery.value.trim()) {
@@ -1458,9 +1351,10 @@ const selectedItem = ref<any>(null);
 function selectItem(item: any) {
   selectedItem.value = item;
   activeTab.value = 'overview';
-  if (props.facilities?.length && !referralForm.value.facility_id) {
-    referralForm.value.facility_id = props.facilities[0].id;
-  }
+  verificationForm.value = { method: 'PHONE', notes: '' };
+  decisionForm.value = { clinical_result: 'T0_CONFIRMED', notes: '' };
+  referralForm.value = { facility_id: null, notes: '' };
+  actionFeedback.value = null;
 }
 
 watch(queueList, (newList) => {
@@ -1471,6 +1365,12 @@ watch(queueList, (newList) => {
     if (refreshed) selectedItem.value = refreshed;
   }
 }, { immediate: true });
+
+watch(filteredQueue, (visibleItems) => {
+  if (selectedItem.value && !visibleItems.some(item => item.key === selectedItem.value.key)) {
+    selectItem(visibleItems[0] ?? null);
+  }
+});
 
 onMounted(() => {
   if (!selectedItem.value && queueList.value.length > 0) {
@@ -1526,46 +1426,6 @@ function getFunctionLabel(domain: string): string {
 
 // Action notification banner feedback
 const actionFeedback = ref<{ type: 'success' | 'error'; message: string } | null>(null);
-
-// Clinical Notes Computed List (Real author identities only)
-const clinicalNotesList = computed(() => {
-  const baseNotes: Array<{ author: string; role: string; time: string; content: string }> = [];
-  if (!selectedItem.value) return baseNotes;
-
-  if (selectedItem.value.notes) {
-    baseNotes.push({
-      author: selectedItem.value.volunteerName,
-      role: 'Relawan Posko',
-      time: selectedItem.value.timeAgo,
-      content: selectedItem.value.notes,
-    });
-  }
-
-  for (const v of selectedItem.value.verifications) {
-    baseNotes.push({
-      author: v.verifier?.name || (page.props.auth as any)?.user?.name || 'Tenaga Medis',
-      role: 'Tenaga Medis Verifikator',
-      time: timeAgo(v.created_at),
-      content: v.notes || `Verifikasi sekunder via ${v.method || 'telepon'}.`,
-    });
-  }
-
-  const userAdded = localNotes.value[selectedItem.value.key] || [];
-  return [...userAdded, ...baseNotes];
-});
-
-function addLocalNote() {
-  if (!newClinicalNote.value.trim() || !selectedItem.value) return;
-  const key = selectedItem.value.key;
-  if (!localNotes.value[key]) localNotes.value[key] = [];
-  localNotes.value[key].unshift({
-    author: (page.props.auth as any)?.user?.name || 'Tenaga Medis',
-    role: 'Tenaga Medis • PSC 119',
-    time: 'Baru saja',
-    content: newClinicalNote.value.trim(),
-  });
-  newClinicalNote.value = '';
-}
 
 // ACTION DISPATCH HANDLERS (Section 15: Never update canonical state in onFinish!)
 function acknowledgeCase(item: any) {
@@ -1636,34 +1496,17 @@ function submitReferral(item: any) {
   });
 }
 
-function submitValidation(item: any) {
-  if (!item.assessmentId) return;
-  isSubmitting.value = true;
-  actionFeedback.value = null;
-  router.post(`/healthcare/validations/${item.assessmentId}`, validationForm.value, {
-    onSuccess: () => {
-      actionFeedback.value = { type: 'success', message: 'Validasi klinis berhasil disimpan.' };
-    },
-    onError: (errors) => {
-      actionFeedback.value = { type: 'error', message: (Object.values(errors)[0] as string) || 'Gagal menyimpan validasi.' };
-    },
-    onFinish: () => {
-      isSubmitting.value = false;
-    },
-  });
-}
-
 function selectPrevCase() {
-  const idx = filteredQueue.value.findIndex((item: any) => item.queueId === selectedQueueId.value);
+  const idx = filteredQueue.value.findIndex((item: any) => item.key === selectedItem.value?.key);
   if (idx > 0) {
-    selectQueueItem(filteredQueue.value[idx - 1].queueId);
+    selectItem(filteredQueue.value[idx - 1]);
   }
 }
 
 function selectNextCase() {
-  const idx = filteredQueue.value.findIndex((item: any) => item.queueId === selectedQueueId.value);
+  const idx = filteredQueue.value.findIndex((item: any) => item.key === selectedItem.value?.key);
   if (idx >= 0 && idx < filteredQueue.value.length - 1) {
-    selectQueueItem(filteredQueue.value[idx + 1].queueId);
+    selectItem(filteredQueue.value[idx + 1]);
   }
 }
 
@@ -1697,7 +1540,7 @@ onMounted(() => {
 
 
 const pendingValidationCount = computed(() => {
-  return (props.assessments || []).filter((a: any) => !a.clinical_validation).length;
+  return queueList.value.filter(item => ['ACKNOWLEDGED', 'REVIEWING'].includes(item.status)).length;
 });
 
 const referralsIssuedCount = computed(() => {

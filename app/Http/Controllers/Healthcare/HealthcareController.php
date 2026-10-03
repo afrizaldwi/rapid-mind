@@ -59,25 +59,11 @@ final class HealthcareController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $assessments = Assessment::with([
-            'patient.shelter',
-            'triageResult',
-            'srqResponses',
-            'riskAssessment',
-            'functionAssessment',
-            'clinicalValidation.validator:id,name',
-            'user:id,name',
-        ])
-            ->where('status', \App\Enums\AssessmentStatus::COMPLETED)
-            ->orderByDesc('completed_at')
-            ->get();
-
         $facilities = HealthcareFacility::where('is_active', true)->get();
         $facility = $user->facility_id ? HealthcareFacility::find($user->facility_id) : null;
 
         return Inertia::render('Healthcare/Emergencies/Index', [
             'emergencies' => $emergencies,
-            'assessments' => $assessments,
             'facilities' => $facilities,
             'facility' => $facility,
         ]);

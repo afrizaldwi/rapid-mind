@@ -47,13 +47,13 @@
         <!-- Canonical Connection Status Badge -->
         <div
           class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-          :class="isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-slate-100 text-slate-700 border border-slate-300'"
+          :class="connectionStatus.classes"
         >
           <span
             class="w-2 h-2 rounded-full"
-            :class="isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"
+            :class="connectionStatus.dotClass"
           ></span>
-          <span>{{ isOnline ? 'Online • PSC Siaga' : 'Offline' }}</span>
+          <span>{{ connectionStatus.label }}</span>
         </div>
 
         <!-- User Profile Pill / Dropdown -->
@@ -117,7 +117,11 @@
       </div>
     </header>
 
-    <!-- Main Shell: Sidebar + Content -->
+      <div v-if="connectionStatus.stale" role="status" class="border-b border-slate-300 bg-slate-100 px-4 py-2 text-center text-xs font-medium text-slate-700">
+        Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin tidak terbaru.
+      </div>
+
+      <!-- Main Shell: Sidebar + Content -->
     <div class="flex-1 flex min-h-0 relative">
       <!-- Mobile sidebar backdrop -->
       <div
@@ -177,7 +181,7 @@
           <!-- Group 2: RUJUKAN & TRANSPORT -->
           <div>
             <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              RUJUKAN & TRANSPORT
+              RUJUKAN MEDIS
             </div>
             <div class="space-y-0.5">
               <Link
@@ -188,7 +192,7 @@
                 <svg class="w-4 h-4 shrink-0" :class="isRoute('/healthcare/referrals') ? 'text-teal-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                <span>Rujukan & Evakuasi</span>
+                <span>Rujukan</span>
               </Link>
             </div>
           </div>
@@ -218,10 +222,10 @@
           <div class="flex items-center space-x-2">
             <span
               class="w-2 h-2 rounded-full"
-              :class="isOnline ? 'bg-emerald-500' : 'bg-rose-500'"
+              :class="connectionStatus.dotClass"
             ></span>
             <span class="text-[11px] font-medium text-slate-600">
-              {{ isOnline ? 'Sistem Terhubung' : 'Terputus' }}
+              {{ connectionStatus.label }}
             </span>
           </div>
           <span class="text-[10px] text-slate-400 font-semibold tracking-wider">PSC 119</span>
@@ -272,6 +276,18 @@ function handleOffline() {
 
 const serverReachable = ref<boolean | null>(null);
 const subscriptionReady = ref(false);
+const connectionStatus = computed(() => {
+  if (!isOnline.value) {
+    return { label: 'Offline', stale: true, classes: 'bg-slate-100 text-slate-700 border border-slate-300', dotClass: 'bg-slate-400' };
+  }
+  if (serverReachable.value === false) {
+    return { label: 'Server tidak terjangkau', stale: true, classes: 'bg-slate-100 text-slate-700 border border-slate-300', dotClass: 'bg-slate-500' };
+  }
+  if (!subscriptionReady.value) {
+    return { label: 'Realtime menghubungkan ulang', stale: true, classes: 'bg-slate-100 text-slate-700 border border-slate-300', dotClass: 'bg-slate-500' };
+  }
+  return { label: 'Realtime aktif', stale: false, classes: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80', dotClass: 'bg-emerald-500' };
+});
 
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 let healthProbeInFlight = false;
@@ -285,20 +301,17 @@ function logout() {
   router.post('/logout');
 }
 
-function onEmergencyCreated(event: { id: string }) {
+function onEmergencyCreated(event: { emergency: { id: string } }) {
+  if (!event.emergency?.id) return;
   playAudioNotification();
   router.reload({
     only: ['emergencies', 'pendingT0Count'],
-    preserveScroll: true,
-    preserveState: true,
   });
 }
 
 function requestReconciliation() {
   router.reload({
     only: ['emergencies', 'pendingT0Count'],
-    preserveScroll: true,
-    preserveState: true,
   });
 }
 
