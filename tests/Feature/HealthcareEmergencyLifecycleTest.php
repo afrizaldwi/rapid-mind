@@ -360,4 +360,38 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
             fn (EmergencyUpdated $event): bool => $event->emergency->is($emergency),
         );
     }
+    public function test_broadcast_failure_on_inertia_acknowledge_sets_both_success_and_warning_flash(): void
+    {
+        Event::listen(EmergencyUpdated::class, static function (): never {
+            throw new RuntimeException('Reverb tidak tersedia.');
+        });
+        $emergency = $this->emergency();
+
+        // Inertia request (no Accept: application/json header)
+        $response = $this->post("/healthcare/emergencies/{$emergency->id}/acknowledge");
+
+        // Canonical: mutation succeeded → redirect
+        $response->assertRedirect();
+
+        // flash.message carries the success label
+        $response->assertSessionHas('message', 'Kasus berhasil diakui.');
+
+        // flash.error carries the realtime uncertainty warning
+        $response->assertSessionHas(
+            'error',
+            'Perubahan tersimpan, tetapi pembaruan realtime ke perangkat lain belum dapat dikonfirmasi.',
+        );
+
+        // Clinical state is correct
+        $this->assertSame(EmergencyStatus::ACKNOWLEDGED, $emergency->fresh()->status);
+
+        // Exactly one audit entry — no duplicate
+        $this->assertSame(1, AuditLog::where('entity_id', $emergency->id)->where('action', 'EMERGENCY_ACKNOWLEDGED')->count());
+
+        // Second identical request (replay) is a no-op — still succeeds, no second audit
+        $replay = $this->post("/healthcare/emergencies/{$emergency->id}/acknowledge");
+        $replay->assertRedirect();
+        $this->assertSame(EmergencyStatus::ACKNOWLEDGED, $emergency->fresh()->status);
+        $this->assertSame(1, AuditLog::where('entity_id', $emergency->id)->where('action', 'EMERGENCY_ACKNOWLEDGED')->count());
+    }
 }
