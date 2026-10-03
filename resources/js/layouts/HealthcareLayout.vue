@@ -31,7 +31,7 @@
                 RAPID-MIND
               </span>
               <span class="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200/80 px-2 py-0.5 rounded-full leading-none tracking-wide">
-                PSC 119 / HEALTHCARE
+                HEALTHCARE
               </span>
             </div>
             <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">
@@ -228,7 +228,7 @@
               {{ connectionStatus.label }}
             </span>
           </div>
-          <span class="text-[10px] text-slate-400 font-semibold tracking-wider">PSC 119</span>
+          <span class="max-w-[120px] truncate text-[10px] text-slate-400 font-semibold" :title="userFacilityName">{{ userFacilityName }}</span>
         </div>
       </aside>
 
@@ -249,10 +249,10 @@ const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
 const userDisplayName = computed(() => user.value?.name || 'Tenaga Medis');
 const userRoleLabel = computed(() => {
-  if (user.value?.role === 'HEALTHCARE') return 'Tenaga Medis • PSC 119';
+  if (user.value?.role === 'HEALTHCARE') return 'Tenaga Medis';
   return user.value?.role || 'Layanan Medis';
 });
-const userFacilityName = computed(() => user.value?.facility?.name || 'Faskes Rujukan PSC 119');
+const userFacilityName = computed(() => user.value?.facility?.name || 'Fasilitas kesehatan belum terhubung');
 const pendingT0Count = computed(() => Number((page.props as any).pendingT0Count ?? 0));
 
 const sidebarOpen = ref(false);
@@ -283,6 +283,9 @@ const connectionStatus = computed(() => {
   }
   if (serverReachable.value === false) {
     return { label: 'Server tidak terjangkau', stale: true, classes: 'bg-slate-100 text-slate-700 border border-slate-300', dotClass: 'bg-slate-500' };
+  }
+  if (serverReachable.value === null) {
+    return { label: 'Memeriksa server', stale: true, classes: 'bg-slate-100 text-slate-700 border border-slate-300', dotClass: 'bg-slate-400' };
   }
   if (!subscriptionReady.value) {
     return { label: 'Realtime menghubungkan ulang', stale: true, classes: 'bg-slate-100 text-slate-700 border border-slate-300', dotClass: 'bg-slate-500' };
@@ -376,8 +379,8 @@ onMounted(() => {
     .listen('EmergencyCreated', onEmergencyCreated)
     .subscribed(() => {
       subscriptionReady.value = true;
-      serverReachable.value = true;
       requestReconciliation();
+      void probeServer();
     })
     .error(() => {
       subscriptionReady.value = false;
@@ -406,6 +409,9 @@ function playAudioNotification() {
     gain.gain.setValueAtTime(0.2, ctx.currentTime);
     osc.connect(gain);
     gain.connect(ctx.destination);
+    osc.onended = () => {
+      void ctx.close();
+    };
     osc.start();
     osc.stop(ctx.currentTime + 0.3);
   } catch {}

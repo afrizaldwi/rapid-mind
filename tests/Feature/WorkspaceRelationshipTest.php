@@ -185,7 +185,11 @@ final class WorkspaceRelationshipTest extends TestCase
             $assessment->srqResponses()->create(['question_number' => $questionNumber, 'answer' => $questionNumber === 17]);
         }
         foreach (range(1, 5) as $indicator) {
-            $assessment->riskAssessment()->create(['indicator' => "R{$indicator}", 'answer' => $indicator === 3, 'weight' => $indicator === 3 ? 1 : 2]);
+            $assessment->riskAssessment()->create([
+                'indicator' => "R{$indicator}",
+                'answer' => in_array($indicator, [1, 3], true),
+                'weight' => in_array($indicator, [3, 5], true) ? 1 : 2,
+            ]);
         }
         foreach ([0, 1, 3] as $index => $level) {
             $assessment->functionAssessment()->create(['domain' => 'F'.($index + 1), 'level' => $level]);

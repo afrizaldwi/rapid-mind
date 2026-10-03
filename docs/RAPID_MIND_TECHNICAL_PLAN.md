@@ -3277,11 +3277,14 @@ The UI should be designed around the actual workflow and operational risk, not m
 
 # 26. Daffa Repair Checkpoint (3 October 2026)
 
-The Daffa repair is implemented and automated-verified on baseline `771143fb00268f7f671f3e31597befacbf3a17ca`.
+The Daffa repair and remaining truthfulness pass are implemented and automated-verified through baseline `37a7fcfd64ecef81915dd599f6f3635c52b71dda`.
 
 - Healthcare assessment evidence uses the emergency-linked assessment and a single snake_case-compatible normalization boundary.
 - Healthcare displays canonical R1–R5 and F1–F3 data without turning missing evidence into negative evidence or inventing SRQ/Red Flag interpretations.
 - `HealthcareLayout.vue` is the sole emergency subscription owner. Event IDs are deduplicated with a bounded cache; Inertia reconciliations are serialized/coalesced; reconnect catch-up does not play new-event audio; refresh time advances only after successful reconciliation.
 - Admin uses one active-T0 definition: `PENDING`, `ACKNOWLEDGED`, `REVIEWING`, and `CONFIRMED`; `DOWNGRADED` is excluded from active counts.
+- Healthcare now uses the canonical Q5/Q6 and F1–F3 labels, derives vulnerability only from assessment R3, and does not attribute a manually selected suicidal-ideation Red Flag to Q17 without an actual affirmative Q17 answer.
+- Missing assessments and triage results are explicit, the referral selector exposes only persisted facility fields, verification rows are chronologically ordered by `created_at` then `id`, and active referrals are not presented as completed work.
+- Healthcare identity is facility-aware. Reverb subscription readiness cannot assert Laravel HTTP health, and each finite alert closes its `AudioContext` after playback.
 
-Automated evidence: TypeScript validation passed, production frontend build passed, focused feature tests passed (8 tests / 149 assertions), and the complete Docker Laravel suite passed (138 tests / 1,638 assertions). Browser gates were intentionally skipped and remain NDV; therefore live Reverb, audio, outage/recovery, and rendered interaction behavior are not claimed as browser verified.
+Automated evidence: TypeScript validation passed, production frontend build passed, focused feature tests passed (8 tests / 149 assertions), and the complete Docker Laravel suite passed (138 tests / 1,638 assertions). Browser gates were intentionally skipped and remain NDV; therefore rendered mappings/copy, live Reverb, HTTP/Reverb outage separation, audio cleanup under repeated alerts, reconnect behavior, and interactive referral state are not claimed as browser verified.

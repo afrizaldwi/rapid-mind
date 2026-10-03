@@ -775,7 +775,7 @@ Deferred: dedicated dispatch model/schema, referral/dispatch architecture redesi
 
 ## Daffa Repair — Clinical Rendering, Realtime, and Admin Truthfulness (3 October 2026)
 
-The Daffa visual structure is preserved while the remaining correctness repairs from baseline `771143fb00268f7f671f3e31597befacbf3a17ca` are implemented.
+The Daffa visual structure is preserved while the initial and remaining correctness repairs through baseline `37a7fcfd64ecef81915dd599f6f3635c52b71dda` are implemented.
 
 - Healthcare Darurat now normalizes Laravel snake_case assessment relations at one boundary and uses only the emergency's linked assessment. It no longer substitutes an arbitrary patient assessment.
 - Risk renders canonical R1–R5 with `YA`, `TIDAK`, or an explicit unavailable state. Function renders F1–F3 using only levels 0, 1, and 3. The unsupported SRQ `>= 6` positive/negative interpretation was removed.
@@ -784,6 +784,11 @@ The Daffa visual structure is preserved while the remaining correctness repairs 
 - `HealthcareLayout.vue` remains the single Reverb subscription owner and now restores bounded event-ID deduplication, coalesced authoritative reloads, reconnect catch-up without audio, and a success-backed last-refresh time.
 - Admin Summary and Map share the active status set `PENDING`, `ACKNOWLEDGED`, `REVIEWING`, and `CONFIRMED`. Zero shelters remains zero, missing addresses are explicit, and inert map-layer checkboxes were replaced with navigation to the dedicated map.
 - Focused feature coverage now asserts snake_case linked assessment payloads, unidentified emergencies, and identical Admin active-T0 aggregates including `REVIEWING` and excluding `DOWNGRADED`.
+- The remaining clinical display pass aligns Q5/Q6 and all F1–F3 labels with Relawan, replaces age-derived vulnerability with the linked R3 answer, and separates the suicidal-ideation category from optional Q17 evidence.
+- No-assessment and missing-triage cases now use explicit unavailable states. The referral selector no longer references nonexistent bed capacity, and final action copy distinguishes downgrade decisions, active referrals, and terminal referral states.
+- Verification rows are loaded by `created_at ASC, id ASC`. Healthcare shell/page identity uses the assigned facility or a neutral fallback instead of PSC 119.
+- Reverb subscription state no longer writes Laravel HTTP health; `Realtime aktif` requires online, successful HTTP health, and subscription readiness. Alert audio contexts close after playback.
+- The linked-assessment fixture now uses canonical R1/R3 answers, R1–R5 weights, and a coherent risk score.
 
 No dependency was installed, removed, or updated. Relawan source and `docs/workflow.md` were not changed.
 
@@ -794,4 +799,4 @@ No dependency was installed, removed, or updated. Relawan source and `docs/workf
 - Focused `WorkspaceRelationshipTest`: 8 tests, 149 assertions, 0 failures.
 - Complete Docker Laravel suite: 138 tests, 1,638 assertions, 0 failures.
 - `git diff --check`: passed.
-- Browser gates A–T: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio, outage/recovery, native `tel:`, or rendered interaction claim is made by this checkpoint.
+- Browser gates for both Daffa passes, including remaining-plan Gates A–L: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio lifecycle, HTTP/Reverb outage separation, reconnect, facility-identity, or rendered interaction claim is made by this checkpoint.
