@@ -35,6 +35,12 @@ export async function resolveOfflineRoute(
                 .default,
             props: {},
         };
+    if (path === "/relawan/assessment/drafts")
+        return {
+            component: (await import("@/Pages/Relawan/Assessment/Drafts.vue"))
+                .default,
+            props: {},
+        };
     const assessmentPath = path.match(
         /^\/relawan\/assessment\/([^/]+)\/(identity|srq|risk|function|review|result)$/,
     );

@@ -304,6 +304,7 @@ const isDataRoute = computed(
     () => runtime.path.split("?")[0] === "/relawan/data",
 );
 const isFocusedAssessment = computed(() =>
+    runtime.path.split("?")[0] !== "/relawan/assessment/drafts" &&
     /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(runtime.path.split("?")[0]),
 );
 const recoveryMessage = computed(() => {

@@ -33,6 +33,7 @@ Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawa
 
     // Assessment flow
     Route::get('/assessment', [RelawanController::class, 'assessmentIndex'])->name('assessment.index');
+    Route::get('/assessment/drafts', [RelawanController::class, 'assessmentDrafts'])->name('assessment.drafts');
     Route::post('/assessment', [RelawanController::class, 'createAssessment'])->name('assessment.create');
     Route::get('/assessment/{assessmentId}/identity', [RelawanController::class, 'assessmentIdentity'])->name('assessment.identity');
     Route::get('/assessment/{assessmentId}/srq', [RelawanController::class, 'assessmentSrq'])->name('assessment.srq');

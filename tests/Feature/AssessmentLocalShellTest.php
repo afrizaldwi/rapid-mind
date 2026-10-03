@@ -106,6 +106,25 @@ final class AssessmentLocalShellTest extends TestCase
             ->etc());
     }
 
+    public function test_drafts_route_only_exposes_owned_in_progress_assessments_to_relawan(): void
+    {
+        $owner = $this->relawan();
+        $other = $this->relawan();
+        $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Uji', 'created_by' => $owner->id]);
+        $owned = Assessment::create(['patient_id' => $patient->id, 'user_id' => $owner->id, 'status' => AssessmentStatus::IN_PROGRESS, 'mode' => AssessmentMode::VERBAL]);
+        Assessment::create(['patient_id' => $patient->id, 'user_id' => $owner->id, 'status' => AssessmentStatus::COMPLETED, 'mode' => AssessmentMode::VERBAL]);
+        Assessment::create(['patient_id' => $patient->id, 'user_id' => $other->id, 'status' => AssessmentStatus::IN_PROGRESS, 'mode' => AssessmentMode::VERBAL]);
+
+        $this->actingAs($owner)->get('/relawan/assessment/drafts')->assertInertia(fn (Assert $page) => $page
+            ->component('Relawan/Assessment/Drafts', false)
+            ->has('inProgressAssessments', 1)
+            ->where('inProgressAssessments.0.id', $owned->id)
+            ->where('inProgressAssessments.0.resume_url', "/relawan/assessment/{$owned->id}/srq")
+            ->etc());
+        $this->actingAs($healthcare)->getJson('/relawan/assessment/drafts')->assertForbidden();
+    }
+
     public function test_interactive_creation_rejects_unrelated_existing_patient(): void
     {
         $owner = $this->relawan();

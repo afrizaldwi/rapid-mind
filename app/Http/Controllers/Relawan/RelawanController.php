@@ -96,6 +96,21 @@ final class RelawanController extends Controller
         ]);
     }
 
+    public function assessmentDrafts(AssessmentResume $resume): InertiaResponse
+    {
+        $inProgressAssessments = Assessment::with(['patient', 'srqResponses', 'riskAssessment', 'functionAssessment'])
+            ->where('user_id', Auth::id())
+            ->where('status', AssessmentStatus::IN_PROGRESS)
+            ->latest('updated_at')
+            ->get();
+
+        $inProgressAssessments->each(fn (Assessment $assessment) => $resume->attach($assessment));
+
+        return Inertia::render('Relawan/Assessment/Drafts', [
+            'inProgressAssessments' => $inProgressAssessments,
+        ]);
+    }
+
     public function patientOptions(): JsonResponse
     {
         return response()->json($this->eligiblePatients(Auth::user())
