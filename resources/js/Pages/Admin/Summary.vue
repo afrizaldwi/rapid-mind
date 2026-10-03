@@ -1,355 +1,180 @@
 <template>
   <AdminLayout>
-    <div class="space-y-5">
-      <!-- Title & Subtitle -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h2 class="text-lg lg:text-xl font-black text-slate-900 tracking-tight">
-            Ringkasan Operasional Lapangan
-          </h2>
-          <p class="text-xs text-slate-500 mt-0.5">
-            Distribusi kondisi kesehatan jiwa penyintas di seluruh posko pengungsian aktif.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2 text-xs">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 font-medium shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Data Diperbarui: {{ lastUpdatedTime }}
-          </span>
-        </div>
+    <div class="space-y-6">
+      <!-- 1. Editorial Page Header (Section 9) -->
+      <div>
+        <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+          Ringkasan Operasional Lapangan
+        </h1>
+        <p class="text-xs text-slate-500 mt-1 font-normal">
+          Distribusi kondisi kesehatan jiwa penyintas di seluruh posko aktif.
+        </p>
       </div>
 
-      <!-- Macro KPI Grid (5 Compact Cards matching reference) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <!-- 2. Radically Simplified KPI Metrics (4 Cards Maximum, Section 10 & 11) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Card 1: TOTAL PENYINTAS -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Penyintas</span>
-            <div class="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-          </div>
+        <div class="bg-white p-4.5 rounded-xl border border-slate-200/80 flex flex-col justify-between space-y-2">
+          <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            Total Penyintas
+          </span>
           <div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">{{ kpis.totalSurvivors }}</span>
-              <span class="text-xs font-semibold text-slate-500">jiwa</span>
-              <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
-                Terpantau
-              </span>
+            <div class="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
+              {{ kpis.totalSurvivors }}
             </div>
-            <span class="text-[11px] text-slate-400 block mt-1 font-medium">
-              {{ kpis.totalAssessments ?? 0 }} rekam skrining aktif
+            <span class="text-xs text-slate-400 font-normal block mt-0.5">
+              penyintas aktif
             </span>
           </div>
         </div>
 
-        <!-- Card 2: T0 EMERGENCY -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-rose-600 shadow-xs flex flex-col justify-between space-y-3">
+        <!-- Card 2: T0 AKTIF -->
+        <div class="bg-white p-4.5 rounded-xl border border-slate-200/80 flex flex-col justify-between space-y-2">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-rose-600"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T0 — Emergency</span>
-            </div>
-            <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-            </div>
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              T0 Aktif
+            </span>
+            <span v-if="kpis.countT0 > 0" class="w-2 h-2 rounded-full bg-rose-600"></span>
           </div>
           <div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-2xl lg:text-3xl font-black text-rose-600 tracking-tight">{{ kpis.countT0 }}</span>
-              <span class="text-xs font-semibold text-rose-600">({{ percentage(kpis.countT0) }}%)</span>
-              <span
-                v-if="kpiTrends?.t0Change !== undefined"
-                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
-                :class="kpiTrends.t0Change > 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
-              >
-                {{ kpiTrends.t0Change > 0 ? `↗ +${kpiTrends.t0Change} hari ini` : (kpiTrends.t0Change < 0 ? `↘ ${kpiTrends.t0Change} hari ini` : '— stabil') }}
-              </span>
+            <div class="text-2xl lg:text-3xl font-bold tracking-tight" :class="kpis.countT0 > 0 ? 'text-rose-600' : 'text-slate-900'">
+              {{ kpis.countT0 }}
             </div>
-            <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Siaga PSC 119 & IGD Jiwa
+            <span class="text-xs text-slate-400 font-normal block mt-0.5">
+              kasus darurat
             </span>
           </div>
         </div>
 
-        <!-- Card 3: T1 HIGH RISK -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-orange-500 shadow-xs flex flex-col justify-between space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T1 — High Risk</span>
-            </div>
-            <div class="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-          </div>
+        <!-- Card 3: POSKO AKTIF -->
+        <div class="bg-white p-4.5 rounded-xl border border-slate-200/80 flex flex-col justify-between space-y-2">
+          <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            Posko Aktif
+          </span>
           <div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-2xl lg:text-3xl font-black text-orange-600 tracking-tight">{{ kpis.countT1 }}</span>
-              <span class="text-xs font-semibold text-orange-600">({{ percentage(kpis.countT1) }}%)</span>
-              <span
-                v-if="kpiTrends?.t1Change !== undefined"
-                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
-                :class="kpiTrends.t1Change > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
-              >
-                {{ kpiTrends.t1Change > 0 ? `↗ +${kpiTrends.t1Change} hari ini` : (kpiTrends.t1Change < 0 ? `↘ ${kpiTrends.t1Change} hari ini` : '— stabil') }}
-              </span>
+            <div class="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
+              {{ activeSheltersCount }}
             </div>
-            <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Risiko Tinggi · Konsultasi Faskes
+            <span class="text-xs text-slate-400 font-normal block mt-0.5">
+              posko penanggulangan
             </span>
           </div>
         </div>
 
-        <!-- Card 4: T2 MODERATE -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-amber-500 shadow-xs flex flex-col justify-between space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T2 — Moderate</span>
-            </div>
-            <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-          </div>
+        <!-- Card 4: RELAWAN AKTIF -->
+        <div class="bg-white p-4.5 rounded-xl border border-slate-200/80 flex flex-col justify-between space-y-2">
+          <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            Relawan Aktif
+          </span>
           <div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{{ kpis.countT2 }}</span>
-              <span class="text-xs font-semibold text-amber-600">({{ percentage(kpis.countT2) }}%)</span>
-              <span
-                v-if="kpiTrends?.t2Change !== undefined"
-                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
-                :class="kpiTrends.t2Change > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
-              >
-                {{ kpiTrends.t2Change > 0 ? `↗ +${kpiTrends.t2Change} hari ini` : (kpiTrends.t2Change < 0 ? `↘ ${kpiTrends.t2Change} hari ini` : '— stabil') }}
-              </span>
+            <div class="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
+              {{ activeVolunteersCount }}
             </div>
-            <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Risiko Sedang · Pendampingan PFA
-            </span>
-          </div>
-        </div>
-
-        <!-- Card 5: T3 LOW RISK -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200/90 border-t-2 border-t-emerald-500 shadow-xs flex flex-col justify-between space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">T3 — Low Risk</span>
-            </div>
-            <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-2xl lg:text-3xl font-black text-emerald-600 tracking-tight">{{ kpis.countT3 }}</span>
-              <span class="text-xs font-semibold text-emerald-600">({{ percentage(kpis.countT3) }}%)</span>
-              <span
-                v-if="kpiTrends?.t3Change !== undefined"
-                class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded border"
-                :class="kpiTrends.t3Change > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
-              >
-                {{ kpiTrends.t3Change > 0 ? `↗ +${kpiTrends.t3Change} hari ini` : (kpiTrends.t3Change < 0 ? `↘ ${kpiTrends.t3Change} hari ini` : '— stabil') }}
-              </span>
-            </div>
-            <span class="text-[11px] text-slate-500 block mt-1 font-medium">
-              Risiko Rendah · Penguatan Komunitas
+            <span class="text-xs text-slate-400 font-normal block mt-0.5">
+              personel bertugas
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Middle Grid: T0 Early Warning (Left ~60%) + Geospatial Map (Right ~40%) -->
+      <!-- 3. Operational Focus: T0 Early Warning + Geospatial Sebaran Kasus (Section 12, 13, 14, 15, 16, 17) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <!-- T0 Early Warning Module (Kasus Emergensi Kritis) -->
-        <div class="lg:col-span-7 bg-rose-50/40 border border-rose-200/80 rounded-xl p-4 shadow-xs flex flex-col justify-between">
+        <!-- T0 Early Warning (Left, Section 14 & 15) -->
+        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200/80 p-5 flex flex-col justify-between">
           <div>
-            <!-- Section Header -->
-            <div class="flex items-center justify-between pb-3 border-b border-rose-200/60">
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+                <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+                <div>
+                  <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider leading-tight">
+                    PERINGATAN DINI · T0 AKTIF
+                  </h2>
+                  <span class="text-[11px] text-slate-400 font-normal block leading-tight mt-0.5">
+                    Kedaruratan memerlukan koordinasi
+                  </span>
                 </div>
-                <h3 class="text-xs lg:text-sm font-bold text-slate-900 tracking-tight">
-                  PERINGATAN DINI KASUS T0 — EMERGENSI KRITIS
-                </h3>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white shadow-xs">
-                  {{ activeT0List.length }} Kasus Aktif
-                </span>
               </div>
-
-              <Link
-                href="/admin/operations/posko"
-                class="text-xs font-semibold text-slate-500 hover:text-slate-900 transition flex items-center gap-1"
-              >
-                Lihat Posko
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
+              <span v-if="activeT0List.length > 0" class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200/70">
+                {{ activeT0List.length }} Kasus
+              </span>
             </div>
 
-            <!-- T0 Emergency Cards Grid / Empty State -->
-            <div v-if="activeT0List.length === 0" class="py-6 px-4 bg-white rounded-lg border border-slate-200 text-center mt-3 space-y-1">
-              <span class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 font-bold inline-flex items-center justify-center text-xs">✓</span>
-              <p class="text-xs font-bold text-slate-800">Tidak ada kedaruratan aktif (T0)</p>
-              <p class="text-[11px] text-slate-500">Seluruh posko terpantau aman dan terkendali.</p>
+            <!-- Compact Cases List -->
+            <div v-if="activeT0List.length === 0" class="py-10 text-center space-y-1">
+              <p class="text-xs font-medium text-slate-700">Tidak ada kedaruratan aktif (T0)</p>
+              <p class="text-[11px] text-slate-400">Seluruh posko terpantau aman dan terkendali.</p>
             </div>
-            <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div v-else class="divide-y divide-slate-100 mt-1">
               <div
                 v-for="e in activeT0List"
                 :key="e.id"
-                class="bg-white rounded-lg p-3 border border-rose-200/90 shadow-xs flex flex-col justify-between space-y-2 hover:border-rose-400 transition"
+                class="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition px-1 rounded-lg"
               >
-                <div>
-                  <!-- Patient & Status Tag -->
-                  <div class="flex items-center justify-between">
-                    <h4 class="font-bold text-slate-900 text-xs truncate max-w-[120px]">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-900 text-xs truncate">
                       {{ e.patient?.name || 'Penyintas' }}
-                    </h4>
+                    </span>
                     <span
-                      class="px-1.5 py-0.5 rounded text-[9px] font-black tracking-wide"
-                      :class="e.status === 'CONFIRMED' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-800 border border-amber-300'"
+                      class="px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wide"
+                      :class="e.status === 'CONFIRMED' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'"
                     >
                       {{ e.status === 'CONFIRMED' ? 'T0-CONFIRMED' : 'T0-SUSPECT' }}
                     </span>
                   </div>
-
-                  <!-- RM identifier -->
-                  <div class="text-[11px] font-semibold text-slate-600 mt-0.5">
-                    RM-{{ formatRecordId(e.assessment_id || e.id) }}
-                  </div>
-
-                  <!-- Meta: Time & Posko -->
-                  <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-1.5">
-                    <span class="flex items-center gap-1">
-                      <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {{ formatTime(e.created_at) }}
-                    </span>
+                  <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                    <span class="truncate">{{ e.shelter?.name || 'Posko' }}</span>
                     <span>·</span>
-                    <span class="truncate max-w-[90px] flex items-center gap-0.5">
-                      <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      </svg>
-                      {{ e.shelter?.name || 'Posko tidak diketahui' }}
-                    </span>
-                  </div>
-
-                  <!-- Red Flag Triggers -->
-                  <div class="mt-2 space-y-1 text-[10px] text-slate-700 bg-rose-50/50 p-2 rounded border border-rose-100">
-                    <div class="flex items-start gap-1 font-medium line-clamp-2">
-                      <span class="text-rose-600 font-bold shrink-0">✓</span>
-                      <span>{{ getRedFlagSummary(e) }}</span>
-                    </div>
+                    <span>{{ formatTime(e.created_at) }}</span>
                   </div>
                 </div>
 
-                <!-- Footer Status & CTA (RBAC correct: Admin monitors posko, does NOT clinically review) -->
-                <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <span class="text-[9px] font-black text-rose-600 tracking-wider uppercase">
-                    {{ e.status === 'CONFIRMED' ? 'TERKONFIRMASI FASKES' : 'MENUNGGU VALIDASI FASKES' }}
-                  </span>
-                  <Link
-                    :href="e.shelter_id ? `/admin/operations/posko/${e.shelter_id}` : '/admin/operations/posko'"
-                    class="text-[11px] font-bold text-slate-700 hover:text-teal-700 flex items-center gap-0.5 transition"
-                  >
-                    Pantau Posko →
-                  </Link>
-                </div>
+                <Link
+                  :href="e.shelter_id ? `/admin/operations/posko/${e.shelter_id}` : '/admin/operations/posko'"
+                  class="shrink-0 text-[11px] font-semibold text-teal-700 hover:text-teal-900 transition flex items-center gap-0.5"
+                >
+                  Posko →
+                </Link>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Sebaran Kasus Geospasial Module -->
-        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
+        <!-- Sebaran Kasus Geospasial Map (Right, Section 16 & 17) -->
+        <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200/80 p-5 flex flex-col justify-between">
           <div>
-            <!-- Module Header -->
+            <!-- Header -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 class="text-xs lg:text-sm font-bold text-slate-900 tracking-tight leading-tight">
-                    Sebaran Kasus Geospasial
-                  </h3>
-                  <span class="text-[10px] text-slate-400 block leading-tight">
-                    Posko Penanggulangan Bencana
-                  </span>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200/80">
-                  {{ kpis.totalSurvivors }} Jiwa
+              <div>
+                <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider leading-tight">
+                  SEBARAN KASUS
+                </h2>
+                <span class="text-[11px] text-slate-400 font-normal block leading-tight mt-0.5">
+                  Posko penanggulangan bencana
                 </span>
-                <Link
-                  href="/admin/map"
-                  class="p-1 text-slate-400 hover:text-slate-600 transition"
-                  title="Buka Peta Lengkap"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
-                </Link>
               </div>
+              <Link
+                href="/admin/map"
+                class="text-xs font-semibold text-teal-700 hover:text-teal-900 transition flex items-center gap-1"
+              >
+                Peta Penuh →
+              </Link>
             </div>
 
-            <!-- Map Viewport with Floating Legend Overlay -->
-            <div class="mt-3 relative h-64 sm:h-72 w-full rounded-lg overflow-hidden border border-slate-200">
+            <!-- Compact Map Container -->
+            <div class="mt-3 relative h-64 sm:h-72 w-full rounded-lg overflow-hidden border border-slate-200/80">
               <div ref="mapContainer" class="w-full h-full"></div>
 
-              <!-- Floating Map Case Filter Box (top-right overlay per reference) -->
-              <div class="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-xs p-2.5 rounded-lg border border-slate-200 shadow-sm text-[10px] space-y-1.5 z-10">
-                <span class="font-bold text-slate-500 uppercase tracking-wider block text-[9px]">
-                  FILTER KASUS
-                </span>
-                <div class="space-y-1 font-medium text-slate-700">
-                  <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-rose-600"></span>
-                    <span>T0 Emergency</span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                    <span>T1 High Risk</span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                    <span>T2 Moderate</span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>T3 Low Risk</span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                    <span>Posko</span>
-                  </div>
+              <!-- Quiet Minimal Legend -->
+              <div class="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs text-[10px] flex items-center gap-3 z-10 font-medium text-slate-600">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+                  <span>T0 Darurat</span>
                 </div>
-
-                <div class="pt-1.5 border-t border-slate-100 text-[9px]">
-                  <Link href="/admin/map" class="font-bold text-teal-700 hover:text-teal-900">
-                    Buka Peta Geospasial →
-                  </Link>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                  <span>Posko Terpantau</span>
                 </div>
               </div>
             </div>
@@ -357,74 +182,61 @@
         </div>
       </div>
 
-      <!-- Analytics Row: 3 Modular Cards matching reference -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <!-- 1. DISTRIBUSI TINGKAT TRIASE (Donut Chart) -->
-        <div class="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
+      <!-- 4. Operational Analytics: Max 2 Modules (Section 18, 19, 20, 45) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- Distribusi Tingkat Triase (Donut + Clear Breakdown, Section 19) -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                  </svg>
-                </div>
-                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  DISTRIBUSI TINGKAT TRIASE
-                </h3>
-              </div>
-              <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                Hari Ini ▾
+            <div class="pb-3 border-b border-slate-100">
+              <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider leading-tight">
+                DISTRIBUSI TINGKAT TRIASE
+              </h2>
+              <span class="text-[11px] text-slate-400 font-normal block leading-tight mt-0.5">
+                Akumulasi status kesehatan jiwa penyintas
               </span>
             </div>
 
-            <!-- Donut Graphic Representation -->
-            <div class="py-5 flex flex-col items-center justify-center">
-              <div class="relative w-36 h-36">
+            <div class="py-5 flex flex-col sm:flex-row items-center justify-around gap-6">
+              <!-- Subtle Donut Graphic -->
+              <div class="relative w-28 h-28 shrink-0">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <!-- Background Ring -->
                   <path
                     class="text-slate-100"
-                    stroke-width="5"
+                    stroke-width="4.5"
                     stroke="currentColor"
                     fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
-                  <!-- T3 Ring Segment -->
                   <path
-                    class="text-emerald-500 transition-all duration-500"
-                    stroke-width="5"
+                    class="text-emerald-500"
+                    stroke-width="4.5"
                     :stroke-dasharray="`${t3Dash}, 100`"
                     stroke-dashoffset="0"
                     stroke="currentColor"
                     fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
-                  <!-- T2 Ring Segment -->
                   <path
-                    class="text-amber-500 transition-all duration-500"
-                    stroke-width="5"
+                    class="text-amber-500"
+                    stroke-width="4.5"
                     :stroke-dasharray="`${t2Dash}, 100`"
                     :stroke-dashoffset="`-${t3Dash}`"
                     stroke="currentColor"
                     fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
-                  <!-- T1 Ring Segment -->
                   <path
-                    class="text-orange-500 transition-all duration-500"
-                    stroke-width="5"
+                    class="text-orange-500"
+                    stroke-width="4.5"
                     :stroke-dasharray="`${t1Dash}, 100`"
                     :stroke-dashoffset="`-${t3Dash + t2Dash}`"
                     stroke="currentColor"
                     fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
-                  <!-- T0 Ring Segment -->
                   <path
-                    class="text-rose-600 transition-all duration-500"
-                    stroke-width="5"
+                    class="text-rose-600"
+                    stroke-width="4.5"
                     :stroke-dasharray="`${t0Dash}, 100`"
                     :stroke-dashoffset="`-${t3Dash + t2Dash + t1Dash}`"
                     stroke="currentColor"
@@ -432,143 +244,97 @@
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                 </svg>
-                <!-- Center Info -->
                 <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span class="text-xl font-black text-slate-900 leading-none">{{ totalTriageCount }}</span>
-                  <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Kasus</span>
+                  <span class="text-xl font-bold text-slate-900 leading-none">{{ totalTriageCount }}</span>
+                  <span class="text-[9px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">kasus</span>
                 </div>
               </div>
-            </div>
 
-            <!-- Legend Grid -->
-            <div class="grid grid-cols-2 gap-2 text-xs font-semibold pt-2 border-t border-slate-100">
-              <div class="flex items-center justify-between p-1.5 rounded bg-rose-50/60 border border-rose-100">
-                <span class="flex items-center gap-1.5 text-rose-700">
-                  <span class="w-2 h-2 rounded-full bg-rose-600"></span>
-                  T0 Darurat
-                </span>
-                <span class="text-rose-800 font-bold">{{ kpis.countT0 }} ({{ percentage(kpis.countT0) }}%)</span>
-              </div>
-              <div class="flex items-center justify-between p-1.5 rounded bg-orange-50/60 border border-orange-100">
-                <span class="flex items-center gap-1.5 text-orange-700">
-                  <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                  T1 Berat
-                </span>
-                <span class="text-orange-800 font-bold">{{ kpis.countT1 }} ({{ percentage(kpis.countT1) }}%)</span>
-              </div>
-              <div class="flex items-center justify-between p-1.5 rounded bg-amber-50/60 border border-amber-100">
-                <span class="flex items-center gap-1.5 text-amber-700">
-                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                  T2 Sedang
-                </span>
-                <span class="text-amber-800 font-bold">{{ kpis.countT2 }} ({{ percentage(kpis.countT2) }}%)</span>
-              </div>
-              <div class="flex items-center justify-between p-1.5 rounded bg-emerald-50/60 border border-emerald-100">
-                <span class="flex items-center gap-1.5 text-emerald-700">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  T3 Stabil
-                </span>
-                <span class="text-emerald-800 font-bold">{{ kpis.countT3 }} ({{ percentage(kpis.countT3) }}%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. BEBAN KASUS PER POSKO BENCANA (Bar Chart) -->
-        <div class="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
+              <!-- Primary Values Breakdown -->
+              <div class="grid grid-cols-2 gap-x-6 gap-y-3.5 w-full max-w-xs text-xs">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+                    <span class="font-medium text-slate-600">T0 Darurat</span>
+                  </div>
+                  <span class="font-bold text-slate-900">
+                    {{ kpis.countT0 }}
+                    <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT0) }}%)</span>
+                  </span>
                 </div>
-                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  BEBAN KASUS PER POSKO BENCANA
-                </h3>
-              </div>
-              <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                {{ shelters?.length ?? 0 }} Sektor Operasional ▾
-              </span>
-            </div>
-
-            <!-- Legend indicator -->
-            <div class="flex items-center gap-3 text-[10px] font-bold text-slate-500 pt-2 pb-1 justify-end">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-600"></span> T0</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-500"></span> T1</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> T2</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> T3</span>
-            </div>
-
-            <!-- Posko Bars List (Real aggregates, no fake distribution) -->
-            <div class="space-y-3.5 pt-2">
-              <div v-for="s in shelterCaseloadList" :key="s.id" class="space-y-1">
-                <div class="flex items-center justify-between text-xs">
-                  <span class="font-bold text-slate-800">{{ s.name }}</span>
-                  <span class="text-[11px] text-slate-500 font-semibold">{{ s.total }} jiwa ({{ s.volunteers }} relawan)</span>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                    <span class="font-medium text-slate-600">T1 Tinggi</span>
+                  </div>
+                  <span class="font-bold text-slate-900">
+                    {{ kpis.countT1 }}
+                    <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT1) }}%)</span>
+                  </span>
                 </div>
-                <div v-if="s.totalTriage > 0" class="w-full h-3 rounded-full bg-slate-100 flex overflow-hidden" :title="`T0: ${s.t0} | T1: ${s.t1} | T2: ${s.t2} | T3: ${s.t3}`">
-                  <div :style="{ width: `${s.t0Pct}%` }" class="bg-rose-600 h-full"></div>
-                  <div :style="{ width: `${s.t1Pct}%` }" class="bg-orange-500 h-full"></div>
-                  <div :style="{ width: `${s.t2Pct}%` }" class="bg-amber-500 h-full"></div>
-                  <div :style="{ width: `${s.t3Pct}%` }" class="bg-emerald-500 h-full"></div>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span class="font-medium text-slate-600">T2 Sedang</span>
+                  </div>
+                  <span class="font-bold text-slate-900">
+                    {{ kpis.countT2 }}
+                    <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT2) }}%)</span>
+                  </span>
                 </div>
-                <div v-else class="w-full h-3 rounded-full bg-slate-100 flex items-center px-2 text-[9px] text-slate-400 font-medium">
-                  Belum ada data skrining
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="font-medium text-slate-600">T3 Stabil</span>
+                  </div>
+                  <span class="font-bold text-slate-900">
+                    {{ kpis.countT3 }}
+                    <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT3) }}%)</span>
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3. TREN KASUS 30 HARI (Line / Area Chart) -->
-        <div class="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
+        <!-- Tren Kasus 30 Hari (Section 20) -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                  </svg>
-                </div>
-                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <div>
+                <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider leading-tight">
                   TREN KASUS 30 HARI
-                </h3>
+                </h2>
+                <span class="text-[11px] text-slate-400 font-normal block leading-tight mt-0.5">
+                  Dinamika triase 30 hari terakhir
+                </span>
               </div>
-              <span class="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                Semua Posko ▾
-              </span>
+              <div v-if="hasTrendData" class="flex items-center gap-2.5 text-[10px] font-medium text-slate-500">
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>T0</span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>T1</span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>T2</span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>T3</span>
+              </div>
             </div>
 
-            <!-- Legend indicator -->
-            <div class="flex items-center gap-3 text-[10px] font-bold text-slate-500 pt-2 pb-1 justify-end">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-600"></span> T0</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-500"></span> T1</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> T2</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> T3</span>
-            </div>
-
-            <!-- Real Dynamic Trend Line Chart Graphic bound to trendData -->
-            <div class="pt-2 pb-2">
-              <div class="h-44 w-full relative flex items-center justify-center">
-                <div v-if="!hasTrendData" class="flex flex-col items-center justify-center text-slate-400 text-xs font-medium space-y-1">
-                  <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-                  <span>Belum ada data tren 30 hari</span>
-                  <span class="text-[10px] text-slate-400">Data terakumulasi seiring pelaksanaan skrining</span>
+            <!-- Dynamic Trend Line Chart or Quiet Empty State (Section 20) -->
+            <div class="pt-3 pb-1">
+              <div class="h-36 w-full relative flex items-center justify-center">
+                <div v-if="!hasTrendData" class="text-center text-slate-400 text-xs font-medium py-10">
+                  Belum cukup data untuk menampilkan tren
                 </div>
-                <svg v-else class="w-full h-full overflow-visible" viewBox="0 0 300 120" preserveAspectRatio="none">
-                  <!-- Grid lines -->
-                  <line x1="0" y1="30" x2="300" y2="30" stroke="#F1F5F9" stroke-width="1" />
-                  <line x1="0" y1="60" x2="300" y2="60" stroke="#F1F5F9" stroke-width="1" />
-                  <line x1="0" y1="90" x2="300" y2="90" stroke="#F1F5F9" stroke-width="1" />
+                <svg v-else class="w-full h-full overflow-visible" viewBox="0 0 300 100" preserveAspectRatio="none">
+                  <!-- Subtle horizontal baseline -->
+                  <line x1="0" y1="25" x2="300" y2="25" stroke="#F1F5F9" stroke-width="1" />
+                  <line x1="0" y1="50" x2="300" y2="50" stroke="#F1F5F9" stroke-width="1" />
+                  <line x1="0" y1="75" x2="300" y2="75" stroke="#F1F5F9" stroke-width="1" />
 
                   <!-- Trend T3 line (green) -->
                   <path
                     :d="trendPathT3"
                     fill="none"
                     stroke="#10B981"
-                    stroke-width="2.5"
+                    stroke-width="2"
                     stroke-linecap="round"
                   />
                   <!-- Trend T2 line (amber) -->
@@ -576,7 +342,7 @@
                     :d="trendPathT2"
                     fill="none"
                     stroke="#F59E0B"
-                    stroke-width="2.5"
+                    stroke-width="2"
                     stroke-linecap="round"
                   />
                   <!-- Trend T1 line (orange) -->
@@ -584,7 +350,7 @@
                     :d="trendPathT1"
                     fill="none"
                     stroke="#F97316"
-                    stroke-width="2.2"
+                    stroke-width="2"
                     stroke-linecap="round"
                   />
                   <!-- Trend T0 line (red) -->
@@ -598,7 +364,7 @@
                 </svg>
               </div>
 
-              <!-- Time axis -->
+              <!-- Time axis labels -->
               <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-2 border-t border-slate-100">
                 <span>30 hari lalu</span>
                 <span>15 hari lalu</span>
@@ -606,90 +372,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Integrated Shelter Operational Table (Status Posko Pengungsian) -->
-      <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 class="font-bold text-slate-900 text-sm tracking-tight">
-              Status Posko Pengungsian & Sumber Daya Lapangan
-            </h3>
-            <span class="text-xs text-slate-400">
-              Pemantauan posko terdaftar, alokasi relawan dan daya tampung pengungsi.
-            </span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-200">
-              {{ shelters?.length || 0 }} Posko Terdaftar
-            </span>
-            <Link
-              href="/admin/operations/posko"
-              class="text-xs font-bold text-teal-700 hover:text-teal-900 transition"
-            >
-              Kelola Posko →
-            </Link>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80 text-[11px]">
-              <tr>
-                <th class="py-3 px-5">Nama Posko</th>
-                <th class="py-3 px-5">Lokasi Wilayah</th>
-                <th class="py-3 px-5 text-center">Penyintas Terdata</th>
-                <th class="py-3 px-5 text-center">Relawan Ditugaskan</th>
-                <th class="py-3 px-5 text-center">Status Operasional</th>
-                <th class="py-3 px-5 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
-              <tr v-for="s in shelters" :key="s.id" class="hover:bg-slate-50/70 transition">
-                <td class="py-3.5 px-5">
-                  <div class="font-bold text-slate-900 text-xs flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full" :class="s.is_active ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-                    {{ s.name }}
-                  </div>
-                  <span class="text-[11px] text-slate-400 font-normal block mt-0.5">
-                    ID: {{ s.id }}
-                  </span>
-                </td>
-                <td class="py-3.5 px-5 text-slate-600 text-xs">
-                  {{ s.address || 'Alamat tidak tersedia' }}
-                </td>
-                <td class="py-3.5 px-5 text-center font-bold text-slate-900 text-xs">
-                  <span class="px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200/60 font-black">
-                    {{ s.patients_count }} jiwa
-                  </span>
-                </td>
-                <td class="py-3.5 px-5 text-center text-xs">
-                  <span class="font-semibold text-slate-700">
-                    {{ s.volunteers_count }} personel
-                  </span>
-                </td>
-                <td class="py-3.5 px-5 text-center">
-                  <span
-                    class="px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1"
-                    :class="s.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'"
-                  >
-                    <span class="w-1.5 h-1.5 rounded-full" :class="s.is_active ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-                    {{ s.is_active ? 'Aktif' : 'Nonaktif' }}
-                  </span>
-                </td>
-                <td class="py-3.5 px-5 text-right">
-                  <Link
-                    :href="`/admin/operations/posko/${s.id}`"
-                    class="text-xs font-semibold text-teal-700 hover:text-teal-900 transition"
-                  >
-                    Buka Detail →
-                  </Link>
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -710,6 +392,8 @@ interface KPIProps {
   countT2: number;
   countT3: number;
   totalAssessments?: number;
+  activeShelters?: number;
+  activeVolunteers?: number;
 }
 
 const props = defineProps<{
@@ -729,9 +413,14 @@ const props = defineProps<{
 
 const mapContainer = ref<HTMLElement | null>(null);
 
-const lastUpdatedTime = computed(() => {
-  const d = new Date();
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} WIB`;
+const activeSheltersCount = computed(() => {
+  if (props.kpis.activeShelters !== undefined) return props.kpis.activeShelters;
+  return (props.shelters || []).filter((s: any) => s.is_active).length;
+});
+
+const activeVolunteersCount = computed(() => {
+  if (props.kpis.activeVolunteers !== undefined) return props.kpis.activeVolunteers;
+  return (props.shelters || []).reduce((acc: number, s: any) => acc + Number(s.volunteers_count || 0), 0);
 });
 
 const totalTriageCount = computed(() => {
@@ -753,12 +442,6 @@ const activeT0List = computed(() => {
   return props.t0Emergencies || [];
 });
 
-function formatRecordId(id: string | number): string {
-  const str = String(id || '');
-  if (str.length >= 6) return str.slice(-6).toUpperCase();
-  return str ? str.padStart(6, '0') : '000000';
-}
-
 function formatTime(iso: string): string {
   if (!iso) return '-';
   try {
@@ -768,43 +451,6 @@ function formatTime(iso: string): string {
     return '-';
   }
 }
-
-function getRedFlagSummary(e: any): string {
-  if (e.notes) return e.notes;
-  if (e.red_flag_type) {
-    if (e.red_flag_type === 'SUICIDAL_IDEATION') return 'Ideasi Bunuh Diri (Q17)';
-    if (e.red_flag_type === 'PSYCHOSIS') return 'Gejala Psikotik Akut Bencana';
-    if (e.red_flag_type === 'SEVERE_AGITATION') return 'Agitasi Fisik / Perilaku Membahayakan';
-    return `Red Flag: ${e.red_flag_type}`;
-  }
-  return 'Tanda bahaya kedaruratan jiwa lapangan';
-}
-
-// Shelter Caseload distribution calculated from actual records
-const shelterCaseloadList = computed(() => {
-  return (props.shelters || []).map((s: any) => {
-    const t0 = Number(s.t0_count || 0);
-    const t1 = Number(s.t1_count || 0);
-    const t2 = Number(s.t2_count || 0);
-    const t3 = Number(s.t3_count || 0);
-    const totalTriage = t0 + t1 + t2 + t3;
-
-    const t0Pct = totalTriage > 0 ? Math.round((t0 / totalTriage) * 100) : 0;
-    const t1Pct = totalTriage > 0 ? Math.round((t1 / totalTriage) * 100) : 0;
-    const t2Pct = totalTriage > 0 ? Math.round((t2 / totalTriage) * 100) : 0;
-    const t3Pct = totalTriage > 0 ? Math.max(0, 100 - (t0Pct + t1Pct + t2Pct)) : 0;
-
-    return {
-      id: s.id,
-      name: s.name,
-      total: s.patients_count || 0,
-      volunteers: s.volunteers_count || 0,
-      totalTriage,
-      t0, t1, t2, t3,
-      t0Pct, t1Pct, t2Pct, t3Pct,
-    };
-  });
-});
 
 // Dynamic Trend Chart derived from props.trendData
 const hasTrendData = computed(() => {
@@ -829,7 +475,7 @@ function buildTrendPath(category: 't0' | 't1' | 't2' | 't3'): string {
   const points = props.trendData.map((d: any, idx: number) => {
     const x = Math.round((idx / (totalPoints - 1 || 1)) * 300);
     const val = Number(d[category] || 0);
-    const y = Math.round(110 - (val / max) * 85);
+    const y = Math.round(95 - (val / max) * 75);
     return `${x},${y}`;
   });
 
@@ -875,7 +521,6 @@ onMounted(() => {
 
     const points = props.mapShelters || props.shelters || [];
     for (const s of points) {
-      // Real coordinates ONLY — NEVER Math.random() per Section 9
       const rawLng = s.longitude !== null && s.longitude !== undefined ? Number(s.longitude) : null;
       const rawLat = s.latitude !== null && s.latitude !== undefined ? Number(s.latitude) : null;
 
@@ -884,7 +529,7 @@ onMounted(() => {
       }
 
       const el = document.createElement('div');
-      el.className = 'w-7 h-7 rounded-full border-2 border-white shadow-md flex items-center justify-center text-[10px] font-black cursor-pointer';
+      el.className = 'w-6 h-6 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold cursor-pointer';
 
       const hasT0 = Number(s.t0_count || 0) > 0;
       el.style.backgroundColor = hasT0 ? '#DC2626' : '#0F766E';

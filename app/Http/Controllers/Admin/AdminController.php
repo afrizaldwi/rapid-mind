@@ -144,6 +144,8 @@ final class AdminController extends Controller
         ];
 
         $totalAssessments = Assessment::count();
+        $activeShelters = Shelter::where('is_active', true)->count();
+        $activeVolunteers = User::where('role', UserRole::RELAWAN)->where('is_active', true)->count();
 
         return Inertia::render('Admin/Summary', [
             'kpis' => [
@@ -153,6 +155,8 @@ final class AdminController extends Controller
                 'countT2' => $countT2,
                 'countT3' => $countT3,
                 'totalAssessments' => $totalAssessments,
+                'activeShelters' => $activeShelters,
+                'activeVolunteers' => $activeVolunteers,
             ],
             'kpiTrends' => $kpiTrends,
             'shelters' => $shelters,
