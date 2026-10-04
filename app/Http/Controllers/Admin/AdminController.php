@@ -37,6 +37,16 @@ final class AdminController extends Controller
         $countT2 = TriageResult::where('system_recommendation', TriageCategory::T2)->count();
         $countT3 = TriageResult::where('system_recommendation', TriageCategory::T3)->count();
 
+        $countT0Confirmed = EmergencyEvent::where('status', EmergencyStatus::CONFIRMED->value)->count();
+        $countT1Validated = DB::table('clinical_validations')->where('clinical_result', TriageCategory::T1->value)->count();
+        $countT2Validated = DB::table('clinical_validations')->where('clinical_result', TriageCategory::T2->value)->count();
+        $countT3Validated = DB::table('clinical_validations')->where('clinical_result', TriageCategory::T3->value)->count();
+
+        $totalConfirmed = $countT0Confirmed + $countT1Validated + $countT2Validated + $countT3Validated;
+        if ($totalConfirmed === 0) {
+            $totalConfirmed = $countT0 + $countT1 + $countT2 + $countT3;
+        }
+
         $shelters = Shelter::withCount(['patients', 'volunteers'])->get();
 
         $shelterTriageCounts = DB::table('triage_results')
@@ -57,26 +67,28 @@ final class AdminController extends Controller
             ->keyBy('shelter_id');
 
         $shelters->each(function ($shelter) use ($shelterTriageCounts, $shelterEmergencyCounts) {
-            $shelter->setAttribute('t0_count', (int) ($shelterEmergencyCounts->get($shelter->id)?->aggregate ?? 0));
-            $shelter->setAttribute('t1_count', (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T1->value)->first()?->aggregate ?? 0));
-            $shelter->setAttribute('t2_count', (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T2->value)->first()?->aggregate ?? 0));
-            $shelter->setAttribute('t3_count', (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T3->value)->first()?->aggregate ?? 0));
+            $t0 = (int) ($shelterEmergencyCounts->get($shelter->id)?->aggregate ?? 0);
+            $t1 = (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T1->value)->first()?->aggregate ?? 0);
+            $t2 = (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T2->value)->first()?->aggregate ?? 0);
+            $t3 = (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T3->value)->first()?->aggregate ?? 0);
+            $shelter->setAttribute('t0_count', $t0);
+            $shelter->setAttribute('t1_count', $t1);
+            $shelter->setAttribute('t2_count', $t2);
+            $shelter->setAttribute('t3_count', $t3);
+            $shelter->setAttribute('total_cases', $t0 + $t1 + $t2 + $t3);
         });
 
-        // 1. T0 Early Warning active cases (max 6)
-        $t0Emergencies = EmergencyEvent::with([
-            'patient.shelter',
-            'assessment.triageResult',
-            'shelter',
-            'user:id,name',
-        ])
+        // 1. T0 Early Warning aggregate incidents (strictly anonymous without patient personal data)
+        $t0Emergencies = EmergencyEvent::query()
+            ->select(['id', 'shelter_id', 'status', 'created_at'])
+            ->with('shelter:id,name')
             ->whereIn('status', self::ACTIVE_T0_STATUSES)
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->latest('created_at')
             ->take(6)
             ->get();
 
-        // 2. Geospatial map shelter points
+        // 2. Geospatial map shelter points (aggregate counts only)
         $activeT0Placeholders = implode(', ', array_fill(0, count(self::ACTIVE_T0_STATUSES), '?'));
         $mapShelters = DB::select("
             SELECT s.id, s.name, s.address, s.is_active,
@@ -149,11 +161,13 @@ final class AdminController extends Controller
 
         return Inertia::render('Admin/Summary', [
             'kpis' => [
-                'totalSurvivors' => $totalSurvivors,
+                'totalConfirmed' => $totalConfirmed,
                 'countT0' => $countT0,
+                'countT0Confirmed' => $countT0Confirmed,
                 'countT1' => $countT1,
                 'countT2' => $countT2,
                 'countT3' => $countT3,
+                'totalSurvivors' => $totalSurvivors,
                 'totalAssessments' => $totalAssessments,
                 'activeShelters' => $activeShelters,
                 'activeVolunteers' => $activeVolunteers,
@@ -169,14 +183,14 @@ final class AdminController extends Controller
 
     public function map(): InertiaResponse
     {
-        // Fetch shelters with PostGIS coordinates
+        // Fetch shelters with PostGIS coordinates (aggregate counts only)
         $activeT0Placeholders = implode(', ', array_fill(0, count(self::ACTIVE_T0_STATUSES), '?'));
         $shelters = DB::select("
             SELECT s.id, s.name, s.address, s.is_active,
                    ST_X(s.location::geometry) as longitude,
                    ST_Y(s.location::geometry) as latitude,
                    (SELECT COUNT(*) FROM patients p WHERE p.shelter_id = s.id) as patient_count,
-                   (SELECT COUNT(*) FROM users u WHERE u.shelter_id = s.id) as volunteer_count,
+                   (SELECT COUNT(*) FROM users u WHERE u.shelter_id = s.id AND u.role = 'RELAWAN') as volunteer_count,
                    (SELECT COUNT(*) FROM emergency_events e WHERE e.shelter_id = s.id AND e.status IN ({$activeT0Placeholders})) as t0_count
             FROM shelters s
         ", self::ACTIVE_T0_STATUSES);
@@ -227,32 +241,45 @@ final class AdminController extends Controller
             ];
         }
 
-        $patients = Patient::with([
-            'shelter',
-            'assessments' => fn ($query) => $query
-                ->where('status', AssessmentStatus::COMPLETED)
-                ->whereNotNull('completed_at')
-                ->whereHas('triageResult')
-                ->with('triageResult')
-                ->orderByDesc('completed_at')
-                ->orderByDesc('created_at'),
-        ])
-            ->latest('created_at')
-            ->take(50)
-            ->get()
-            ->map(function (Patient $patient): Patient {
-                $latestAssessment = $patient->assessments->first();
-                $patient->setAttribute('latest_triage_result', $latestAssessment?->triageResult);
-                $patient->setAttribute('latest_triage_completed_at', $latestAssessment?->completed_at);
-                $patient->unsetRelation('assessments');
+        // Aggregate shelter statistics - strictly zero individual patient PII
+        $shelters = Shelter::query()
+            ->select(['id', 'name', 'address', 'is_active'])
+            ->withCount(['patients as patient_count', 'volunteers as volunteer_count'])
+            ->get();
 
-                return $patient;
-            });
+        $shelterTriageCounts = DB::table('triage_results')
+            ->join('assessments', 'assessments.id', '=', 'triage_results.assessment_id')
+            ->join('patients', 'patients.id', '=', 'assessments.patient_id')
+            ->where('assessments.status', AssessmentStatus::COMPLETED->value)
+            ->whereNotNull('patients.shelter_id')
+            ->selectRaw('patients.shelter_id, triage_results.system_recommendation, count(*) as aggregate')
+            ->groupBy('patients.shelter_id', 'triage_results.system_recommendation')
+            ->get();
+
+        $shelterEmergencyCounts = DB::table('emergency_events')
+            ->whereNotNull('shelter_id')
+            ->whereIn('status', self::ACTIVE_T0_STATUSES)
+            ->selectRaw('shelter_id, count(*) as aggregate')
+            ->groupBy('shelter_id')
+            ->get()
+            ->keyBy('shelter_id');
+
+        $shelters->each(function ($shelter) use ($shelterTriageCounts, $shelterEmergencyCounts) {
+            $t0 = (int) ($shelterEmergencyCounts->get($shelter->id)?->aggregate ?? 0);
+            $t1 = (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T1->value)->first()?->aggregate ?? 0);
+            $t2 = (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T2->value)->first()?->aggregate ?? 0);
+            $t3 = (int) ($shelterTriageCounts->where('shelter_id', $shelter->id)->where('system_recommendation', TriageCategory::T3->value)->first()?->aggregate ?? 0);
+            $shelter->setAttribute('t0_count', $t0);
+            $shelter->setAttribute('t1_count', $t1);
+            $shelter->setAttribute('t2_count', $t2);
+            $shelter->setAttribute('t3_count', $t3);
+            $shelter->setAttribute('total_cases', $t0 + $t1 + $t2 + $t3);
+        });
 
         return Inertia::render('Admin/Analytics', [
             'distribution' => $distribution,
             'trendData' => $trendData,
-            'patients' => $patients,
+            'shelters' => $shelters,
         ]);
     }
 
@@ -265,5 +292,4 @@ final class AdminController extends Controller
 
         return Inertia::render('Admin/People/Index', ['kind' => 'relawan', 'users' => $volunteers]);
     }
-
 }

@@ -103,6 +103,16 @@ export default defineConfig({
             },
         }),
     ],
+    server: {
+        host: "0.0.0.0",
+        port: 5173,
+        origin: "http://localhost:5173",
+        cors: true,
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Private-Network": "true",
+        },
+    },
     resolve: {
         alias: {
             '@': '/resources/js',

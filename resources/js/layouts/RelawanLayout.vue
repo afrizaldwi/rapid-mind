@@ -61,10 +61,11 @@
                 <button
                     type="button"
                     @click="logout"
-                    title="Keluar"
-                    class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+                    title="Logout Relawan"
+                    aria-label="Logout Relawan"
+                    class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
                 >
-                    <span class="text-sm font-medium">Keluar</span>
+                    <LogOut class="w-4 h-4" />
                 </button>
             </div>
         </header>
@@ -211,7 +212,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { BookOpen, ClipboardList, FolderOpen, House } from "lucide-vue-next";
+import { BookOpen, ClipboardList, FolderOpen, House, LogOut } from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
 import { router } from "@inertiajs/vue3";
 import { useRelawanRuntime } from "@/relawan/runtime";

@@ -146,7 +146,7 @@
                                 class="text-xs text-slate-600 max-w-xs leading-relaxed"
                             >
                                 Panduan humanis Look, Listen, Link tanpa beban
-                                input formulir, dan teknik relaksasi 5-4-3-2-1.
+                                input formulir.
                             </p>
                         </div>
                         <BookOpen

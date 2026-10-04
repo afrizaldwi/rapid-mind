@@ -251,6 +251,9 @@ final class WorkspaceRelationshipTest extends TestCase
             ->where('shelters.0.t0_count', 4)
             ->where('mapShelters.0.t0_count', 4)
             ->has('t0Emergencies', 4)
+            ->missing('t0Emergencies.0.patient')
+            ->missing('t0Emergencies.0.assessment')
+            ->missing('patients')
             ->etc());
 
         $this->get('/admin/map')->assertOk()->assertInertia(fn (Assert $page) => $page

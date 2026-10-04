@@ -37,65 +37,96 @@
         </div>
       </div>
 
-      <!-- Master Patient Records Table -->
+      <!-- Aggregate Posko & Regional Distribution Table (Strictly Zero Patient PII) -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 class="font-bold text-slate-900 text-sm">
-              Data Agregat Penyintas Terdata
+              Rekapitulasi Sebaran Wilayah & Posko
             </h3>
             <p class="text-xs text-slate-500">
-              Menampilkan 50 penyintas terbaru dengan hasil skrining awal.
+              Distribusi agregat kasus terkonfirmasi per posko penanggulangan bencana.
             </p>
           </div>
           <span class="text-xs font-bold text-slate-500">
-            {{ patients?.length || 0 }} rekam data
+            {{ shelters?.length || 0 }} posko aktif
           </span>
         </div>
 
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
-            <tr>
-              <th class="py-4 px-6">Nama Penyintas</th>
-              <th class="py-4 px-6">NIK</th>
-              <th class="py-4 px-6">Posko</th>
-              <th class="py-4 px-6">Kategori Rekomendasi</th>
-              <th class="py-4 px-6">Total Skor</th>
-              <th class="py-4 px-6">Waktu Skrining</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
-            <tr v-for="p in patients" :key="p.id" class="hover:bg-slate-50/70 transition">
-              <td class="py-4 px-6 font-bold text-slate-900">
-                {{ p.name }}
-              </td>
-              <td class="py-4 px-6 text-slate-500">
-                {{ p.nik || '-' }}
-              </td>
-              <td class="py-4 px-6">
-                {{ p.shelter?.name || 'Posko tidak diketahui' }}
-              </td>
-              <td class="py-4 px-6">
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-bold"
-                  :class="triageTextColor(p.latest_triage_result?.system_recommendation)"
-                >
-                  <span
-                    class="w-1.5 h-1.5 rounded-full shrink-0"
-                    :class="triageDotColor(p.latest_triage_result?.system_recommendation)"
-                  ></span>
-                  {{ p.latest_triage_result?.system_recommendation || 'Belum ada hasil' }}
-                </span>
-              </td>
-              <td class="py-4 px-6 font-bold">
-                {{ p.latest_triage_result ? `${p.latest_triage_result.total_score} / 37` : '-' }}
-              </td>
-              <td class="py-4 px-6 text-slate-400">
-                {{ p.latest_triage_completed_at ? new Date(p.latest_triage_completed_at).toLocaleDateString('id-ID') : '-' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+              <tr>
+                <th class="py-4 px-6">Nama Posko</th>
+                <th class="py-4 px-6">Wilayah / Lokasi</th>
+                <th class="py-4 px-6">Penyintas Terdata</th>
+                <th class="py-4 px-6">T0 (Darurat)</th>
+                <th class="py-4 px-6">T1 (Tinggi)</th>
+                <th class="py-4 px-6">T2 (Sedang)</th>
+                <th class="py-4 px-6">T3 (Stabil)</th>
+                <th class="py-4 px-6">Total Kasus</th>
+                <th class="py-4 px-6 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
+              <tr v-if="!shelters?.length">
+                <td colspan="9" class="py-8 text-center text-slate-400 font-normal">
+                  Belum ada posko terdata.
+                </td>
+              </tr>
+              <tr v-for="s in shelters" :key="s.id" class="hover:bg-slate-50/70 transition">
+                <td class="py-4 px-6 font-bold text-slate-900">
+                  {{ s.name }}
+                </td>
+                <td class="py-4 px-6 text-slate-500">
+                  {{ s.address || 'Kawasan Posko Bencana' }}
+                </td>
+                <td class="py-4 px-6 font-medium text-slate-700">
+                  {{ s.patient_count || 0 }} jiwa
+                </td>
+                <td class="py-4 px-6">
+                  <span v-if="s.t0_count > 0" class="inline-flex items-center gap-1 text-xs font-bold text-rose-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>
+                    {{ s.t0_count }}
+                  </span>
+                  <span v-else class="text-slate-400">0</span>
+                </td>
+                <td class="py-4 px-6">
+                  <span v-if="s.t1_count > 0" class="inline-flex items-center gap-1 text-xs font-bold text-orange-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-600 shrink-0"></span>
+                    {{ s.t1_count }}
+                  </span>
+                  <span v-else class="text-slate-400">0</span>
+                </td>
+                <td class="py-4 px-6">
+                  <span v-if="s.t2_count > 0" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0"></span>
+                    {{ s.t2_count }}
+                  </span>
+                  <span v-else class="text-slate-400">0</span>
+                </td>
+                <td class="py-4 px-6">
+                  <span v-if="s.t3_count > 0" class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
+                    {{ s.t3_count }}
+                  </span>
+                  <span v-else class="text-slate-400">0</span>
+                </td>
+                <td class="py-4 px-6 font-bold text-slate-900">
+                  {{ s.total_cases ?? ((s.t0_count || 0) + (s.t1_count || 0) + (s.t2_count || 0) + (s.t3_count || 0)) }}
+                </td>
+                <td class="py-4 px-6 text-right">
+                  <Link
+                    :href="`/admin/operations/posko/${s.id}`"
+                    class="font-semibold text-teal-700 hover:text-teal-900 transition text-xs"
+                  >
+                    Detail Posko →
+                  </Link>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </AdminLayout>
@@ -103,13 +134,14 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import * as echarts from 'echarts';
 
 const props = defineProps<{
   distribution: { T0: number; T1: number; T2: number; T3: number };
   trendData: Array<{ date: string; t1: number; t2: number; t3: number }>;
-  patients: any[];
+  shelters: any[];
 }>();
 
 const pieChartRef = ref<HTMLElement | null>(null);
@@ -163,20 +195,4 @@ onMounted(() => {
     });
   }
 });
-
-function triageTextColor(value?: string): string {
-  if (value?.startsWith('T0')) return 'text-rose-700';
-  if (value === 'T1') return 'text-orange-700';
-  if (value === 'T2') return 'text-amber-700';
-  if (value === 'T3') return 'text-emerald-700';
-  return 'text-slate-500';
-}
-
-function triageDotColor(value?: string): string {
-  if (value?.startsWith('T0')) return 'bg-rose-600';
-  if (value === 'T1') return 'bg-orange-600';
-  if (value === 'T2') return 'bg-amber-600';
-  if (value === 'T3') return 'bg-emerald-600';
-  return 'bg-slate-400';
-}
 </script>

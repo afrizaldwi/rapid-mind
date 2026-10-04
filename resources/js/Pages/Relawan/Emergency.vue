@@ -67,7 +67,7 @@
                         {{
                             localEmergency
                                 ? transmissionLabel
-                                : "Diterima server"
+                                : "Data berhasil dikirim ke tim kesehatan."
                         }}
                     </span>
                 </div>
@@ -178,7 +178,7 @@ const transmissionLabel = computed(
             PENDING_SYNC: "Menunggu sinkronisasi",
             SYNCING: "Menunggu sinkronisasi",
             SYNC_FAILED: "Sinkronisasi belum berhasil",
-            SYNCED: "Diterima server",
+            SYNCED: "Data berhasil dikirim ke tim kesehatan.",
         })[props.localEmergency?.sync_state ?? "LOCAL_SAVED"],
 );
 
