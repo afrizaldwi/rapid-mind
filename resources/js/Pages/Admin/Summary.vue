@@ -17,7 +17,7 @@
           </div>
 
           <!-- Total Confirmed Primary Statistic -->
-          <div class="flex items-baseline gap-2.5 shrink-0 bg-white border border-slate-200 px-4 py-2 rounded-md shadow-2xs">
+          <div class="flex items-center gap-2.5 shrink-0 bg-white border border-slate-200 p-4 rounded-md shadow-2xs">
             <span class="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
               {{ totalConfirmedCases }}
             </span>
