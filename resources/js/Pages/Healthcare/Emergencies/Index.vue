@@ -194,7 +194,7 @@
                                 @click="selectedFilter = 'PENDING'"
                                 :class="
                                     selectedFilter === 'PENDING'
-                                        ? 'bg-rose-700 text-white font-semibold'
+                                        ? 'bg-slate-900 text-white font-semibold'
                                         : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'
                                 "
                                 class="px-2.5 py-1 rounded-lg transition"
@@ -342,7 +342,16 @@
                                     class="flex items-center gap-1.5 text-xs text-slate-500"
                                 >
                                     <span
-                                        class="font-bold text-[10px] uppercase tracking-wider"
+                                        class="w-1.5 h-1.5 rounded-full shrink-0"
+                                        :class="
+                                            selectedItem.semanticPriority ===
+                                            'T0_CONFIRMED'
+                                                ? 'bg-rose-600'
+                                                : 'bg-amber-600'
+                                        "
+                                    ></span>
+                                    <span
+                                        class="font-bold text-[11px] uppercase tracking-wider"
                                         :class="
                                             selectedItem.semanticPriority ===
                                             'T0_CONFIRMED'
@@ -352,8 +361,8 @@
                                     >
                                         {{ selectedItem.semanticPriorityLabel }}
                                     </span>
-                                    <span>·</span>
-                                    <span>{{
+                                    <span class="text-slate-300">·</span>
+                                    <span class="text-slate-600">{{
                                         selectedItem.semanticStatusDescription
                                     }}</span>
                                 </div>
@@ -398,9 +407,12 @@
                                 </button>
                                 <span
                                     v-else-if="selectedItem.hasReferral"
-                                    class="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold"
+                                    class="text-xs font-semibold text-teal-800 flex items-center gap-1"
                                 >
-                                    Rujukan Medis Diterbitkan
+                                    <svg class="w-4 h-4 text-teal-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Rujukan medis diterbitkan</span>
                                 </span>
                             </div>
                         </div>
@@ -540,38 +552,10 @@
                                 v-if="activeTab === 'overview'"
                                 class="space-y-5"
                             >
-                                <!-- Status Kritis (Section 18: Much quieter, very pale red, thin border, small dot) -->
-                                <div
-                                    v-if="
-                                        selectedItem.hasRedFlag ||
-                                        selectedItem.semanticPriority.startsWith(
-                                            'T0',
-                                        )
-                                    "
-                                    class="py-2.5 px-3.5 rounded-lg border border-rose-200/80 bg-rose-50/40 flex items-center gap-2 text-xs text-rose-900"
-                                >
-                                    <span
-                                        class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"
-                                    ></span>
-                                    <span class="font-bold text-rose-950"
-                                        >STATUS KRITIS</span
-                                    >
-                                    <span class="text-rose-700">·</span>
-                                    <span class="font-medium text-rose-800"
-                                        >{{
-                                            selectedItem.semanticPriorityLabel
-                                        }}
-                                        —
-                                        {{
-                                            selectedItem.semanticStatusDescription
-                                        }}</span
-                                    >
-                                </div>
-
                                 <!-- Indikator Bahaya / Red Flag (Sections 19, 20: Real data, thin dividers, NO giant red container) -->
                                 <div class="pt-2">
                                     <div
-                                        class="flex items-center justify-between pb-2.5 border-b border-slate-100"
+                                        class="flex items-baseline justify-between pb-2.5 border-b border-slate-100"
                                     >
                                         <h3
                                             class="text-xs font-bold uppercase tracking-wider text-slate-900"
@@ -580,18 +564,14 @@
                                         </h3>
                                         <span
                                             v-if="detectedRedFlags.length > 0"
-                                            class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200/70 uppercase tracking-wider"
+                                            class="text-xs font-semibold text-rose-700"
                                         >
-                                            {{
-                                                detectedRedFlags.length
-                                            }}
-                                            Terdeteksi
+                                            {{ detectedRedFlags.length }} terdeteksi
                                         </span>
                                         <span
                                             v-else
-                                            class="text-[10px] text-slate-400"
-                                            >Tidak ada indikator
-                                            terdeteksi</span
+                                            class="text-xs text-slate-400 font-normal"
+                                            >Tidak ada indikator terdeteksi</span
                                         >
                                     </div>
 
@@ -617,7 +597,7 @@
                                                 </p>
                                             </div>
                                             <span
-                                                class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0"
+                                                class="text-xs font-semibold text-rose-700 shrink-0 flex items-center gap-1"
                                             >
                                                 ✓ Terdeteksi
                                             </span>
@@ -955,13 +935,10 @@
                                             </p>
                                         </div>
                                         <span
-                                            v-if="
-                                                selectedItem.srqScore !== null
-                                            "
-                                            class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700"
+                                            v-if="selectedItem.srqScore !== null"
+                                            class="text-xs font-mono font-medium text-slate-600"
                                         >
-                                            Skor: {{ selectedItem.srqScore }} /
-                                            20
+                                            Skor: {{ selectedItem.srqScore }} / 20
                                         </span>
                                     </div>
 
@@ -1397,8 +1374,9 @@
                                             >Rujukan Medis Diterbitkan</span
                                         >
                                         <span
-                                            class="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]"
+                                            class="text-xs font-semibold text-teal-800 flex items-center gap-1.5"
                                         >
+                                            <span class="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0"></span>
                                             {{
                                                 formatReferralStatus(
                                                     selectedItem.referrals[0]

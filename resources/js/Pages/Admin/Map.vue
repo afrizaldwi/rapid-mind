@@ -15,11 +15,11 @@
       <!-- Map & Sidebar Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[640px]">
         <!-- Interactive Map Container -->
-        <div class="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden relative">
+        <div class="lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden relative">
           <div ref="mapContainer" class="w-full h-full min-h-[500px]"></div>
 
           <!-- Map Legend Overlay -->
-          <div class="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-md border border-slate-200 text-xs space-y-2 z-10">
+          <div class="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md p-3.5 rounded-lg shadow-md border border-slate-200 text-xs space-y-2 z-10">
             <span class="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">Indikator Peta</span>
             <div class="flex items-center space-x-2">
               <span class="w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white shadow-xs"></span>
@@ -37,7 +37,7 @@
         </div>
 
         <!-- Shelter Directory Sidebar -->
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-xs p-5 flex flex-col space-y-4 overflow-y-auto">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col space-y-4 overflow-y-auto">
           <h3 class="font-bold text-slate-900 text-xs uppercase tracking-wider">
             Daftar Posko Lapangan ({{ shelters?.length || 0 }})
           </h3>
@@ -46,7 +46,7 @@
             <div
               v-for="s in shelters"
               :key="s.id"
-              class="p-4 rounded-2xl border transition"
+              class="p-4 rounded-lg border transition"
               :class="Number(s.t0_count) > 0 ? 'bg-red-50/60 border-red-300' : 'bg-slate-50 border-slate-200'"
             >
               <div class="flex items-start justify-between">
@@ -137,7 +137,7 @@ onMounted(() => {
         <p style="font-size: 11px; color: #64748B; margin: 0 0 6px 0;">${s.address || ''}</p>
         <p style="font-size: 11px; margin: 2px 0;">👥 <strong>${s.patient_count || 0}</strong> Penyintas Terdata</p>
         <p style="font-size: 11px; margin: 2px 0;">🤝 <strong>${s.volunteer_count || 0}</strong> Relawan Bertugas</p>
-        ${hasT0 ? `<p style="font-size: 11px; color: #991B1B; font-weight: bold; margin: 4px 0 0 0;">🚨 ${s.t0_count} Kasus Darurat Aktif</p>` : ''}
+        ${hasT0 ? `<p style="font-size: 11px; color: #991B1B; font-weight: bold; margin: 4px 0 0 0;">${s.t0_count} Kasus Darurat Aktif</p>` : ''}
       </div>
     `);
 

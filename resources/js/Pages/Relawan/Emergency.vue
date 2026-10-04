@@ -1,16 +1,16 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6 pb-20">
-      <div v-if="broadcastWarning" role="alert" class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+      <div v-if="broadcastWarning" role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
         {{ broadcastWarning }}
       </div>
 
       <!-- Incident Header Banner -->
-      <div class="bg-red-800 text-white rounded-3xl p-6 shadow-xl border border-red-700 space-y-4">
+      <div class="bg-red-800 text-white rounded-xl p-6 shadow-xl border border-red-700 space-y-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <Siren class="h-6 w-6" aria-hidden="true" />
-            <span class="text-xs font-black uppercase tracking-wider bg-red-900/80 px-2.5 py-1 rounded-md">
+            <span class="text-xs font-bold uppercase tracking-wider bg-red-900/80 px-2.5 py-1 rounded-md">
               Insiden T0 Darurat Aktif
             </span>
           </div>
@@ -18,7 +18,7 @@
         </div>
 
         <div>
-          <h2 class="text-2xl font-black tracking-tight">
+          <h2 class="text-2xl font-bold tracking-tight">
             {{ emergency.patient?.name || 'Penyintas Tanpa Nama' }}
           </h2>
           <p class="text-xs text-red-200 mt-1">
@@ -28,7 +28,7 @@
       </div>
 
       <!-- 3 Separate State Axes (AGENTS.md Critical Rule) -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Status Multi-Dimensi Insiden
         </h3>
@@ -36,7 +36,7 @@
         <!-- Axis 1: Status Klinis -->
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
           <span class="text-slate-600 font-semibold">1. Status Klinis:</span>
-          <span class="font-extrabold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+          <span class="font-semibold text-rose-700 text-xs">
             {{ clinicalLabel }}
           </span>
         </div>
@@ -44,7 +44,7 @@
         <!-- Axis 2: Transmisi Server -->
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
           <span class="text-slate-600 font-semibold">2. Transmisi Sistem:</span>
-          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+          <span class="font-semibold text-teal-800 text-xs">
             {{ localEmergency ? transmissionLabel : 'Diterima server' }}
           </span>
         </div>
@@ -53,8 +53,8 @@
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
           <span class="text-slate-600 font-semibold">3. Respons Faskes:</span>
           <span
-            class="font-bold px-2 py-0.5 rounded-md border"
-            :class="emergency.status === 'PENDING' ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-teal-800 bg-teal-50 border-teal-200'"
+            class="font-semibold text-xs"
+            :class="emergency.status === 'PENDING' ? 'text-amber-800' : 'text-teal-800'"
           >
             {{ healthcareResponse }}
           </span>
@@ -62,7 +62,7 @@
       </div>
 
       <!-- Safety Protocol Guidelines -->
-      <div class="bg-amber-50 border border-amber-300 rounded-2xl p-5 text-xs text-amber-950 space-y-2">
+      <div class="bg-amber-50 border border-amber-300 rounded-xl p-5 text-xs text-amber-950 space-y-2">
         <div class="flex items-center space-x-2 font-bold text-amber-900 text-sm">
           <ShieldAlert class="h-4 w-4" aria-hidden="true" />
           <h4>Protokol Keselamatan Relawan</h4>
@@ -75,7 +75,7 @@
       </div>
 
       <!-- Incident Location & Details -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs text-xs space-y-2.5">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs text-xs space-y-2.5">
         <h3 class="font-bold text-slate-500 uppercase tracking-wider text-[11px]">
           Detail Lokasi & Kejadian
         </h3>
@@ -111,7 +111,6 @@
 import { computed } from 'vue';
 import { ShieldAlert, Siren, Smartphone } from 'lucide-vue-next';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
-import Badge from '@/components/ui/Badge.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
 import type { LocalEmergency } from '@/offline/db';
 

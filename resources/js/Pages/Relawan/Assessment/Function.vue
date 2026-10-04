@@ -1,7 +1,7 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6 pb-64">
-      <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200">
+      <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
           Bagian C: Keberfungsian Harian
         </span>
@@ -16,7 +16,7 @@
 
       <div class="space-y-5">
         <div v-for="d in domains" :key="d.code"
-          class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+          class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-start justify-between gap-3">
             <h3 class="font-semibold text-slate-900 text-base leading-snug">
               {{ d.code }}. {{ d.title }}

@@ -1,7 +1,7 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6 pb-56">
-      <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200">
+      <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
           Tinjau Sebelum Finalisasi
         </span>
@@ -14,7 +14,7 @@
       </div>
 
       <!-- Identity Review Card -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Identitas Penyintas
         </h3>
@@ -28,19 +28,19 @@
 
       <!-- Subtotal Breakdown -->
       <div class="grid grid-cols-3 gap-3 text-center">
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <p class="text-[11px] font-bold text-slate-500 uppercase">SRQ-20</p>
           <p class="text-xl font-extrabold text-slate-900 mt-1">{{ srqYesCount }}</p>
           <p class="text-[10px] text-slate-400">dari 20 Ya</p>
         </div>
 
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <p class="text-[11px] font-bold text-slate-500 uppercase">Faktor Risiko</p>
           <p class="text-xl font-extrabold text-amber-800 mt-1">{{ riskScore }}</p>
           <p class="text-[10px] text-slate-400">dari 8 Poin</p>
         </div>
 
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <p class="text-[11px] font-bold text-slate-500 uppercase">Fungsi Harian</p>
           <p class="text-xl font-extrabold text-teal-800 mt-1">{{ functionScore }}</p>
           <p class="text-[10px] text-slate-400">dari 9 Poin</p>
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Estimation Card -->
-      <div v-if="assessmentComplete" class="bg-teal-50 border border-teal-200 rounded-2xl p-5 space-y-2">
+      <div v-if="assessmentComplete" class="bg-teal-50 border border-teal-200 rounded-xl p-5 space-y-2">
         <div class="flex items-center space-x-2 text-teal-900 font-bold text-sm">
           <Calculator class="h-4 w-4" aria-hidden="true" />
           <h4>Kalkulasi Deterministik Sistem</h4>

@@ -1,6 +1,6 @@
 <template>
     <div v-if="emergency" class="space-y-5 pb-20">
-        <div class="rounded-3xl bg-red-800 p-6 text-white shadow-xl">
+        <div class="rounded-xl bg-red-800 p-6 text-white shadow-xl">
             <div class="flex items-center gap-2 text-xs font-bold uppercase">
                 <Siren class="h-4 w-4" aria-hidden="true" />
                 <p>Insiden T0-Suspect</p>
@@ -12,7 +12,7 @@
         </div>
 
         <div
-            class="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm"
+            class="space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm"
         >
             <div class="flex justify-between gap-3">
                 <span>Status klinis</span><strong>{{ clinicalStatus }}</strong>
@@ -27,7 +27,7 @@
         </div>
 
         <div
-            class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+            class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
         >
             <strong>✓ Aman tersimpan di perangkat.</strong>
             <p v-if="emergency.sync_state !== 'SYNCED'" class="mt-1">
@@ -40,7 +40,7 @@
             </p>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 text-sm">
+        <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
             <p>
                 <strong>Waktu:</strong>
                 {{ new Date(emergency.created_at).toLocaleString("id-ID") }}

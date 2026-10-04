@@ -30,9 +30,7 @@
               <span class="text-sm font-bold tracking-tight text-slate-900 leading-none">
                 RAPID-MIND
               </span>
-              <span class="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200/70 px-1.5 py-0.5 rounded leading-none">
-                Healthcare
-              </span>
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider leading-none">Healthcare</span>
             </div>
             <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">
               Clinical Triage & Response
@@ -43,13 +41,13 @@
 
       <!-- Right: Connection Status & Identity -->
       <div class="flex items-center space-x-3">
-        <!-- Canonical Connection Status Badge -->
+        <!-- Canonical Connection Status (plain dot + text, no container pill) -->
         <div
-          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-          :class="connectionStatus.classes"
+          class="hidden sm:flex items-center gap-1.5 text-xs font-medium"
+          :class="connectionStatus.textClass"
         >
           <span
-            class="w-1.5 h-1.5 rounded-full"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
             :class="connectionStatus.dotClass"
           ></span>
           <span>{{ connectionStatus.label }}</span>
@@ -177,7 +175,7 @@
                 </div>
                 <span
                   v-if="pendingT0Count > 0"
-                  class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white"
+                  class="text-[11px] font-bold text-rose-600 font-mono"
                 >
                   {{ pendingT0Count }}
                 </span>
@@ -335,7 +333,7 @@ const connectionStatus = computed(() => {
   if (!isOnline.value) {
     return {
       label: 'Offline',
-      classes: 'bg-slate-100 text-slate-600 border border-slate-200',
+      textClass: 'text-slate-500',
       dotClass: 'bg-slate-400',
       stale: true,
     };
@@ -343,7 +341,7 @@ const connectionStatus = computed(() => {
   if (serverReachable.value === false) {
     return {
       label: 'Jaringan Terputus',
-      classes: 'bg-rose-50 text-rose-700 border border-rose-200',
+      textClass: 'text-rose-700',
       dotClass: 'bg-rose-500',
       stale: true,
     };
@@ -351,7 +349,7 @@ const connectionStatus = computed(() => {
   if (serverReachable.value === null) {
     return {
       label: 'Memeriksa Server',
-      classes: 'bg-slate-100 text-slate-600 border border-slate-200',
+      textClass: 'text-slate-500',
       dotClass: 'bg-slate-400',
       stale: true,
     };
@@ -359,14 +357,14 @@ const connectionStatus = computed(() => {
   if (!subscriptionReady.value) {
     return {
       label: 'Menghubungkan Ulang',
-      classes: 'bg-amber-50 text-amber-800 border border-amber-200',
+      textClass: 'text-amber-800',
       dotClass: 'bg-amber-500 animate-pulse',
       stale: true,
     };
   }
   return {
     label: 'Online',
-    classes: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80',
+    textClass: 'text-slate-600',
     dotClass: 'bg-emerald-500',
     stale: false,
   };

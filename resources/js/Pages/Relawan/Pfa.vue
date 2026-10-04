@@ -2,13 +2,13 @@
   <RelawanLayout>
     <div class="space-y-5">
       <!-- Title & Phase Info -->
-      <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200">
+      <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <div class="flex items-center justify-between">
           <div>
-            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
+            <span class="text-xs font-bold text-teal-800 uppercase tracking-wider block">
               Hari 1–3 Pascabencana
             </span>
-            <h2 class="text-xl font-extrabold text-slate-900 mt-1">
+            <h2 class="text-xl font-bold text-slate-900 mt-1">
               Buku Saku Digital PFA
             </h2>
           </div>
@@ -34,7 +34,7 @@
 
       <!-- TAHAP 1: LOOK -->
       <div v-if="activeTab === 'LOOK'" class="space-y-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
             <h4> Amati Keamanan Fisik</h4>
           </div>
@@ -44,7 +44,7 @@
           </ul>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
             <h4>Amati Reaksi Distres Parah</h4>
           </div>
@@ -68,7 +68,7 @@
       <!-- TAHAP 2: LISTEN -->
       <div v-if="activeTab === 'LISTEN'" class="space-y-4">
         <!-- Sapaan Awal -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
             <h4>Skrip Sapaan Hangat</h4>
           </div>
@@ -78,7 +78,7 @@
         </div>
 
         <!-- Do's and Don'ts -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <h4 class="font-bold text-sm text-slate-900">
             Panduan Sikap (Do's & Don'ts)
           </h4>
@@ -109,7 +109,7 @@
         </div>
 
         <!-- Grounding 5-4-3-2-1 -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <h4 class="text-sm font-bold text-teal-800">Latihan Grounding</h4>
           <p class="text-xs text-slate-600 leading-relaxed">
             Gunakan teknik ini jika penyintas tampak panik, napas tersengal, atau mengalami disorientasi:
@@ -131,7 +131,7 @@
 
       <!-- TAHAP 3: LINK -->
       <div v-if="activeTab === 'LINK'" class="space-y-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
             <h4>Kebutuhan Dasar Logistik</h4>
           </div>
@@ -154,7 +154,7 @@
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
             <h4>Menghubungkan Keluarga</h4>
           </div>
@@ -163,7 +163,7 @@
           </blockquote>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
             <h4>Penutup Sesi Humanis</h4>
           </div>

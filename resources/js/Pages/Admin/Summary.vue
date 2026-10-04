@@ -95,8 +95,8 @@
                   </span>
                 </div>
               </div>
-              <span v-if="activeT0List.length > 0" class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200/70">
-                {{ activeT0List.length }} Kasus
+              <span v-if="activeT0List.length > 0" class="text-xs font-semibold text-rose-700">
+                {{ activeT0List.length }} kasus
               </span>
             </div>
 
@@ -117,9 +117,10 @@
                       {{ e.patient?.name || 'Penyintas' }}
                     </span>
                     <span
-                      class="px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wide"
-                      :class="e.status === 'CONFIRMED' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'"
+                      class="inline-flex items-center gap-1 text-[11px] font-bold tracking-wide"
+                      :class="e.status === 'CONFIRMED' ? 'text-rose-700' : 'text-amber-700'"
                     >
+                      <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="e.status === 'CONFIRMED' ? 'bg-rose-600' : 'bg-amber-600'"></span>
                       {{ e.status === 'CONFIRMED' ? 'T0-CONFIRMED' : 'T0-SUSPECT' }}
                     </span>
                   </div>

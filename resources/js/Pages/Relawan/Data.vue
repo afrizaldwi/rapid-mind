@@ -1,10 +1,10 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6 pb-20">
-      <header class="rounded-2xl border border-slate-200 bg-white p-5">
+      <header class="rounded-xl border border-slate-200 bg-white p-5">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h2 class="text-xl font-extrabold text-slate-900">Data Lapangan</h2>
+            <h2 class="text-xl font-bold text-slate-900">Data Lapangan</h2>
             <p class="mt-1 text-xs text-slate-600">Pekerjaan di perangkat dan data yang telah diterima server.</p>
           </div>
           <button type="button" :disabled="busy || !online" @click="triggerSync"
@@ -18,13 +18,13 @@
       <p v-if="actionError" role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{{ actionError }}</p>
 
       <section class="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 class="text-sm font-extrabold text-slate-800">Asesmen Belum Selesai</h3>
+        <h3 class="text-sm font-bold text-slate-800">Asesmen Belum Selesai</h3>
         <p class="mt-1 text-xs text-slate-600">{{ workspace.groups.value.inProgress.length ? `${workspace.groups.value.inProgress.length} asesmen belum selesai.` : 'Belum ada asesmen yang sedang dikerjakan.' }}</p>
         <RelawanLink href="/relawan/assessment/drafts" class="mt-3 inline-block rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900">Lihat Asesmen Belum Selesai →</RelawanLink>
       </section>
 
       <section class="space-y-3">
-        <h3 class="text-sm font-extrabold text-slate-800">Menunggu Sinkronisasi ({{ workspace.groups.value.pending.length }})</h3>
+        <h3 class="text-sm font-bold text-slate-800">Menunggu Sinkronisasi ({{ workspace.groups.value.pending.length }})</h3>
         <div v-if="workspace.groups.value.pending.length === 0" class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">Belum ada data menunggu sinkronisasi.</div>
         <article v-for="item in workspace.groups.value.pending" :key="item.key"
           class="rounded-xl border bg-white p-4" :class="item.type === 'EMERGENCY' ? 'border-red-300' : 'border-amber-200'">
@@ -34,7 +34,7 @@
               <p class="mt-1 text-xs font-semibold" :class="item.type === 'EMERGENCY' ? 'text-red-800' : 'text-amber-800'">{{ item.type === 'EMERGENCY' ? 'T0-Suspect' : 'Asesmen selesai' }} • {{ item.label }}</p>
               <p class="mt-1 text-xs text-slate-600">{{ formatDate(item.date) }} • Tersimpan di perangkat</p>
             </div>
-            <span v-if="item.type === 'EMERGENCY'" class="shrink-0 rounded-full bg-red-800 px-2 py-1 text-xs font-bold text-white">Prioritas T0</span>
+            <span v-if="item.type === 'EMERGENCY'" class="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-rose-700"><span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>Prioritas T0</span>
           </div>
           <details v-if="item.type === 'EMERGENCY'" class="mt-3 text-xs text-slate-700">
             <summary class="cursor-pointer font-bold">Lihat rincian T0</summary>
@@ -54,7 +54,7 @@
       </section>
 
       <section class="space-y-3">
-        <h3 class="text-sm font-extrabold text-slate-800">Tersinkron ({{ workspace.groups.value.synchronized.length }})</h3>
+        <h3 class="text-sm font-bold text-slate-800">Tersinkron ({{ workspace.groups.value.synchronized.length }})</h3>
         <div v-if="workspace.groups.value.synchronized.length === 0" class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">Belum ada riwayat yang tersinkron.</div>
         <article v-for="item in workspace.groups.value.synchronized" :key="item.key" class="rounded-xl border border-slate-200 bg-white p-4">
           <div class="flex items-start justify-between gap-3">
@@ -62,7 +62,17 @@
               <h4 class="font-bold text-slate-900">{{ item.patientName }}</h4>
               <p class="mt-1 text-xs text-slate-600">{{ item.type === 'EMERGENCY' ? 'T0-Suspect' : 'Asesmen' }} • {{ item.label }} • {{ formatDate(item.date) }}</p>
             </div>
-            <Badge v-if="item.type === 'ASSESSMENT' && item.triage" :variant="badgeVariant(item.triage.system_recommendation)">{{ item.triage.system_recommendation }}</Badge>
+            <span
+              v-if="item.type === 'ASSESSMENT' && item.triage"
+              class="inline-flex items-center gap-1.5 text-xs font-bold"
+              :class="triageTextColor(item.triage.system_recommendation)"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full shrink-0"
+                :class="triageDotColor(item.triage.system_recommendation)"
+              ></span>
+              {{ item.triage.system_recommendation }}
+            </span>
           </div>
           <p v-if="item.type === 'ASSESSMENT'" class="mt-2 text-xs text-slate-600">
             Rekomendasi Sistem: {{ item.triage?.system_recommendation || 'Belum tersedia' }} •
@@ -81,7 +91,6 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
-import Badge from '@/components/ui/Badge.vue';
 import { useRelawanDataWorkspace, type ServerDataAssessment, type ServerDataEmergency } from '@/composables/useRelawanDataWorkspace';
 import { completeLocalAssessment } from '@/offline/assessmentWorkflow';
 import { syncManager } from '@/offline/syncManager';
@@ -139,11 +148,20 @@ async function prepareAssessment(id: string) {
     busy.value = false;
   }
 }
-function badgeVariant(category: string) {
-  if (category === 'T0_SUSPECT' || category === 'T0_CONFIRMED') return 't0';
-  if (category === 'T1') return 't1';
-  if (category === 'T2') return 't2';
-  return 't3';
+function triageTextColor(value?: string): string {
+  if (value?.startsWith('T0')) return 'text-rose-700';
+  if (value === 'T1') return 'text-orange-700';
+  if (value === 'T2') return 'text-amber-700';
+  if (value === 'T3') return 'text-emerald-700';
+  return 'text-slate-600';
+}
+
+function triageDotColor(value?: string): string {
+  if (value?.startsWith('T0')) return 'bg-rose-600';
+  if (value === 'T1') return 'bg-orange-600';
+  if (value === 'T2') return 'bg-amber-600';
+  if (value === 'T3') return 'bg-emerald-600';
+  return 'bg-slate-400';
 }
 function formatDate(value?: string) {
   if (!value) return 'Waktu tidak tersedia';

@@ -30,9 +30,7 @@
               <span class="text-sm font-bold tracking-tight text-slate-900 leading-none">
                 RAPID-MIND
               </span>
-              <span class="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200/70 px-1.5 py-0.5 rounded leading-none">
-                Pusat Komando
-              </span>
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider leading-none">Pusat Komando</span>
             </div>
             <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">
               Disaster Response Monitoring
@@ -43,13 +41,13 @@
 
       <!-- Right: Realtime Connection & Identity -->
       <div class="flex items-center space-x-3">
-        <!-- Canonical Connection Status Badge -->
+        <!-- Canonical Connection Status (plain dot + text, no container pill) -->
         <div
-          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-          :class="isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-slate-100 text-slate-600 border border-slate-200'"
+          class="hidden sm:flex items-center gap-1.5 text-xs font-medium"
+          :class="isOnline ? 'text-slate-600' : 'text-slate-500'"
         >
           <span
-            class="w-1.5 h-1.5 rounded-full"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
             :class="isOnline ? 'bg-emerald-500' : 'bg-slate-400'"
           ></span>
           <span>{{ isOnline ? 'Online' : 'Offline' }}</span>

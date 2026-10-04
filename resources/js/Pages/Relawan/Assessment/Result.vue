@@ -3,7 +3,7 @@
         <div class="space-y-6">
             <!-- Result Card -->
             <div
-                class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 text-center space-y-4"
+                class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 text-center space-y-4"
             >
                 <span
                     class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700"
@@ -23,7 +23,7 @@
                 </p>
                 <div v-if="triageResult" class="py-2">
                     <div
-                        class="inline-flex items-center justify-center px-6 py-3 rounded-2xl text-2xl font-black tracking-wide border-2 shadow-sm"
+                        class="inline-flex items-center justify-center px-6 py-3 rounded-xl text-2xl font-bold tracking-wide border-2 shadow-sm"
                         :class="categoryStyle.badge"
                     >
                         {{ triageResult?.system_recommendation || "—" }}
@@ -91,7 +91,7 @@
                             class="text-[10px] font-bold text-teal-800 uppercase block"
                             >Total</span
                         >
-                        <span class="text-base font-black text-teal-950">{{
+                        <span class="text-base font-bold text-teal-950">{{
                             triageResult?.total_score
                         }}</span>
                         <span class="text-[9px] text-teal-700 block">/37</span>
@@ -102,7 +102,7 @@
             <!-- Field Intervention Guidance -->
             <div
                 v-if="triageResult"
-                class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3"
+                class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-3"
             >
                 <h3
                     class="text-xs font-bold text-slate-500 uppercase tracking-wider"
@@ -116,10 +116,10 @@
 
             <div
                 v-if="isT0Recommendation"
-                class="rounded-2xl border-2 border-red-700 bg-red-50 p-5 shadow-sm"
+                class="rounded-xl border-2 border-red-700 bg-red-50 p-5 shadow-sm"
             >
                 <p
-                    class="text-xs font-black uppercase tracking-wider text-red-800"
+                    class="text-xs font-bold uppercase tracking-wider text-red-800"
                 >
                     Tindakan darurat wajib
                 </p>

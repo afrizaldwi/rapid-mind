@@ -1,14 +1,14 @@
 <template>
   <RelawanLayout>
     <div class="space-y-4">
-      <header class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+      <header class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
         <h1 class="text-xl font-extrabold text-slate-900">Asesmen Belum Selesai</h1>
         <p class="mt-1 text-xs leading-relaxed text-slate-600">Asesmen yang tersimpan di perangkat ini dapat dilanjutkan dari tahap terakhir.</p>
       </header>
 
       <p v-if="error" role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{{ error }}</p>
 
-      <section v-if="!loading && !drafts.length" class="rounded-2xl border border-slate-200 bg-white p-5">
+      <section v-if="!loading && !drafts.length" class="rounded-xl border border-slate-200 bg-white p-5">
         <p v-if="!readFailed" class="text-sm text-slate-600">Belum ada asesmen yang belum selesai.</p>
         <RelawanLink href="/relawan/assessment" class="mt-3 inline-block rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white">Mulai Asesmen Baru</RelawanLink>
       </section>

@@ -1,7 +1,7 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6">
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
           Hari 4–30 Pascabencana
         </span>
@@ -23,7 +23,7 @@
       </section>
 
       <!-- Start New Assessment Form -->
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
         <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
           <UserRound class="h-5 w-5" aria-hidden="true" />
           <h3 class="font-extrabold text-slate-900 text-base">

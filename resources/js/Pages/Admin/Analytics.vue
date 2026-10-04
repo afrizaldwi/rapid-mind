@@ -2,7 +2,7 @@
   <AdminLayout>
     <div class="space-y-8">
       <div>
-        <h2 class="text-xl font-black text-slate-900 tracking-tight">
+        <h2 class="text-xl font-bold text-slate-900 tracking-tight">
           Tren & Analitik Longitudinal 30 Hari
         </h2>
         <p class="text-xs text-slate-500 mt-1">
@@ -13,8 +13,8 @@
       <!-- Charts Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Triage Category Breakdown Pie Chart -->
-        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-          <h3 class="font-extrabold text-slate-900 text-sm">
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <h3 class="font-bold text-slate-900 text-sm">
             Distribusi Proporsi Triase
           </h3>
           <div v-if="hasDistributionData" ref="pieChartRef" class="w-full h-64"></div>
@@ -24,12 +24,12 @@
         </div>
 
         <!-- 30-Day Longitudinal Trend Line Chart -->
-        <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
           <div class="flex items-center justify-between">
-            <h3 class="font-extrabold text-slate-900 text-sm">
+            <h3 class="font-bold text-slate-900 text-sm">
               Tren Kasus Harian (30 Hari Terakhir)
             </h3>
-            <span class="text-xs bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-lg">
+            <span class="text-xs text-slate-400 font-medium">
               Fase Akut & Lanjutan
             </span>
           </div>
@@ -38,10 +38,10 @@
       </div>
 
       <!-- Master Patient Records Table -->
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 class="font-extrabold text-slate-900 text-sm">
+            <h3 class="font-bold text-slate-900 text-sm">
               Data Agregat Penyintas Terdata
             </h3>
             <p class="text-xs text-slate-500">
@@ -49,7 +49,7 @@
             </p>
           </div>
           <span class="text-xs font-bold text-slate-500">
-            {{ patients?.length || 0 }} Rekam Data
+            {{ patients?.length || 0 }} rekam data
           </span>
         </div>
 
@@ -76,9 +76,16 @@
                 {{ p.shelter?.name || 'Posko tidak diketahui' }}
               </td>
               <td class="py-4 px-6">
-                <Badge :variant="badgeVariant(p.latest_triage_result?.system_recommendation)">
+                <span
+                  class="inline-flex items-center gap-1.5 text-xs font-bold"
+                  :class="triageTextColor(p.latest_triage_result?.system_recommendation)"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0"
+                    :class="triageDotColor(p.latest_triage_result?.system_recommendation)"
+                  ></span>
                   {{ p.latest_triage_result?.system_recommendation || 'Belum ada hasil' }}
-                </Badge>
+                </span>
               </td>
               <td class="py-4 px-6 font-bold">
                 {{ p.latest_triage_result ? `${p.latest_triage_result.total_score} / 37` : '-' }}
@@ -97,7 +104,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import Badge from '@/components/ui/Badge.vue';
 import * as echarts from 'echarts';
 
 const props = defineProps<{
@@ -158,19 +164,19 @@ onMounted(() => {
   }
 });
 
-function badgeVariant(category?: string) {
-  switch (category) {
-    case 'T0_SUSPECT':
-    case 'T0_CONFIRMED':
-      return 't0';
-    case 'T1':
-      return 't1';
-    case 'T2':
-      return 't2';
-    case 'T3':
-      return 't3';
-    default:
-      return 'neutral';
-  }
+function triageTextColor(value?: string): string {
+  if (value?.startsWith('T0')) return 'text-rose-700';
+  if (value === 'T1') return 'text-orange-700';
+  if (value === 'T2') return 'text-amber-700';
+  if (value === 'T3') return 'text-emerald-700';
+  return 'text-slate-500';
+}
+
+function triageDotColor(value?: string): string {
+  if (value?.startsWith('T0')) return 'bg-rose-600';
+  if (value === 'T1') return 'bg-orange-600';
+  if (value === 'T2') return 'bg-amber-600';
+  if (value === 'T3') return 'bg-emerald-600';
+  return 'bg-slate-400';
 }
 </script>

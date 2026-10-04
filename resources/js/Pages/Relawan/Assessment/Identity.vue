@@ -1,11 +1,11 @@
 <template>
   <RelawanLayout>
     <div class="space-y-5">
-      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
         <h1 class="text-lg font-extrabold text-slate-900">Konfirmasi Identitas Penyintas</h1>
         <p class="text-xs text-slate-600 mt-2">Periksa identitas sebelum wawancara SRQ-20.</p>
       </div>
-      <div v-if="patient" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 text-sm">
+      <div v-if="patient" class="bg-white rounded-xl border border-slate-200 p-5 space-y-3 text-sm">
         <p><strong>Nama:</strong> {{ patient.name }}</p>
         <p><strong>NIK:</strong> {{ patient.nik || 'Tanpa NIK' }}</p>
         <p><strong>Usia:</strong> {{ patient.age ?? 'Tidak terdata' }}</p>

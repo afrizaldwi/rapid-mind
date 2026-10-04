@@ -2,7 +2,7 @@
   <RelawanLayout>
     <div class="space-y-6 pb-64">
       <!-- Top Patient & Progress Sticky Bar -->
-      <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 sticky top-16 z-20 space-y-3">
+      <div class="bg-white rounded-xl p-4 shadow-xs border border-slate-200 sticky top-16 z-20 space-y-3">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-sm font-bold text-slate-900">
@@ -81,7 +81,7 @@
 
       <!-- SRQ-20 Scrollable Question List -->
       <div class="space-y-4">
-        <div v-for="q in srqQuestions" :key="q.number" class="bg-white p-5 rounded-2xl border transition"
+        <div v-for="q in srqQuestions" :key="q.number" class="bg-white p-5 rounded-xl border transition"
           :class="answers[q.number] === true ? 'border-teal-400 shadow-xs' : 'border-slate-200 shadow-xs'">
           <div class="flex items-start justify-between">
             <div class="flex items-center space-x-2">
