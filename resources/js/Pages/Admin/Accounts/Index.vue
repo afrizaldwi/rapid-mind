@@ -21,7 +21,7 @@
       </div>
 
       <!-- Users Table -->
-      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
             <tr>
@@ -42,11 +42,11 @@
               </td>
               <td class="py-4 px-6">
                 <span
-                  class="px-2.5 py-1 rounded-full text-[11px] font-bold"
+                  class="text-xs font-semibold"
                   :class="{
-                    'bg-teal-100 text-teal-800': u.role === 'RELAWAN',
-                    'bg-indigo-100 text-indigo-800': u.role === 'HEALTHCARE',
-                    'bg-amber-100 text-amber-800': u.role === 'ADMIN',
+                    'text-teal-800': u.role === 'RELAWAN',
+                    'text-indigo-800': u.role === 'HEALTHCARE',
+                    'text-amber-800': u.role === 'ADMIN',
                   }"
                 >
                   {{ u.role }}
@@ -65,7 +65,7 @@
 
       <!-- Create Account Modal -->
       <div v-if="showCreateModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex justify-center items-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-200">
+        <div class="bg-white w-full max-w-md rounded-xl p-6 space-y-4 shadow-2xl border border-slate-200">
           <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 class="font-bold text-slate-900 text-base">
               Buat Akun Petugas Baru

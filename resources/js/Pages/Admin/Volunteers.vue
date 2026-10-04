@@ -12,7 +12,7 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
             <tr>
@@ -55,7 +55,7 @@
 
       <!-- Assign Shelter Modal -->
       <div v-if="assignVolunteerModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex justify-center items-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl border border-slate-200">
+        <div class="bg-white w-full max-w-sm rounded-xl p-6 space-y-4 shadow-xl border border-slate-200">
           <h3 class="font-bold text-slate-900 text-sm">
             Tugaskan Posko untuk {{ selectedVol?.name }}
           </h3>

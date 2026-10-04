@@ -1,84 +1,50 @@
 <template>
-  <div class="min-h-screen bg-[#F5F7FA] flex flex-col text-slate-900 font-sans antialiased">
-    <!-- Top Global Header (60-64px high, crisp white, full-width) -->
-    <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs shrink-0">
-      <!-- Left Brand & Context -->
-      <div class="flex items-center space-x-3 lg:space-x-4">
+  <div class="min-h-screen bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased">
+    <!-- Top Global Header (64px high, crisp white, minimal enterprise style) -->
+    <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+      <!-- Left: Understated Brand & Context -->
+      <div class="flex items-center space-x-3">
         <!-- Mobile hamburger -->
         <button
           type="button"
           @click="sidebarOpen = !sidebarOpen"
           class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-          aria-label="Toggle navigation"
+          aria-label="Buka navigasi"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        <!-- Brand Icon -->
-        <Link href="/admin/summary" class="flex items-center gap-3 group">
-          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0 group-hover:bg-blue-700 transition">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="M12 8v8" />
-              <path d="M8 12h8" />
-            </svg>
-          </div>
+        <!-- Brand Identifier -->
+        <Link href="/admin/summary" class="flex items-center gap-2.5 group">
+          <img src="/logo.png?v=3" alt="RAPID-MIND Logo" class="w-8 h-8 object-contain shrink-0" />
           <div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-black tracking-tight text-slate-900 leading-none">
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-bold tracking-tight text-slate-900 leading-none">
                 RAPID-MIND
               </span>
-              <span class="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 px-2 py-0.5 rounded-full leading-none tracking-wide">
-                BPBD / DINKES
-              </span>
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider leading-none">Pusat Komando</span>
             </div>
             <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">
               Disaster Response Monitoring
             </span>
           </div>
         </Link>
-
-        <!-- Separator on desktop -->
-        <div class="hidden xl:block h-7 w-[1px] bg-slate-200 mx-1"></div>
-
-        <!-- Center operational title on large screen -->
-        <div class="hidden xl:block">
-          <h2 class="text-xs font-bold text-slate-800 leading-tight">
-            Pusat Komando Operasional Kesehatan Jiwa Bencana
-          </h2>
-          <p class="text-[11px] text-slate-400 leading-tight">
-            Pemantauan agregat regional, alokasi sumber daya, dan integrasi lintas posko.
-          </p>
-        </div>
       </div>
 
-      <!-- Right Controls & User Profile -->
+      <!-- Right: Realtime Connection & Identity -->
       <div class="flex items-center space-x-3">
-        <!-- Online Connection Badge -->
-        <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Online</span>
-          <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-
-        <!-- Notification Bell with Count Badge -->
-        <div class="relative">
-          <button
-            type="button"
-            class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-            aria-label="Notifikasi Darurat"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span class="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
-              2
-            </span>
-          </button>
+        <!-- Canonical Connection Status (plain dot + text, no container pill) -->
+        <div
+          class="hidden sm:flex items-center gap-1.5 text-xs font-medium"
+          :class="isOnline ? 'text-slate-600' : 'text-slate-500'"
+        >
+          <span
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="isOnline ? 'bg-emerald-500' : 'bg-slate-400'"
+          ></span>
+          <span>{{ isOnline ? 'Online' : 'Offline' }}</span>
         </div>
 
         <!-- User Profile Pill / Dropdown -->
@@ -86,9 +52,9 @@
           <button
             type="button"
             @click="profileOpen = !profileOpen"
-            class="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-slate-50 transition"
+            class="flex items-center space-x-2.5 p-1 rounded-lg hover:bg-slate-50 transition"
           >
-            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+            <div class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
               {{ userInitials }}
             </div>
             <div class="hidden md:block text-left">
@@ -116,7 +82,7 @@
             </div>
             <Link
               href="/admin/summary"
-              class="block px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-blue-600"
+              class="block px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-800 font-medium"
             >
               Pusat Komando
             </Link>
@@ -141,7 +107,7 @@
         class="fixed inset-0 bg-slate-900/40 z-30 lg:hidden backdrop-blur-xs"
       ></div>
 
-      <!-- Left Sidebar Navigation (240px wide, clean white, grouped) -->
+      <!-- Left Sidebar Navigation (240px wide, quiet white background, enterprise grouped) -->
       <aside
         :class="[
           'fixed lg:static inset-y-0 left-0 z-40 w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
@@ -158,9 +124,9 @@
               <Link
                 href="/admin/summary"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/summary') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/summary') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/summary') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/summary') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 <span>Pusat Komando</span>
@@ -169,9 +135,9 @@
               <Link
                 href="/admin/analytics"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/analytics') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/analytics') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/analytics') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/analytics') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 <span>Data Longitudinal</span>
@@ -188,9 +154,9 @@
               <Link
                 href="/admin/volunteers"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/volunteers') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/volunteers') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/volunteers') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/volunteers') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 <span>Manajemen Relawan</span>
@@ -199,9 +165,9 @@
               <Link
                 href="/admin/operations/posko"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/operations/posko') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/operations/posko') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/operations/posko') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/operations/posko') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 <span>Posko & Sumber Daya</span>
@@ -210,9 +176,9 @@
               <Link
                 href="/admin/logistics"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/logistics') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/logistics') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/logistics') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/logistics') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
                 <span>Kebutuhan Logistik</span>
@@ -229,9 +195,9 @@
               <Link
                 href="/admin/facilities/organizations"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/facilities/organizations') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/facilities/organizations') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/facilities/organizations') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/facilities/organizations') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 <span>Organisasi Faskes</span>
@@ -240,9 +206,9 @@
               <Link
                 href="/admin/facilities/users"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/facilities/users') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/facilities/users') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/facilities/users') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/facilities/users') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span>Akun Healthcare</span>
@@ -250,43 +216,23 @@
             </div>
           </div>
 
-          <!-- Group 4: GEOSPATIAL & MASTER DATA -->
+          <!-- Group 4: SPATIAL -->
           <div>
             <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              SPATIAL & REPORTING
+              SPATIAL
             </div>
             <div class="space-y-0.5">
               <Link
                 href="/admin/map"
                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
-                :class="isRoute('/admin/map') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
+                :class="isRoute('/admin/map') ? 'bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'"
               >
-                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/map') ? 'text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" :class="isRoute('/admin/map') ? 'text-teal-700' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 </svg>
                 <span>Peta Geospasial</span>
               </Link>
             </div>
-          </div>
-        </div>
-
-        <!-- Bottom Sidebar Box (Offline / Sync Status indicator matching reference) -->
-        <div class="p-3 border-t border-slate-100">
-          <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3 flex items-center justify-between text-xs">
-            <div class="flex items-center space-x-2.5">
-              <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-6.364 9 9 0 012.828-6.364m2.829 2.828a5 5 0 012.828 3.536m-5.656 0a5 5 0 011.414-3.536L3 3l18 18" />
-                </svg>
-              </div>
-              <div>
-                <span class="font-bold text-rose-700 block leading-tight text-[11px]">Mode Offline</span>
-                <span class="text-[10px] text-slate-500 block leading-tight">Data tersimpan lokal</span>
-              </div>
-            </div>
-            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
           </div>
         </div>
       </aside>
@@ -300,21 +246,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-
 const sidebarOpen = ref(false);
 const profileOpen = ref(false);
 
+// Canonical network connection status
+const isOnline = ref(typeof window !== 'undefined' ? window.navigator.onLine : true);
+
+function handleOnline() {
+  isOnline.value = true;
+}
+
+function handleOffline() {
+  isOnline.value = false;
+}
+
+onMounted(() => {
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('online', handleOnline);
+  window.removeEventListener('offline', handleOffline);
+});
+
+// Role-correct identity (Section 42: Admin BPBD / Dinkes with actual authenticated data)
 const userDisplayName = computed(() => {
-  return user.value?.name || 'dr. Sarah Amanda, Sp.KJ';
+  return user.value?.name || 'Admin BPBD / Dinkes';
 });
 
 const userRoleLabel = computed(() => {
-  return 'Incident Psychological Coordinator';
+  return 'Admin BPBD / Dinkes';
 });
 
 const userInitials = computed(() => {
@@ -326,8 +293,8 @@ const userInitials = computed(() => {
   return name.substring(0, 2).toUpperCase();
 });
 
-function isRoute(path: string) {
-  return page.url.startsWith(path);
+function isRoute(path: string): boolean {
+  return page.url === path || page.url.startsWith(path + '/') || page.url.startsWith(path + '?');
 }
 
 function logout() {

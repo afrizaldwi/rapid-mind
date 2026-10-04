@@ -1,8 +1,8 @@
 <template>
   <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex justify-center items-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border-2 border-red-500 overflow-hidden text-center p-6 space-y-4">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-700 text-3xl">
-        ⚠️
+    <div class="bg-white w-full max-w-md rounded-xl shadow-2xl border border-rose-300 overflow-hidden text-center p-6 space-y-4">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-rose-50 text-rose-700">
+        <TriangleAlert class="h-8 w-8" aria-hidden="true" />
       </div>
 
       <h3 class="text-xl font-bold text-slate-900">
@@ -29,7 +29,7 @@
           v-if="!reviewOnly"
           type="button"
           @click="$emit('escalate')"
-          class="w-full py-3.5 px-4 rounded-xl bg-red-800 hover:bg-red-900 text-white font-extrabold text-sm tracking-wide shadow-md transition"
+          class="w-full py-3.5 px-4 rounded-xl bg-red-800 hover:bg-red-900 text-white font-bold text-xs shadow-md transition"
         >
           BUKA VERIFIKASI T0 DARURAT
         </button>
@@ -46,6 +46,8 @@
 </template>
 
 <script setup lang="ts">
+import { TriangleAlert } from 'lucide-vue-next';
+
 defineProps<{
   show: boolean;
   reviewOnly?: boolean;

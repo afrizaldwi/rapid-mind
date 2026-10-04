@@ -770,3 +770,46 @@ Browser verification on 2 October 2026 passed Gates A–I, K, and L for the sele
 Gate J is **NOT DIRECTLY VERIFIED — dataset not empty**. The runtime dataset was deliberately not wiped. Direct browser evidence did confirm truthful missing-result presentation (`BELUM ADA HASIL`, score `-`, screening time `-`, and no false T3 fallback); the automated all-zero dataset contract remains verified. No browser defects were found during the D1.1 browser verification scope. This does not generalize to production correctness or claim production concurrency/load, security hardening, clinical validation, or full E2E coverage outside the selected path.
 
 Deferred: dedicated dispatch model/schema, referral/dispatch architecture redesign, Admin realtime, Faskes map markers, full geospatial heatmap, continuous STT, WebGPU Whisper, complete offline Whisper, broad responsive/accessibility D2/D3 gates, production concurrency/load, production security, and clinical validation. Existing referral movement-like states remain a known post-demo mismatch; no separate dispatch model is claimed.
+
+---
+
+## Daffa Repair — Clinical Rendering, Realtime, and Admin Truthfulness (3 October 2026)
+
+The initial Daffa repair is committed at `2ad64616ce426b3af51b049bf58e81049c7fd0c8`. The final consistency changes below are implemented in the current uncommitted working tree based on that commit. A post-repair commit reference is intentionally not claimed because the user owns all Git mutations.
+
+- Healthcare Darurat now normalizes Laravel snake_case assessment relations at one boundary and uses only the emergency's linked assessment. It no longer substitutes an arbitrary patient assessment.
+- Risk renders canonical R1–R5 with `YA`, `TIDAK`, or an explicit unavailable state. Function renders F1–F3 using only levels 0, 1, and 3. The unsupported SRQ `>= 6` positive/negative interpretation was removed.
+- Red Flag evidence is driven by the stored enum plus a real linked Q17 answer. Q18, note keywords, and the obsolete `SOMATIC_EMERGENCY` key no longer synthesize categories; `MEDICAL_CRISIS` is supported.
+- Active-T0 counts exclude `DOWNGRADED`. Emergency history shows linked patient/assessment context only when present and renders actual emergency, verification/decision, and referral records.
+- `HealthcareLayout.vue` remains the single Reverb subscription owner and now restores bounded event-ID deduplication, coalesced authoritative reloads, reconnect catch-up without audio, and a success-backed last-refresh time.
+- Admin Summary and Map share the active status set `PENDING`, `ACKNOWLEDGED`, `REVIEWING`, and `CONFIRMED`. Zero shelters remains zero, missing addresses are explicit, and inert map-layer checkboxes were replaced with navigation to the dedicated map.
+- Focused feature coverage now asserts snake_case linked assessment payloads, unidentified emergencies, and identical Admin active-T0 aggregates including `REVIEWING` and excluding `DOWNGRADED`.
+- The remaining clinical display pass aligns Q5/Q6 and all F1–F3 labels with Relawan, replaces age-derived vulnerability with the linked R3 answer, and separates the suicidal-ideation category from optional Q17 evidence.
+- No-assessment and missing-triage cases now use explicit unavailable states. The referral selector no longer references nonexistent bed capacity, and final action copy distinguishes downgrade decisions, active referrals, and terminal referral states.
+- Verification rows are loaded by `created_at ASC, id ASC`. Healthcare shell/page identity uses the assigned facility or a neutral fallback instead of PSC 119.
+- Reverb subscription state no longer writes Laravel HTTP health; `Realtime aktif` requires online, successful HTTP health, and subscription readiness. Alert audio contexts close after playback.
+- The linked-assessment fixture now uses canonical R1/R3 answers, R1–R5 weights, and a coherent risk score.
+- Patient list status is now a server-derived, timestamped clinical projection. Active T0 has priority; otherwise the newest stored T0 decision, assessment validation, or system recommendation is used. No result remains `Belum ada hasil`, while a genuine T3 score of zero remains zero.
+- Patient list search matches name or full internal NIK while rendering masked NIK. Patient detail now has the required `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` sections with deterministic assessment, incident, verification, referral, and referral-status chronology.
+- The Darurat endpoint now returns only active operational T0: PENDING, ACKNOWLEDGED, REVIEWING, and CONFIRMED while follow-up remains open. DOWNGRADED and CONFIRMED with completed referral work remain in patient history but leave the active queue.
+- Darurat full-NIK search uses a non-rendered normalized value. Unused longitudinal patient-assessment collections were removed from emergency payloads, and the remaining active-queue labels were corrected to factual, facility-neutral language including medical-crisis T0.
+- All five Healthcare lifecycle `EmergencyUpdated` dispatch points are best-effort after persistence. A broadcast exception is reported, the successful mutation response remains successful, and JSON/Inertia can communicate that cross-device realtime delivery was not confirmed.
+- Healthcare realtime reconciliation is route-aware while preserving one global subscription and one coalescer: Darurat, Rujukan, patient list, patient detail, and Validasi reload only their relevant canonical props plus the shared pending-T0 count.
+- Patient latest-status ordering preserves microseconds and retains the existing deterministic tie-break only for truly equal timestamps. Active-emergency list copy now says `Insiden sejak` for the incident creation time.
+- Pure emergency normalization/display helpers moved to `resources/js/lib/healthcareEmergency.ts`; no backend contract or intended UI behavior changed. `Emergencies/Index.vue` was reduced from 3,069 to 2,728 lines, but remains a known maintainability target for later coherent component extraction.
+
+No dependency was installed, removed, or updated. Relawan source and `docs/workflow.md` were not changed.
+
+### Verification
+
+- `npx vue-tsc --noEmit`: passed.
+- `npm run build`: passed; 1,280 modules transformed and 24 PWA precache entries generated. Existing large-chunk and PWA deprecation advisories remain non-fatal.
+- Focused `WorkspaceRelationshipTest`: 8 tests, 149 assertions, 0 failures.
+- Focused `HealthcareEmergencyLifecycleTest`: 13 tests, 124 assertions, 0 failures.
+- Focused `HealthcareOperationalCompletionTest`: 17 tests, 367 assertions, 0 failures.
+- Focused `WorkspaceRelationshipTest`: 8 tests, 149 assertions, 0 failures.
+- Complete Docker Laravel suite: 149 tests, 1,818 assertions, 0 failures.
+- Browser/runtime gates for this final consistency pass: **NDV — explicitly skipped by user instruction**. Live cross-user Reverb delivery, transport outage/recovery, route-visible updates, and rendered behavior are not claimed.
+- GitHub CI: **no claim**. The evidence above is local automated verification.
+- `git diff --check`: passed.
+- Browser gates for both Daffa passes, including final remaining-plan Gates A–N: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio lifecycle, HTTP/Reverb outage separation, reconnect, facility-identity, search interaction, responsive layout, or rendered interaction claim is made by this checkpoint.

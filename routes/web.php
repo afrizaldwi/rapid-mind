@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\FacilityManagementController;
+use App\Http\Controllers\Admin\LogisticsController;
 use App\Http\Controllers\Admin\ProvisioningController;
 use App\Http\Controllers\Admin\ShelterManagementController;
 use App\Http\Controllers\AuthController;
@@ -19,6 +20,36 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Web App Manifest fallbacks (ensuring valid JSON and 200 OK across dev/prod environments)
+Route::get('/manifest.webmanifest', function () {
+    $path = public_path('manifest.webmanifest');
+    if (!file_exists($path)) {
+        $path = public_path('build/manifest.webmanifest');
+    }
+    return response()->file($path, [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+});
+
+Route::get('/manifest.json', function () {
+    return response()->file(public_path('manifest.webmanifest'), [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+});
+Route::get('/build/manifest.webmanifest', function () {
+    $path = file_exists(public_path('build/manifest.webmanifest'))
+        ? public_path('build/manifest.webmanifest')
+        : public_path('manifest.webmanifest');
+    return response()->file($path, [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, private',
+    ]);
+});
+
 // Read-only recovery boundary for the static offline Relawan runtime.
 Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'])
     ->name('relawan.session-status');
@@ -29,9 +60,11 @@ Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'
 Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawan.')->group(function () {
     Route::get('/home', [RelawanController::class, 'home'])->name('home');
     Route::get('/pfa', [RelawanController::class, 'pfa'])->name('pfa');
+    Route::get('/patients/options', [RelawanController::class, 'patientOptions'])->name('patients.options');
 
     // Assessment flow
     Route::get('/assessment', [RelawanController::class, 'assessmentIndex'])->name('assessment.index');
+    Route::get('/assessment/drafts', [RelawanController::class, 'assessmentDrafts'])->name('assessment.drafts');
     Route::post('/assessment', [RelawanController::class, 'createAssessment'])->name('assessment.create');
     Route::get('/assessment/{assessmentId}/identity', [RelawanController::class, 'assessmentIdentity'])->name('assessment.identity');
     Route::get('/assessment/{assessmentId}/srq', [RelawanController::class, 'assessmentSrq'])->name('assessment.srq');
@@ -52,6 +85,7 @@ Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawa
 
     // T0 Emergency Incident
     Route::post('/emergencies', [RelawanController::class, 'triggerEmergency'])->name('emergencies.trigger');
+    Route::get('/emergencies/{emergencyId}/status', [RelawanController::class, 'emergencyStatus'])->name('emergencies.status');
     Route::get('/emergencies/{emergencyId}', [RelawanController::class, 'emergencyDetail'])->name('emergencies.show');
 });
 
@@ -92,7 +126,10 @@ Route::middleware(['auth.jwt', 'role:ADMIN'])->prefix('admin')->name('admin.')->
     Route::post('/volunteers', [ProvisioningController::class, 'storeVolunteer'])->name('volunteers.store');
     Route::get('/volunteers/{userId}', [ProvisioningController::class, 'showVolunteer'])->name('volunteers.show');
     Route::put('/volunteers/{userId}', [ProvisioningController::class, 'updateVolunteer'])->name('volunteers.update');
-    Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
+    Route::get('/logistics', [LogisticsController::class, 'index'])->name('logistics');
+    Route::post('/logistics/needs', [LogisticsController::class, 'storeNeed'])->name('logistics.needs.store');
+    Route::put('/logistics/needs/{resourceNeed}', [LogisticsController::class, 'updateNeed'])->name('logistics.needs.update');
+    Route::post('/logistics/needs/{resourceNeed}/allocations', [LogisticsController::class, 'storeAllocation'])->name('logistics.allocations.store');
     Route::get('/facilities', fn() => redirect('/admin/facilities/organizations'))->name('facilities');
     Route::get('/operations/posko', [ShelterManagementController::class, 'index'])->name('posko.index');
     Route::get('/operations/posko/create', [ShelterManagementController::class, 'create'])->name('posko.create');

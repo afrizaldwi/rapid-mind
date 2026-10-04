@@ -8,16 +8,17 @@ use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\RedFlagType;
+use App\Enums\ReferralStatus;
 use App\Enums\TriageCategory;
 use App\Enums\UserRole;
 use App\Models\Assessment;
 use App\Models\ClinicalValidation;
 use App\Models\EmergencyEvent;
+use App\Models\EmergencyVerification;
 use App\Models\HealthcareFacility;
 use App\Models\Patient;
 use App\Models\Referral;
 use App\Models\ReferralStatusHistory;
-use App\Models\Shelter;
 use App\Models\TriageResult;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,7 +31,9 @@ final class HealthcareOperationalCompletionTest extends TestCase
     use RefreshDatabase;
 
     private User $healthcare;
+
     private Patient $patient;
+
     private HealthcareFacility $facility;
 
     protected function setUp(): void
@@ -62,6 +65,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         $assessment->srqResponses()->create(['question_number' => 1, 'answer' => true]);
         $assessment->riskAssessment()->create(['indicator' => 'R1', 'answer' => true, 'weight' => 2]);
         $assessment->functionAssessment()->create(['domain' => 'F1', 'level' => 3]);
+
         return $assessment;
     }
 
@@ -74,12 +78,12 @@ final class HealthcareOperationalCompletionTest extends TestCase
             'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
             'status' => EmergencyStatus::PENDING,
         ]);
-        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Emergencies/Index', false)
             ->missing('emergencies.0.user.phone_number')->etc());
         $this->get("/healthcare/emergencies/{$emergency->id}")
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->component('Healthcare/Emergencies/Show', false)
                 ->where('emergency.user.id', $volunteer->id)
                 ->where('emergency.user.name', $volunteer->name)
@@ -91,7 +95,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
                 ->missing('emergency.user.shelter_id')
                 ->etc());
         $volunteer->update(['phone_number' => null]);
-        $this->get("/healthcare/emergencies/{$emergency->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get("/healthcare/emergencies/{$emergency->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('emergency.user.phone_number', null)->etc());
         $this->assertSame(EmergencyStatus::PENDING, $emergency->fresh()->status);
     }
@@ -99,25 +103,33 @@ final class HealthcareOperationalCompletionTest extends TestCase
     public function test_pending_emergencies_are_oldest_first_with_deterministic_ties(): void
     {
         $old = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
         ]);
         $old->forceFill(['created_at' => now()->subHours(2)])->save();
         $new = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
         ]);
         $new->forceFill(['created_at' => now()->subHour()])->save();
         $sameTime = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::PENDING,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
         ]);
         $sameTime->forceFill(['created_at' => $new->created_at])->save();
         $tieIds = [$new->id, $sameTime->id];
         sort($tieIds);
         $resolved = EmergencyEvent::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->healthcare->id,
-            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION, 'status' => EmergencyStatus::CONFIRMED,
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
         ]);
 
         $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
@@ -125,6 +137,236 @@ final class HealthcareOperationalCompletionTest extends TestCase
             ->where('emergencies.1.id', $tieIds[0])
             ->where('emergencies.2.id', $tieIds[1])
             ->where('emergencies.3.id', $resolved->id)->etc());
+    }
+
+    public function test_patient_latest_status_projection_preserves_missing_zero_and_longitudinal_recency(): void
+    {
+        $withoutResult = Assessment::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'status' => AssessmentStatus::COMPLETED,
+            'mode' => AssessmentMode::VERBAL,
+            'completed_at' => now()->subHours(4),
+        ]);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients.0.id', $this->patient->id)
+            ->where('patients.0.latest_clinical_status', null)->etc());
+
+        TriageResult::create([
+            'assessment_id' => $withoutResult->id,
+            'srq_score' => 0,
+            'risk_score' => 0,
+            'function_score' => 0,
+            'total_score' => 0,
+            'system_recommendation' => TriageCategory::T3,
+        ]);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T3')
+            ->where('patients.0.assessments.0.triage_result.total_score', 0)->etc());
+
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::DOWNGRADED,
+        ]);
+        $decision = EmergencyVerification::create([
+            'emergency_event_id' => $emergency->id,
+            'verified_by' => $this->healthcare->id,
+            'clinical_result' => TriageCategory::T1,
+        ]);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T1')
+            ->where('patients.0.latest_clinical_status.source', 'emergency_decision')->etc());
+
+        $decision->forceFill(['created_at' => now()->subHours(2)])->save();
+        $newerAssessment = $this->assessment(TriageCategory::T2);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T2')
+            ->where('patients.0.latest_clinical_status.source', 'system_recommendation')
+            ->where('patients.0.assessments.0.id', $newerAssessment->id)->etc());
+
+        $active = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::MEDICAL_CRISIS,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T0-Suspect Aktif')
+            ->where('patients.0.latest_clinical_status.source', 'active_emergency')
+            ->where('patients.0.emergency_events.0.id', $active->id)->etc());
+    }
+
+    public function test_patient_history_excludes_newer_in_progress_assessment_shells(): void
+    {
+        $completed = $this->assessment(TriageCategory::T2, 60);
+        $inProgress = Assessment::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'status' => AssessmentStatus::IN_PROGRESS,
+            'mode' => AssessmentMode::VERBAL,
+        ]);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('patients.0.assessments', 1)
+            ->where('patients.0.assessments.0.id', $completed->id)
+            ->where('patients.0.latest_clinical_status.label', 'T2')
+            ->where('patients.0.latest_clinical_status.source', 'system_recommendation')
+            ->etc());
+
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('patient.assessments', 1)
+            ->where('patient.assessments.0.id', $completed->id)
+            ->where('patient.assessments', fn ($assessments): bool => ! $assessments->contains('id', $inProgress->id))
+            ->etc());
+    }
+
+    public function test_nullable_historical_validation_falls_back_without_fabricating_a_status(): void
+    {
+        $older = $this->assessment(TriageCategory::T2, 60);
+        $newer = $this->assessment(TriageCategory::T1, 30);
+        ClinicalValidation::create([
+            'assessment_id' => $newer->id,
+            'validated_by' => $this->healthcare->id,
+            'clinical_result' => null,
+            'diagnosis_notes' => 'Catatan historis tanpa klasifikasi.',
+        ]);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients.0.latest_clinical_status.label', 'T1')
+            ->where('patients.0.latest_clinical_status.source', 'system_recommendation')
+            ->where('patients.0.assessments.0.id', $newer->id)
+            ->where('patients.0.assessments.1.id', $older->id)
+            ->etc());
+
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patient.assessments.0.clinical_validation.clinical_result', null)
+            ->etc());
+    }
+
+    public function test_emergency_worklist_contains_only_active_operational_t0_cases(): void
+    {
+        foreach ([EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING] as $status) {
+            EmergencyEvent::create([
+                'patient_id' => $this->patient->id,
+                'user_id' => $this->healthcare->id,
+                'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+                'status' => $status,
+            ]);
+        }
+        EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::DOWNGRADED,
+        ]);
+        EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
+        ]);
+        $openReferralEmergency = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
+        ]);
+        Referral::create([
+            'emergency_event_id' => $openReferralEmergency->id,
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::ACTIVE,
+        ]);
+        $completedReferralEmergency = EmergencyEvent::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => $this->healthcare->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::CONFIRMED,
+        ]);
+        Referral::create([
+            'emergency_event_id' => $completedReferralEmergency->id,
+            'patient_id' => $this->patient->id,
+            'referred_by' => $this->healthcare->id,
+            'facility_id' => $this->facility->id,
+            'status' => ReferralStatus::COMPLETED,
+        ]);
+
+        $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('emergencies', 5)
+            ->where('emergencies', fn ($emergencies) => ! $emergencies->contains('id', $completedReferralEmergency->id)
+                && ! $emergencies->contains('status', EmergencyStatus::DOWNGRADED->value))
+            ->etc());
+
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('patient.emergency_events', 7)
+            ->etc());
+    }
+
+    public function test_patient_latest_status_uses_stable_id_tie_break_for_equal_timestamps(): void
+    {
+        $patient = Patient::create(['name' => 'Pasien Tie Break', 'created_by' => $this->healthcare->id]);
+        $timestamp = now()->subHour();
+        $categoriesById = [];
+        foreach ([TriageCategory::T1, TriageCategory::T2] as $category) {
+            $assessment = Assessment::create([
+                'patient_id' => $patient->id,
+                'user_id' => $this->healthcare->id,
+                'status' => AssessmentStatus::COMPLETED,
+                'mode' => AssessmentMode::VERBAL,
+                'completed_at' => $timestamp,
+            ]);
+            TriageResult::create([
+                'assessment_id' => $assessment->id,
+                'total_score' => $category === TriageCategory::T1 ? 15 : 8,
+                'system_recommendation' => $category,
+            ]);
+            $categoriesById[$assessment->id] = $category->value;
+        }
+        krsort($categoriesById, SORT_STRING);
+        $expected = reset($categoriesById);
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients', function ($patients) use ($patient, $expected): bool {
+                $projected = $patients->firstWhere('id', $patient->id);
+
+                return $projected['latest_clinical_status']['label'] === $expected
+                    && $projected['latest_clinical_status']['source'] === 'system_recommendation';
+            })->etc());
+    }
+
+    public function test_patient_latest_status_preserves_microsecond_order_before_id_tie_break(): void
+    {
+        $patient = Patient::create(['name' => 'Pasien Presisi', 'created_by' => $this->healthcare->id]);
+        $base = now()->subHour()->startOfSecond();
+        $categoriesById = [];
+
+        foreach ([TriageCategory::T1, TriageCategory::T2] as $offset => $category) {
+            $assessment = Assessment::create([
+                'patient_id' => $patient->id,
+                'user_id' => $this->healthcare->id,
+                'status' => AssessmentStatus::COMPLETED,
+                'mode' => AssessmentMode::VERBAL,
+                'completed_at' => $base->copy()->addMicroseconds($offset === 0 ? 100000 : 900000),
+            ]);
+            TriageResult::create([
+                'assessment_id' => $assessment->id,
+                'total_score' => $category === TriageCategory::T1 ? 15 : 8,
+                'system_recommendation' => $category,
+            ]);
+            $categoriesById[$assessment->id] = $category->value;
+        }
+
+        $this->get('/healthcare/patients')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('patients', function ($patients) use ($patient): bool {
+                $projected = $patients->firstWhere('id', $patient->id);
+
+                return $projected['latest_clinical_status']['label'] === TriageCategory::T2->value
+                    && $projected['latest_clinical_status']['source'] === 'system_recommendation';
+            })->etc());
     }
 
     public function test_worklist_prioritizes_oldest_t1_then_t2_and_keeps_t3_in_patient_history(): void
@@ -136,7 +378,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         $validated = $this->assessment(TriageCategory::T2, 50);
         ClinicalValidation::create(['assessment_id' => $validated->id, 'validated_by' => $this->healthcare->id, 'clinical_result' => TriageCategory::T2]);
 
-        $this->get('/healthcare/validations')->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Validations/Index', false)
             ->has('pendingAssessments', 3)
             ->where('pendingAssessments.0.id', $oldT1->id)
@@ -144,7 +386,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
             ->where('pendingAssessments.2.id', $t2->id)
             ->has('completedAssessments', 1)
             ->where('completedAssessments.0.id', $validated->id)->etc());
-        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Patients/Show', false)
             ->has('patient.assessments', 5)->etc());
         $this->get("/healthcare/validations/{$t3->id}")->assertNotFound();
@@ -158,7 +400,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         $volunteer = User::factory()->create(['role' => UserRole::RELAWAN, 'phone_number' => '+6281234567890']);
         $current->update(['user_id' => $volunteer->id]);
         HealthcareFacility::create(['name' => 'Faskes Nonaktif', 'type' => 'RS', 'is_active' => false]);
-        $this->get("/healthcare/validations/{$current->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get("/healthcare/validations/{$current->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Healthcare/Validations/Show', false)
             ->where('assessment.id', $current->id)
             ->where('assessment.triage_result.system_recommendation', 'T1')
@@ -173,7 +415,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
             ->where('previousAssessments.0.id', $previous->id)
             ->has('facilities', 1)->etc());
         $this->assertNotSame($newer->id, $previous->id);
-        $this->get('/healthcare/validations')->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get('/healthcare/validations')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('pendingAssessments.0.user.id', $volunteer->id)
             ->missing('pendingAssessments.0.user.phone_number')
             ->missing('pendingAssessments.0.user.email')->etc());
@@ -256,7 +498,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         $this->assertSame(1, Referral::count());
         $this->assertSame(1, ReferralStatusHistory::where('referral_id', $referral->id)->count());
         $this->facility->update(['is_active' => false]);
-        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('patient.referrals.0.facility.id', $this->facility->id)
             ->where('patient.referrals.0.facility.is_active', false)
             ->where('patient.referrals.0.clinical_validation.assessment.id', $assessment->id)
@@ -291,18 +533,18 @@ final class HealthcareOperationalCompletionTest extends TestCase
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,
-            'status' => \App\Enums\ReferralStatus::ACTIVE,
+            'status' => ReferralStatus::ACTIVE,
         ]);
         $newer->forceFill(['created_at' => now()->subDay()])->save();
         $older = Referral::create([
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,
-            'status' => \App\Enums\ReferralStatus::COMPLETED,
+            'status' => ReferralStatus::COMPLETED,
         ]);
         $older->forceFill(['created_at' => now()->subDays(3)])->save();
 
-        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('patient.referrals.0.id', $newer->id)
             ->where('patient.referrals.1.id', $older->id)->etc());
     }
@@ -331,7 +573,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
             ->forceFill(['created_at' => now()->subMinutes(2)])->save();
         $emergency->referrals()->firstOrFail()
             ->forceFill(['created_at' => now()->subMinute()])->save();
-        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn(Assert $page) => $page
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
             ->has('patient.referrals', 2)
             ->where('patient.referrals.0.emergency_event_id', $emergency->id)
             ->where('patient.referrals.1.clinical_validation_id', $assessment->clinicalValidation()->firstOrFail()->id)

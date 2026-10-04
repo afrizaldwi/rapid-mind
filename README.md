@@ -1,58 +1,72 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# RAPID-MIND
+> **Rapid Assessment & Psychosocial Intervention Delivery - Mental Health In Disaster**
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+RAPID-MIND adalah platform triase dan respons intervensi kesehatan jiwa darurat bencana multi-peran terpadu (*3-Tier Multi-Role Architecture*) berbasis Progressive Web Application (PWA) Offline-First, Realtime WebSockets, dan Desktop Command Center.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📚 Dokumentasi Lengkap Proyek
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Dokumentasi sistem komprehensif yang memuat seluruh alur operasional, arsitektur, mesin triase, skema database, rute API, dan panduan instalasi telah didokumentasikan secara terperinci pada:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+👉 **[RAPID_MIND_DOKUMENTASI_SISTEM.md](./RAPID_MIND_DOKUMENTASI_SISTEM.md)** (atau di folder [docs/RAPID_MIND_DOKUMENTASI_SISTEM.md](./docs/RAPID_MIND_DOKUMENTASI_SISTEM.md))
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 👥 Tiga Pilar Peran Sistem
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. **Role 1: Relawan Garda Depan (Frontline Volunteer)**
+   - Akses: Mobile PWA (`/relawan/...`)
+   - Fitur: Offline-First PWA Shell, Modul Psychological First Aid (PFA Hari 1–3), Penapisan Terstruktur SRQ-20 + Faktor Risiko + Keberfungsian (Hari 4–30), Floating Red Flag SOS (<0.5s), dan sinkronisasi otomatis Outbox IndexedDB.
+2. **Role 2: Healthcare (Tenaga Medis: Puskesmas / RSUD / Psikiater)**
+   - Akses: Desktop Workspace (`/healthcare/...`)
+   - Fitur: Notifikasi audio-visual gawat darurat T0, verifikasi & downgrade T0, validasi klinis asesmen T1-T3, penetapan diagnosis klinis & rencana terapi, serta manajemen rujukan evakuasi medis (Referral Lifecycle).
+3. **Role 3: Admin Makro (BPBD / Dinas Kesehatan / PSC 119)**
+   - Akses: Desktop Command Center (`/admin/...`)
+   - Fitur: Geospatial Heatmap sebaran distres mental bencana, Pemantauan Longitudinal 30 Hari (Fase Akut, Peak Distress, Kronisitas), manajemen posko pengungsian & faskes, serta provisioning akun pengguna.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## 🛠️ Tech Stack
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+- **Backend:** Laravel 11.x (PHP 8.2+) + Inertia.js
+- **Frontend:** Vue 3 (Composition API, `<script setup lang="ts">`) + Tailwind CSS + Lucide Icons
+- **Realtime:** Pusher / Laravel Echo / WebSockets
+- **Offline Engine:** Service Worker, Workbox, IndexedDB (`idb`), Background Sync API
+- **Database:** MySQL 8.0 (UUID v4 Primary Keys)
+- **Autentikasi:** JWT HttpOnly Cookies dengan Role-Based Access Control (RBAC)
+
+---
+
+## ⚡ Panduan Menjalankan Cepat
 
 ```bash
-composer require laravel/boost --dev
+# 1. Clone & Masuk Direktori
+git clone https://github.com/afrizaldwi/rapid-mind.git
+cd rapid-mind
 
-php artisan boost:install
+# 2. Instal Dependensi
+composer install
+npm install
+
+# 3. Setup Environment
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+
+# 4. Migrasi & Seed Database Demo
+php artisan migrate:fresh --seed
+
+# 5. Build Aset Frontend
+npm run build   # atau npm run dev
+
+# 6. Jalankan Server
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Akses aplikasi di `http://localhost:8000`.
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Kredensial Pengguna Demo Bawaan:
+- **Relawan:** `relawan_demo` / `password`
+- **Healthcare:** `dokter_demo` / `password`
+- **Admin:** `admin_demo` / `password`

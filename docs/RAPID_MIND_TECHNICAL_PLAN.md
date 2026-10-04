@@ -3272,3 +3272,26 @@ Recommended discussion order:
 ```
 
 The UI should be designed around the actual workflow and operational risk, not merely around conventional dashboard patterns.
+
+---
+
+# 26. Daffa Repair Checkpoint (3 October 2026)
+
+The first Daffa repair pass is committed at `2ad64616ce426b3af51b049bf58e81049c7fd0c8`. The final consistency repair described below is implemented and automated-verified in the current uncommitted working tree based on that commit. No post-repair commit reference is claimed because Git mutations remain user-owned.
+
+- Healthcare assessment evidence uses the emergency-linked assessment and a single snake_case-compatible normalization boundary.
+- Healthcare displays canonical R1–R5 and F1–F3 data without turning missing evidence into negative evidence or inventing SRQ/Red Flag interpretations.
+- `HealthcareLayout.vue` is the sole emergency subscription owner. Event IDs are deduplicated with a bounded cache; Inertia reconciliations are serialized/coalesced; reconnect catch-up does not play new-event audio; refresh time advances only after successful reconciliation.
+- Admin uses one active-T0 definition: `PENDING`, `ACKNOWLEDGED`, `REVIEWING`, and `CONFIRMED`; `DOWNGRADED` is excluded from active counts.
+- Healthcare now uses the canonical Q5/Q6 and F1–F3 labels, derives vulnerability only from assessment R3, and does not attribute a manually selected suicidal-ideation Red Flag to Q17 without an actual affirmative Q17 answer.
+- Missing assessments and triage results are explicit, the referral selector exposes only persisted facility fields, verification rows are chronologically ordered by `created_at` then `id`, and active referrals are not presented as completed work.
+- Healthcare identity is facility-aware. Reverb subscription readiness cannot assert Laravel HTTP health, and each finite alert closes its `AudioContext` after playback.
+- Patient status is projected server-side from active T0 or the newest timestamped stored decision/result; missing results are not converted into T3 or score zero. Patient list identity is masked while name/full-NIK search remains supported.
+- The patient workspace now exposes separate `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` histories with deterministic ordering and preserved original T0-Suspect provenance.
+- Darurat is an active operational queue: DOWNGRADED and CONFIRMED cases whose referral work is complete leave the worklist while remaining in patient history. Emergency payloads no longer expose unused longitudinal patient assessments.
+- `EmergencyUpdated` remains a private, ID-only, synchronous event, but all five post-commit Healthcare lifecycle dispatch points are now best-effort. Reverb failure is reported and can return a realtime-delivery warning without changing a persisted clinical mutation into a false HTTP failure.
+- The shared Healthcare subscription now reconciles the visible route: Darurat reloads `emergencies`/`emergency`, Rujukan reloads `referrals`, patient list reloads `patients`, patient detail reloads `patient`, and Validasi reloads only the shared pending-T0 count. Existing serialized/coalesced reload behavior remains in place.
+- Patient latest-status ordering compares seconds and microseconds before using its deterministic source/ID tie-break. Active-emergency timestamps are presented as incident time with `Insiden sejak`, not as an implied confirmation timestamp.
+- Deterministic emergency normalization, display mappings, question/risk constants, and formatting helpers were extracted to `resources/js/lib/healthcareEmergency.ts` as a behavior-preserving maintainability checkpoint. The emergency page remains large and further component extraction remains appropriate.
+
+Automated evidence for the final consistency working tree: TypeScript validation passed, production frontend build passed, focused feature tests passed (`HealthcareEmergencyLifecycleTest`: 13 tests / 124 assertions; `HealthcareOperationalCompletionTest`: 17 tests / 367 assertions; `WorkspaceRelationshipTest`: 8 tests / 149 assertions), and the complete Docker Laravel suite passed (149 tests / 1,818 assertions). Browser/runtime verification was explicitly skipped and remains NDV; therefore route-specific rendered reconciliation, live Reverb delivery/failure/recovery, two-session behavior, audio behavior, and interactive rendering are not claimed as browser verified. Local automated output is not GitHub CI evidence.

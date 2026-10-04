@@ -16,10 +16,10 @@
         <div
           v-for="f in facilities"
           :key="f.id"
-          class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-3"
+          class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3"
         >
           <div class="flex items-start justify-between">
-            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               {{ f.type }}
             </span>
             <span class="text-xs font-bold text-emerald-700">● Aktif</span>

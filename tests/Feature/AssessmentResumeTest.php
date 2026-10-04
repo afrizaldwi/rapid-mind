@@ -59,6 +59,13 @@ final class AssessmentResumeTest extends TestCase
             ->where('inProgressAssessments.0.resume_label', $label)
             ->etc());
 
+        $this->get('/relawan/assessment/drafts')->assertInertia(fn (Assert $page) => $page
+            ->component('Relawan/Assessment/Drafts', false)
+            ->where('inProgressAssessments.0.resume_stage', $stage)
+            ->where('inProgressAssessments.0.resume_url', $url)
+            ->where('inProgressAssessments.0.resume_label', $label)
+            ->etc());
+
         $this->get('/relawan/data')->assertInertia(fn (Assert $page) => $page
             ->component('Relawan/Data', false)
             ->where('inProgress.0.resume_stage', $stage)

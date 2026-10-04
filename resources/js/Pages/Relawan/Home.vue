@@ -2,20 +2,19 @@
   <RelawanLayout>
     <div class="space-y-6">
       <!-- Greeting & Posko Context -->
-      <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200">
+      <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs font-bold text-teal-700 uppercase tracking-wider">
               Relawan Pendamping Lapangan
             </p>
-            <h2 class="text-xl font-extrabold text-slate-900 mt-0.5">
+            <h2 class="text-xl font-bold text-slate-900 mt-0.5">
               {{ userName }}
             </h2>
           </div>
-          <span class="text-2xl">🤝</span>
         </div>
         <div class="mt-3 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60">
-          <span class="mr-1.5">📍</span>
+          <MapPin class="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
           <span>{{ shelter?.name || userShelterName || 'Posko belum ditetapkan' }}</span>
         </div>
       </div>
@@ -25,19 +24,19 @@
       <!-- Active Emergency Banner if any -->
       <div
         v-if="displayEmergency"
-        class="bg-red-50 border-2 border-red-500 rounded-2xl p-5 text-red-950 shadow-md space-y-3"
+        class="bg-red-50 border-2 border-red-500 rounded-xl p-5 text-red-950 shadow-md space-y-3"
       >
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
-            <span class="text-xl">🚨</span>
-            <span class="text-xs font-extrabold uppercase tracking-wider text-red-800">
+            <Siren class="h-5 w-5" aria-hidden="true" />
+            <span class="text-xs font-bold uppercase tracking-wider text-red-800">
               Sinyal Darurat T0 Aktif
             </span>
           </div>
-          <Badge variant="t0">{{ runtime.mode === 'OFFLINE_FIELD_MODE' ? 'T0-Suspect' : displayEmergency?.status }}</Badge>
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700"><span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>{{ runtime.mode === 'OFFLINE_FIELD_MODE' ? 'T0-Suspect' : displayEmergency?.status }}</span>
         </div>
         <div>
-          <h3 class="font-extrabold text-base">
+          <h3 class="font-bold text-base">
             {{ displayEmergency?.patient?.name || 'Penyintas Tanpa Nama' }}
           </h3>
           <p class="text-xs text-red-800 mt-1">
@@ -55,7 +54,7 @@
       <!-- Resume Incomplete Draft Banner -->
       <div
         v-if="displayDraft"
-        class="bg-amber-50 border border-amber-300 rounded-2xl p-5 shadow-xs space-y-3"
+        class="bg-amber-50 border border-amber-300 rounded-xl p-5 shadow-xs space-y-3"
       >
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">
@@ -64,7 +63,7 @@
           <span class="text-xs text-amber-700 font-medium">Sedang Dikerjakan</span>
         </div>
         <div>
-          <h3 class="font-extrabold text-slate-900 text-base">
+          <h3 class="font-bold text-slate-900 text-base">
             {{ displayDraft?.name || 'Penyintas' }}
           </h3>
           <p class="text-xs text-slate-600 mt-0.5">
@@ -88,12 +87,12 @@
         <!-- PFA Guidebook Card (Hari 1-3) -->
         <RelawanLink
           href="/relawan/pfa"
-          class="block bg-white hover:bg-teal-50/40 p-5 rounded-2xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
+          class="block bg-white hover:bg-teal-50/40 p-5 rounded-xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
         >
           <div class="flex items-start justify-between">
             <div class="space-y-1">
-              <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">
-                Fase Akut: Hari 1–3
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider block">
+                Fase Akut · Hari 1–3
               </span>
               <h4 class="text-lg font-bold text-slate-900 group-hover:text-teal-800 transition">
                 Buku Saku Digital PFA
@@ -102,19 +101,19 @@
                 Panduan humanis Look, Listen, Link tanpa beban input formulir, dan teknik relaksasi 5-4-3-2-1.
               </p>
             </div>
-            <span class="text-3xl text-teal-600 group-hover:scale-110 transition">📖</span>
+            <BookOpen class="h-8 w-8 text-teal-600 group-hover:scale-110 transition" aria-hidden="true" />
           </div>
         </RelawanLink>
 
         <!-- Structured SRQ-20 Screening Card (Hari 4-30) -->
         <RelawanLink
           href="/relawan/assessment"
-          class="block bg-white hover:bg-teal-50/40 p-5 rounded-2xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
+          class="block bg-white hover:bg-teal-50/40 p-5 rounded-xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
         >
           <div class="flex items-start justify-between">
             <div class="space-y-1">
-              <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">
-                Fase Lanjutan: Hari 4–30
+              <span class="text-[11px] font-bold text-indigo-800 uppercase tracking-wider block">
+                Fase Lanjutan · Hari 4–30
               </span>
               <h4 class="text-lg font-bold text-slate-900 group-hover:text-teal-800 transition">
                 Penapisan Terstruktur SRQ-20
@@ -123,18 +122,19 @@
                 Wawancara psikologis terstandarisasi, checklist faktor risiko, keberfungsian harian, dan rekomendasi triase sistem.
               </p>
             </div>
-            <span class="text-3xl text-teal-600 group-hover:scale-110 transition">📋</span>
+            <ClipboardList class="h-8 w-8 text-teal-600 group-hover:scale-110 transition" aria-hidden="true" />
           </div>
         </RelawanLink>
       </div>
 
       <!-- Quick Guidance -->
-      <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs text-slate-600 space-y-1.5">
-        <p class="font-bold text-slate-800">
-          💡 Catatan Etik Garda Depan:
+      <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+        <p class="font-bold text-slate-800 inline-flex items-center gap-1.5">
+          <Info class="h-3.5 w-3.5" aria-hidden="true" />
+          <span>Catatan Etik Garda Depan:</span>
         </p>
         <p>
-          Prioritaskan keselamatan fisik dan kenyamanan emosional penyintas. Jika menemukan indikasi ideasi bunuh diri atau amuk, gunakan tombol <strong>🚨 T0 DARURAT</strong> di pojok kanan bawah.
+          Prioritaskan keselamatan fisik dan kenyamanan emosional penyintas. Jika menemukan indikasi ideasi bunuh diri atau amuk, gunakan tombol <strong>T0 DARURAT</strong> di pojok kanan bawah.
         </p>
       </div>
     </div>
@@ -143,10 +143,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { BookOpen, ClipboardList, Info, MapPin, Siren } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
-import Badge from '@/components/ui/Badge.vue';
 import { useOwnedLocalRecords } from '@/composables/useRelawanDataWorkspace';
 import { resumeStage } from '@/offline/assessmentWorkflow';
 

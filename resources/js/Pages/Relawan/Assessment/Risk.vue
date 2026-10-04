@@ -1,7 +1,7 @@
 <template>
   <RelawanLayout>
     <div class="space-y-6 pb-64">
-      <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200">
+      <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
           Bagian A: Faktor Risiko
         </span>
@@ -14,7 +14,7 @@
       </div>
 
       <div class="space-y-3">
-        <div v-for="item in riskItems" :key="item.code" class="p-4 rounded-2xl border-2 transition"
+        <div v-for="item in riskItems" :key="item.code" class="p-4 rounded-xl border-2 transition"
           :class="risks[item.code] === true ? 'bg-amber-50/70 border-amber-500 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'">
           <div class="space-y-1">
             <div class="flex items-center justify-between">
