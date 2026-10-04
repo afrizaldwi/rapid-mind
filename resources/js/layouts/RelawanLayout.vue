@@ -38,11 +38,11 @@
             class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-2 shadow-xs"
         >
             <div class="flex min-w-0 flex-1 items-center space-x-3">
-                <div
-                    class="w-8 h-8 shrink-0 rounded-lg bg-teal-700 text-white font-bold flex items-center justify-center text-sm shadow-xs"
-                >
-                    RM
-                </div>
+                <img
+                    src="/logo.png?v=3"
+                    alt="RAPID-MIND Logo"
+                    class="w-8 h-8 object-contain shrink-0"
+                />
                 <div class="min-w-0">
                     <p
                         class="truncate text-sm text-slate-700 font-semibold leading-tight"

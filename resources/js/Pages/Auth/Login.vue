@@ -2,8 +2,8 @@
   <div class="min-h-screen bg-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8">
     <div class="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
       <div class="text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 text-white font-bold text-2xl tracking-wider shadow-lg shadow-teal-500/30 mb-4">
-          RM
+        <div class="inline-flex items-center justify-center w-20 h-20 mb-4">
+          <img src="/logo.png?v=3" alt="RAPID-MIND Logo" class="w-20 h-20 object-contain drop-shadow-md" />
         </div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-900">
           RAPID-MIND

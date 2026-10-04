@@ -18,13 +18,7 @@
 
         <!-- Brand Identifier -->
         <Link href="/admin/summary" class="flex items-center gap-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center shrink-0 group-hover:bg-teal-800 transition">
-            <svg class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="M12 8v8" />
-              <path d="M8 12h8" />
-            </svg>
-          </div>
+          <img src="/logo.png?v=3" alt="RAPID-MIND Logo" class="w-8 h-8 object-contain shrink-0" />
           <div>
             <div class="flex items-center gap-1.5">
               <span class="text-sm font-bold tracking-tight text-slate-900 leading-none">
