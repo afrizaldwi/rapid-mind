@@ -117,8 +117,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import * as maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import * as maplibregl from '@/lib/maplibre';
 
 interface MarkerEntry {
   marker: maplibregl.Marker;

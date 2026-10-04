@@ -18,6 +18,23 @@ configureEcho({
     enabledTransports: ["ws", "wss"],
 });
 
+// Safely clear any legacy/stale service workers registered with broad root scope ('/')
+// that can intercept /login or non-relawan routes, while preserving legitimate /relawan/ PWA
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+            try {
+                const scopePath = new URL(reg.scope).pathname;
+                if (scopePath !== "/relawan/") {
+                    void reg.unregister();
+                }
+            } catch {
+                // Ignore URL parsing errors
+            }
+        }
+    }).catch(() => {});
+}
+
 createInertiaApp({
     title: (title) => (title ? `${title} — RAPID-MIND` : "RAPID-MIND"),
 

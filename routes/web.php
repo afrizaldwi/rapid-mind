@@ -20,6 +20,27 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Web App Manifest fallbacks (ensuring valid JSON and 200 OK across dev/prod environments)
+Route::get('/manifest.webmanifest', function () {
+    $path = public_path('manifest.webmanifest');
+    if (!file_exists($path)) {
+        $path = public_path('build/manifest.webmanifest');
+    }
+    return response()->file($path, [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, private',
+    ]);
+});
+Route::get('/build/manifest.webmanifest', function () {
+    $path = file_exists(public_path('build/manifest.webmanifest'))
+        ? public_path('build/manifest.webmanifest')
+        : public_path('manifest.webmanifest');
+    return response()->file($path, [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, private',
+    ]);
+});
+
 // Read-only recovery boundary for the static offline Relawan runtime.
 Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'])
     ->name('relawan.session-status');
