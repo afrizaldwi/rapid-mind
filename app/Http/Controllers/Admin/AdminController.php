@@ -266,13 +266,4 @@ final class AdminController extends Controller
         return Inertia::render('Admin/People/Index', ['kind' => 'relawan', 'users' => $volunteers]);
     }
 
-    public function logistics(): InertiaResponse
-    {
-        $shelters = Shelter::with(['patients'])->get();
-
-        return Inertia::render('Admin/Logistics', [
-            'shelters' => $shelters,
-        ]);
-    }
-
 }

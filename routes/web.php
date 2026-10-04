@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\FacilityManagementController;
+use App\Http\Controllers\Admin\LogisticsController;
 use App\Http\Controllers\Admin\ProvisioningController;
 use App\Http\Controllers\Admin\ShelterManagementController;
 use App\Http\Controllers\AuthController;
@@ -95,7 +96,10 @@ Route::middleware(['auth.jwt', 'role:ADMIN'])->prefix('admin')->name('admin.')->
     Route::post('/volunteers', [ProvisioningController::class, 'storeVolunteer'])->name('volunteers.store');
     Route::get('/volunteers/{userId}', [ProvisioningController::class, 'showVolunteer'])->name('volunteers.show');
     Route::put('/volunteers/{userId}', [ProvisioningController::class, 'updateVolunteer'])->name('volunteers.update');
-    Route::get('/logistics', [AdminController::class, 'logistics'])->name('logistics');
+    Route::get('/logistics', [LogisticsController::class, 'index'])->name('logistics');
+    Route::post('/logistics/needs', [LogisticsController::class, 'storeNeed'])->name('logistics.needs.store');
+    Route::put('/logistics/needs/{resourceNeed}', [LogisticsController::class, 'updateNeed'])->name('logistics.needs.update');
+    Route::post('/logistics/needs/{resourceNeed}/allocations', [LogisticsController::class, 'storeAllocation'])->name('logistics.allocations.store');
     Route::get('/facilities', fn() => redirect('/admin/facilities/organizations'))->name('facilities');
     Route::get('/operations/posko', [ShelterManagementController::class, 'index'])->name('posko.index');
     Route::get('/operations/posko/create', [ShelterManagementController::class, 'create'])->name('posko.create');

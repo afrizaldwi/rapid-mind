@@ -8,4 +8,5 @@ class Shelter extends Model {
     public function patients() { return $this->hasMany(Patient::class); }
     public function users() { return $this->hasMany(User::class); }
     public function volunteers() { return $this->hasMany(User::class)->where('role', \App\Enums\UserRole::RELAWAN); }
+    public function resourceNeeds() { return $this->hasMany(ResourceNeed::class); }
 }
