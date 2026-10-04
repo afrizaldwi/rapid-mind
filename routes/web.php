@@ -85,7 +85,6 @@ Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawa
 
     // T0 Emergency Incident
     Route::post('/emergencies', [RelawanController::class, 'triggerEmergency'])->name('emergencies.trigger');
-    Route::get('/emergencies/{emergencyId}/status', [RelawanController::class, 'emergencyStatus'])->name('emergencies.status');
     Route::get('/emergencies/{emergencyId}', [RelawanController::class, 'emergencyDetail'])->name('emergencies.show');
 });
 

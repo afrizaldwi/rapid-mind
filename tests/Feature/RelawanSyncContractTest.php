@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
+use App\Enums\EmergencyStatus;
 use App\Enums\RedFlagType;
 use App\Enums\UserRole;
 use App\Events\EmergencyCreated;
@@ -142,8 +143,12 @@ final class RelawanSyncContractTest extends TestCase
         $payload = $this->emergency();
         $this->postJson('/relawan/sync/emergencies', $payload)->assertCreated()
             ->assertJsonPath('emergency.id', $payload['id'])
-            ->assertJsonPath('emergency.patient_id', null);
-        $this->postJson('/relawan/sync/emergencies', $payload)->assertOk()->assertJsonPath('replayed', true);
+            ->assertJsonPath('emergency.patient_id', null)
+            ->assertJsonMissingPath('emergency.status');
+        EmergencyEvent::sole()->update(['status' => EmergencyStatus::CONFIRMED]);
+        $this->postJson('/relawan/sync/emergencies', $payload)->assertOk()
+            ->assertJsonPath('replayed', true)
+            ->assertJsonMissingPath('emergency.status');
         $this->assertSame(1, EmergencyEvent::count());
         Event::assertDispatched(EmergencyCreated::class, 1);
         $changed = $payload;

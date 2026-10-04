@@ -813,3 +813,13 @@ No dependency was installed, removed, or updated. Relawan source and `docs/workf
 - GitHub CI: **no claim**. The evidence above is local automated verification.
 - `git diff --check`: passed.
 - Browser gates for both Daffa passes, including final remaining-plan Gates A–N: **NDV — intentionally skipped by user instruction**. No browser, live Reverb transport, audio lifecycle, HTTP/Reverb outage separation, reconnect, facility-identity, search interaction, responsive layout, or rendered interaction claim is made by this checkpoint.
+
+---
+
+## Relawan T0 Role Boundary — 4 October 2026
+
+Relawan now sees an emergency only as its original `T0-Suspect` field report plus local persistence and server submission state. Healthcare acknowledgement, review, confirmation, downgrade, resolution, clinical validation, referral, and dispatch progression are no longer exposed in Relawan UI or Relawan-facing emergency projections.
+
+The Relawan Healthcare-status polling route was removed. Emergency detail and Data payloads are deliberately restricted, and emergency sync replay no longer returns the server's Healthcare-owned lifecycle status. The local Dexie emergency shape remains compatible and the existing local-first queue, retry, stable identifier, and server-receipt behavior remain intact. Healthcare lifecycle storage, routes, and screens are unchanged.
+
+Automated verification passed: complete Docker Laravel suite (`161` tests, `2,052` assertions), focused role-boundary/Healthcare regression suite (`51` tests, `834` assertions), SRQ Node tests (`2` files), `npx vue-tsc --noEmit`, `npm run build`, PHP syntax checks, and `git diff --check`. The production build retained its existing large-chunk and PWA deprecation advisories. Pint check-only reported pre-existing whole-file style issues in the touched PHP files; no broad formatter rewrite was applied. Browser, offline runtime, and live Reverb behavior were not directly verified in this revision.

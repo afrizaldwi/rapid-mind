@@ -122,11 +122,10 @@ MANUAL T0 TAP                         Q17 / STT SAFETY SIGNAL
                              transmission status visible
                                             │
                          Healthcare performs validation
+                         in the Healthcare workspace
                                             │
-                        ┌───────────────────┴──────────────┐
-                        │                                  │
-                 T0-CONFIRMED                       Downgraded
-                 / referral                         T1 / T2
+                         Relawan view remains T0-Suspect
+                         plus submission/transmission state
 ```
 
 ---
@@ -1010,8 +1009,6 @@ Recommended progression:
 Disimpan di perangkat
 → Mengirim T0…
 → Diterima sistem
-→ Ditinjau tenaga kesehatan
-→ later operational/clinical updates
 ```
 
 Meaning must remain explicit.
@@ -1054,11 +1051,7 @@ After acknowledgement:
 ✓ Diterima sistem
 ```
 
-Then:
-
-```text
-Menunggu peninjauan tenaga kesehatan
-```
+After server receipt, keep the Relawan view focused on `T0-Suspect`, field safety guidance, and the recorded `Diterima sistem` submission state. Do not append Healthcare handling or clinical progress.
 
 ---
 
@@ -1198,10 +1191,6 @@ STATUS PENGIRIMAN
 ✓ Diterima sistem
 16:42
 
-STATUS PENANGANAN
-
-Menunggu peninjauan tenaga kesehatan
-
 ────────────────
 
 Yang perlu dilakukan sekarang
@@ -1229,7 +1218,6 @@ After T0 creation, keep visible:
 - location and/or location source;
 - local persistence state;
 - network transmission state;
-- Healthcare review/response state;
 - SMS handoff state where relevant;
 - field safety instructions;
 - interrupted assessment reference where relevant.
@@ -1240,19 +1228,17 @@ Do not expose a dense audit log in the normal Relawan interface.
 
 ---
 
-# 41. Three Independent Status Axes
+# 41. Relawan Report and Transmission States
 
-T0 must not use one combined status that hides different meanings.
+The Relawan interface keeps the original field report separate from its submission state.
 
-## A. Emergency / Clinical Classification
+## A. Field Report
 
 ```text
 T0-Suspect
-T0-Confirmed
-Downgraded to T1/T2
 ```
 
-Healthcare controls clinical validation after T0-Suspect creation.
+This label does not change when Healthcare later acknowledges, reviews, confirms, downgrades, resolves, refers, or dispatches the incident. Those lifecycle and clinical states remain in the Healthcare workspace only.
 
 ## B. Transmission State
 
@@ -1264,27 +1250,14 @@ Diterima server
 Gagal sinkronisasi
 ```
 
-## C. Response / Dispatch State
-
-Potential examples:
-
-```text
-Belum ditinjau
-Sedang ditinjau
-Tim ditugaskan
-Menuju lokasi
-Tiba
-```
-
 Example legitimate combination:
 
 ```text
 T0-Suspect
 Diterima server
-Belum ditinjau tenaga kesehatan
 ```
 
-These axes must remain conceptually separate.
+These two concepts must remain separate. `Diterima server` describes technical receipt of the Relawan's report, not any Healthcare action.
 
 ---
 
@@ -1467,84 +1440,23 @@ The history remains auditable.
 
 ---
 
-# 49. Healthcare Review State
+# 49. Healthcare State Isolation
 
-When Healthcare begins reviewing:
+Healthcare acknowledgement, review, clinical validation, confirmation, downgrade, resolution, referral, and dispatch progression are not exposed in Relawan UI or Relawan-facing server payloads.
 
-```text
-T0-SUSPECT
-
-Sedang ditinjau tenaga kesehatan
-```
-
-Do not infer human review merely from server acknowledgement.
-
-Only show:
-
-```text
-Tim medis telah menerima laporan
-```
-
-when that state corresponds to an actual Healthcare-side action.
+The Relawan continues to see the original `T0-Suspect` report and the local/server submission state only.
 
 ---
 
 # 50. T0 Confirmed by Healthcare
 
-Example:
-
-```text
-T0 TERKONFIRMASI
-
-Dikonfirmasi tenaga kesehatan
-16:48
-
-Tim medis sedang menindaklanjuti.
-```
-
-If an actual dispatch/referral state exists:
-
-```text
-Tim menuju lokasi
-```
-
-may be shown.
-
-Do not show dispatch language before the Healthcare workflow actually produces it.
-
-The original T0-Suspect remains part of the event history.
+Healthcare may record `T0_CONFIRMED` in its own clinical workflow. Relawan must not receive or display that value; the Relawan-facing report remains `T0-Suspect`.
 
 ---
 
 # 51. Healthcare Downgrade
 
-If Healthcare determines that the case should be T1 or T2:
-
-```text
-Status diperbarui tenaga kesehatan
-
-T0-Suspect telah ditinjau.
-
-Status tindak lanjut:
-T1 — Prioritas asesmen klinis
-```
-
-Do not use blame-oriented wording such as:
-
-```text
-T0 salah
-```
-
-The original Relawan escalation and later Healthcare validation are distinct decisions.
-
-Potential timeline:
-
-```text
-16:42 T0-Suspect dibuat
-16:43 Diterima sistem
-16:46 Ditinjau tenaga kesehatan
-16:49 Diperbarui menjadi T1
-```
+Healthcare may record a T1/T2/T3 downgrade in its own clinical workflow. Relawan must not receive or display the downgrade or any derived clinical label. The original Relawan report remains `T0-Suspect`.
 
 ---
 
@@ -1562,7 +1474,7 @@ detect concern
 → create T0-Suspect
 → transmit or preserve offline
 → remain with penyintas
-→ receive operational status
+→ receive local/server submission status
 ```
 
 ## Healthcare UI
@@ -1580,7 +1492,7 @@ receive T0-Suspect
 → intervention/transport workflow
 ```
 
-The Relawan must not receive controls such as:
+The Relawan must not receive controls or resulting state such as:
 
 ```text
 Konfirmasi T0
@@ -1589,6 +1501,8 @@ Downgrade ke T1
 Downgrade ke T2
 Resep / Intervensi
 Dispatch Ambulans
+Healthcare acknowledgement/review/resolution
+Clinical result, referral, or dispatch progression
 ```
 
 These belong to Healthcare.
@@ -1822,8 +1736,6 @@ T0-Suspect
 +
 transmission state
 +
-Healthcare state
-+
 field instructions
 
 ────────────────────────────────
@@ -1869,7 +1781,7 @@ The following are treated as the current design baseline:
 21. Final action uses `KIRIM T0-SUSPECT`.
 22. Local persistence occurs before network transmission.
 23. T0 local records enter a priority outbox.
-24. `T0-Suspect`, transmission state, and Healthcare response state are separate concepts.
+24. Relawan sees `T0-Suspect` and its separate local/server submission state; Healthcare response and clinical states are not exposed to Relawan.
 25. `Diterima sistem` does not mean Healthcare has reviewed the case.
 26. `Diterima sistem` does not mean ambulance/medical assistance is already on the way.
 27. Offline T0 remains visible and explicitly marked as safe locally.

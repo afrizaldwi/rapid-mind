@@ -5,6 +5,7 @@ import {
     selectSrqSpeechAnswerUpdates,
     type SrqTranscriptInterpretation,
 } from "../../resources/js/domain/srq/srqTranscriptInterpreter.ts";
+import { srqQuestions } from "../../resources/js/domain/srq/srqQuestions.ts";
 
 function answerFor(
     transcript: string,
@@ -39,28 +40,7 @@ test("a comma-containing canonical question keeps its local direct response", ()
     assert.equal(answerFor(`${question} Tidak.`, 6), false);
 });
 
-const canonicalQuestions = [
-    "Apakah sering merasa sakit kepala?",
-    "Apakah nafsu makan menurun?",
-    "Apakah sulit tidur nyenyak?",
-    "Apakah mudah merasa takut?",
-    "Apakah tangan terasa gemetar?",
-    "Apakah merasa cemas, tegang, atau khawatir?",
-    "Apakah pencernaan terasa buruk?",
-    "Apakah sulit berpikir jernih?",
-    "Apakah merasa tidak bahagia?",
-    "Apakah lebih sering menangis?",
-    "Apakah sulit menikmati kegiatan sehari-hari?",
-    "Apakah kesulitan mengambil keputusan?",
-    "Apakah hasil kerja atau tugas posko terganggu?",
-    "Apakah merasa tidak mampu berbuat hal bermanfaat?",
-    "Apakah kehilangan minat total pada berbagai hal?",
-    "Apakah merasa diri tidak berharga atau gagal?",
-    "Apakah memiliki pemikiran untuk mengakhiri hidup?",
-    "Apakah merasa lelah sepanjang waktu?",
-    "Apakah merasakan tidak nyaman di perut/ulu hati?",
-    "Apakah mudah merasa lelah?",
-] as const;
+const canonicalQuestions = srqQuestions.map(({ question }) => question);
 
 test("all canonical SRQ questions support an anchored YA or TIDAK response", () => {
     canonicalQuestions.forEach((question, index) => {
@@ -169,9 +149,7 @@ test("ownership filtering distinguishes manual, STT-owned, and restored answers"
         new Set([1]),
     );
 
-    assert.deepEqual(result.accepted, [
-        { questionNumber: 3, answer: true },
-    ]);
+    assert.deepEqual(result.accepted, [{ questionNumber: 3, answer: true }]);
     assert.deepEqual(result.protectedQuestionNumbers, [1, 4]);
 });
 

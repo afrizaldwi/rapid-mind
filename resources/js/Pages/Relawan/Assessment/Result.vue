@@ -217,7 +217,6 @@ const props = defineProps<{
     existingEmergency?: {
         id: string;
         assessment_id: string;
-        status: string;
     } | null;
 }>();
 
@@ -289,7 +288,6 @@ const categoryStyle = computed(() => {
 
     switch (cat) {
         case "T0_SUSPECT":
-        case "T0_CONFIRMED":
             return {
                 badge: "bg-red-50 text-red-900 border-red-500",
                 title: "T0 — Gawat Darurat Psikiatrik",

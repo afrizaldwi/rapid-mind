@@ -953,20 +953,18 @@ Once the emergency exists locally, it must be recoverable after:
 - location;
 - local persistence state;
 - network transmission state;
-- Healthcare response state;
 - SMS handoff state if used;
 - safety instructions;
 - interrupted assessment reference.
 
-These are separate axes:
+These are separate Relawan-facing concepts:
 
 ```text
-Clinical emergency state
+Original T0-Suspect report
 Transmission/sync state
-Healthcare response state
 ```
 
-Do not collapse them into one badge.
+Do not expose Healthcare acknowledgement, review, clinical validation, confirmation, downgrade, resolution, referral, or dispatch progression through this screen or its payload.
 
 Assessment is suspended, not deleted.
 
@@ -2399,7 +2397,6 @@ location fallback
 T0 local-first creation
 high-priority T0 sync
 active T0 incident
-Healthcare response updates
 ```
 
 ---
@@ -3480,7 +3477,7 @@ acknowledged incident
 → decision T0-confirmed or T1/T2
 → server confirmation
 → decision appears in timeline
-→ Relawan receives updated handling/clinical state
+→ Healthcare lifecycle and clinical state remain visible only to Healthcare
 ```
 
 ---
@@ -3551,6 +3548,7 @@ Before treating any screen as complete, verify the following.
 - T0 first tap never transmits immediately;
 - T0 can be created without GPS;
 - T0 can be created without known patient identity;
+- Relawan sees T0-Suspect plus local/server submission state, never Healthcare lifecycle or clinical results;
 - STT is present in the MVP;
 - STT does not control the authoritative answer;
 - manual SRQ remains fully usable;

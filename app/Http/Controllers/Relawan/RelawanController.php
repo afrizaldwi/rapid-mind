@@ -53,18 +53,11 @@ final class RelawanController extends Controller
             ->take(5)
             ->get();
 
-        $activeEmergency = EmergencyEvent::with('patient')
-            ->where('user_id', $user->id)
-            ->whereIn('status', [EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED, EmergencyStatus::REVIEWING])
-            ->latest()
-            ->first();
-
         $shelter = $user->shelter_id ? Shelter::find($user->shelter_id) : null;
 
         return Inertia::render('Relawan/Home', [
             'activeDraft' => $activeDraft,
             'recentAssessments' => $recentAssessments,
-            'activeEmergency' => $activeEmergency,
             'shelter' => $shelter,
         ]);
     }
@@ -376,7 +369,7 @@ final class RelawanController extends Controller
         $existingEmergency = $assessment?->emergencyEvents()
             ->where('user_id', Auth::id())
             ->latest('created_at')
-            ->first(['id', 'assessment_id', 'status']);
+            ->first(['id', 'assessment_id']);
 
         return Inertia::render('Relawan/Assessment/Result', [
             'assessment' => $assessment,
@@ -425,7 +418,9 @@ final class RelawanController extends Controller
             ->latest('completed_at')
             ->get();
 
-        $emergencies = EmergencyEvent::with('patient')
+        $emergencies = EmergencyEvent::query()
+            ->select(['id', 'user_id', 'patient_id', 'red_flag_type', 'notes', 'created_at'])
+            ->with(['patient:id,name'])
             ->where('user_id', $user->id)
             ->latest('created_at')
             ->get();
@@ -439,29 +434,24 @@ final class RelawanController extends Controller
 
     public function emergencyDetail(string $emergencyId): InertiaResponse
     {
-        $emergency = EmergencyEvent::with(['patient', 'shelter', 'verifications.verifier'])
+        $emergency = EmergencyEvent::query()
+            ->select([
+                'id',
+                'patient_id',
+                'user_id',
+                'red_flag_type',
+                'latitude',
+                'longitude',
+                'shelter_id',
+                'notes',
+                'created_at',
+            ])
+            ->with(['patient:id,name', 'shelter:id,name'])
             ->where('user_id', Auth::id())
             ->findOrFail($emergencyId);
 
         return Inertia::render('Relawan/Emergency', [
             'emergency' => $emergency,
-        ]);
-    }
-
-    public function emergencyStatus(string $emergencyId): JsonResponse
-    {
-        $emergency = EmergencyEvent::where('user_id', Auth::id())
-            ->findOrFail($emergencyId);
-        $decision = $emergency->verifications()
-            ->whereNotNull('clinical_result')
-            ->latest('id')
-            ->first();
-
-        return response()->json([
-            'id' => $emergency->id,
-            'status' => $emergency->status->value,
-            'clinical_result' => $decision?->clinical_result?->value,
-            'updated_at' => $emergency->updated_at?->toISOString(),
         ]);
     }
 

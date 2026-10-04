@@ -103,6 +103,9 @@ final class AssessmentLocalShellTest extends TestCase
             ->has('emergencies', 1)
             ->where('emergencies.0.id', $emergency->id)
             ->where('emergencies.0.patient.name', 'Penyintas Pemilik')
+            ->missing('emergencies.0.status')
+            ->missing('emergencies.0.updated_at')
+            ->missing('emergencies.0.verifications')
             ->etc());
     }
 
@@ -138,7 +141,7 @@ final class AssessmentLocalShellTest extends TestCase
                 ->component('Relawan/Assessment/Result', false)
                 ->where('existingEmergency.id', $ownedEmergency->id)
                 ->where('existingEmergency.assessment_id', $assessment->id)
-                ->where('existingEmergency.status', EmergencyStatus::PENDING->value)
+                ->missing('existingEmergency.status')
                 ->etc());
     }
 

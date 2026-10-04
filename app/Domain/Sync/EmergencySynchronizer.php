@@ -133,7 +133,6 @@ final class EmergencySynchronizer
             'patient_id' => $event->patient_id,
             'assessment_id' => $event->assessment_id,
             'red_flag_type' => $event->red_flag_type->value,
-            'status' => $event->status->value,
             'latitude' => $event->latitude === null ? null : (float) $event->latitude,
             'longitude' => $event->longitude === null ? null : (float) $event->longitude,
             'shelter_id' => $event->shelter_id,

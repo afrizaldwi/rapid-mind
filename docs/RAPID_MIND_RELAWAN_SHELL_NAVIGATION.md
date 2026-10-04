@@ -1623,7 +1623,7 @@ Cover:
 12. instructions to the Relawan while waiting for help;
 13. cancellation/false-positive handling;
 14. what happens to an interrupted PFA/SRQ workflow;
-15. T0-Suspect vs Healthcare-confirmed state communication;
+15. T0-Suspect report vs local/server submission-state communication, without exposing Healthcare lifecycle or clinical results;
 16. accessibility, sound, vibration, and motion;
 17. avoiding accidental T0 activation without slowing genuine emergencies.
 

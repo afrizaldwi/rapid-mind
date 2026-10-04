@@ -1,4 +1,5 @@
 import { srqSpeechRules } from "./srqSpeechRules.ts";
+import { srqQuestions } from "./srqQuestions.ts";
 
 export type SrqSpeechMatch = {
     questionNumber: number;
@@ -66,6 +67,13 @@ function transcriptClauses(normalized: string): string[] {
         .filter(Boolean);
 }
 
+const canonicalQuestionClauses = new Map(
+    srqQuestions.map(({ number, question }) => [
+        number,
+        transcriptClauses(normalizeSrqTranscript(question))[0],
+    ]),
+);
+
 function matchesAny(text: string, patterns: readonly RegExp[]): boolean {
     return patterns.some((pattern) => pattern.test(text));
 }
@@ -106,8 +114,10 @@ export function interpretSrqTranscript(
 
     for (let index = 0; index < clauses.length; index += 1) {
         const clause = clauses[index];
-        const anchoredRules = srqSpeechRules.filter((rule) =>
-            matchesAny(clause, rule.questionPatterns),
+        const anchoredRules = srqSpeechRules.filter(
+            (rule) =>
+                matchesAny(clause, rule.questionPatterns) ||
+                canonicalQuestionClauses.get(rule.number) === clause,
         );
         if (anchoredRules.length !== 1) continue;
 

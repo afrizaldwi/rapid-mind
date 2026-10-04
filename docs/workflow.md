@@ -126,9 +126,7 @@ Dashboard pelayanan kesehatan diperuntukkan bagi tenaga kesehatan profesional (d
 1. **Notifikasi Peringatan Dini Real-Time (T0-Suspect Alert):**  
    Sistem menampilkan jendela pop-up darurat disertai sinyal audio berfrekuensi tinggi secara instan begitu sinyal T0 dipicu oleh relawan di lapangan. Layar menampilkan data NIK/identitas pasien, jenis indikator darurat, nama relawan pendamping, dan lokasi titik GPS penjemputan.  
 2. **Rekam Medis Klinis dan Prioritasi Asesmen:**  
-   Menyajikan rekam jejak psikologis pasien secara longitudinal (riwayat SRQ-20, faktor risiko, dan skor fungsi). Sistem mengurutkan antrean intervensi pasien secara otomatis berdasarkan matriks kegawatan klinis (**T0 $\rightarrow$ T1 $\rightarrow$ T2 $\rightarrow$ T3**).  
-3. **Modul Validasi dan Tindakan Medis:**  
-   Tenaga medis profesional melakukan evaluasi klinis mendalam (*clinical validation*) untuk mengonfirmasi atau menyesuaikan status rekomendasi sistem, memasukkan catatan diagnosis medis, menetapkan rencana intervensi/farmakoterapi, atau menerbitkan surat rujukan resmi ke fasilitas kesehatan tingkat lanjut.
+   Menyajikan rekam jejak psikologis pasien secara longitudinal (riwayat SRQ-20, faktor risiko, dan skor fungsi). Sistem mengurutkan antrean intervensi pasien secara otomatis berdasarkan matriks kegawatan klinis (**T0 $\rightarrow$ T1 $\rightarrow$ T2 $\rightarrow$ T3**).
 
 **PEMBAGIAN 3 ROLE (RBAC) RAPID-MIND**
 
@@ -143,7 +141,8 @@ Dashboard pelayanan kesehatan diperuntukkan bagi tenaga kesehatan profesional (d
 
 * Hak Akses: Layar Tele-Emergency, Konfirmasi Status Rujukan, dan Rekam Medis Klinis Pasien.  
 * Tingkat Keputusan: Validasi Diagnostik atau Triage Sekunder.  
-* Akses & Aksi: Menerima notifikasi T0-Suspect, melakukan verifikasi cepat via telepon/video ke HP relawan atau menurunkan Tim Mobile, lalu mengubah status menjadi "T0-Confirmed Rujukan" atau menurunkan status ke T1/T2.
+* Akses & Aksi: Menerima notifikasi T0-Suspect
+
 
 **ROLE 3: ADMIN & PENGAMBIL KEBIJAKAN (Dashboard BPBD / Dinkes)**
 
@@ -159,11 +158,8 @@ Dashboard pelayanan kesehatan diperuntukkan bagi tenaga kesehatan profesional (d
      
 3. Notifikasi darurat masuk ke Dashboard Role 2 (PSC 119 / Tim Reaksi Cepat Dinkes / Puskesmas Terdekat).  
      
-4. Dokter atau Tenaga Kesehatan di Command Center melakukan validasi sekunder (Tele-Emergency) dengan menghubungi relawan di lapangan untuk konfirmasi visual selama 1-2 menit.  
      
-5. Jika terkonfirmasi valid, status diubah menjadi "T0-Confirmed" dan unit evakuasi/ambulans baru diberangkatkan. Jika ternyata hanya respons histeria biasa tanpa bahaya darurat, status diturunkan oleh Nakes menjadi T1 atau T2.  
-     
-6. Seluruh pergerakan data ini terekam secara real-time di Dashboard Role 3 (BPBD dan Dinkes) untuk pemetaan peta geospasial (heatmap) dan pengambil kebijakan skala wilayah.
+4. Seluruh pergerakan data ini terekam secara real-time di Dashboard Role 3 (BPBD dan Dinkes) untuk pemetaan peta geospasial (heatmap) dan pengambil kebijakan skala wilayah.
 
 Halo Dev Team\! Biar kita satu frekuensi untuk pengerjaan prototipe/mockup web-app **RAPID-MIND**, berikut adalah ringkasan spesifikasi teknis, logika *backend*, dan alur UI/UX yang perlu kita bangun:
 
@@ -264,10 +260,6 @@ Halo Dev Team\! Biar kita satu frekuensi untuk pengerjaan prototipe/mockup web-a
     * Tombol aksi cepat: *"Buka Tele-Emergency"* dan *"Lihat Detail Klinis"*.  
   * **Panel Tengah (Patient Clinical Detail & Validation Workspace):**  
     * Rekam Medis Terintegrasi Penyintas: jawaban SRQ-20, detail faktor risiko, dan skor fungsi harian.  
-    * Fitur *Tele-Emergency Modal:* Jendela panggilan suara/video atau obrolan terintegrasi ke PWA relawan untuk verifikasi visual kondisi penyintas.  
-    * *Action Button Area* (Tombol Eksekusi Validasi Medis):  
-      * Tombol Hijau: *"Konfirmasi Rujukan (T0-Confirmed)"* $\rightarrow$ Mengirim perintah penjemputan ambulans/PSC 119\.  
-      * Tombol Kuning: *"Downgrade Status (Ke T1 High Risk / T2 Moderate)"* $\rightarrow$ Jika verifikasi klinis menunjukkan penyintas tidak dalam bahaya nyawa/psikosis akut.  
   * **Panel Kanan (Active Referral & Priority Queue Tracking):**  
     * Pengurutan antrean penanganan medis berdasarkan matriks kegawatan: **T0 $\rightarrow$ T1 $\rightarrow$ T2 $\rightarrow$ T3**.  
     * *Transport Tracking:* Status pengiriman unit ambulans/tim medis mobile ke posko (*Menuju Lokasi $\rightarrow$ Tiba di Posko $\rightarrow$ Transportasi ke RS $\rightarrow$ Selesai*).
@@ -595,5 +587,28 @@ $Total\ Integrated\ Score=Skor\ SRQ20\ (0-20)+Skor\ Risk\ Factor\ (0-8)+Skor\ Fu
 
 1. **Tombol Area Tap Luas (*Fat-Finger Friendly*):** Seluruh tombol pilihan jawaban dirancang dengan tinggi minimal **56px** agar tidak salah tekan saat tangan relawan gemetar atau lelah di lapangan.  
 2. **Kontras Warna Tinggi (*High Contrast Mode*):** Menggunakan palet warna yang memenuhi standar WCAG AAA agar tetap terbaca jelas di bawah terik matahari tenda pengungsian.  
-3. **Indikator Sinyal & Sync Digital:** Ikon `[📶 OFF]` di pojok kanan atas memberikan kepastian kepada relawan bahwa data tersimpan di penyimpanan lokal HP (*IndexedDB*) saat tidak ada koneksi internet.
+3. **Indikator Sinyal & Sync Digital:** Ikon `[📶 OFF]` di pojok kanan atas memberikan kepastian kepada relawan bahwa data tersimpan di penyimpanan lokal HP 
+
+**Keamanan:**
+
+**1\. Enkripsi Lokal di HP Relawan (*Client-Side AES-256 Encryption*)**
+
+* **Bagaimana kalau HP Relawan Hilang / Dicuri di Posko?** Data wawancara yang tersimpan sementara di penyimpanan lokal HP (`IndexedDB`) **tidak berbentuk teks biasa**, melainkan dienkripsi dengan standar militer **AES-256**.  
+* Orang awam atau peretas yang membongkar HP relawan **TIDAK AKAN BISA BISA BACA** isinya tanpa *decryption key*. Begitu HP mendapat sinyal dan data ter-upload ke server, data di HP relawan otomatis terhapus bersih (*auto-purge*).
+
+### **2\. Pseudonimisasi & Pemisahan Identitas (*Data Anonymization*)**
+
+* **NIK dan Nama Dipisah dari Skor Psikologis:** Server menyimpan data medis/psikologis terpisah dari data identitas diri (NIK, nama, HP) menggunakan teknik *hashing* dan *pseudonymization*.  
+* Pihak luar atau peretas yang mencoba mengintip data analisis psikologis hanya akan melihat ID acak (misal: `USR-98421-X`), **tanpa pernah tahu siapa nama atau NIK pemilik skor tersebut**.
+
+**3\. Keamanan Jalur Transmisi Sinyal (*Encrypted Data in Transit*)**
+
+* **Saat Online (WiFi/Seluler):** Seluruh lalu lintas data dienkripsi E2EE menggunakan protokol HTTPS dan WSS (*WebSockets Secure* / TLS 1.3). Data tidak bisa disadap di tengah jalan.  
+* **Saat Pakai SMS Fallback (Gagal Internet):** Payload SMS Red Flag T0 dikirim dalam bentuk **Kode Hash Terenkripsi (Base64/Encrypted Hash)**. Jika ada pihak tak bertanggung jawab mencuri lalu lintas SMS, mereka hanya melihat deretan karakter acak yang membingungkan.
+
+### **4\. Akses Berlapis / RBAC (*Least Privilege Access*)**
+
+* **Relawan Lapangan (Role 1):** Hanya bisa menginput data dan *tidak punya akses* untuk mengunduh, mengekspor, atau melihat daftar rekam medis pengungsi lain.  
+* **Admin BPBD/Dinkes (Role 3):** Hanya bisa melihat **data agregat/anonim** di Peta Heatmap (misal: *"Posko Tenda B ada 12 kasus T1"*). Admin **tidak bisa** melihat NIK atau nama penyintas demi menjaga kerahasiaan (*Doctor-Patient Confidentiality*).  
+* **Faskes/Dokter (Role 2):** Hanya Faskes terverifikasi resmi yang memegang *key* untuk membuka rekam medis berbasis NIK demi kebutuhan penjemputan ambulans atau resep obat.
 

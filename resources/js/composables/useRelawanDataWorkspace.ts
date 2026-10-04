@@ -25,7 +25,6 @@ export type ServerDataEmergency = {
     id: string;
     user_id: number;
     patient?: ServerPatient | null;
-    status: string;
     red_flag_type: string;
     notes?: string | null;
     created_at: string;
@@ -174,7 +173,6 @@ export function useRelawanDataWorkspace(
                 source: "server",
                 emergencyUrl: `/relawan/emergencies/${item.id}`,
                 triage: null,
-                status: item.status,
                 redFlagType: item.red_flag_type,
                 notes: item.notes,
             });
@@ -253,7 +251,9 @@ export function useRelawanDataWorkspace(
                 type: "ASSESSMENT",
                 patientName: item.patient?.name || "Penyintas",
                 date: item.updated_at || item.started_at || "",
-                label: local.ready.value ? "Hanya tersedia di server" : "Status di perangkat belum dapat dipastikan",
+                label: local.ready.value
+                    ? "Hanya tersedia di server"
+                    : "Status di perangkat belum dapat dipastikan",
                 source: "server",
                 resumeUrl:
                     item.resume_url || `/relawan/assessment/${item.id}/srq`,
@@ -279,7 +279,6 @@ export function useRelawanDataWorkspace(
                 label: "Tersimpan di perangkat",
                 source: "local",
                 triage: null,
-                status: item.status,
                 redFlagType: item.red_flag_type,
                 notes: item.notes,
                 emergencyUrl: `/relawan/emergencies/${item.id}`,
