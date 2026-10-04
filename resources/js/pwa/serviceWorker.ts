@@ -28,7 +28,7 @@ registerRoute(
     ({ url }) =>
         url.origin === self.location.origin &&
         (url.pathname === "/login" ||
-            url.pathname === "/logout" ||
+            url.pathname === "/logout" || url.pathname.endsWith(".webmanifest") ||
             url.pathname.startsWith("/api/") ||
             url.pathname.startsWith("/sanctum/") ||
             url.pathname.startsWith("/admin/") ||

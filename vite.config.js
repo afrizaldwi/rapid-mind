@@ -22,6 +22,23 @@ export default defineConfig({
         }),
 
         tailwindcss(),
+        {
+            name: "vite-serve-manifest",
+            configureServer(server) {
+                server.middlewares.use((req, res, next) => {
+                    const pathname = req.url ? req.url.split("?")[0] : "";
+                    if (pathname === "/manifest.webmanifest" || pathname === "/manifest.json" || pathname === "/build/manifest.webmanifest") {
+                        res.setHeader("Content-Type", "application/manifest+json");
+                        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+                        res.setHeader("Access-Control-Allow-Origin", "*");
+                        res.statusCode = 200;
+                        res.end(readFileSync(new URL("./public/manifest.webmanifest", import.meta.url), "utf8"));
+                        return;
+                    }
+                    next();
+                });
+            },
+        },
         VitePWA({
             strategies: "injectManifest",
             srcDir: "resources/js/pwa",

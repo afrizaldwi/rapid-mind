@@ -8,7 +8,7 @@
 
     <title inertia>{{ config('app.name', 'RAPID-MIND') }}</title>
 
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="/manifest.webmanifest?v=2" crossorigin="use-credentials">
     <meta name="theme-color" content="#0F766E">
     @vite('resources/js/app.ts')
     @inertiaHead

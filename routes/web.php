@@ -28,7 +28,16 @@ Route::get('/manifest.webmanifest', function () {
     }
     return response()->file($path, [
         'Content-Type' => 'application/manifest+json',
-        'Cache-Control' => 'no-cache, private',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+});
+
+Route::get('/manifest.json', function () {
+    return response()->file(public_path('manifest.webmanifest'), [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin' => '*',
     ]);
 });
 Route::get('/build/manifest.webmanifest', function () {
