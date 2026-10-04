@@ -142,24 +142,24 @@
           </div>
         </div>
 
-        <!-- Sebaran Kasus Geospasial Map (Right, Section 16 & 17) -->
+        <!-- Sebaran Posko Geospasial Map (Right) -->
         <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200/80 p-5 flex flex-col justify-between">
           <div>
             <!-- Header -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider leading-tight">
-                  SEBARAN KASUS
+                  SEBARAN POSKO
                 </h2>
                 <span class="text-[11px] text-slate-400 font-normal block leading-tight mt-0.5">
-                  Posko penanggulangan bencana
+                  Pemantauan lokasi posko dan status triase
                 </span>
               </div>
               <Link
                 href="/admin/map"
-                class="text-xs font-semibold text-teal-700 hover:text-teal-900 transition flex items-center gap-1"
+                class="text-xs font-medium text-teal-700 hover:text-teal-900 transition flex items-center gap-1"
               >
-                Peta Penuh →
+                Peta penuh →
               </Link>
             </div>
 
@@ -167,16 +167,20 @@
             <div class="mt-3 relative h-64 sm:h-72 w-full rounded-lg overflow-hidden border border-slate-200/80">
               <div ref="mapContainer" class="w-full h-full"></div>
 
-              <!-- Quiet Minimal Legend -->
-              <div class="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs text-[10px] flex items-center gap-3 z-10 font-medium text-slate-600">
-                <div class="flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-rose-600"></span>
-                  <span>T0 Darurat</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                  <span>Posko Terpantau</span>
-                </div>
+              <!-- Minimal Inline Legend Overlay (Top-Left, matching Peta Geospasial) -->
+              <div
+                class="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-md border border-slate-200/80 shadow-xs text-[10px] flex items-center gap-3 z-10 select-none pointer-events-auto"
+                aria-label="Legenda Peta"
+              >
+                <span class="font-semibold text-slate-400 uppercase tracking-wider text-[9px]">Indikator</span>
+                <span class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-2 h-2 rounded-full bg-red-600 border border-white shrink-0"></span>
+                  T0 Aktif
+                </span>
+                <span class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-2 h-2 rounded-full bg-teal-700 border border-white shrink-0"></span>
+                  Posko
+                </span>
               </div>
             </div>
           </div>
@@ -380,7 +384,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import * as maplibregl from 'maplibre-gl';
@@ -488,6 +492,48 @@ const trendPathT1 = computed(() => buildTrendPath('t1'));
 const trendPathT2 = computed(() => buildTrendPath('t2'));
 const trendPathT3 = computed(() => buildTrendPath('t3'));
 
+const selectedShelterId = ref<number | null>(null);
+const mapInstance = ref<maplibregl.Map | null>(null);
+const markersMap = new Map<number, { marker: maplibregl.Marker; popup: maplibregl.Popup; visualEl: HTMLElement; hasT0: boolean }>();
+
+function escapeHtml(str: string): string {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function updateMarkerHighlight(entry: { visualEl: HTMLElement; hasT0: boolean; marker: maplibregl.Marker }, isSelected: boolean) {
+  const visual = entry.visualEl;
+  const wrapper = entry.marker.getElement();
+
+  if (isSelected) {
+    visual.classList.add('scale-125');
+    if (entry.hasT0) {
+      visual.classList.add('ring-4', 'ring-red-600/35');
+    } else {
+      visual.classList.add('ring-4', 'ring-teal-700/35');
+    }
+    wrapper.style.zIndex = '30';
+  } else {
+    visual.classList.remove('scale-125', 'ring-4', 'ring-red-600/35', 'ring-teal-700/35');
+    wrapper.style.zIndex = '1';
+  }
+}
+
+watch(selectedShelterId, (newId, oldId) => {
+  if (oldId !== null) {
+    const prev = markersMap.get(oldId);
+    if (prev) updateMarkerHighlight(prev, false);
+  }
+  if (newId !== null) {
+    const next = markersMap.get(newId);
+    if (next) updateMarkerHighlight(next, true);
+  }
+});
+
 onMounted(() => {
   if (!mapContainer.value) return;
 
@@ -514,35 +560,107 @@ onMounted(() => {
           },
         ],
       },
-      center: [110.42, -7.70], // Sleman / Merapi
+      center: [110.42, -7.70],
       zoom: 11,
     });
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+    mapInstance.value = map;
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
-    const points = props.mapShelters || props.shelters || [];
-    for (const s of points) {
+    map.on('click', () => {
+      selectedShelterId.value = null;
+    });
+
+    const points = (props.mapShelters || props.shelters || []).filter((s: any) => {
       const rawLng = s.longitude !== null && s.longitude !== undefined ? Number(s.longitude) : null;
       const rawLat = s.latitude !== null && s.latitude !== undefined ? Number(s.latitude) : null;
+      return rawLng !== null && rawLat !== null && !isNaN(rawLng) && !isNaN(rawLat);
+    });
 
-      if (rawLng === null || rawLat === null || isNaN(rawLng) || isNaN(rawLat)) {
-        continue;
-      }
-
-      const el = document.createElement('div');
-      el.className = 'w-6 h-6 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold cursor-pointer';
-
+    for (const s of points) {
+      const rawLng = Number(s.longitude);
+      const rawLat = Number(s.latitude);
       const hasT0 = Number(s.t0_count || 0) > 0;
-      el.style.backgroundColor = hasT0 ? '#DC2626' : '#0F766E';
-      el.style.color = '#FFFFFF';
-      el.innerText = s.name ? s.name.charAt(0) : 'P';
 
-      new maplibregl.Marker(el)
+      // Generous hit target wrapper (32x32px) ensuring easy click and tap
+      const hitArea = document.createElement('div');
+      hitArea.className = 'w-8 h-8 flex items-center justify-center cursor-pointer pointer-events-auto select-none';
+      hitArea.setAttribute('role', 'button');
+      hitArea.setAttribute('tabindex', '0');
+      hitArea.setAttribute('aria-label', `${s.name} - ${hasT0 ? s.t0_count + ' T0 Aktif' : 'Posko'}`);
+      hitArea.setAttribute('title', `${s.name} (${hasT0 ? s.t0_count + ' T0 Aktif' : 'Posko'})`);
+
+      // Inner visual marker (20x20px, matching Peta Geospasial design)
+      const visualMarker = document.createElement('div');
+      visualMarker.className = `w-5 h-5 rounded-full border-2 border-white shadow-md flex items-center justify-center transition-all duration-150 ${hasT0 ? 'bg-red-600' : 'bg-teal-700'}`;
+
+      const innerDot = document.createElement('div');
+      innerDot.className = 'w-1 h-1 rounded-full bg-white shrink-0';
+      visualMarker.appendChild(innerDot);
+
+      hitArea.appendChild(visualMarker);
+
+      const popupHTML = `
+        <div style="font-family: inherit; padding: 2px; min-width: 160px;">
+          <div style="font-weight: 700; font-size: 12px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(s.name)}</div>
+          <div style="font-size: 10px; color: #64748B; margin-bottom: 6px;">${escapeHtml(s.address || 'Kawasan Posko Bencana')}</div>
+          <div style="font-size: 10px; color: #334155; line-height: 1.4; border-top: 1px solid #F1F5F9; padding-top: 4px;">
+            <div><span style="font-weight: 600; color: #0F172A;">${s.patient_count || 0}</span> penyintas terdata</div>
+            ${hasT0 ? `<div style="color: #B91C1C; font-weight: 600; margin-top: 3px;">● ${s.t0_count} kasus T0 aktif</div>` : '<div style="color: #0F766E; font-weight: 500; margin-top: 3px;">● Posko terkendali</div>'}
+          </div>
+          <div style="margin-top: 6px; border-top: 1px solid #F1F5F9; padding-top: 4px; text-align: right;">
+            <a href="/admin/map" style="font-size: 10px; font-weight: 600; color: #0F766E; text-decoration: none;">Peta penuh &rarr;</a>
+          </div>
+        </div>
+      `;
+
+      const popup = new maplibregl.Popup({ offset: 14 }).setHTML(popupHTML);
+
+      const onMarkerClick = (event: Event) => {
+        event.stopPropagation();
+        selectedShelterId.value = s.id;
+        map.flyTo({
+          center: [rawLng, rawLat],
+          zoom: 12.5,
+          essential: true,
+        });
+        if (!popup.isOpen()) {
+          popup.addTo(map);
+        }
+      };
+
+      hitArea.addEventListener('click', onMarkerClick);
+      hitArea.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onMarkerClick(event);
+        }
+      });
+
+      const marker = new maplibregl.Marker({ element: hitArea, anchor: 'center' })
         .setLngLat([rawLng, rawLat])
+        .setPopup(popup)
         .addTo(map);
+
+      markersMap.set(s.id, { marker, popup, visualEl: visualMarker, hasT0 });
+    }
+
+    if (points.length > 0) {
+      const bounds = new maplibregl.LngLatBounds();
+      for (const s of points) {
+        bounds.extend([Number(s.longitude), Number(s.latitude)]);
+      }
+      map.fitBounds(bounds, { padding: 36, maxZoom: 13 });
     }
   } catch (err) {
     console.warn('Map initialization note:', err);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (mapInstance.value) {
+    mapInstance.value.remove();
+    mapInstance.value = null;
   }
 });
 </script>
