@@ -16,9 +16,14 @@
       <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div class="min-w-0 bg-white rounded-lg border border-slate-200/80 overflow-hidden shadow-none">
         <div class="hidden md:block overflow-x-auto">
-          <table class="w-full text-left border-collapse">
+          <table class="w-full min-w-[720px] text-left border-collapse">
             <colgroup>
-              <col class="w-[34%]" /><col class="w-[12%]" /><col class="w-[14%]" /><col class="w-[14%]" /><col class="w-[14%]" /><col class="w-[12%]" />
+              <col class="w-[34%]" />
+              <col class="w-[12%]" />
+              <col class="w-[16%]" />
+              <col class="w-[16%]" />
+              <col class="w-[16%]" />
+              <col class="w-[6%]" />
             </colgroup>
             <thead>
               <tr class="bg-slate-50/70 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 tracking-wider uppercase">
@@ -26,27 +31,29 @@
                 <th scope="col" class="py-3 px-4">PENYINTAS</th>
                 <th scope="col" class="py-3 px-4">KIT ANAK</th>
                 <th scope="col" class="py-3 px-4">SANITASI</th>
-                <th scope="col" class="py-3 px-5">OBAT KRONIS</th>
+                <th scope="col" class="py-3 px-4">OBAT KRONIS</th>
                 <th scope="col" class="py-3 px-5 text-right">AKSI</th>
               </tr>
             </thead>
             <tbody v-if="shelters.length" class="divide-y divide-slate-100">
               <tr v-for="shelter in shelters" :key="shelter.id" class="hover:bg-slate-50/40 transition-colors">
-                <td class="py-3.5 px-5 align-middle">
+                <td class="py-3.5 px-5 align-top">
                   <div class="space-y-0.5">
                     <div class="text-sm font-semibold text-slate-900 leading-snug">{{ shelter.name }}</div>
                     <div class="text-xs text-slate-400 font-normal truncate max-w-sm">{{ shelter.address || 'Kawasan Posko Bencana' }}</div>
                   </div>
                 </td>
-                <td class="py-3.5 px-4 align-middle text-xs text-slate-600">
-                  <span class="font-semibold text-slate-800">{{ shelter.patients_count }}</span><span class="text-slate-500 font-normal"> penyintas</span>
+                <td class="py-3.5 px-4 align-top text-xs text-slate-600">
+                  <div class="pt-0.5">
+                    <span class="font-semibold text-slate-800">{{ shelter.patients_count }}</span><span class="text-slate-500 font-normal"> penyintas</span>
+                  </div>
                 </td>
-                <td v-for="category in categories" :key="category.value" class="py-3.5 px-4 align-middle">
-                  <button type="button" class="text-left disabled:cursor-default" :disabled="!shelter.is_active" @click="openManagement(shelter.id, category.value)">
+                <td v-for="category in categories" :key="category.value" class="py-3.5 px-4 align-top">
+                  <button type="button" class="text-left disabled:cursor-default w-full" :disabled="!shelter.is_active" @click="openManagement(shelter.id, category.value)">
                     <ResourceSummary :summary="categorySummary(shelter, category.value)" />
                   </button>
                 </td>
-                <td class="py-3.5 px-5 text-right align-middle">
+                <td class="py-3.5 px-5 text-right align-top">
                   <button
                     type="button"
                     class="whitespace-nowrap rounded-md border border-teal-700 px-3 py-1.5 text-[11px] font-semibold text-teal-800 hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
@@ -75,9 +82,9 @@
                 </div>
               </div>
               <div class="pt-2 border-t border-slate-100 space-y-2 text-xs">
-                <button v-for="category in categories" :key="category.value" type="button" class="flex w-full items-center justify-between gap-2 text-left disabled:cursor-default" :disabled="!shelter.is_active" @click="openManagement(shelter.id, category.value)">
-                  <span class="text-slate-600 font-medium">{{ category.label }}</span>
-                  <ResourceSummary :summary="categorySummary(shelter, category.value)" />
+                <button v-for="category in categories" :key="category.value" type="button" class="flex w-full items-start justify-between gap-2 text-left disabled:cursor-default" :disabled="!shelter.is_active" @click="openManagement(shelter.id, category.value)">
+                  <span class="text-slate-600 font-medium pt-0.5">{{ category.label }}</span>
+                  <ResourceSummary :summary="categorySummary(shelter, category.value)" align="right" />
                 </button>
               </div>
               <div class="flex justify-end border-t border-slate-100 pt-3">
@@ -165,9 +172,12 @@
                   <p class="mt-1 text-xs text-slate-500">Dibutuhkan {{ formatNumber(need.quantity_needed) }} {{ need.unit }} · dialokasikan {{ formatNumber(need.allocated_quantity) }} {{ need.unit }}</p>
                   <p v-if="need.notes" class="mt-1 text-xs text-slate-500">{{ need.notes }}</p>
                 </div>
-                <span class="inline-flex items-center gap-1.5 text-xs font-semibold" :class="Number(need.remaining_quantity) > 0 ? 'text-amber-800' : 'text-teal-800'">
-                  <span class="h-1.5 w-1.5 rounded-full" :class="Number(need.remaining_quantity) > 0 ? 'bg-amber-500' : 'bg-teal-600'"></span>
-                  {{ Number(need.remaining_quantity) > 0 ? `Sisa ${formatNumber(need.remaining_quantity)} ${need.unit}` : 'Terpenuhi' }}
+                <span v-if="Number(need.remaining_quantity) > 0" class="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800">
+                  <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"></span>
+                  Sisa {{ formatNumber(need.remaining_quantity) }} {{ need.unit }}
+                </span>
+                <span v-else class="text-xs font-medium text-teal-700">
+                  Terpenuhi
                 </span>
               </div>
 
@@ -251,14 +261,34 @@ type Shelter = { id: number; name: string; address: string | null; is_active: bo
 type Summary = { count: number; state: 'empty' | 'outstanding' | 'fulfilled' };
 
 const ResourceSummary = defineComponent({
-  props: { summary: { type: Object as () => Summary, required: true } },
+  props: {
+    summary: { type: Object as () => Summary, required: true },
+    align: { type: String as () => 'left' | 'right', default: 'left' },
+  },
   setup(componentProps) {
     return () => {
-      if (componentProps.summary.state === 'empty') return h('span', { class: 'text-xs font-medium text-slate-400' }, 'Belum dicatat');
+      const isRight = componentProps.align === 'right';
+      const containerClass = [
+        'flex flex-col justify-start min-h-[36px]',
+        isRight ? 'items-end text-right' : 'items-start text-left',
+      ];
+
+      if (componentProps.summary.state === 'empty') {
+        return h('div', { class: containerClass }, [
+          h('span', { class: 'text-xs font-normal text-slate-400 whitespace-nowrap leading-tight' }, 'Belum dicatat'),
+        ]);
+      }
+      const count = componentProps.summary.count;
       const outstanding = componentProps.summary.state === 'outstanding';
-      return h('span', { class: ['inline-flex items-center gap-1.5 text-xs font-semibold', outstanding ? 'text-amber-800' : 'text-teal-800'] }, [
-        h('span', { class: ['h-1.5 w-1.5 shrink-0 rounded-full', outstanding ? 'bg-amber-500' : 'bg-teal-600'] }),
-        `${componentProps.summary.count} jenis · ${outstanding ? 'Perlu alokasi' : 'Terpenuhi'}`,
+
+      return h('div', { class: [...containerClass, 'gap-0.5'] }, [
+        h('span', { class: 'text-xs font-normal text-slate-500 whitespace-nowrap leading-tight' }, `${count} jenis`),
+        outstanding
+          ? h('span', { class: 'inline-flex items-center gap-1 text-xs font-medium text-amber-800 whitespace-nowrap leading-tight' }, [
+              h('span', { class: 'h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500' }),
+              'Perlu alokasi',
+            ])
+          : h('span', { class: 'text-xs font-medium text-teal-700 whitespace-nowrap leading-tight' }, 'Terpenuhi'),
       ]);
     };
   },
