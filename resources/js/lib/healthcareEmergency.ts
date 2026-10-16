@@ -307,3 +307,166 @@ export function formatRiskAnswer(answer: boolean | null): string {
     if (answer === false) return "TIDAK";
     return "Tidak tersedia";
 }
+
+export type HealthcareEmergencyQueueItem = ReturnType<typeof normalizeQueueItem>;
+export type HealthcareEmergencyFilter = "ALL" | "PENDING" | "CONFIRMED";
+
+export function normalizeEmergencyQueue(emergencies: any[]): HealthcareEmergencyQueueItem[] {
+    return emergencies
+        .map((emergency) => normalizeQueueItem(emergency, true))
+        .sort((a, b) => {
+            if (a.status === "PENDING" && b.status !== "PENDING") return -1;
+            if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+            return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+            );
+        });
+}
+
+export function emergencyQueueCounts(
+    queue: HealthcareEmergencyQueueItem[],
+    emergencies: any[],
+) {
+    let referralsIssuedCount = 0;
+    for (const emergency of emergencies) {
+        referralsIssuedCount += (emergency.referrals || []).length;
+    }
+
+    return {
+        totalSurvivorsCount: queue.length,
+        criticalT0Count: queue.filter((item) =>
+            ["PENDING", "ACKNOWLEDGED", "REVIEWING", "CONFIRMED"].includes(
+                item.status,
+            ),
+        ).length,
+        pendingValidationCount: queue.filter((item) =>
+            ["ACKNOWLEDGED", "REVIEWING"].includes(item.status),
+        ).length,
+        referralsIssuedCount,
+    };
+}
+
+export function filterEmergencyQueue(
+    queue: HealthcareEmergencyQueueItem[],
+    selectedFilter: HealthcareEmergencyFilter,
+    searchQuery: string,
+): HealthcareEmergencyQueueItem[] {
+    return queue.filter((item) => {
+        if (selectedFilter === "PENDING" && item.status !== "PENDING") {
+            return false;
+        }
+        if (selectedFilter === "CONFIRMED" && item.status !== "CONFIRMED") {
+            return false;
+        }
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            const nikQuery = q.replace(/\D/g, "");
+            const matchName = item.survivorName.toLowerCase().includes(q);
+            const matchRm = item.rmCode.toLowerCase().includes(q);
+            const matchNik =
+                nikQuery.length > 0 && item.searchNik.includes(nikQuery);
+            const matchShelter = item.shelterName.toLowerCase().includes(q);
+            return matchName || matchRm || matchNik || matchShelter;
+        }
+        return true;
+    });
+}
+
+export function getSrqAnswer(
+    item: HealthcareEmergencyQueueItem | null,
+    qNumber: number,
+): boolean | null {
+    if (!item?.srqResponses?.length) return null;
+    const resp = item.srqResponses.find(
+        (response: any) => response.question_number === qNumber,
+    );
+    if (!resp || resp.answer === undefined || resp.answer === null) return null;
+    return Boolean(resp.answer);
+}
+
+export function getRiskAnswer(
+    item: HealthcareEmergencyQueueItem | null,
+    code: string,
+): boolean | null {
+    if (!item?.riskResponses?.length) return null;
+    const resp = item.riskResponses.find(
+        (response: any) => response.indicator === code,
+    );
+    if (!resp || resp.answer === undefined || resp.answer === null) return null;
+    return Boolean(resp.answer);
+}
+
+export function getFunctionLabel(
+    item: HealthcareEmergencyQueueItem | null,
+    domain: string,
+): string {
+    if (!item?.functionResponses?.length)
+        return "Data fungsi tidak tersedia";
+    const resp = item.functionResponses.find(
+        (response: any) => response.domain === domain,
+    );
+    if (resp?.level === 3) return "Gangguan berat";
+    if (resp?.level === 1) return "Gangguan ringan-sedang / perlu dukungan";
+    if (resp?.level === 0) return "Tidak terganggu / mandiri";
+    return "Data fungsi tidak tersedia";
+}
+
+export function getDetectedRedFlags(item: HealthcareEmergencyQueueItem | null) {
+    if (!item) return [];
+    const list: Array<{ key: string; title: string; evidence: string }> = [];
+
+    if (item.redFlagType === "SUICIDAL_IDEATION" || getSrqAnswer(item, 17) === true) {
+        let evidence =
+            item.redFlagType === "SUICIDAL_IDEATION"
+                ? "Jenis Red Flag tercatat: Ideasi / Risiko Bunuh Diri."
+                : "";
+        if (getSrqAnswer(item, 17) === true) {
+            evidence =
+                (evidence ? evidence + " • " : "") +
+                "Jawaban YA pada SRQ #17 (Pikiran mengakhiri hidup)";
+        }
+        list.push({
+            key: "SUICIDAL_IDEATION",
+            title: "Risiko keamanan jiwa spesifik",
+            evidence: evidence || "Jawaban YA pada SRQ #17",
+        });
+    }
+
+    if (item.redFlagType === "PSYCHOSIS") {
+        list.push({
+            key: "PSYCHOSIS",
+            title: "Gejala psikotik akut",
+            evidence:
+                "Jenis Red Flag tercatat: PSYCHOSIS. Gangguan persepsi / waham.",
+        });
+    }
+
+    if (item.redFlagType === "SEVERE_AGITATION") {
+        list.push({
+            key: "SEVERE_AGITATION",
+            title: "Perilaku agresif & gangguan kontrol impuls",
+            evidence:
+                "Jenis Red Flag tercatat: SEVERE_AGITATION. Risiko melukai orang lain atau merusak lingkungan.",
+        });
+    }
+
+    if (item.redFlagType === "MEDICAL_CRISIS") {
+        list.push({
+            key: "MEDICAL_CRISIS",
+            title: "Krisis medis akut",
+            evidence:
+                "Jenis Red Flag tercatat: MEDICAL_CRISIS. Penurunan kesadaran atau cedera fisik.",
+        });
+    }
+
+    if (list.length === 0 && item.hasRedFlag) {
+        list.push({
+            key: "GENERAL_EMERGENCY",
+            title: item.redFlagLabel || "Kedaruratan Medis Terlapor",
+            evidence: "Tanda bahaya lapangan dilaporkan oleh relawan.",
+        });
+    }
+
+    return list;
+}
