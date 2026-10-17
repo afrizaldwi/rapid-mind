@@ -4,6 +4,8 @@
 > All PHP/Composer/Laravel commands run via `docker compose exec -T app`.
 > Only Node/npm runs on the host.
 
+> **DOKUMEN HISTORIS — rencana scaffold awal.** Pernyataan "bare scaffold", daftar pekerjaan, jalur file lokal, dan instruksi instalasi di bawah mencerminkan saat dokumen ini ditulis; semuanya bukan status aplikasi sekarang. Implementasi dan prioritas saat ini harus diperiksa pada source repository, [workflow final](workflow.md), [rencana teknis](RAPID_MIND_TECHNICAL_PLAN.md), dan [ledger verifikasi](workflow-verification.md). Jangan mengeksekusi perintah pengubah database atau dependensi dari rencana lama tanpa otorisasi sesuai AGENTS.md.
+
 ---
 
 ## Goal Description
@@ -32,10 +34,10 @@ RAPID-MIND is one repository, one Laravel application, one user-facing website, 
 
 The codebase is a **bare scaffold**:
 - Docker infrastructure exists and works: `app`, `queue`, `scheduler`, `reverb`, `nginx`, `postgres` (PostGIS 17-3.5)
-- Dockerfile at [`docker/php/Dockerfile`](file:///home/saga/coding/rapid-mind/docker/php/Dockerfile) — PHP 8.4-FPM with pdo_pgsql, Composer
-- [`compose.yaml`](file:///home/saga/coding/rapid-mind/compose.yaml) — 6 services, PostgreSQL healthcheck, Nginx on port 8080
-- [`.env`](file:///home/saga/coding/rapid-mind/.env) — PostgreSQL connection configured, Reverb configured
-- [`nginx/default.conf`](file:///home/saga/coding/rapid-mind/nginx/default.conf) — reverse proxy to PHP-FPM + Reverb WebSocket passthrough
+- Dockerfile at [`docker/php/Dockerfile`](../docker/php/Dockerfile) — PHP 8.4-FPM with pdo_pgsql, Composer
+- [`compose.yaml`](../compose.yaml) — 6 services, PostgreSQL healthcheck, Nginx on port 8080
+- `.env` — PostgreSQL connection configured, Reverb configured
+- [`nginx/default.conf`](../nginx/default.conf) — reverse proxy to PHP-FPM + Reverb WebSocket passthrough
 - Frontend: Vue 3 + Inertia + TypeScript + Tailwind CSS 4 + Echo
 - Only code: one placeholder `Setup.vue` page, default User model, default migrations
 - **No domain models, no routes, no auth, no triage logic, no role pages**

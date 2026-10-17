@@ -3,14 +3,31 @@
 **Project:** RAPID-MIND  
 **Document type:** Technical architecture + implementation plan  
 **Status:** Working baseline for development  
-**Primary source:** `workflow.md`  
-**Last updated:** 2026-10-01
+**Primary source:** `docs/workflow.md` (finalized product workflow)
+**Last documentation alignment:** 2026-10-17
 
 ---
 
-# Current Demo Sprint Execution Anchor — 1 October 2026
+## Current authority and implementation status — 17 October 2026
 
-This section defines the **authoritative implementation sequence for the `demo` branch**. It takes precedence over the older broad development-phase ordering (Section 20 below) for day-to-day implementation sequencing. It does NOT replace the permanent architecture, clinical decision-support rules, or UX specifications.
+`docs/workflow.md` is the finalized product and functional workflow. This plan supplies architecture, sequencing, and historical implementation checkpoints; the repository source determines current implementation. When workflow, safety decisions, UX detail, and implemented behavior differ, record the difference explicitly before changing clinical policy or working architecture. A workflow requirement alone is not implementation or test evidence.
+
+**Healthcare Emergency Worklist baseline:** commit `b4779f1` (16 October 2026) extracted seven Vue components from `Emergencies/Index.vue`, plus `useEmergencyQueue.ts` and `useEmergencyActions.ts`. Three focused Node regression files cover queue/actions behavior, including the corrected same-tick form synchronization regression. The project-owner request reports Checkpoint 4B TypeScript/build/Node checks, Checkpoint 4C Antigravity browser regression, and Checkpoint 4D cross-role Relawan → Healthcare rehearsal. These are reported historical evidence, not checks rerun in this documentation checkpoint; see `workflow-verification.md`.
+
+### Open workflow / implementation differences
+
+- **SRQ-20 item 17:** the final workflow calls for automatic Red Flag detection; the current UI opens a potential Red Flag interruption, but transmitting T0-Suspect still requires the explicit verification gate and final Relawan submission. Clarify whether detection alone should change any business state. STT must not transmit T0 autonomously.
+- **Daily functioning:** the final scoring model has three domains (F1–F3, 0/1/3). The Relawan assessment page uses three; any four-domain legacy display or wording elsewhere must be reconciled with the canonical model before it is treated as a scoring input.
+- **SMS:** workflow language describes automatic fallback; the browser implementation offers a user-mediated `sms:` composer handoff. Automatic delivery, native handler launch, and receipt are not verified. A pure PWA cannot promise silent SMS transmission.
+- **Offline/background sync:** local IndexedDB/outbox and selected offline gates have evidence, but browser and device support varies. Complete connectivity-failure coverage and a mid-flight POST disconnect/reconnect case are not established by Checkpoints 4C/4D.
+- **Data protection:** workflow claims local AES-256 encryption, local purging, and pseudonymization; corresponding end-to-end implementations were not verified in this checkpoint. Base64 is encoding, not encryption. HTTPS/WSS transport encryption does not establish application-level end-to-end encryption.
+- **Healthcare queue:** backend orders pending emergencies oldest first (`created_at`, then `id`); frontend `normalizeEmergencyQueue` sorts pending items newest first and has no matching ID tie-break. The extracted header still references a legacy `genderLabel` absent from normalized queue items. Both remain unresolved.
+
+---
+
+# Historical Demo Sprint Execution Anchor — 1 October 2026
+
+This section records the implementation sequence used for the `demo` branch on 1 October 2026. Its phase details, milestones, and verification results are historical. It does not supersede current project-owner instructions, the finalized product requirements in `docs/workflow.md`, or later approved safety decisions. Use the current authority and status note above when planning new work.
 
 ---
 
@@ -1465,10 +1482,12 @@ All remaining implementation work must adhere strictly to these principles:
 
 ---
 
-## 6. Decision Rule for Remaining Tasks
+## 6. Historical Decision Rule for Remaining Tasks
 
-Before starting any task in the remaining demo sprint:
-1. **Read this Current Demo Sprint Execution Anchor.**
+The following was the task rule at the 1 October 2026 checkpoint; current project-owner instructions and `docs/workflow.md` govern new work.
+
+Before starting a task under that historical sequence:
+1. **Read the 1 October Demo Sprint Execution Anchor.**
 2. **Inspect the current `demo` branch codebase.**
 3. **Read the applicable dedicated UX specification.**
 4. **Confirm the requested task belongs to the active phase (Phase B, C, or D; Phase A is complete).**
@@ -2790,7 +2809,7 @@ Admin login
 
 # 20. Development Phases
 
-> The phase structure below remains the architectural/historical development plan. For the current `demo` sprint execution order, use the **Current Demo Sprint Execution Anchor — 1 October 2026** near the top of this document.
+> The phase structure below and the **Historical Demo Sprint Execution Anchor — 1 October 2026** above record earlier sequencing. For current work, use project-owner instructions and the finalized `docs/workflow.md`.
 
 The order below is intentionally risk-first rather than screen-first.
 

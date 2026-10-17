@@ -70,14 +70,18 @@ Always inspect the existing repository before changing code.
 For requirements, use this priority:
 
 ```text
-1. Current user instruction
-2. RAPID_MIND_FINAL_SCREEN_INVENTORY_IMPLEMENTATION_HANDOFF.md
-3. Relevant dedicated UX specification
-4. RAPID_MIND_SHARED_SYSTEM_STATES_INTERACTIONS.md
-5. RAPID_MIND_VISUAL_FOUNDATION.md
-6. RAPID_MIND_TECHNICAL_PLAN.md
-7. workflow.md
+1. Explicit current instructions from the project owner
+2. docs/workflow.md — finalized functional and product requirements
+3. Approved domain-specific safety requirements and explicit later decisions
+4. Final screen inventory and dedicated UX specifications — interaction detail
+5. Technical plan — architecture and implementation sequence
+6. Actual repository source — evidence of current implementation
 ```
+
+When sources conflict, identify the conflicting requirements explicitly. Do not
+silently rewrite clinical policy or replace a working architectural decision.
+A requirement in `docs/workflow.md` does not prove that a feature exists or was
+tested. Use source inspection and appropriately scoped verification for status.
 
 Dedicated specifications include:
 
@@ -148,7 +152,9 @@ Do not replace the Docker architecture with a host-native development setup.
 
 ## Dependency Installation
 
-For this demo sprint, **Antigravity is allowed to install required dependencies**.
+The project owner prefers to install dependencies personally. Agents must not
+install, upgrade, remove, or modify dependencies or lockfiles without explicit
+authorization from the owner.
 
 PHP/Composer dependency commands must run inside Docker:
 
@@ -164,7 +170,7 @@ npm install <package>
 npm install
 ```
 
-Only install dependencies that are directly required by the current task.
+When explicitly authorized, install only dependencies directly required by the task.
 
 Do not perform broad package upgrades.
 
@@ -180,7 +186,8 @@ If adding a dependency:
 
 ## Git Rules
 
-The user performs all Git mutations.
+The project owner exclusively performs all mutating Git operations. Do not
+execute or instruct another agent to execute them.
 
 ### Never run
 
@@ -503,6 +510,10 @@ claiming security exists when it does not
 
 Use PostgreSQL/PostGIS through Docker.
 
+Do not run destructive migrations, database resets, seeders, or state-changing
+workflows without explicit authorization and verification that the environment
+is safe.
+
 Do not switch to SQLite for convenience.
 
 Use synthetic demo identities only.
@@ -540,6 +551,10 @@ Prefer focused modules and components.
 ## Verification
 
 Run verification appropriate to the task.
+
+Use Google Antigravity as the preferred browser testing agent. Codex may
+implement code and run static or automated checks, but browser testing must
+have actual browser evidence before it is reported as performed.
 
 Backend:
 
@@ -595,6 +610,9 @@ After every task report:
 ```
 
 Do not commit or push.
+
+Work in narrow checkpoints. Stop after the requested checkpoint and report
+exact files and results so the project owner can review before the next phase.
 
 ---
 

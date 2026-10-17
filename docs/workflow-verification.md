@@ -1433,3 +1433,22 @@ The browser verification does not claim production concurrency/load, security ha
 Deferred and unclaimed: separate dispatch model/schema, referral/dispatch redesign, Admin realtime subscription, Faskes map markers, full geospatial heatmap, continuous STT, WebGPU/Whisper performance, complete offline Whisper, broad accessibility, and D2/D3 responsive gates. The current referral lifecycle still carries movement-like states and is a known post-demo model mismatch, not a dedicated dispatch implementation.
 
 `docs/workflow.md` was not modified by this checkpoint.
+
+---
+
+## 19. Healthcare Emergency Worklist refactor and Checkpoints 4B/4C/4D — 16 October 2026
+
+**Provenance:** The project owner's documentation request reports Checkpoint 4B automated-check outcomes, Checkpoint 4C Antigravity browser regression, and Checkpoint 4D cross-role runtime outcomes. The underlying reports were not supplied with this documentation checkpoint, and no browser, database, Laravel, Node, TypeScript, or build command was rerun here. The commit and repository source were read to identify the refactor and focused test files. Treat all outcomes below as **reported historical evidence**, not independently rerun CI or direct verification in this checkpoint.
+
+| Evidence category | Reported or inspected result | Boundary |
+|---|---|---|
+| Source inspected | Commit `b4779f1` extracted seven Vue components from Healthcare `Emergencies/Index.vue`, `useEmergencyQueue.ts`, `useEmergencyActions.ts`, shared normalization logic, and three Node regression files. | Source existence does not prove runtime behavior. |
+| Checkpoint 4B — TypeScript, build, Node | Reported passing Vue TypeScript checks, frontend production build, and three focused Node regression test files: `healthcareEmergencyQueue.test.ts`, `healthcareEmergencyActions.test.ts`, and `healthcareEmergencyActionsTab.test.ts`. The latter covers corrected same-tick form synchronization. | Test files inspected; pass result reported, not rerun here. |
+| Checkpoint 4C — browser regression | Antigravity reportedly exercised the refactored Healthcare worklist without resetting the environment. | Reported non-destructive browser result for selected scope only. |
+| Checkpoint 4D — two-session realtime | Reportedly observed a Relawan T0-Suspect reach an already open Healthcare session via Reverb/Echo. | Server receipt and realtime appearance are distinct from Healthcare acknowledgement. |
+| Checkpoint 4D — Healthcare actions | Reportedly submitted real acknowledgement, secondary verification, clinical classification, and explicit referral forms. | These are separate transitions; T0 confirmation does not itself imply referral or dispatch. |
+| Checkpoint 4D — persistence and reconciliation | Reportedly observed persisted state and Inertia reconciliation after submissions. | Reported runtime evidence, not a new database inspection here. |
+
+**Preserved limits:** None of these checkpoints is a production security certification. Checkpoints 4C/4D did not establish a complete offline connectivity-failure test or a full network-disconnect/reconnect test during a mid-flight POST. Checkpoint 4D did not submit a T3 clinical downgrade. The existing legacy `genderLabel` reference and frontend/backend pending-emergency ordering discrepancy remain unresolved. Device-level native SMS delivery, local AES-256 encryption, purging, pseudonymization, and application-level end-to-end encryption are not established by these reports.
+
+Earlier dated entries remain historical evidence for their own code states; this section does not retroactively change their outcomes.

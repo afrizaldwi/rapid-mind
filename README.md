@@ -1,72 +1,59 @@
 # RAPID-MIND
-> **Rapid Assessment & Psychosocial Intervention Delivery - Mental Health In Disaster**
 
-RAPID-MIND adalah platform triase dan respons intervensi kesehatan jiwa darurat bencana multi-peran terpadu (*3-Tier Multi-Role Architecture*) berbasis Progressive Web Application (PWA) Offline-First, Realtime WebSockets, dan Desktop Command Center.
+RAPID-MIND adalah prototipe pendukung keputusan untuk respons kesehatan jiwa saat bencana. Satu aplikasi Laravel melayani tiga pengalaman berbasis peran: **RELAWAN**, **HEALTHCARE**, dan **ADMIN**. Rekomendasi triase sistem bukan diagnosis; keputusan klinis tetap pada Healthcare.
 
----
+## Implementasi saat ini
 
-## 📚 Dokumentasi Lengkap Proyek
+Relawan memiliki alur PFA, asesmen SRQ-20, faktor risiko, fungsi harian, rekomendasi triase, serta pembuatan T0-Suspect dengan penyimpanan lokal dan sinkronisasi. Healthcare memiliki antrean darurat, penerimaan Reverb/Echo, pengakuan, verifikasi sekunder, klasifikasi klinis, dan tindakan rujukan eksplisit. Admin memiliki ringkasan operasional, peta, analitik, dan pengelolaan akun/organisasi. Cakupan dan batas verifikasi tiap alur dicatat dalam [ledger verifikasi](docs/workflow-verification.md); keberadaan layar tidak menjamin semua skenario luring atau produksi telah diuji.
 
-Dokumentasi sistem komprehensif yang memuat seluruh alur operasional, arsitektur, mesin triase, skema database, rute API, dan panduan instalasi telah didokumentasikan secara terperinci pada:
+## Teknologi
 
-👉 **[RAPID_MIND_DOKUMENTASI_SISTEM.md](./RAPID_MIND_DOKUMENTASI_SISTEM.md)** (atau di folder [docs/RAPID_MIND_DOKUMENTASI_SISTEM.md](./docs/RAPID_MIND_DOKUMENTASI_SISTEM.md))
+- Laravel 13, Vue 3, Inertia.js, TypeScript, Tailwind CSS 4
+- PostgreSQL 17 + PostGIS melalui Docker Compose
+- Laravel Reverb + Echo, queue, scheduler, Nginx
+- IndexedDB + Dexie, PWA/service worker, MapLibre, ECharts
 
----
+Autentikasi web memakai sesi Laravel untuk navigasi Inertia. Login juga membuat JWT dan refresh token untuk respons API; middleware `auth.jwt` menerima bearer token atau sesi web yang masih aktif. Jadi aplikasi bukan hanya JWT ataupun hanya sesi.
 
-## 👥 Tiga Pilar Peran Sistem
+## Menjalankan lingkungan pengembangan
 
-1. **Role 1: Relawan Garda Depan (Frontline Volunteer)**
-   - Akses: Mobile PWA (`/relawan/...`)
-   - Fitur: Offline-First PWA Shell, Modul Psychological First Aid (PFA Hari 1–3), Penapisan Terstruktur SRQ-20 + Faktor Risiko + Keberfungsian (Hari 4–30), Floating Red Flag SOS (<0.5s), dan sinkronisasi otomatis Outbox IndexedDB.
-2. **Role 2: Healthcare (Tenaga Medis: Puskesmas / RSUD / Psikiater)**
-   - Akses: Desktop Workspace (`/healthcare/...`)
-   - Fitur: Notifikasi audio-visual gawat darurat T0, verifikasi & downgrade T0, validasi klinis asesmen T1-T3, penetapan diagnosis klinis & rencana terapi, serta manajemen rujukan evakuasi medis (Referral Lifecycle).
-3. **Role 3: Admin Makro (BPBD / Dinas Kesehatan / PSC 119)**
-   - Akses: Desktop Command Center (`/admin/...`)
-   - Fitur: Geospatial Heatmap sebaran distres mental bencana, Pemantauan Longitudinal 30 Hari (Fase Akut, Peak Distress, Kronisitas), manajemen posko pengungsian & faskes, serta provisioning akun pengguna.
-
----
-
-## 🛠️ Tech Stack
-
-- **Backend:** Laravel 11.x (PHP 8.2+) + Inertia.js
-- **Frontend:** Vue 3 (Composition API, `<script setup lang="ts">`) + Tailwind CSS + Lucide Icons
-- **Realtime:** Pusher / Laravel Echo / WebSockets
-- **Offline Engine:** Service Worker, Workbox, IndexedDB (`idb`), Background Sync API
-- **Database:** MySQL 8.0 (UUID v4 Primary Keys)
-- **Autentikasi:** JWT HttpOnly Cookies dengan Role-Based Access Control (RBAC)
-
----
-
-## ⚡ Panduan Menjalankan Cepat
+Prasyarat: Docker Compose dan Node/npm pada host. PHP, Composer, Laravel, dan PostgreSQL berjalan di container. Pemilik proyek memasang dependensi frontend dengan Node/npm. Tinjau `.env` dan tujuan database sebelum memulai; salin contoh hanya jika `.env` belum ada.
 
 ```bash
-# 1. Clone & Masuk Direktori
-git clone https://github.com/afrizaldwi/rapid-mind.git
-cd rapid-mind
-
-# 2. Instal Dependensi
-composer install
-npm install
-
-# 3. Setup Environment
-cp .env.example .env
-php artisan key:generate
-php artisan jwt:secret
-
-# 4. Migrasi & Seed Database Demo
-php artisan migrate:fresh --seed
-
-# 5. Build Aset Frontend
-npm run build   # atau npm run dev
-
-# 6. Jalankan Server
-php artisan serve
+cp -n .env.example .env
+docker compose build
+docker compose up -d postgres app
+docker compose exec -T app composer install
 ```
 
-Akses aplikasi di `http://localhost:8000`.
+Untuk `.env` baru, jalankan masing-masing perintah berikut hanya jika nilai `APP_KEY` atau `JWT_SECRET` yang bersangkutan masih kosong. Jangan regenerasi kunci yang sudah dipakai lingkungan berjalan.
 
-### Kredensial Pengguna Demo Bawaan:
-- **Relawan:** `relawan_demo` / `password`
-- **Healthcare:** `dokter_demo` / `password`
-- **Admin:** `admin_demo` / `password`
+```bash
+docker compose exec -T app php artisan key:generate
+docker compose exec -T app php artisan jwt:secret
+```
+
+Setelah dependensi backend tersedia, pemilik proyek memasang dependensi frontend dan membangun aset. Kemudian mulai layanan lainnya:
+
+```bash
+npm ci
+npm run build
+docker compose up -d queue scheduler reverb nginx
+```
+
+**Migrasi mengubah state database.** Jalankan hanya setelah memastikan lingkungan dan database tujuan aman serta tindakan ini telah disetujui:
+
+```bash
+docker compose exec -T app php artisan migrate
+```
+
+Nginx melayani aplikasi di `http://localhost:8080` sesuai `compose.yaml`. Kredensial demo, bila diperlukan, bergantung pada data yang benar-benar disiapkan di lingkungan tersebut.
+
+## Indeks dokumentasi
+
+- [Alur produk final](docs/workflow.md) — kebutuhan fungsional dan produk.
+- [Handoff layar](docs/RAPID_MIND_FINAL_SCREEN_INVENTORY_IMPLEMENTATION_HANDOFF.md) — rancangan interaksi terperinci.
+- [Rencana teknis](docs/RAPID_MIND_TECHNICAL_PLAN.md) — arsitektur, status, dan kesenjangan implementasi.
+- [Dokumentasi sistem](docs/RAPID_MIND_DOKUMENTASI_SISTEM.md) — ikhtisar sistem dan formula triase.
+- [Ledger verifikasi](docs/workflow-verification.md) dan [catatan perubahan](docs/changes-notes.md) — bukti serta riwayat checkpoint.
+- [Instruksi agen](AGENTS.md) — aturan kerja dan prioritas sumber.

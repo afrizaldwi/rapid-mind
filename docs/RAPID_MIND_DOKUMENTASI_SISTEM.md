@@ -1,6 +1,8 @@
 # DOKUMENTASI SISTEM LENGKAP: RAPID-MIND
 **Rapid Assessment & Psychosocial Intervention Delivery - Mental Health In Disaster**
 
+> Dokumen ini memuat rancangan dan riwayat implementasi. Kebutuhan produk final ada di [workflow.md](workflow.md); status implementasi dan bukti uji ada di [rencana teknis](RAPID_MIND_TECHNICAL_PLAN.md) dan [ledger verifikasi](workflow-verification.md). Pernyataan rancangan di bawah tidak otomatis berarti fitur sudah diimplementasikan atau diuji.
+
 ---
 
 ## DAFTAR ISI
@@ -65,8 +67,8 @@ RAPID-MIND menerapkan pembatasan hak akses berbasis peran (*Role-Based Access Co
 ### Karakteristik Desain per Peran:
 1. **Relawan (Mobile PWA):**
    - Dioptimalkan untuk layar ponsel dengan kondisi lapangan ekstrem (cahaya terik matahari, tangan lelah/gemetar).
-   - Memenuhi standar WCAG AAA (kontras warna tajam), tombol sentuh minimal **56px** (*fat-finger friendly*).
-   - Kemampuan berjalan penuh tanpa sinyal internet (*zero network dependency* saat input asesmen).
+   - Ditujukan untuk keterbacaan lapangan dan target sentuh yang besar; kepatuhan WCAG AAA belum disertifikasi.
+   - Penyimpanan lokal dan sebagian alur tanpa jaringan tersedia; kompatibilitas perangkat serta seluruh skenario putus jaringan belum terverifikasi.
 2. **Healthcare (Desktop Faskes):**
    - Menampilkan antrean terstruktur berdasarkan prioritas kegawatan klinis (**T0 -> T1 -> T2 -> T3**).
    - Sistem notifikasi audio-visual keras saat ada sinyal Red Flag masuk.
@@ -82,14 +84,14 @@ RAPID-MIND menerapkan pembatasan hak akses berbasis peran (*Role-Based Access Co
 
 | Layer | Teknologi / Library | Alasan Pemilihan & Fungsi |
 |---|---|---|
-| **Backend Framework** | **Laravel 11.x (PHP 8.2+)** | Framework enterprise yang kokoh, mendukung RESTful API, ORM Eloquent, Form Request Validation, dan pengelolaan Queue/Jobs. |
+| **Backend Framework** | **Laravel 13 (PHP di Docker)** | Framework enterprise yang kokoh, mendukung RESTful API, ORM Eloquent, Form Request Validation, dan pengelolaan Queue/Jobs. |
 | **Frontend Framework** | **Vue 3 (Composition API) + Inertia.js** | Single Page Application (SPA) modern berbasis server-side routing tanpa lag reload, pengetikan ketat menggunakan **TypeScript**. |
-| **Styling & Icons** | **Tailwind CSS + Lucide Icons** | Utility-first CSS untuk kontrol UI presisi, responsifitas tinggi, dan ikonografi standar medis/lapangan. |
-| **Realtime Engine** | **Pusher / Laravel Echo / WebSockets** | Siaran instan tanpa refresh untuk event kedaruratan jiwa (`EmergencyEventCreated`) dari lapangan ke faskes. |
-| **PWA & Offline** | **Service Worker + Cache Storage + IndexedDB (idb)** | Penyimpanan shell aplikasi, aset statis, dan penyimpanan data lokal relawan secara mandiri tanpa internet. |
-| **Database** | **MySQL 8.0** | RDBMS transaksional ACID yang andal, menggunakan **UUID v4** untuk primary key entitas kritis demi sinkronisasi tanpa tabrakan ID. |
-| **Autentikasi** | **JWT (JSON Web Token) via HttpOnly Cookies** | Autentikasi aman tanpa state sesi di server, mendukung *token refresh cycle* dan pembatasan isolasi sesi akun di peramban. |
-| **Hardware Integration**| **HTML5 Geolocation API, SpeechRecognition** | Penangkapan otomatis titik GPS darurat dan asisten pengenalan suara (STT) untuk kata kunci trauma. |
+| **Styling & Icons** | **Tailwind CSS 4 + Lucide Icons** | Utility-first CSS untuk kontrol UI presisi, responsifitas tinggi, dan ikonografi standar medis/lapangan. |
+| **Realtime Engine** | **Laravel Reverb + Echo / WebSockets** | Siaran instan tanpa refresh untuk event kedaruratan jiwa (`App\Events\EmergencyCreated`) dari lapangan ke faskes. |
+| **PWA & Offline** | **PWA / Service Worker + Workbox + IndexedDB (Dexie)** | Penyimpanan shell aplikasi, aset statis, dan penyimpanan data lokal relawan secara mandiri tanpa internet. |
+| **Database** | **PostgreSQL 17 + PostGIS** | RDBMS transaksional ACID yang andal, menggunakan **UUID v4** untuk primary key entitas kritis demi sinkronisasi tanpa tabrakan ID. |
+| **Autentikasi** | **Sesi web Laravel + JWT bearer untuk API** | Navigasi Inertia memakai sesi web; login juga menerbitkan JWT dan refresh token untuk respons API. Middleware menerima bearer atau sesi web. |
+| **Hardware Integration**| **HTML5 Geolocation API, Whisper melalui Transformers.js Web Worker** | Permintaan lokasi perangkat dan bantuan transkripsi lokal pada alur SRQ; jawaban manual tetap otoritatif. |
 
 ---
 
@@ -112,8 +114,8 @@ $$\mathbf{Total\ Integrated\ Score} = \text{Skor SRQ-20 (0--20)} + \text{Skor Fa
 | WHO (Pilihan: Ya/Tidak) | R1: Kehilangan Berat (2 pt)   | F1: Perawatan Diri      |
 | Khusus Nomor 17:        | R2: Trauma Langsung (2 pt)    | F2: Interaksi Sosial    |
 | 'Ide Bunuh Diri'        | R3: Kelompok Rentan (1 pt)    | F3: Akses Kebutuhan     |
-| Jika 'Ya' -> Override   | R4: Riwayat Jiwa (2 pt)       | Pilihan skor:           |
-| Langsung ke Kategori T0 | R5: Terputus Obat Kronis (1)  | 0 (Baik), 1 (Sedang), 3 |
+| Jika 'Ya' -> deteksi     | R4: Riwayat Jiwa (2 pt)       | Pilihan skor:           |
+| Red Flag otomatis       | R5: Terputus Obat Kronis (1)  | 0 (Baik), 1 (Sedang), 3 |
 +-------------------------+-------------------------------+-------------------------+
 ```
 
@@ -121,12 +123,14 @@ $$\mathbf{Total\ Integrated\ Score} = \text{Skor SRQ-20 (0--20)} + \text{Skor Fa
 
 | Kategori | Ambang Batas Skor | Profil Kondisi Klinis | Rekomendasi Tindakan Sistem |
 |---|---|---|---|
-| **🚨 Triage T0 (Critical Emergency)** | **Override Red Flag** (SRQ #17 = "Ya" atau Tombol SOS ditekan) | Ancaman langsung terhadap nyawa (keinginan bunuh diri aktif, gaduh gelisah/amuk, psikosis akut, syok fisik). | **Bypass skoring**. Kirim alert darurat instan ke Faskes/PSC 119. Relawan wajib mendampingi fisik terus menerus. |
+| **🚨 Triage T0 (Critical Emergency)** | **Override Red Flag** (SRQ #17 = "Ya" atau Tombol SOS ditekan) | Ancaman langsung terhadap nyawa (keinginan bunuh diri aktif, gaduh gelisah/amuk, psikosis akut, syok fisik). | **Tandai potensi Red Flag**. Pengiriman T0-Suspect memerlukan verifikasi dan tindakan eksplisit Relawan; Healthcare menentukan hasil klinis. |
 | **🔴 Triage T1 (Severe Distress)** | Total Skor >= 15 ATAU Skor Fungsi F >= 6 | Distres psikologis berat disertai kelumpuhan fungsi kehidupan dasar sehari-hari atau trauma bertumpuk masif. | Prioritas rujukan ke Faskes Tingkat 2 (Puskesmas/Dokter/Psikiater). Evaluasi farmakoterapi dan psikoterapi mendalam. |
 | **🟡 Triage T2 (Moderate Distress)** | Total Skor 7 - 14 | Distres sedang (gejala kecemasan/somatisasi menonjol) atau gejala ringan yang diperberat oleh kerentanan tinggi. | Masuk ke **Daftar Pantau Utama Posko (Watchlist)**. Diberikan konseling kelompok, relaksasi, dan evaluasi ulang dalam 7 hari. |
 | **🟢 Triage T3 (Mild / Resilient)** | Total Skor 0 - 6 | Gejala emosional wajar/adaptif pascabencana. Keberfungsian mandiri masih terjaga baik. | Dukungan psikososial komunitas (kegiatan sosial posko, pemenuhan logistik kebutuhan dasar, PFA lanjutan). |
 
 *Catatan Sistem: Triase yang dihasilkan di HP relawan berstatus **Rekomendasi Awal Sistem (Decision Support)** dan bersifat tentatif hingga divalidasi resmi oleh tenaga medis profesional di Faskes.*
+
+**Kebutuhan alur final:** jawaban "Ya" pada SRQ-20 butir 17 harus memicu deteksi dan eskalasi Red Flag secara otomatis. **Implementasi saat ini:** antarmuka membuka interupsi potensi Red Flag, lalu meminta verifikasi dan tindakan kirim eksplisit dari Relawan sebelum T0-Suspect ditransmisikan. Perbedaan ini masih perlu keputusan produk; perilaku antarmuka saat ini tidak menggantikan kebutuhan alur final. T0-Suspect tetap laporan darurat Relawan, bukan konfirmasi klinis T0 oleh sistem; keputusan klinis adalah kewenangan Healthcare.
 
 ---
 
@@ -136,13 +140,13 @@ $$\mathbf{Total\ Integrated\ Score} = \text{Skor SRQ-20 (0--20)} + \text{Skor Fa
 1. Pengguna membuka URL aplikasi.
 2. Service Worker PWA mengecek ketersediaan jaringan (`navigator.onLine`).
 3. **Kondisi Offline:**
-   - Aplikasi membaca sesi yang telah tersimpan di IndexedDB terenkripsi akun lokal.
+   - Pemulihan shell lokal memakai konteks akun yang tersimpan; penyimpanan lokal terenkripsi AES-256 belum diverifikasi.
    - Jika pengguna sebelumnya adalah `RELAWAN`, shell PWA offline diaktifkan dan pengguna dapat langsung bekerja di posko tanpa sinyal.
    - Jika pengguna baru dan belum pernah login sama sekali, aplikasi menampilkan layar pemberitahuan bahwa inisialisasi awal memerlukan internet.
 4. **Kondisi Online:**
    - Pengguna menginput Username dan Password pada `/login`.
-   - Backend memverifikasi hash password, menerbitkan JWT Access Token dan Refresh Token via HttpOnly cookie.
-   - Sesi disinkronkan ke cache lokal.
+   - Backend memverifikasi password, membuat sesi web untuk Inertia, dan menghasilkan JWT serta refresh token untuk respons API; jangan menganggap token JWT dikirim lewat HttpOnly cookie.
+   - Konteks akun lokal dipakai untuk pemulihan Relawan sesuai kemampuan runtime yang tersedia.
    - Router mengarahkan pengguna sesuai perannya:
      - Relawan -> `/relawan/home`
      - Healthcare -> `/healthcare/emergencies`
@@ -163,13 +167,13 @@ Setelah fase syok akut mereda, penapisan formal dimulai guna mendeteksi penyinta
    - *Moda Verbal:* Untuk penyintas yang dapat berkomunikasi lancar (didukung pengenal suara kata kunci STT).
    - *Moda Non-Verbal / Adaptif:* Untuk penyintas yang mengalami syok berat atau mutisme; relawan menggunakan ketukan layar, bahasa isyarat visual, dan observasi perilaku terpandu bersama keluarga.
 3. **Pengisian Butir:**
-   - Pengisian 20 butir SRQ-20 (Ya/Tidak). Jika pertanyaan #17 dijawab 'Ya', sistem langsung menandai *Red Flag Override*.
+   - Pengisian 20 butir SRQ-20 (Ya/Tidak). Alur final meminta deteksi/eskalasi Red Flag otomatis saat butir 17 dijawab "Ya"; antarmuka saat ini membuka interupsi potensi Red Flag dan mensyaratkan verifikasi serta pengiriman eksplisit oleh Relawan sebelum transmisi T0-Suspect.
    - Pengisian 5 indikator Faktor Risiko.
    - Pengisian 3 domain Penilaian Keberfungsian Harian.
 4. **Kalkulasi & Submission:**
    - Klien menghitung skor total integrasi (0–37).
    - Data disimpan ke IndexedDB lokal.
-   - Jika ada internet, klien mengirim payload ke backend (`POST /relawan/assessment`), server melakukan validasi ulang (*dual-calculation*), dan data tersimpan di database MySQL.
+   - Jika ada internet, klien mengirim payload ke backend (endpoint asesmen atau sinkronisasi yang sesuai), server memvalidasi payload, lalu data diterima di PostgreSQL setelah respons berhasil.
    - Jika tidak ada internet, payload disimpan ke dalam antrean **Outbox IndexedDB** dengan status `PENDING_SYNC`.
    - Layar menampilkan hasil rekomendasi triase (T0/T1/T2/T3) dan instruksi penanganan.
 
@@ -179,9 +183,9 @@ Jika terdeteksi bahaya jiwa (keinginan bunuh diri, amuk massal, psikosis berat, 
 2. Klien membaca koordinat GPS perangkat secara otomatis (`latitude`, `longitude`).
 3. Relawan memilih jenis Red Flag (`SUICIDAL_IDEATION`, `PSYCHOSIS`, `SEVERE_AGITATION`, `MEDICAL_CRISIS`).
 4. **Transmisi 3-Tier:**
-   - **Tier 1 (Internet Normal):** Data dikirim via HTTP POST. Server mem-broadcast event `EmergencyEventCreated` lewat WebSockets. Monitor Faskes dan Command Center membunyikan alarm audio-visual merah berfrekuensi tinggi secara realtime.
-   - **Tier 2 (Internet Mati, Sinyal Seluler 2G/GSM Aktif):** Sistem secara otomatis membuka tautan SMS dengan payload terenkripsi standar yang memuat identitas relawan, tipe bahaya, dan titik koordinat GPS untuk dikirim ke nomor Call Center PSC 119.
-   - **Tier 3 (Offline Murni / Blank Spot Total):** Data dikunci di prioritas teratas IndexedDB. HP relawan bergetar panjang dan menampilkan instruksi darurat: *"JARINGAN TERPUTUS: Segera lakukan penanganan fisik PFA dan bawa/dampingi penyintas langsung ke Tenda Medis Posko!"* Sinyal akan otomatis terkirim saat HP mendeteksi sinyal kembali (*Background Sync*).
+   - **Tier 1 (Internet Normal):** Data dikirim via HTTP POST. Server mem-broadcast event `App\Events\EmergencyCreated` lewat WebSockets. Antrean Healthcare dapat menerima pembaruan Reverb/Echo; cakupan notifikasi Admin tidak dinyatakan terverifikasi.
+   - **Tier 2 (Internet Mati, Sinyal Seluler 2G/GSM Aktif):** Implementasi browser saat ini menawarkan handoff ke aplikasi SMS melalui tautan `sms:` yang tetap harus dikirim pengguna. Pengiriman otomatis, penerimaan, dan enkripsi payload SMS belum diverifikasi.
+   - **Tier 3 (Offline Murni / Blank Spot Total):** Data dikunci di prioritas teratas IndexedDB. Layar Relawan menampilkan instruksi darurat: *"JARINGAN TERPUTUS: Segera lakukan penanganan fisik PFA dan bawa/dampingi penyintas langsung ke Tenda Medis Posko!"* Outbox dapat dicoba ulang saat koneksi tersedia; dukungan Background Sync dan perilaku semua perangkat tidak dijamin.
 
 ### 5.5 Alur Triase & Validasi Klinis Faskes
 1. **Penanganan Darurat T0 (`/healthcare/emergencies`):**
@@ -189,7 +193,7 @@ Jika terdeteksi bahaya jiwa (keinginan bunuh diri, amuk massal, psikosis berat, 
    - Menekan tombol **Acknowledge** -> status menjadi `ACKNOWLEDGED`.
    - Melakukan kontak verifikasi via telepon/video/tim lapangan -> status menjadi `REVIEWING`.
    - Menentukan keputusan:
-     - Jika terbukti darurat jiwa: Status diubah menjadi `CONFIRMED` dan diterbitkan tiket Rujukan/Dispatch Medis.
+     - Jika terbukti darurat jiwa: Status diubah menjadi `CONFIRMED`; pembuatan rujukan adalah tindakan Healthcare terpisah. Model dispatch khusus belum tersedia.
      - Jika reaksi panik biasa/salah tekan: Status diturunkan (*downgraded*) ke `T1` atau `T2`.
 2. **Validasi Asesmen Masuk (`/healthcare/validations`):**
    - Tenaga medis membuka antrean pasien yang terurut berdasarkan prioritas (**T1 -> T2 -> T3**).
@@ -216,14 +220,14 @@ Untuk menjamin pasien tidak hilang dalam proses evakuasi bencana, sistem menerap
    - Mengirim request `POST /relawan/sync/emergencies` atau `POST /relawan/sync/assessments`.
 4. **Prinsip Idempotensi di Server:**
    - Server memeriksa apakah `client_uuid` sudah pernah tercatat di database.
-   - Jika sudah ada, server memperbarui record tanpa membuat record duplikat (mencegah data ganda jika koneksi terputus di tengah jalan).
-   - Jika belum ada, server membuat entitas baru di database MySQL.
+   - Jika sudah ada, server menerapkan kontrak replay/idempotensi yang sesuai; replay tidak berarti data lama boleh ditimpa sembarang.
+   - Jika belum ada, server membuat entitas baru di database PostgreSQL.
 5. Klien menerima respon 200/201, menghapus item dari antrean Outbox, dan memperbarui status lokal menjadi `SYNCED`.
 
 ### 5.8 Alur Monitoring Makro & Manajemen Bencana Admin
 1. **Interactive Geospatial Heatmap (`/admin/map`):**
    - Menampilkan peta digital wilayah bencana dengan penanda posko dan kasus aktif.
-   - Titik diklasifikasikan dengan layer warna: T0 (Merah Berkedip), T1 (Merah), T2 (Kuning), T3 (Hijau).
+   - Titik diklasifikasikan dengan layer warna: T0 (Merah), T1 (Merah), T2 (Kuning), T3 (Hijau).
    - BPBD dan Dinkes dapat mendeteksi klaster posko yang mengalami distres massal untuk pengiriman tim pendukung.
 2. **Pemantauan Longitudinal 30 Hari (`/admin/analytics`):**
    - Grafik kurva tren temporal memantau dinamika epidemiologi psikososial:
@@ -240,7 +244,7 @@ Untuk menjamin pasien tidak hilang dalam proses evakuasi bencana, sistem menerap
 
 ## 6. Skema Basis Data & Struktur Entitas
 
-Database RAPID-MIND dirancang menggunakan MySQL 8.0 dengan integritas referensial dan UUID pada tabel-tabel utama:
+Database RAPID-MIND menggunakan PostgreSQL 17 + PostGIS dengan integritas referensial dan UUID pada tabel-tabel utama:
 
 ### Rincian Tabel Utama:
 1. **`users`**: Menyimpan kredensial dan peran aktor.
@@ -257,7 +261,7 @@ Database RAPID-MIND dirancang menggunakan MySQL 8.0 dengan integritas referensia
 7. **`risk_responses`**: Jawaban 5 indikator faktor risiko latar belakang trauma (R1 s.d. R5).
 8. **`function_responses`**: Jawaban 3 domain keberfungsian hidup harian (F1, F2, F3).
 9. **`triage_results`**: Hasil kalkulasi triase terpadu.
-   - Kolom: `id`, `assessment_id`, `srq_score`, `risk_score`, `function_score`, `total_score`, `system_recommendation` (`T0_SUSPECT`, `T0_CONFIRMED`, `T1`, `T2`, `T3`), `is_red_flag_override`.
+   - Kolom: `id`, `assessment_id`, `srq_score`, `risk_score`, `function_score`, `total_score`, `system_recommendation` (`T0_SUSPECT`, `T1`, `T2`, `T3`), `is_red_flag_override`.
 10. **`emergency_events`**: Laporan insiden gawat darurat T0.
     - Kolom: `id` (UUID), `patient_id`, `assessment_id`, `user_id`, `red_flag_type` (`SUICIDAL_IDEATION`, `PSYCHOSIS`, `SEVERE_AGITATION`, `MEDICAL_CRISIS`), `status` (`PENDING`, `ACKNOWLEDGED`, `REVIEWING`, `CONFIRMED`, `DOWNGRADED`, `RESOLVED`), `latitude`, `longitude`, `shelter_id`, `notes`.
 11. **`emergency_verifications`**: Log riwayat verifikasi darurat oleh faskes.
@@ -277,8 +281,8 @@ Database RAPID-MIND dirancang menggunakan MySQL 8.0 dengan integritas referensia
 | Method | URI | Controller Action | Keterangan |
 |---|---|---|---|
 | `GET` | `/login` | `AuthController@showLogin` | Halaman login multi-role |
-| `POST` | `/login` | `AuthController@login` | Proses login & penerbitan token JWT |
-| `POST` | `/logout` | `AuthController@logout` | Revokasi sesi & hapus token cookie |
+| `POST` | `/login` | `AuthController@login` | Proses login sesi web; respons API menyediakan JWT |
+| `POST` | `/logout` | `AuthController@logout` | Akhiri sesi web dan invalidasi bearer bila tersedia |
 | `GET` | `/relawan/session-status` | `RelawanSessionController@status` | Validasi sesi recovery untuk PWA offline |
 
 ### 7.2 Rute Relawan Lapangan (`/relawan/...`) — Role: RELAWAN
@@ -350,13 +354,13 @@ rapid-mind/
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Admin/             # Controller admin command center & provisioning
-│   │   │   ├── AuthController.php # Autentikasi multi-role & JWT
+│   │   │   ├── AuthController.php # Sesi web dan JWT API
 │   │   │   ├── Healthcare/        # Controller validasi klinis & penanganan darurat
 │   │   │   └── Relawan/           # Controller PWA relawan & asesmen lapangan
-│   │   └── Middleware/            # JWT middleware & role restriction (auth.jwt, role:...)
+│   │   └── Middleware/            # Middleware bearer/sesi dan pembatasan peran
 │   └── Models/                    # Model Eloquent (Assessment, Patient, EmergencyEvent, dsb.)
 ├── database/
-│   ├── migrations/                # Skema database MySQL (22 file migrasi)
+│   ├── migrations/                # Skema PostgreSQL/PostGIS
 │   └── seeders/                   # Seeder akun demo, posko, faskes, dan contoh kasus
 ├── docs/                          # Dokumen perancangan, arsitektur, dan flow proyek
 ├── resources/
@@ -384,62 +388,27 @@ rapid-mind/
 ## 9. Panduan Instalasi & Menjalankan Proyek
 
 ### 9.1 Prasyarat Sistem
-- **PHP** >= 8.2 (dengan ekstensi `pdo_mysql`, `mbstring`, `bcmath`, `curl`)
-- **Composer** >= 2.5
-- **Node.js** >= 20.x & **NPM**
-- **MySQL** >= 8.0
-- **Git**
+- Docker Compose untuk PHP/Laravel, Composer, PostgreSQL/PostGIS, Reverb, queue, scheduler, dan Nginx.
+- Node.js dan npm pada host untuk aset frontend.
+- Konfigurasi lingkungan lokal yang sesuai di `.env`.
 
-### 9.2 Langkah Instalasi Lokal
-1. **Clone Repositori & Buka Direktori:**
-   ```bash
-   git clone https://github.com/afrizaldwi/rapid-mind.git
-   cd rapid-mind
-   ```
+### 9.2 Langkah pengembangan lokal
 
-2. **Instal Dependensi Backend (PHP):**
-   ```bash
-   composer install
-   ```
+`compose.yaml` menyediakan layanan `app`, `queue`, `scheduler`, `reverb`, `nginx`, dan `postgres`. Setelah meninjau `.env`, gunakan:
 
-3. **Instal Dependensi Frontend (Node):**
-   ```bash
-   npm install
-   ```
+```bash
+cp .env.example .env
+docker compose build
+docker compose up -d
+docker compose exec -T app composer install
+docker compose exec -T app php artisan key:generate
+docker compose exec -T app php artisan jwt:secret
+npm ci
+npm run build
+docker compose exec -T app php artisan migrate
+```
 
-4. **Konfigurasi Environment (`.env`):**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   php artisan jwt:secret
-   ```
-   *Sesuaikan konfigurasi koneksi database MySQL (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) serta kredensial Pusher/WebSockets.*
-
-5. **Migrasi Database & Seeder Demo:**
-   ```bash
-   php artisan migrate:fresh --seed
-   ```
-   *Perintah ini akan membuat seluruh tabel dan mengisi akun demo siap pakai untuk Relawan, Healthcare, dan Admin.*
-
-6. **Kompilasi Aset Frontend:**
-   ```bash
-   npm run build
-   # Atau untuk mode pengembangan (hot reload):
-   npm run dev
-   ```
-
-7. **Jalankan Server Lokal:**
-   ```bash
-   php artisan serve --port=8000
-   ```
-   Aplikasi dapat diakses melalui peramban di `http://localhost:8000`.
-
-### 9.3 Akun Pengguna Demo Bawaan
-| Peran | Username / Email | Password Default | Tujuan Akses |
-|---|---|---|---|
-| **Relawan** | `relawan_demo` | `password` | Uji coba mobile PWA, PFA, penapisan SRQ-20, & pemicuan SOS. |
-| **Healthcare** | `dokter_demo` | `password` | Uji coba verifikasi T0, validasi klinis asesmen, & dispatch rujukan. |
-| **Admin** | `admin_demo` | `password` | Uji coba command center, peta spasial (heatmap), & provisioning posko. |
+Nginx melayani aplikasi pada `http://localhost:8080`. Migrasi dan seeding mengubah data; hanya jalankan setelah lingkungan diverifikasi aman dan ada otorisasi. Jangan gunakan `migrate:fresh --seed` sebagai langkah setup umum. Akun demo hanya tersedia jika data sintetis memang disiapkan di lingkungan tersebut; tidak ada kredensial universal yang dijamin.
 
 ---
 *Dokumen ini disusun sebagai acuan resmi perancangan arsitektur, diagram UML (Activity, Sequence, Use Case, Class Diagram), serta pedoman operasional sistem RAPID-MIND.*

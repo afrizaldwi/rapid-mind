@@ -823,3 +823,13 @@ Relawan now sees an emergency only as its original `T0-Suspect` field report plu
 The Relawan Healthcare-status polling route was removed. Emergency detail and Data payloads are deliberately restricted, and emergency sync replay no longer returns the server's Healthcare-owned lifecycle status. The local Dexie emergency shape remains compatible and the existing local-first queue, retry, stable identifier, and server-receipt behavior remain intact. Healthcare lifecycle storage, routes, and screens are unchanged.
 
 Automated verification passed: complete Docker Laravel suite (`161` tests, `2,052` assertions), focused role-boundary/Healthcare regression suite (`51` tests, `834` assertions), SRQ Node tests (`2` files), `npx vue-tsc --noEmit`, `npm run build`, PHP syntax checks, and `git diff --check`. The production build retained its existing large-chunk and PWA deprecation advisories. Pint check-only reported pre-existing whole-file style issues in the touched PHP files; no broad formatter rewrite was applied. Browser, offline runtime, and live Reverb behavior were not directly verified in this revision.
+
+---
+
+## Healthcare Emergency Worklist refactor and Checkpoints 4B/4C/4D (16 October 2026)
+
+**Source baseline:** commit `b4779f1` split `Healthcare/Emergencies/Index.vue` into seven focused Vue components, introduced `useEmergencyQueue.ts` and `useEmergencyActions.ts`, and added three focused Node regression files. The `healthcareEmergencyActionsTab.test.ts` regression covers the corrected same-tick parent/form draft synchronization case.
+
+**Reported historical verification:** Checkpoint 4B reported passing Vue TypeScript checks, production frontend build, and three focused Node regression test files. Checkpoint 4C reported non-destructive Antigravity browser regression of the refactored worklist. Checkpoint 4D reported two-session Relawan → Healthcare Reverb delivery and real submissions for acknowledgement, secondary verification, clinical classification, and explicit referral, with persistence and Inertia reconciliation observed. These outcomes come from the project-owner request; this documentation checkpoint did not rerun checks, inspect a live database, or conduct browser testing. The detailed report artifacts were not included.
+
+**Open limits:** No production security certification; no complete offline connectivity-failure or mid-flight POST disconnect/reconnect test in Checkpoints 4C/4D; no submitted T3 clinical downgrade in 4D. The legacy `genderLabel` reference and frontend/backend pending-emergency order difference remain. See `RAPID_MIND_TECHNICAL_PLAN.md` for the workflow/implementation conflict list and `workflow-verification.md` for evidence categories.

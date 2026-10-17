@@ -39,17 +39,11 @@ The source material used to derive this handoff is:
 9. `RAPID_MIND_AUTH_PROVISIONING.md`
 10. `RAPID_MIND_SHARED_SYSTEM_STATES_INTERACTIONS.md`
 
-## 0.1 Authority order
+## 0.1 Authority order and current status
 
-When requirements conflict, use this order:
+`docs/workflow.md` is the finalized functional and product workflow. Explicit current project-owner instructions and approved domain safety decisions also govern implementation. This handoff and dedicated UX specifications supply detailed interaction design; the technical plan supplies architecture and sequence. Source code shows current implementation, not product authority. Identify conflicts explicitly instead of silently treating an earlier UX or technical assumption as a change to clinical policy. Required screens are not necessarily implemented or tested.
 
-1. **Explicit decisions in this handoff**
-2. The dedicated detailed UX document for that domain
-3. The visual/shared-state foundations
-4. `RAPID_MIND_TECHNICAL_PLAN.md`
-5. `workflow.md` when an older workflow statement conflicts with a later explicit implementation decision
-
-`workflow.md` remains authoritative for product/business intent, but older implementation assumptions in it must not override later dedicated UX or technical decisions.
+**Historical document:** the 29 September handoff remains useful for detailed UX. The later Healthcare Emergency Worklist refactor at commit `b4779f1` (16 October 2026) extracted seven Vue components and `useEmergencyQueue.ts` / `useEmergencyActions.ts`. Three focused Node regression files include coverage for corrected same-tick form synchronization. The project-owner request summarizes Checkpoint 4C/4D Antigravity reports describing browser regression and a cross-role workflow; these are reported evidence, not verification rerun for this documentation update. Current limits and differences are tracked in `RAPID_MIND_TECHNICAL_PLAN.md` and `workflow-verification.md`.
 
 ## 0.2 Locked product model
 
@@ -94,7 +88,7 @@ Inertia.js
 TypeScript
 Tailwind CSS
 PostgreSQL + PostGIS
-JWT access + refresh authentication
+Laravel web session for Inertia; JWT access + refresh for API
 Laravel Reverb / Echo
 IndexedDB + Dexie
 PWA / Workbox
