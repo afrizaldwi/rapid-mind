@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Healthcare;
 
+use App\Domain\Healthcare\ClinicalReferralWorkflow;
 use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\ReferralStatus;
@@ -295,7 +296,7 @@ final class HealthcareController extends Controller
         return $this->mutationSuccessRedirect('Status klinis darurat berhasil diperbarui.', $realtimeDelivered);
     }
 
-    public function createEmergencyReferral(Request $request, string $emergencyId): JsonResponse|RedirectResponse
+    public function createEmergencyReferral(Request $request, string $emergencyId, ClinicalReferralWorkflow $referrals): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
         $validated = $request->validate([
@@ -303,7 +304,7 @@ final class HealthcareController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $result = DB::transaction(function () use ($emergencyId, $user, $validated): array {
+        $result = DB::transaction(function () use ($emergencyId, $user, $validated, $referrals): array {
             $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
 
             if ($emergency->status !== EmergencyStatus::CONFIRMED) {
@@ -321,18 +322,14 @@ final class HealthcareController extends Controller
             }
 
             $referral = $emergency->referrals()->create([
+                'emergency_verification_id' => $emergency->verifications()->where('clinical_result', TriageCategory::T0_CONFIRMED)->oldest('id')->value('id'),
                 'patient_id' => $emergency->patient_id,
                 'referred_by' => $user->id,
                 'facility_id' => (int) $validated['facility_id'],
                 'status' => ReferralStatus::ACTIVE,
                 'notes' => $validated['notes'] ?? null,
             ]);
-            ReferralStatusHistory::create([
-                'referral_id' => $referral->id,
-                'status' => ReferralStatus::ACTIVE,
-                'changed_by' => $user->id,
-                'notes' => 'Rujukan darurat diterbitkan setelah konfirmasi T0.',
-            ]);
+            $referrals->recordCreated($referral, $user, 'Rujukan darurat diterbitkan setelah konfirmasi T0.');
 
             return ['created' => true];
         });
@@ -432,7 +429,7 @@ final class HealthcareController extends Controller
         ]);
     }
 
-    public function validateAssessment(Request $request, string $assessmentId): JsonResponse|RedirectResponse
+    public function validateAssessment(Request $request, string $assessmentId, ClinicalReferralWorkflow $referrals): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
         $assessment = Assessment::where('status', AssessmentStatus::COMPLETED)
@@ -455,7 +452,7 @@ final class HealthcareController extends Controller
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
 
         try {
-            DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
+            DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated, $referrals): void {
                 $assessment = Assessment::whereKey($assessment->id)
                     ->where('status', AssessmentStatus::COMPLETED)
                     ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
@@ -483,12 +480,7 @@ final class HealthcareController extends Controller
                         'status' => ReferralStatus::ACTIVE,
                         'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
                     ]);
-                    ReferralStatusHistory::create([
-                        'referral_id' => $referral->id,
-                        'status' => ReferralStatus::ACTIVE,
-                        'changed_by' => $user->id,
-                        'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
-                    ]);
+                    $referrals->recordCreated($referral, $user, 'Rujukan klinis diterbitkan pasca-validasi asesmen.');
                 }
 
                 AuditLog::create([
@@ -564,9 +556,18 @@ final class HealthcareController extends Controller
             $referral->update(['status' => $newStatus]);
             ReferralStatusHistory::create([
                 'referral_id' => $referral->id,
+                'previous_status' => $current,
                 'status' => $newStatus,
                 'changed_by' => Auth::id(),
                 'notes' => $validated['notes'] ?? null,
+            ]);
+            AuditLog::create([
+                'actor_id' => Auth::id(),
+                'action' => 'REFERRAL_LEGACY_STATUS_CHANGED',
+                'entity_type' => 'Referral',
+                'entity_id' => $referral->id,
+                'old_values' => ['status' => $current->value],
+                'new_values' => ['status' => $newStatus->value, 'notes' => $validated['notes'] ?? null],
             ]);
 
             return [
