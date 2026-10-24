@@ -43,9 +43,6 @@ final class AdminController extends Controller
         $countT3Validated = DB::table('clinical_validations')->where('clinical_result', TriageCategory::T3->value)->count();
 
         $totalConfirmed = $countT0Confirmed + $countT1Validated + $countT2Validated + $countT3Validated;
-        if ($totalConfirmed === 0) {
-            $totalConfirmed = $countT0 + $countT1 + $countT2 + $countT3;
-        }
 
         $shelters = Shelter::withCount(['patients', 'volunteers'])->get();
 

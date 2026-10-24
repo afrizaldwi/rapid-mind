@@ -12,7 +12,7 @@
               Ringkasan Operasional Lapangan
             </h1>
             <p class="text-xs text-slate-500 mt-0.5">
-              Agregasi kasus terverifikasi klinis di seluruh posko penanggulangan bencana
+              Agregasi laporan T0 dan rekomendasi sistem di seluruh posko penanggulangan bencana
             </p>
           </div>
 
@@ -36,7 +36,7 @@
         <div class="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
           <!-- T0 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">T0 Gawat Darurat:</span>
+            <span class="text-slate-500 font-medium">Laporan T0 Aktif:</span>
             <span class="text-sm font-bold tabular-nums" :class="kpis.countT0 > 0 ? 'text-red-600' : 'text-slate-800'">
               {{ kpis.countT0 }}
             </span>
@@ -46,7 +46,7 @@
 
           <!-- T1 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">T1 Distres Tinggi:</span>
+            <span class="text-slate-500 font-medium">Rekomendasi T1:</span>
             <span class="text-sm font-bold text-orange-600 tabular-nums">
               {{ kpis.countT1 }}
             </span>
@@ -56,7 +56,7 @@
 
           <!-- T2 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">T2 Distres Sedang:</span>
+            <span class="text-slate-500 font-medium">Rekomendasi T2:</span>
             <span class="text-sm font-bold text-amber-600 tabular-nums">
               {{ kpis.countT2 }}
             </span>
@@ -66,7 +66,7 @@
 
           <!-- T3 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">T3 Stabil:</span>
+            <span class="text-slate-500 font-medium">Rekomendasi T3:</span>
             <span class="text-sm font-bold text-emerald-600 tabular-nums">
               {{ kpis.countT3 }}
             </span>
@@ -91,7 +91,7 @@
           <div class="flex items-center justify-between pb-1">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Sebaran Kasus Terkonfirmasi per Posko
+                Sebaran Laporan T0 dan Rekomendasi per Posko
               </h2>
               <p class="text-[11px] text-slate-500 mt-0.5">
                 Klik baris posko untuk memfokuskan tampilan lokasi pada peta
@@ -133,7 +133,7 @@
                       <span
                         v-if="s.t0_count > 0"
                         class="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"
-                        title="Terdapat kasus T0 aktif"
+                        title="Terdapat laporan T0 aktif"
                       ></span>
                       <span class="font-bold text-slate-900 text-xs">
                         {{ s.name }}
@@ -186,7 +186,7 @@
                     {{ kpis.countT3 }}
                   </td>
                   <td class="py-2 px-3.5 text-right tabular-nums font-extrabold text-slate-900">
-                    {{ totalConfirmedCases }}
+                    {{ totalTriageCount }}
                   </td>
                 </tr>
               </tfoot>
@@ -241,14 +241,14 @@
           <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Proporsi Kasus Terkonfirmasi
+                Proporsi Laporan T0 dan Rekomendasi
               </h2>
               <span class="text-[11px] text-slate-400 mt-0.5 block">
                 Rasio agregat tingkat kedaruratan & distres
               </span>
             </div>
             <span class="text-xs font-bold text-slate-800 tabular-nums">
-              {{ totalTriageCount }} kasus
+              {{ totalTriageCount }} laporan/rekomendasi
             </span>
           </div>
 
@@ -307,7 +307,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-slate-600 flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-xs bg-red-600 shrink-0"></span>
-                  T0 Darurat
+                  T0 Aktif
                 </span>
                 <span class="font-bold text-slate-900 tabular-nums">
                   {{ kpis.countT0 }} <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT0) }}%)</span>
@@ -349,10 +349,10 @@
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Tren Kasus Harian (30 Hari Terakhir)
+                Tren T0 dan Rekomendasi (30 Hari)
               </h2>
               <span class="text-[11px] text-slate-400 mt-0.5 block">
-                Dinamika kasus terkonfirmasi harian
+                Laporan T0 dan rekomendasi harian
               </span>
             </div>
             <div v-if="hasTrendData" class="flex items-center gap-3 text-[10px] font-medium text-slate-500">
@@ -399,7 +399,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import * as maplibregl from '@/lib/maplibre';
 
 interface KPIProps {
-  totalConfirmed?: number;
+  totalConfirmed: number;
   totalSurvivors: number;
   countT0: number;
   countT0Confirmed?: number;
@@ -438,10 +438,7 @@ const totalTriageCount = computed(() => {
 });
 
 const totalConfirmedCases = computed(() => {
-  if (props.kpis.totalConfirmed !== undefined) {
-    return props.kpis.totalConfirmed;
-  }
-  return totalTriageCount.value;
+  return props.kpis.totalConfirmed;
 });
 
 const sheltersList = computed(() => {
@@ -525,6 +522,18 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function showOnlyPopup(target: maplibregl.Popup, map: maplibregl.Map) {
+  for (const entry of markersMap.values()) {
+    if (entry.popup !== target && entry.popup.isOpen()) {
+      entry.popup.remove();
+    }
+  }
+
+  if (!target.isOpen()) {
+    target.addTo(map);
+  }
+}
+
 function focusShelter(s: any) {
   selectedShelterId.value = s.id;
   const rawLng = Number(s.longitude);
@@ -536,8 +545,8 @@ function focusShelter(s: any) {
       essential: true,
     });
     const entry = markersMap.get(s.id);
-    if (entry && !entry.popup.isOpen()) {
-      entry.popup.addTo(mapInstance.value as any);
+    if (entry) {
+      showOnlyPopup(entry.popup, mapInstance.value);
     }
   }
 }
@@ -643,8 +652,8 @@ onMounted(() => {
           <div style="font-weight: 700; font-size: 12px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(s.name)}</div>
           <div style="font-size: 10px; color: #64748B; margin-bottom: 6px;">${escapeHtml(s.address || 'Kawasan Posko Bencana')}</div>
           <div style="font-size: 10px; color: #334155; line-height: 1.4; border-top: 1px solid #F1F5F9; padding-top: 4px;">
-            ${hasT0 ? `<div style="color: #DC2626; font-weight: 700; margin-bottom: 2px;">● ${s.t0_count} Kasus T0 Terkonfirmasi</div>` : '<div style="color: #0F766E; font-weight: 600; margin-bottom: 2px;">● Bebas Kasus T0</div>'}
-            <div style="color: #64748B;">Total: <strong style="color: #0F172A;">${totalKasus}</strong> kasus terkonfirmasi</div>
+            ${hasT0 ? `<div style="color: #DC2626; font-weight: 700; margin-bottom: 2px;">● ${s.t0_count} Laporan T0 aktif</div>` : '<div style="color: #0F766E; font-weight: 600; margin-bottom: 2px;">● Tanpa T0 aktif</div>'}
+            <div style="color: #64748B;">Total: <strong style="color: #0F172A;">${totalKasus}</strong> laporan dan rekomendasi</div>
           </div>
           <div style="margin-top: 6px; border-top: 1px solid #F1F5F9; padding-top: 4px; text-align: right;">
             <a href="/admin/map" style="font-size: 10px; font-weight: 600; color: #0F766E; text-decoration: none;">Peta penuh &rarr;</a>
@@ -652,7 +661,9 @@ onMounted(() => {
         </div>
       `;
 
-      const popup = new maplibregl.Popup({ offset: 14 }).setHTML(popupHTML);
+      const popup = new maplibregl.Popup({ offset: 14 })
+        .setLngLat([rawLng, rawLat])
+        .setHTML(popupHTML);
 
       const onMarkerClick = (event: Event) => {
         event.stopPropagation();
@@ -662,9 +673,7 @@ onMounted(() => {
           zoom: 12.5,
           essential: true,
         });
-        if (!popup.isOpen()) {
-          popup.addTo(map);
-        }
+        showOnlyPopup(popup, map);
       };
 
       hitArea.addEventListener('click', onMarkerClick);
@@ -677,7 +686,6 @@ onMounted(() => {
 
       const marker = new maplibregl.Marker({ element: hitArea, anchor: 'center' })
         .setLngLat([rawLng, rawLat])
-        .setPopup(popup)
         .addTo(map);
 
       markersMap.set(s.id, { marker, popup, visualEl: visualMarker, hasT0 });

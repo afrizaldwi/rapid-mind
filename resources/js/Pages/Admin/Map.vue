@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import * as maplibregl from '@/lib/maplibre';
 
@@ -132,9 +132,10 @@ const props = defineProps<{
 }>();
 
 const mapContainer = ref<HTMLElement | null>(null);
-const mapInstance = ref<maplibregl.Map | null>(null);
+const mapInstance = shallowRef<maplibregl.Map | null>(null);
 const selectedShelterId = ref<number | null>(null);
 const markersMap = new Map<number, MarkerEntry>();
+let activePopup: maplibregl.Popup | null = null;
 
 const totalT0Count = computed(() => {
   return (props.shelters || []).reduce((acc: number, s: any) => acc + (Number(s.t0_count) || 0), 0);
@@ -151,6 +152,18 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function showOnlyPopup(target: maplibregl.Popup, map: maplibregl.Map) {
+  if (activePopup && activePopup !== target && activePopup.isOpen()) {
+    activePopup.remove();
+  }
+
+  if (!target.isOpen()) {
+    target.addTo(map);
+  }
+
+  activePopup = target;
 }
 
 function updateMarkerHighlight(entry: MarkerEntry, isSelected: boolean) {
@@ -194,9 +207,7 @@ function selectShelter(shelter: any) {
 
   const entry = markersMap.get(shelter.id);
   if (entry) {
-    if (!entry.popup.isOpen()) {
-      entry.marker.togglePopup();
-    }
+    showOnlyPopup(entry.popup, mapInstance.value);
   }
 
   const rowEl = document.getElementById(`shelter-row-${shelter.id}`);
@@ -291,11 +302,12 @@ onMounted(() => {
       </div>
     `;
 
-    const popup = new maplibregl.Popup({ offset: 18 }).setHTML(popupHTML);
+    const popup = new maplibregl.Popup({ offset: 18 })
+      .setLngLat([Number(s.longitude), Number(s.latitude)])
+      .setHTML(popupHTML);
 
     const marker = new maplibregl.Marker({ element: hitArea, anchor: 'center' })
       .setLngLat([Number(s.longitude), Number(s.latitude)])
-      .setPopup(popup)
       .addTo(map);
 
     markersMap.set(s.id, { marker, popup, visualEl: visualMarker, hasT0 });
@@ -329,21 +341,31 @@ onMounted(() => {
       </div>
     `;
 
-    const popup = new maplibregl.Popup({ offset: 16 }).setHTML(popupHTML);
+    const popup = new maplibregl.Popup({ offset: 16 })
+      .setLngLat([Number(f.longitude), Number(f.latitude)])
+      .setHTML(popupHTML);
 
-    hitArea.addEventListener('click', (event) => {
+    const onFacilityClick = (event: Event) => {
       event.stopPropagation();
+      selectedShelterId.value = null;
       map.flyTo({
         center: [Number(f.longitude), Number(f.latitude)],
         zoom: 14,
         essential: true,
       });
-      popup.addTo(map);
+      showOnlyPopup(popup, map);
+    };
+
+    hitArea.addEventListener('click', onFacilityClick);
+    hitArea.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onFacilityClick(event);
+      }
     });
 
     new maplibregl.Marker({ element: hitArea, anchor: 'center' })
       .setLngLat([Number(f.longitude), Number(f.latitude)])
-      .setPopup(popup)
       .addTo(map);
   }
 
