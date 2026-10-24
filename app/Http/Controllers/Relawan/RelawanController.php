@@ -487,6 +487,12 @@ final class RelawanController extends Controller
             $patientId = $assessment->patient_id;
         }
 
+        if ($patientId !== null && !$this->eligiblePatients($user)->whereKey($patientId)->exists()) {
+            throw ValidationException::withMessages([
+                'patient_id' => 'Penyintas tidak tersedia untuk Relawan ini.',
+            ]);
+        }
+
         $redFlag = RedFlagType::from($validated['red_flag_type']);
 
         $emergency = EmergencyEvent::create([

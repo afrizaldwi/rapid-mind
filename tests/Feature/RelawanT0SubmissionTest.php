@@ -13,6 +13,8 @@ use App\Events\EmergencyCreated;
 use App\Models\Assessment;
 use App\Models\EmergencyEvent;
 use App\Models\Patient;
+use App\Models\Region;
+use App\Models\Shelter;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -44,6 +46,98 @@ final class RelawanT0SubmissionTest extends TestCase
             'status' => AssessmentStatus::IN_PROGRESS,
             'mode' => AssessmentMode::VERBAL,
         ]);
+    }
+
+    public function test_owned_patient_is_accepted_without_a_posko(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $patient = Patient::create(['name' => 'Penyintas Milik Relawan', 'created_by' => $this->relawan->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertCreated();
+
+        $this->assertSame($patient->id, EmergencyEvent::sole()->patient_id);
+        Event::assertDispatched(EmergencyCreated::class, 1);
+    }
+
+    public function test_same_posko_patient_is_accepted(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $shelter = Shelter::create(['name' => 'Posko Bersama', 'region_id' => Region::create(['name' => 'Wilayah Uji'])->id]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Posko', 'created_by' => $other->id, 'shelter_id' => $shelter->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertCreated();
+
+        $this->assertSame($patient->id, EmergencyEvent::sole()->patient_id);
+        Event::assertDispatched(EmergencyCreated::class, 1);
+    }
+
+    public function test_foreign_patient_from_another_posko_is_rejected_without_persistence_or_broadcast(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $region = Region::create(['name' => 'Wilayah Uji']);
+        $ownShelter = Shelter::create(['name' => 'Posko Sendiri', 'region_id' => $region->id]);
+        $otherShelter = Shelter::create(['name' => 'Posko Lain', 'region_id' => $region->id]);
+        $this->relawan->update(['shelter_id' => $ownShelter->id]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Identitas Rahasia', 'created_by' => $other->id, 'shelter_id' => $otherShelter->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('patient_id')->assertDontSee('Identitas Rahasia');
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('assessments', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
+    public function test_relawan_without_posko_cannot_use_another_relawans_patient(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Lain', 'created_by' => $other->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
+    public function test_owned_assessment_with_now_ineligible_patient_is_rejected(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $region = Region::create(['name' => 'Wilayah Uji']);
+        $shelter = Shelter::create(['name' => 'Posko Lama', 'region_id' => $region->id]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Dipindah', 'created_by' => $other->id, 'shelter_id' => $shelter->id]);
+        $assessment = Assessment::create([
+            'patient_id' => $patient->id,
+            'user_id' => $this->relawan->id,
+            'status' => AssessmentStatus::IN_PROGRESS,
+            'mode' => AssessmentMode::VERBAL,
+        ]);
+        $this->relawan->update(['shelter_id' => null]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'assessment_id' => $assessment->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('assessments', 1);
+        Event::assertNotDispatched(EmergencyCreated::class);
     }
 
     public function test_owned_assessment_and_matching_patient_are_saved_together(): void
@@ -268,8 +362,8 @@ final class RelawanT0SubmissionTest extends TestCase
         $payload = (new EmergencyCreated($emergency))->broadcastWith();
         $this->assertSame(['emergency' => ['id' => $emergency->id]], $payload);
         $authorize = Broadcast::getChannels()->get('emergencies');
-        $this->assertTrue($authorize(User::factory()->make(['role' => UserRole::HEALTHCARE])));
-        $this->assertFalse($authorize(User::factory()->make(['role' => UserRole::ADMIN])));
+        $this->assertTrue($authorize(User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true])));
+        $this->assertFalse($authorize(User::factory()->create(['role' => UserRole::ADMIN, 'is_active' => true])));
         $this->assertFalse($authorize($this->relawan));
     }
 }
