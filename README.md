@@ -4,7 +4,7 @@ RAPID-MIND adalah prototipe pendukung keputusan untuk respons kesehatan jiwa saa
 
 ## Implementasi saat ini
 
-Relawan memiliki alur PFA, asesmen SRQ-20, faktor risiko, fungsi harian, rekomendasi triase, serta pembuatan T0-Suspect dengan penyimpanan lokal dan sinkronisasi. Healthcare memiliki antrean darurat, penerimaan Reverb/Echo, pengakuan, verifikasi sekunder, klasifikasi klinis, dan tindakan rujukan eksplisit. Admin memiliki ringkasan operasional, peta, analitik, dan pengelolaan akun/organisasi. Cakupan dan batas verifikasi tiap alur dicatat dalam [ledger verifikasi](docs/workflow-verification.md); keberadaan layar tidak menjamin semua skenario luring atau produksi telah diuji.
+Relawan memiliki alur PFA, asesmen SRQ-20, faktor risiko, fungsi harian, rekomendasi triase, serta pembuatan T0-Suspect dengan penyimpanan lokal dan sinkronisasi. Healthcare memiliki antrean darurat, penerimaan Reverb/Echo, pengakuan, verifikasi sekunder, klasifikasi klinis, dan tindakan rujukan eksplisit. Fondasi serta perintah backend Dispatch sudah terpisah dari Referral, tetapi UI Dispatch dan cutover UI Referral masih menunggu checkpoint berikutnya. Admin memiliki ringkasan operasional, peta marker, analitik, logistik, dan pengelolaan akun/organisasi. Cakupan dan batas verifikasi tiap alur dicatat dalam [referensi implementasi saat ini](docs/CURRENT_IMPLEMENTATION.md) dan [ledger verifikasi](docs/workflow-verification.md); keberadaan layar atau endpoint tidak menjamin semua skenario luring, browser, realtime, atau produksi telah diuji.
 
 ## Teknologi
 
@@ -54,6 +54,7 @@ Nginx melayani aplikasi di `http://localhost:8080` sesuai `compose.yaml`. Kreden
 - [Alur produk final](docs/workflow.md) — kebutuhan fungsional dan produk.
 - [Handoff layar](docs/RAPID_MIND_FINAL_SCREEN_INVENTORY_IMPLEMENTATION_HANDOFF.md) — rancangan interaksi terperinci.
 - [Rencana teknis](docs/RAPID_MIND_TECHNICAL_PLAN.md) — arsitektur, status, dan kesenjangan implementasi.
+- [Implementasi saat ini](docs/CURRENT_IMPLEMENTATION.md) — inventaris ringkas route, layar, backend-only, dan batas bukti.
 - [Dokumentasi sistem](docs/RAPID_MIND_DOKUMENTASI_SISTEM.md) — ikhtisar sistem dan formula triase.
 - [Ledger verifikasi](docs/workflow-verification.md) dan [catatan perubahan](docs/changes-notes.md) — bukti serta riwayat checkpoint.
 - [Instruksi agen](AGENTS.md) — aturan kerja dan prioritas sumber.

@@ -4,15 +4,48 @@
 **Document type:** Technical architecture + implementation plan  
 **Status:** Working baseline for development  
 **Primary source:** `docs/workflow.md` (finalized product workflow)
-**Last documentation alignment:** 2026-10-17
+**Last documentation alignment:** 2026-10-24
 
 ---
 
-## Current authority and implementation status — 17 October 2026
+## Current authority and implementation status — 24 October 2026
 
 `docs/workflow.md` is the finalized product and functional workflow. This plan supplies architecture, sequencing, and historical implementation checkpoints; the repository source determines current implementation. When workflow, safety decisions, UX detail, and implemented behavior differ, record the difference explicitly before changing clinical policy or working architecture. A workflow requirement alone is not implementation or test evidence.
 
-**Healthcare Emergency Worklist baseline:** commit `b4779f1` (16 October 2026) extracted seven Vue components from `Emergencies/Index.vue`, plus `useEmergencyQueue.ts` and `useEmergencyActions.ts`. Three focused Node regression files cover queue/actions behavior, including the corrected same-tick form synchronization regression. The project-owner request reports Checkpoint 4B TypeScript/build/Node checks, Checkpoint 4C Antigravity browser regression, and Checkpoint 4D cross-role Relawan → Healthcare rehearsal. These are reported historical evidence, not checks rerun in this documentation checkpoint; see `workflow-verification.md`.
+The compact current-state inventory is `docs/CURRENT_IMPLEMENTATION.md`. The
+sections after this status block preserve dated architecture and execution history;
+they must not be read as overriding this current snapshot.
+
+### Current checkpoint status
+
+| Checkpoint | Status | Evidence boundary |
+|---|---|---|
+| Healthcare Emergency Queue — Checkpoint 1 | **COMPLETE** | Source confirms oldest-first pending ordering, deterministic ties, stable selection, missing-gender fallback, and accessibility corrections. Reported verification: 31 Laravel tests, 501 assertions, plus six Antigravity browser categories passed. This documentation pass did not rerun them. |
+| Referral/Dispatch 2A — Architecture Audit | **COMPLETE** | Approved separation: Referral is clinical handoff; EmergencyDispatch is response coordination/movement; T0 dispatch may exist without referral; the `ON_SITE → COMPLETED` demo branch remains. |
+| Referral/Dispatch 2B — Domain Foundation | **COMPLETE** | Additive schema, models, enums, relationships, factories, and lifecycle/constraint tests. Reported combined result: **115 tests, 1,210 assertions** on guarded PostgreSQL/PostGIS testing. No development database cutover was performed. |
+| Referral/Dispatch 2C — Backend Workflows | **COMPLETE** | Locked/idempotent assignment, progression, linking, clinical completion, history/audit, and four Healthcare POST routes. Reported combined result: **149 tests, 1,670 assertions**, including **4 real PostgreSQL concurrency scenarios**. The later focused rerun is overlapping evidence and is not added as another test set. |
+| Referral/Dispatch 2D + 2E | **PENDING** | Frontend integration, read projections, dispatch controls, realtime reconciliation, and deterministic synthetic fixtures remain pending. Legacy endpoints, Referral casts, and existing constraints are not removed in this stage. |
+| Referral/Dispatch 2F + 2G | **PENDING** | Coordinated database/application cutover and final verification. This scope has not started and is not inferred from backend availability. No development database reset or destructive migration is authorized yet. |
+
+### Current implementation boundary
+
+- The Checkpoint 1 queue-ordering and gender-fallback defects previously listed
+  here are resolved in source. Pending T0 is oldest-first with an ID tie-break,
+  and absent gender uses an explicit fallback.
+- Referral and Dispatch now have independent schema and backend workflows.
+  However, the current `Rujukan` Vue page still drives the legacy movement-like
+  Referral lifecycle. Independent Dispatch commands are **BACKEND ONLY** until
+  the 2D + 2E frontend integration and read-projection work. Coordinated
+  database/application cutover remains in 2F + 2G.
+- Existing Healthcare emergency Reverb/Echo reconciliation remains implemented.
+  Checkpoint 2C introduced no Dispatch broadcast/subscription, and no external
+  response-unit contact, reservation, or acknowledgement is claimed.
+- Admin already renders Posko and Faskes markers. This is a marker map, not a
+  T0–T3 geospatial density heatmap. Admin has no equivalent Reverb/Echo aggregate
+  subscription in current source.
+- The development database was not migrated, reset, or reseeded by 2B/2C. Runtime
+  use of the new backend requires the additive 2B schema to be applied during an
+  explicitly approved cutover.
 
 ### Open workflow / implementation differences
 
@@ -21,7 +54,14 @@
 - **SMS:** workflow language describes automatic fallback; the browser implementation offers a user-mediated `sms:` composer handoff. Automatic delivery, native handler launch, and receipt are not verified. A pure PWA cannot promise silent SMS transmission.
 - **Offline/background sync:** local IndexedDB/outbox and selected offline gates have evidence, but browser and device support varies. Complete connectivity-failure coverage and a mid-flight POST disconnect/reconnect case are not established by Checkpoints 4C/4D.
 - **Data protection:** workflow claims local AES-256 encryption, local purging, and pseudonymization; corresponding end-to-end implementations were not verified in this checkpoint. Base64 is encoding, not encryption. HTTPS/WSS transport encryption does not establish application-level end-to-end encryption.
-- **Healthcare queue:** backend orders pending emergencies oldest first (`created_at`, then `id`); frontend `normalizeEmergencyQueue` sorts pending items newest first and has no matching ID tie-break. The extracted header still references a legacy `genderLabel` absent from normalized queue items. Both remain unresolved.
+- **T0 downgrade taxonomy:** the earlier Healthcare design baseline
+  restricts T0 downgrade to T1/T2, while current source also exposes and accepts
+  T3. This is not silently approved by documentation; it requires an explicit
+  project-owner clinical/product decision.
+- **Admin metrics:** current summary and analytics surfaces use different T0
+  populations in places, and `totalConfirmed` can fall back to system-triage
+  counts. Copy and metric semantics require a separate application-correctness
+  decision; documentation does not relabel these as uniformly clinical outcomes.
 
 ---
 

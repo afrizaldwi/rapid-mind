@@ -5,7 +5,79 @@
 **Product language:** Bahasa Indonesia  
 **Discussion/design language:** English  
 **Design direction:** Operational Humanitarian UI  
-**Status:** Design baseline for the next UI/UX phase
+**Status:** Historical design baseline with current implementation alignment below
+
+---
+
+# Current Implementation Alignment — 24 October 2026
+
+This section is the source-aligned description of the current Admin workspace.
+The numbered sections that follow preserve the original product and UX rationale.
+Where they prescribe four destinations, a map-first landing page, exports,
+realtime aggregates, or a density heatmap, those passages are **historical design
+targets**, not claims about the implemented application.
+
+## Implemented navigation
+
+`resources/js/layouts/AdminLayout.vue` implements eight visible destinations in
+four groups:
+
+| Group | Label | Route | Current surface |
+|---|---|---|---|
+| Command Center | Pusat Komando | `/admin/summary` | Regional KPIs, Posko case table, embedded marker map, distribution, and 30-day trend |
+| Command Center | Data Longitudinal | `/admin/analytics` | Triage distribution, 30-day daily case-count trend, and aggregate Posko table |
+| Operations | Manajemen Relawan | `/admin/volunteers` | Relawan accounts, current Posko assignment, and assignment changes |
+| Operations | Posko & Sumber Daya | `/admin/operations/posko` | Posko registry, operational status, coordinates, and assigned Relawan count |
+| Operations | Kebutuhan Logistik | `/admin/logistics` | Resource-need creation/update and append-only allocation records |
+| Healthcare Network | Organisasi Faskes | `/admin/facilities/organizations` | Faskes registry and activation/deactivation |
+| Healthcare Network | Akun Healthcare | `/admin/facilities/users` | Healthcare account provisioning and facility assignment |
+| Spatial | Peta Geospasial | `/admin/map` | MapLibre Posko/Faskes markers and a textual Posko directory |
+
+The earlier four-destination proposal (`Ringkasan`, `Relawan`, `Faskes`,
+`Operasional`) is therefore **SUPERSEDED AS NAVIGATION**. Its grouping rationale
+remains useful background, but it is not the current sidebar.
+
+## Implemented operational surfaces
+
+- **IMPLEMENTED — Pusat Komando:** database-backed counts and Posko aggregates,
+  a Posko table, an embedded MapLibre marker map, triage distribution, and a
+  30-day series. Some labels and populations are not uniform: for example,
+  `totalConfirmed` can fall back to system-triage counts, and T0 counting differs
+  between summary/analytics contexts. Treat this as a known metric/copy alignment
+  issue, not a uniformly clinically confirmed population.
+- **IMPLEMENTED — Peta Geospasial:** circular Posko markers communicate active T0
+  presence and square markers identify active Faskes when coordinates exist. A
+  Posko directory provides a non-map path. This is **not** a regional density
+  heatmap and does not render a T0–T3 density surface.
+- **IMPLEMENTED — Data Longitudinal:** ECharts renders aggregate T1/T2/T3 daily
+  counts from completed assessments over 30 calendar days plus distribution and
+  Posko totals. This is a case-volume trend, not proven patient-level recovery or
+  prevalence analysis; no population denominator is supplied.
+- **IMPLEMENTED — Relawan/Posko/Faskes provisioning:** dedicated controllers and
+  forms manage accounts, current assignments, organization records, operational
+  status, and guarded deactivation. This does not confer patient-level clinical
+  authority on Admin.
+- **IMPLEMENTED — logistics MVP:** Admin records needs and allocations using real
+  persisted data. It is not stock accounting, procurement, supplier, warehouse,
+  or fleet-management software.
+- **PARTIAL — responsive behavior:** the shared sidebar becomes a drawer below
+  the large breakpoint; summary/map grids stack; logistics uses a desktop table,
+  a mobile card view, and a responsive priority panel; wide tables may scroll.
+  These source-level adaptations are not a new device/browser verification claim.
+
+## Explicit current limitations
+
+- **PLANNED:** a true geospatial density heatmap and broader geographic clustering.
+- **UNVERIFIED / NOT IMPLEMENTED:** Admin Reverb/Echo aggregate subscriptions.
+  `AdminLayout.vue` reports browser online/offline state only; Admin data is loaded
+  by normal server/Inertia requests.
+- **NOT IMPLEMENTED:** PDF/Excel export, live volunteer GPS tracking, response-unit
+  CRUD, fleet scheduling, and a general report builder.
+- **BOUNDARY:** Admin has no patient-specific T0 acknowledgement, clinical
+  classification, referral decision, or dispatch-progression command.
+
+For the compact live inventory and evidence boundaries, see
+`CURRENT_IMPLEMENTATION.md` and `workflow-verification.md`.
 
 ---
 
@@ -132,7 +204,11 @@ instead of permanent flashing
 
 # 4. Admin Information Architecture
 
-## Final Direction
+## Historical Design Direction (Navigation Superseded)
+
+The four-destination proposal below is retained as design history. The current
+implemented eight-link grouped sidebar is documented in the alignment section
+above and in `CURRENT_IMPLEMENTATION.md`.
 
 Use four permanent top-level Admin destinations:
 

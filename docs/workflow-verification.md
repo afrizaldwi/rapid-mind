@@ -1,6 +1,6 @@
 # RAPID-MIND Workflow Verification Ledger
 
-**Verification checkpoint:** 1 October 2026 — Phase B2B local-first T0 emergency gate
+**Latest appended checkpoint:** 24 October 2026 — Healthcare Queue and Referral/Dispatch documentation alignment
 **Branch:** `demo`
 **Document type:** Evidence and status documentation
 
@@ -1452,3 +1452,73 @@ Deferred and unclaimed: separate dispatch model/schema, referral/dispatch redesi
 **Preserved limits:** None of these checkpoints is a production security certification. Checkpoints 4C/4D did not establish a complete offline connectivity-failure test or a full network-disconnect/reconnect test during a mid-flight POST. Checkpoint 4D did not submit a T3 clinical downgrade. The existing legacy `genderLabel` reference and frontend/backend pending-emergency ordering discrepancy remain unresolved. Device-level native SMS delivery, local AES-256 encryption, purging, pseudonymization, and application-level end-to-end encryption are not established by these reports.
 
 Earlier dated entries remain historical evidence for their own code states; this section does not retroactively change their outcomes.
+
+---
+
+## 20. Healthcare Queue and Referral/Dispatch Checkpoints — 24 October 2026
+
+This section appends current evidence without rewriting the older dated records.
+The documentation-alignment checkpoint itself performed source inspection and
+documentation consistency checks only. It did not rerun Laravel/frontend tests,
+open a browser, apply migrations, or inspect a deployed development database.
+
+### Evidence matrix
+
+| Scope | Source inspected | Automated tested | Browser verified | Not directly verified / pending |
+|---|---|---|---|---|
+| Healthcare Emergency Queue Checkpoint 1 | **YES.** Current normalization, queue composable, queue/header components, routes, and focused Node test source confirm oldest-first pending order, deterministic ID ties, stable selection/fallback, explicit missing-gender copy, and accessibility changes. | **REPORTED HISTORICAL EVIDENCE:** 31 Laravel tests, 501 assertions passed. The correction commit also contains focused Node regression coverage. Not rerun during documentation alignment. | **REPORTED HISTORICAL EVIDENCE:** six Antigravity browser categories passed, with the original limitations preserved. Not rerun here and not owner manual testing. | Current genuinely empty backend queue and an actual missing-gender database record were not independently recreated in this checkpoint. |
+| Checkpoint 2B — Domain Foundation | **YES.** Enums, models, relationships, factories, two additive migrations, and focused tests were inspected. | **REPORTED CHECKPOINT EVIDENCE:** 115 tests, 1,210 assertions passed in total (33 focused / 177 assertions plus 82 regression / 1,033 assertions) on guarded PostgreSQL/PostGIS `rapid_mind_testing`. | **NO.** No browser test belonged to the domain-only checkpoint. | No development database migration/reset/reseed; no frontend, realtime transport, or operational workflow proof. |
+| Checkpoint 2C — Backend Workflows | **YES.** Services, controllers, routes, histories/audits, lock/replay rules, rollback tests, and concurrency worker were inspected. | **REPORTED CHECKPOINT EVIDENCE:** 149 tests, 1,670 assertions passed. Four real PostgreSQL concurrency scenarios passed. The later 34-test focused rerun overlaps this selection and is not counted as a second independent set. | **NO.** Checkpoint 2C has no browser verification. | No Dispatch frontend/read projection, new realtime event/subscription, external response-unit contact, development cutover, production load/security/clinical validation, or production-readiness proof. |
+
+### Source-confirmed current boundaries
+
+- Referral is the clinical handoff record; the target lifecycle is
+  `ACTIVE → COMPLETED`.
+- EmergencyDispatch is independent operational coordination with
+  `ASSIGNED → EN_ROUTE → ON_SITE → TRANSPORT → COMPLETED` and the retained
+  `ON_SITE → COMPLETED` branch.
+- Dispatch can be created for a confirmed T0 without a referral or identified
+  patient. Dispatch progression does not alter clinical or Referral state.
+- Checkpoint 2C commands are Healthcare-only and use locked transactions,
+  expected-state checks, replay/conflict handling, and atomic history/audit writes.
+- Existing emergency realtime behavior remains. No Dispatch broadcast or
+  subscription was added.
+- The current `Rujukan` Vue page still invokes the legacy movement endpoint.
+  Independent Dispatch frontend integration is pending 2D + 2E; the coordinated
+  database/application cutover and final verification belong to 2F + 2G.
+
+### Pending implementation
+
+```text
+Checkpoint 2D + 2E
+→ Dispatch read props and UI controls
+→ Referral/Dispatch sibling presentation
+→ frontend integration
+→ queue and patient-history projections
+→ Dispatch realtime reconciliation
+→ separated-domain synthetic demo fixtures
+
+Checkpoint 2F + 2G
+→ coordinated database/application cutover
+→ final verification
+```
+
+Checkpoints 2D + 2E do not remove legacy endpoints, Referral casts, or existing
+constraints. No development database reset or destructive migration is authorized
+yet. These stage boundaries do not change the historical verification evidence.
+
+### Clinical discrepancy
+
+**REQUIRES OWNER DECISION:** the earlier Healthcare design baseline restricts
+T0 downgrade to T1/T2. Current UI and controller also accept T3. This ledger
+records source behavior but does not approve a clinical-policy change.
+
+### Documentation-only verification
+
+- `docs/workflow.md` remained untouched.
+- Application source, routes, migrations, models, controllers, Vue components,
+  tests, dependencies, environment, and database state remained untouched.
+- Route names and cited source paths were checked against current repository
+  source.
+- Documentation consistency and whitespace checks are recorded in the completion
+  report for this checkpoint.

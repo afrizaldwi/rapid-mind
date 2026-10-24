@@ -5,7 +5,99 @@
 **Product language:** Bahasa Indonesia  
 **Discussion/design language:** English  
 **Design direction:** Operational Humanitarian UI  
-**Status:** Design baseline for the next UI/UX phase
+**Status:** Historical design baseline with current implementation alignment below
+
+---
+
+# Current Implementation Alignment — 24 October 2026
+
+This section describes the current source. The numbered sections below retain
+the intended Healthcare UX and clinical/operational rationale. A Vue surface or
+Laravel route is not treated as browser-verified behavior unless the verification
+ledger records that evidence.
+
+## Current navigation and workspaces
+
+`resources/js/layouts/HealthcareLayout.vue` implements four sidebar destinations:
+
+| Label | Route | Current implementation |
+|---|---|---|
+| Triase & Kedaruratan | `/healthcare/emergencies` | T0 queue plus selected-case workspace |
+| Validasi Klinis | `/healthcare/validations` | Pending T1/T2 worklist and completed validation history |
+| Rujukan | `/healthcare/referrals` | Existing referral list and legacy movement controls |
+| Data Pasien & Riwayat | `/healthcare/patients` | Patient search and longitudinal patient detail |
+
+The emergency page is a two-panel desktop workspace. Its selected case has
+`Ringkasan`, `Asesmen`, `Tindakan`, and `Riwayat` tabs. The `Tindakan` tab exposes
+acknowledgement, secondary verification, clinical classification, and explicit
+T0 referral creation according to the current emergency state. The patient detail
+uses `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` sections.
+
+## Checkpoint 1 queue behavior
+
+- **IMPLEMENTED:** unacknowledged `PENDING` T0 items sort oldest first, then by
+  stable ID; non-pending items sort newest first with their own deterministic ID
+  tie-break.
+- **IMPLEMENTED:** a newly reconciled event does not replace the case currently
+  selected; filtering/removal selects a valid fallback and resets action drafts.
+- **IMPLEMENTED:** the queue supports status filters and name, record ID, NIK, and
+  Posko search. Missing gender is rendered explicitly as
+  `Jenis kelamin tidak tersedia`.
+- **IMPLEMENTED:** queue/case controls include explicit labels, visible-focus
+  treatment, and button semantics added during the correction checkpoint.
+- **REPORTED VERIFIED:** the project-owner checkpoint reports 31 Laravel tests
+  with 501 assertions and a six-category Antigravity browser pass. These checks
+  are historical reported evidence; they were not rerun by this documentation
+  alignment.
+
+## Referral and dispatch state today
+
+- **IMPLEMENTED:** Referral remains the clinical handoff record for T0-confirmed
+  emergencies and validated non-T0 assessments. Checkpoints 2B/2C add explicit
+  provenance, creation/completion audit records, and an independent target
+  clinical lifecycle `ACTIVE → COMPLETED`.
+- **BACKEND ONLY:** `EmergencyDispatch`, `EmergencyDispatchHistory`, and
+  `ResponseUnit` persist independent emergency response. Backend commands support
+  assignment, linking, and guarded progression:
+
+  ```text
+  ASSIGNED → EN_ROUTE → ON_SITE → TRANSPORT → COMPLETED
+                              └────────────→ COMPLETED
+  ```
+
+  Dispatch can exist without a referral, including for an unidentified confirmed
+  T0. It does not change clinical classification or referral status.
+- **PARTIAL / COMPATIBILITY MODE:** the visible `Rujukan` page still uses the
+  legacy combined `ReferralStatus` movement sequence and `/status` endpoint. It
+  does not expose response-unit selection, independent dispatch state, dispatch
+  linking, or the new clinical-completion command. Frontend integration, read
+  projections, realtime reconciliation, and synthetic fixtures belong to
+  Checkpoints 2D + 2E. The coordinated database/application cutover and final
+  verification belong to Checkpoints 2F + 2G. Checkpoints 2D + 2E do not remove
+  legacy endpoints, Referral casts, or existing constraints. No development
+  database reset or destructive migration is authorized yet.
+- **BACKEND ONLY:** the four new Healthcare POST routes exist, but no current Vue
+  control invokes them. No external response unit is contacted or reserved.
+- **PARTIAL REALTIME:** `HealthcareLayout.vue` owns the private `emergencies`
+  subscription and reconciles `EmergencyCreated`/`EmergencyUpdated`. Checkpoint
+  2C adds no Dispatch broadcast or subscription. Existing emergency-origin
+  broadcasts remain separate from backend dispatch persistence.
+
+## Clinical protocol discrepancy requiring an owner decision
+
+The historical design requirement in section 21 permits only T1/T2 downgrade
+from T0-Suspect. Current source (`EmergencyActionsTab.vue` and
+`HealthcareController::classify`) also exposes and accepts T3, mapping it to
+`DOWNGRADED`.
+
+**REQUIRES OWNER DECISION:** this document does not authorize T3, remove it, or
+reinterpret the clinical protocol. Until the owner resolves the discrepancy,
+future work must preserve both facts: the earlier Healthcare design requirement restricts
+T0 downgrade to T1/T2, while the current implementation accepts T3.
+
+For the compact live inventory and evidence boundaries, see
+`CURRENT_IMPLEMENTATION.md`, `checkpoint-2b-domain-foundation.md`,
+`checkpoint-2c-backend-workflows.md`, and `workflow-verification.md`.
 
 ---
 
