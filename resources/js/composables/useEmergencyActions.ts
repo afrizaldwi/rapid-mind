@@ -1,12 +1,13 @@
 import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
+import { useHealthcareDraft } from "./useHealthcareDraft.ts";
 
 export type VerificationForm = { method: string; notes: string };
 export type DecisionForm = { clinical_result: string; notes: string };
 export type ReferralForm = { facility_id: number | null; notes: string };
 type ActionFeedback = { type: "success" | "error"; message: string };
 
-export function useEmergencyActions() {
+export function useEmergencyActions(active: (kind: "verification" | "decision" | "referral") => boolean = () => true) {
     const isSubmitting = ref(false);
 
     // Forms
@@ -25,6 +26,10 @@ export function useEmergencyActions() {
         notes: "",
     });
 
+    const verificationDraft = useHealthcareDraft(() => verificationForm.value, () => active('verification'));
+    const decisionDraft = useHealthcareDraft(() => decisionForm.value, () => active('decision'));
+    const referralDraft = useHealthcareDraft(() => referralForm.value, () => active('referral'));
+
     // Action Feedback State
     const actionFeedback = ref<ActionFeedback | null>(null);
 
@@ -33,6 +38,9 @@ export function useEmergencyActions() {
         decisionForm.value = { clinical_result: "T0_CONFIRMED", notes: "" };
         referralForm.value = { facility_id: null, notes: "" };
         actionFeedback.value = null;
+        verificationDraft.reset();
+        decisionDraft.reset();
+        referralDraft.reset();
     }
 
     // ACTION DISPATCH HANDLERS
@@ -67,6 +75,7 @@ export function useEmergencyActions() {
 
     function submitVerification(item: any) {
         if (!item.emergencyId) return;
+        const saved = verificationDraft.submitted();
         isSubmitting.value = true;
         actionFeedback.value = null;
         router.post(
@@ -74,6 +83,7 @@ export function useEmergencyActions() {
             verificationForm.value,
             {
                 onSuccess: () => {
+                    saved();
                     actionFeedback.value = {
                         type: "success",
                         message: "Verifikasi medis berhasil disimpan.",
@@ -96,6 +106,7 @@ export function useEmergencyActions() {
 
     function submitClassification(item: any) {
         if (!item.emergencyId) return;
+        const saved = decisionDraft.submitted();
         isSubmitting.value = true;
         actionFeedback.value = null;
         router.post(
@@ -103,6 +114,7 @@ export function useEmergencyActions() {
             decisionForm.value,
             {
                 onSuccess: () => {
+                    saved();
                     actionFeedback.value = {
                         type: "success",
                         message: "Klasifikasi triase berhasil ditetapkan.",
@@ -125,6 +137,7 @@ export function useEmergencyActions() {
 
     function submitReferral(item: any) {
         if (!item.emergencyId) return;
+        const saved = referralDraft.submitted();
         isSubmitting.value = true;
         actionFeedback.value = null;
         router.post(
@@ -132,6 +145,7 @@ export function useEmergencyActions() {
             referralForm.value,
             {
                 onSuccess: () => {
+                    saved();
                     actionFeedback.value = {
                         type: "success",
                         message: "Rujukan medis berhasil diterbitkan.",

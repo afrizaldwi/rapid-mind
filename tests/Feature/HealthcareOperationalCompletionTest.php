@@ -296,8 +296,8 @@ final class HealthcareOperationalCompletionTest extends TestCase
         ]);
 
         $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn (Assert $page) => $page
-            ->has('emergencies', 5)
-            ->where('emergencies', fn ($emergencies) => ! $emergencies->contains('id', $completedReferralEmergency->id)
+            ->has('emergencies', 6)
+            ->where('emergencies', fn ($emergencies) => $emergencies->contains('id', $completedReferralEmergency->id)
                 && ! $emergencies->contains('status', EmergencyStatus::DOWNGRADED->value))
             ->etc());
 

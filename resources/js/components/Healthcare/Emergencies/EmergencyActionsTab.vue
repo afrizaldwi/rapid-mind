@@ -169,7 +169,8 @@
             </form>
         </div>
 
-        <!-- Section C: Referral Dispatch Form -->
+        <p v-if="item.status === 'CONFIRMED' && item.raw && !item.raw.patient_id" class="text-xs text-amber-800">Identitas pasien diperlukan untuk rujukan. Respons lapangan tetap dapat ditugaskan.</p>
+        <!-- Section C: Clinical referral creation -->
         <div
             v-if="
                 item.status === 'CONFIRMED' &&
@@ -242,6 +243,7 @@
                         type="submit"
                         :disabled="
                             isSubmitting ||
+                            (item.raw && !item.raw.patient_id) ||
                             !referralForm.facility_id
                         "
                         class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg transition"
@@ -252,43 +254,6 @@
             </form>
         </div>
 
-        <!-- Section D: If Referral already issued -->
-        <div
-            v-if="item.hasReferral"
-            class="p-4 rounded-xl bg-teal-50/50 border border-teal-200 text-xs space-y-1.5"
-        >
-            <div
-                class="flex items-center justify-between"
-            >
-                <span class="font-bold text-teal-900"
-                    >Rujukan Medis Diterbitkan</span
-                >
-                <span
-                    class="text-xs font-semibold text-teal-800 flex items-center gap-1.5"
-                >
-                    <span class="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0"></span>
-                    {{
-                        formatReferralStatus(
-                            item.referrals[0]
-                                ?.status,
-                        )
-                    }}
-                </span>
-            </div>
-            <p class="text-slate-600">
-                Faskes Tujuan:
-                <strong>{{
-                    item.referrals[0]?.facility
-                        ?.name || "Faskes Rujukan"
-                }}</strong>
-            </p>
-            <p
-                v-if="item.referrals[0]?.notes"
-                class="text-slate-500 italic"
-            >
-                "{{ item.referrals[0].notes }}"
-            </p>
-        </div>
     </div>
 </template>
 

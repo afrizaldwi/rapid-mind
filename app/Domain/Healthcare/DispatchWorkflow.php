@@ -208,6 +208,7 @@ final class DispatchWorkflow
             'entity_type' => 'EmergencyDispatch', 'entity_id' => $dispatch->id,
             'old_values' => $old, 'new_values' => [...$new, 'notes' => $notes],
         ]);
+        HealthcareWorkflowEvents::changed($dispatch);
     }
 
     private function stale(EmergencyDispatch $dispatch): WorkflowConflict

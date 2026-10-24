@@ -352,17 +352,8 @@
                 </div>
 
                 <template v-if="emergency.referrals?.length">
-                    <div class="rounded-lg border border-teal-200/80 bg-teal-50/60 p-3.5 text-xs">
-                        <p class="font-semibold text-teal-900">
-                            Rujukan telah diterbitkan
-                        </p>
-                        <p class="mt-1 text-slate-700">
-                            Faskes Tujuan: <strong class="text-slate-900">{{ emergency.referrals[0].facility?.name || "Faskes tidak tersedia" }}</strong>
-                        </p>
-                        <p class="mt-0.5 text-slate-600">
-                            Status Rujukan: <span class="font-semibold text-teal-800">{{ formatReferralStatus(emergency.referrals[0].status) }}</span>
-                        </p>
-                    </div>
+                    <ClinicalReferralCard v-for="referral in emergency.operations?.referrals || []" :key="referral.id" :referral="referral" :available="!!emergency.operations?.available" />
+                    <p v-if="!emergency.operations?.available">Rujukan tercatat. Lihat daftar Rujukan untuk alur kompatibilitas.</p>
                 </template>
 
                 <form v-else @submit.prevent="submitReferral" class="space-y-3 text-xs">
@@ -400,7 +391,7 @@
                     </div>
                     <button
                         type="submit"
-                        :disabled="isSubmitting || !referralForm.facility_id"
+                        :disabled="isSubmitting || !emergency.patient_id || !referralForm.facility_id"
                         class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition"
                     >
                         Terbitkan Rujukan Medis
@@ -408,6 +399,8 @@
                 </form>
             </div>
 
+            <DispatchPanel v-if="emergency.status === 'CONFIRMED'" :emergency-id="emergency.id" :operations="emergency.operations" :units="responseUnits || []" />
+            <OperationsTimeline :operations="emergency.operations" />
             <!-- Verification History & Audit Trail -->
             <div
                 v-if="emergency.verifications && emergency.verifications.length > 0"
@@ -444,6 +437,11 @@
 </template>
 
 <script setup lang="ts">
+import { useHealthcareDraft } from "@/composables/useHealthcareDraft";
+import ClinicalReferralCard from "@/components/Healthcare/Operations/ClinicalReferralCard.vue";
+import DispatchPanel from "@/components/Healthcare/Operations/DispatchPanel.vue";
+import OperationsTimeline from "@/components/Healthcare/Operations/OperationsTimeline.vue";
+import type { ResponseUnit } from "@/lib/healthcareOperations";
 import { computed, ref } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
@@ -452,6 +450,7 @@ import { formatReferralStatus } from "@/lib/referralStatus";
 const props = defineProps<{
     emergency: any;
     facilities?: any[];
+    responseUnits?: ResponseUnit[];
 }>();
 
 const isSubmitting = ref(false);
@@ -478,6 +477,13 @@ const referralForm = ref({
     notes: "",
 });
 
+const verificationDraft = useHealthcareDraft(() => verificationForm.value,
+    () => ['PENDING', 'ACKNOWLEDGED'].includes(props.emergency.status));
+const decisionDraft = useHealthcareDraft(() => decisionForm.value,
+    () => props.emergency.status === 'REVIEWING');
+const referralDraft = useHealthcareDraft(() => referralForm.value,
+    () => props.emergency.status === 'CONFIRMED' && !props.emergency.referrals?.length);
+
 function acknowledgeCase() {
     isSubmitting.value = true;
     router.post(
@@ -490,33 +496,39 @@ function acknowledgeCase() {
 }
 
 function submitVerification() {
+    const saved = verificationDraft.submitted();
     isSubmitting.value = true;
     router.post(
         `/healthcare/emergencies/${props.emergency.id}/verify`,
         verificationForm.value,
         {
+            onSuccess: saved,
             onFinish: () => (isSubmitting.value = false),
         },
     );
 }
 
 function submitClassification() {
+    const saved = decisionDraft.submitted();
     isSubmitting.value = true;
     router.post(
         `/healthcare/emergencies/${props.emergency.id}/classify`,
         decisionForm.value,
         {
+            onSuccess: saved,
             onFinish: () => (isSubmitting.value = false),
         },
     );
 }
 
 function submitReferral() {
+    const saved = referralDraft.submitted();
     isSubmitting.value = true;
     router.post(
         `/healthcare/emergencies/${props.emergency.id}/referrals`,
         referralForm.value,
         {
+            onSuccess: saved,
             onFinish: () => (isSubmitting.value = false),
         },
     );

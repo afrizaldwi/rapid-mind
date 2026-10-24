@@ -184,11 +184,18 @@
                                 @submit:referral="submitReferral(selectedItem)"
                             />
 
+                            <template v-if="activeTab === 'actions' && selectedItem.status === 'CONFIRMED'">
+                                <p v-if="!selectedItem.raw.operations?.available && selectedItem.hasReferral" class="text-xs text-slate-600">Rujukan tercatat ke {{ selectedItem.referrals[0]?.facility?.name || 'Faskes' }}. Lihat daftar Rujukan untuk alur kompatibilitas.</p>
+                                <ClinicalReferralCard v-for="referral in selectedItem.raw.operations?.referrals || []" :key="referral.id" :referral="referral" :available="!!selectedItem.raw.operations?.available" />
+                                <DispatchPanel :key="selectedItem.emergencyId!" :emergency-id="selectedItem.emergencyId!" :operations="selectedItem.raw.operations" :units="responseUnits || []" />
+                            </template>
+
                             <!-- TAB 4: RIWAYAT -->
                             <EmergencyHistoryTab
                                 v-if="activeTab === 'history'"
                                 :item="selectedItem"
                             />
+                            <OperationsTimeline v-if="activeTab === 'history'" :operations="selectedItem.raw.operations" />
                         </div>
                     </template>
 
@@ -226,7 +233,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import ClinicalReferralCard from "@/components/Healthcare/Operations/ClinicalReferralCard.vue";
+import DispatchPanel from "@/components/Healthcare/Operations/DispatchPanel.vue";
+import OperationsTimeline from "@/components/Healthcare/Operations/OperationsTimeline.vue";
+import type { ResponseUnit } from "@/lib/healthcareOperations";
+import { computed, ref, watch } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import EmergencySummaryStrip from "@/components/Healthcare/Emergencies/EmergencySummaryStrip.vue";
 import EmergencyQueuePanel from "@/components/Healthcare/Emergencies/EmergencyQueuePanel.vue";
@@ -243,6 +254,7 @@ import { getDetectedRedFlags } from "@/lib/healthcareEmergency";
 const props = defineProps<{
     emergencies?: any[];
     facilities?: any[];
+    responseUnits?: ResponseUnit[];
     facility?: any;
 }>();
 
@@ -263,6 +275,7 @@ const actionErrors = computed(() => {
     }));
 });
 
+const draftActions = ref({ verification: false, decision: false, referral: false });
 const {
     isSubmitting,
     verificationForm,
@@ -274,7 +287,7 @@ const {
     submitVerification,
     submitClassification,
     submitReferral,
-} = useEmergencyActions();
+} = useEmergencyActions(kind => draftActions.value[kind]);
 
 const {
     searchQuery,
@@ -293,6 +306,14 @@ const {
         resetActions();
     },
 );
+
+watch(selectedItem, item => {
+    draftActions.value = {
+        verification: !!item && ['PENDING', 'ACKNOWLEDGED'].includes(item.status),
+        decision: item?.status === 'REVIEWING',
+        referral: item?.status === 'CONFIRMED' && !item.hasReferral,
+    };
+}, { immediate: true, flush: 'sync' });
 
 const detectedRedFlags = computed(() => getDetectedRedFlags(selectedItem.value));
 </script>

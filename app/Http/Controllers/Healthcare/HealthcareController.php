@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Healthcare;
 
 use App\Domain\Healthcare\ClinicalReferralWorkflow;
+use App\Domain\Healthcare\HealthcareOperationsRead;
+use App\Domain\Healthcare\HealthcareWorkflowEvents;
 use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\ReferralStatus;
@@ -34,8 +36,9 @@ use Throwable;
 
 final class HealthcareController extends Controller
 {
-    public function emergencies(): InertiaResponse
+    public function emergencies(HealthcareOperationsRead $operations): InertiaResponse
     {
+        $ready = $operations->ready();
         $user = Auth::user();
 
         $emergencies = EmergencyEvent::with([
@@ -51,26 +54,16 @@ final class HealthcareController extends Controller
             'referrals.facility',
             'referrals.statusHistory.changer:id,name',
         ])
-            ->where(function ($query): void {
-                $query->whereIn('status', [
-                    EmergencyStatus::PENDING,
-                    EmergencyStatus::ACKNOWLEDGED,
-                    EmergencyStatus::REVIEWING,
-                ])->orWhere(function ($confirmed): void {
-                    $confirmed->where('status', EmergencyStatus::CONFIRMED)
-                        ->where(function ($followUp): void {
-                            $followUp->whereDoesntHave('referrals')
-                                ->orWhereHas('referrals', fn($referral) => $referral
-                                    ->where('status', '!=', ReferralStatus::COMPLETED));
-                        });
-                });
-            })
+            ->when($ready, fn ($query) => $query->with($operations->relations()))
+            ->where(fn ($query) => $operations->queue($query, $ready))
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN created_at END ASC")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN id END ASC")
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
+
+        $emergencies->each(fn ($emergency) => $operations->emergency($emergency, $ready));
 
         $facilities = HealthcareFacility::where('is_active', true)->get();
         $facility = $user->facility_id ? HealthcareFacility::find($user->facility_id) : null;
@@ -79,11 +72,13 @@ final class HealthcareController extends Controller
             'emergencies' => $emergencies,
             'facilities' => $facilities,
             'facility' => $facility,
+            ...$operations->options($ready),
         ]);
     }
 
-    public function emergencyDetail(string $emergencyId): InertiaResponse
+    public function emergencyDetail(string $emergencyId, HealthcareOperationsRead $operations): InertiaResponse
     {
+        $ready = $operations->ready();
         $emergency = EmergencyEvent::with([
             'patient.shelter',
             'assessment.triageResult',
@@ -96,12 +91,14 @@ final class HealthcareController extends Controller
             'verifications.verifier',
             'referrals.facility',
             'referrals.statusHistory.changer',
-        ])->findOrFail($emergencyId);
+        ])->when($ready, fn ($query) => $query->with($operations->relations()))->findOrFail($emergencyId);
+        $operations->emergency($emergency, $ready);
 
         $facilities = HealthcareFacility::where('is_active', true)->get();
 
         return Inertia::render('Healthcare/Emergencies/Show', [
             'emergency' => $emergency,
+            ...$operations->options($ready),
             'facilities' => $facilities,
         ]);
     }
@@ -515,14 +512,17 @@ final class HealthcareController extends Controller
         return back()->with('message', 'Validasi klinis berhasil disimpan.');
     }
 
-    public function referrals(): InertiaResponse
+    public function referrals(HealthcareOperationsRead $operations): InertiaResponse
     {
+        $ready = $operations->ready();
         $referrals = Referral::with(['patient', 'facility', 'referrer', 'emergencyEvent', 'statusHistory.changer'])
+            ->when($ready, fn ($query) => $query->with('dispatch.responseUnit:id,code,name'))
             ->latest('created_at')
             ->get();
 
         return Inertia::render('Healthcare/Referrals/Index', [
             'referrals' => $referrals,
+            'operationsAvailable' => $ready,
         ]);
     }
 
@@ -570,6 +570,8 @@ final class HealthcareController extends Controller
                 'new_values' => ['status' => $newStatus->value, 'notes' => $validated['notes'] ?? null],
             ]);
 
+            HealthcareWorkflowEvents::changed($referral);
+
             return [
                 'updated' => true,
                 'emergency_id' => $referral->emergency_event_id,
@@ -597,6 +599,7 @@ final class HealthcareController extends Controller
 
     public function patients(): InertiaResponse
     {
+        $ready = app(HealthcareOperationsRead::class)->ready();
         $patients = Patient::with([
             'shelter',
             'assessments' => fn($query) => $query
@@ -608,6 +611,7 @@ final class HealthcareController extends Controller
             'emergencyEvents' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
             'emergencyEvents.verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'emergencyEvents.referrals',
+            ...($ready ? ['emergencyEvents.dispatch'] : []),
         ])
             ->latest('created_at')
             ->get()
@@ -621,8 +625,9 @@ final class HealthcareController extends Controller
         ]);
     }
 
-    public function patientDetail(string $patientId): InertiaResponse
+    public function patientDetail(string $patientId, HealthcareOperationsRead $operations): InertiaResponse
     {
+        $ready = $operations->ready();
         $patient = Patient::with([
             'shelter',
             'assessments' => fn($query) => $query
@@ -648,10 +653,14 @@ final class HealthcareController extends Controller
             'referrals.statusHistory.changer',
             'referrals.emergencyEvent',
             'referrals.clinicalValidation.assessment.triageResult',
+            'emergencyEvents.referrals.statusHistory.changer',
+            ...($ready ? array_map(fn ($relation) => 'emergencyEvents.'.$relation, $operations->relations()) : []),
         ])->findOrFail($patientId);
+        $patient->emergencyEvents->each(fn ($emergency) => $operations->emergency($emergency, $ready));
 
         return Inertia::render('Healthcare/Patients/Show', [
             'patient' => $patient,
+            'operationsAvailable' => $ready,
         ]);
     }
 
@@ -668,7 +677,8 @@ final class HealthcareController extends Controller
             }
 
             return $emergency->status === EmergencyStatus::CONFIRMED
-                && ($emergency->referrals->isEmpty()
+                && (! $emergency->relationLoaded('dispatch') || ! $emergency->dispatch
+                    || $emergency->dispatch->status->value !== 'COMPLETED'
                     || $emergency->referrals->contains(
                         fn(Referral $referral): bool => $referral->status !== ReferralStatus::COMPLETED,
                     ));

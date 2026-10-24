@@ -418,6 +418,7 @@
 </template>
 
 <script setup lang="ts">
+import { useHealthcareDraft } from "@/composables/useHealthcareDraft";
 import { computed, ref } from "vue";
 import { Link, useForm } from "@inertiajs/vue3";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
@@ -440,7 +441,10 @@ const form = useForm({
     facility_id: null as number | null,
 });
 
+const draft = useHealthcareDraft(() => form.data(), () => !props.assessment.clinical_validation);
+
 function submit() {
+    const saved = draft.submitted();
     saveError.value = "";
     form.post(`/healthcare/validations/${props.assessment.id}`, {
         preserveScroll: true,
@@ -449,6 +453,7 @@ function submit() {
                 "Validasi belum tersimpan. Periksa isian dan coba lagi.";
         },
         onSuccess: () => {
+            saved();
             saveError.value = "";
         },
     });

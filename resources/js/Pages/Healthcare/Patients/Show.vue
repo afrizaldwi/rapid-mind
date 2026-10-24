@@ -348,11 +348,18 @@
                     Belum ada riwayat rujukan medis untuk pasien ini.
                 </div>
             </div>
+            <div v-if="activeTab === 'emergencies'" class="space-y-4">
+                <div v-for="emergency in patient.emergency_events || []" :key="emergency.id" class="rounded-xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs text-slate-500 mb-3">Insiden {{ emergency.id }}</p>
+                    <OperationsTimeline :operations="emergency.operations" />
+                </div>
+            </div>
         </div>
     </HealthcareLayout>
 </template>
 
 <script setup lang="ts">
+import OperationsTimeline from "@/components/Healthcare/Operations/OperationsTimeline.vue";
 import { computed, ref } from "vue";
 import { Link } from "@inertiajs/vue3";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
@@ -471,7 +478,8 @@ function isEmergencyActive(emergency: any): boolean {
         return true;
     if (emergency.status !== "CONFIRMED") return false;
     return (
-        !emergency.referrals?.length ||
+        !emergency.operations?.available || !emergency.operations?.dispatch ||
+        emergency.operations.dispatch.status !== "COMPLETED" ||
         emergency.referrals.some(
             (referral: any) => referral.status !== "COMPLETED",
         )

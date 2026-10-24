@@ -7,7 +7,7 @@
           Pemantauan Rujukan
         </h1>
         <p class="text-xs text-slate-500 mt-1 font-normal">
-          Pelacakan alur operasional rujukan dan tindak lanjut ke fasilitas kesehatan tujuan.
+          Keputusan rujukan klinis dan pekerjaan internal; status respons lapangan ditampilkan terpisah.
         </p>
       </div>
 
@@ -22,11 +22,15 @@
         </button>
       </div>
 
-      <!-- Unified Referrals Surface List -->
+      <label class="block text-xs">Tampilkan rujukan
+        <select v-model="filter" class="ml-2 rounded-lg border border-slate-300 p-2"><option value="ALL">Semua</option><option value="ACTIVE">Aktif</option><option value="COMPLETED">Selesai</option><option value="LEGACY">Alur lama</option></select>
+      </label>
+      <p v-if="!operationsAvailable" role="status" class="text-xs text-amber-800">Skema Dispatch belum siap. Alur kompatibilitas rujukan tetap tersedia.</p>
+      <!-- Referrals surface -->
       <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
-        <div v-if="referrals && referrals.length > 0" class="divide-y divide-slate-100">
+        <div v-if="visibleReferrals.length > 0" class="divide-y divide-slate-100">
           <div
-            v-for="r in referrals"
+            v-for="r in visibleReferrals"
             :key="r.id"
             class="p-4 sm:p-5 space-y-2.5 hover:bg-slate-50/50 transition text-xs"
           >
@@ -44,7 +48,7 @@
                     class="w-1.5 h-1.5 rounded-full shrink-0"
                     :class="r.status === 'COMPLETED' ? 'bg-teal-600' : 'bg-amber-500'"
                   ></span>
-                  {{ formatReferralStatus(r.status) }}
+                  {{ clinicalLabel(r.status) }}
                 </span>
               </div>
               <span class="text-[11px] text-slate-400 shrink-0">
@@ -64,15 +68,19 @@
               "{{ r.notes }}"
             </p>
 
-            <!-- Row 4: Action Controls -->
+            <p class="text-slate-500">Sumber: {{ r.emergency_event_id ? 'T0 terkonfirmasi' : r.clinical_validation_id ? 'Asesmen tervalidasi' : 'Sumber tidak tercatat' }} • Diperbarui: {{ formatDate(r.updated_at || r.created_at) }}</p>
+            <p v-if="operationsAvailable" class="text-slate-600">Respons Lapangan: {{ r.dispatch ? `${r.dispatch.response_unit?.name || 'Unit respons'} — ${dispatchLabel(r.dispatch.status)}` : 'Tidak terhubung ke respons' }}</p>
+            <ClinicalReferralCard v-if="operationsAvailable" :referral="clinicalRow(r)" :available="true" />
+            <p v-if="legacyActions(r).length" class="text-amber-800">Kontrol kompatibilitas pergerakan lama; bukan tahapan baru rujukan klinis.</p>
+            <!-- Row 4: Compatibility controls -->
             <div class="pt-1 flex flex-wrap items-center justify-between gap-2">
               <span class="text-[11px] text-slate-400">
-                Tahapan saat ini: <strong class="text-slate-700 font-medium">{{ formatReferralStatus(r.status) }}</strong>
+                Tahapan saat ini: <strong class="text-slate-700 font-medium">{{ clinicalLabel(r.status) }}</strong>
               </span>
 
               <div class="flex items-center gap-2">
                 <button
-                  v-for="action in nextReferralActions(r.status)"
+                  v-for="action in legacyActions(r)"
                   :key="action.status"
                   type="button"
                   :disabled="busyId !== null || reconciling || needsRefresh"
@@ -87,7 +95,7 @@
         </div>
 
         <div v-else class="p-8 text-center text-xs text-slate-400">
-          Belum ada data rujukan aktif saat ini.
+          Tidak ada rujukan yang sesuai dengan filter.
         </div>
       </div>
 
@@ -98,7 +106,7 @@
             Selesaikan Rujukan Medis?
           </h3>
           <p class="text-xs text-slate-600 leading-relaxed">
-            Pasien <strong>{{ terminalAction.patient?.name || 'ini' }}</strong> akan ditandai selesai dan ditutup dari daftar aktif. Pastikan seluruh tindakan telah tuntas.
+            Pekerjaan alur lama untuk <strong>{{ terminalAction.patient?.name || 'pasien ini' }}</strong> akan ditandai selesai. Ini tidak berarti Faskes menerima atau menyelesaikan perawatan pasien, dan tidak mengubah status Dispatch.
           </p>
           <div class="pt-2 flex justify-end gap-2">
             <button
@@ -125,7 +133,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import ClinicalReferralCard from '@/components/Healthcare/Operations/ClinicalReferralCard.vue';
+import { clinicalLabel, dispatchLabel, type ClinicalReferral } from '@/lib/healthcareOperations';
 import { router } from '@inertiajs/vue3';
 import HealthcareLayout from '@/layouts/HealthcareLayout.vue';
 import { formatReferralStatus, nextReferralActions, type ReferralStatus } from '@/lib/referralStatus';
@@ -134,13 +144,26 @@ type ReferralRow = {
   id: string;
   status: ReferralStatus;
   patient?: { name?: string };
-  facility?: { name?: string };
+  facility?: { name: string };
   referrer?: { name?: string };
   created_at: string;
   notes?: string | null;
+  updated_at?: string;
+  emergency_event_id?: string | null;
+  clinical_validation_id?: number | null;
+  status_history?: any[];
+  dispatch?: { status: string; response_unit?: { name: string } } | null;
 };
 
-defineProps<{ referrals: ReferralRow[] }>();
+const props = defineProps<{ referrals: ReferralRow[]; operationsAvailable?: boolean }>();
+const filter = ref('ALL');
+const visibleReferrals = computed(() => props.referrals.filter(row => filter.value === 'ALL' || (filter.value === 'LEGACY' ? !['ACTIVE', 'COMPLETED'].includes(row.status) : row.status === filter.value)));
+function legacyActions(row: ReferralRow) {
+  return props.operationsAvailable && ['ACTIVE', 'COMPLETED'].includes(row.status) ? [] : nextReferralActions(row.status);
+}
+function clinicalRow(row: ReferralRow): ClinicalReferral {
+  return { ...row, updated_at: row.updated_at || row.created_at, source: row.emergency_event_id ? 'T0_CONFIRMED' : row.clinical_validation_id ? 'VALIDATED_ASSESSMENT' : 'UNKNOWN', history: row.status_history || [] };
+}
 
 const busyId = ref<string | null>(null);
 const reconciling = ref(false);

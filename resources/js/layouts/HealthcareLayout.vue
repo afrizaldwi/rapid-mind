@@ -259,6 +259,10 @@
 
       <!-- Main Workspace Scrollable Body -->
       <main class="flex-1 p-4 lg:p-6 overflow-y-auto space-y-5">
+        <div v-if="deferredUpdate" role="status" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          Ada pembaruan server. Draf Anda tetap tersimpan di layar.
+          <button type="button" class="ml-2 font-bold underline" @click="refreshDeferred">Muat status terbaru</button>
+        </div>
         <slot />
       </main>
     </div>
@@ -269,6 +273,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { echo } from '@laravel/echo-vue';
+import { createHealthcareReconciler, healthcareDrafts } from '@/lib/healthcareReconciliation';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
@@ -317,8 +322,28 @@ const lastRefreshedAt = ref<Date | null>(new Date());
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 let healthProbeInFlight = false;
 let mounted = false;
-let reloadInFlight = false;
-let reloadRequested = false;
+type SocketConnection = { bind: (event: string, callback: (state: { current: string }) => void) => void; unbind: (event: string, callback: (state: { current: string }) => void) => void };
+let socketConnection: SocketConnection | undefined;
+function onSocketState(state: { current: string }) {
+  if (state.current !== 'connected') subscriptionReady.value = false;
+  else {
+    requestReconciliation();
+    void probeServer();
+  }
+}
+const deferredUpdate = ref(false);
+let editing = false;
+let stopDraftSubscription: (() => void) | undefined;
+const activeVisits = new Set<string>();
+let removeStart: (() => void) | undefined;
+let removeFinish: (() => void) | undefined;
+const reconciliation = createHealthcareReconciler(done => {
+  router.reload({ only: reconciliationProps(), onSuccess: () => { lastRefreshedAt.value = new Date(); deferredUpdate.value = false; }, onFinish: done });
+});
+function refreshDeferred() {
+  deferredUpdate.value = false;
+  reconciliation.refresh();
+}
 const seenIds = new Set<string>();
 const seenOrder: string[] = [];
 const seenIdLimit = 100;
@@ -399,13 +424,13 @@ function onEmergencyUpdated(event: { emergency?: { id?: string } }) {
 function reconciliationProps(): string[] {
   const path = page.url.split(/[?#]/, 1)[0];
   if (/^\/healthcare\/emergencies\/[^/]+\/?$/.test(path)) {
-    return ['emergency', 'facilities', 'pendingT0Count'];
+    return ['emergency', 'facilities', 'responseUnits', 'operationsAvailable', 'pendingT0Count'];
   }
   if (path === '/healthcare/emergencies' || path === '/healthcare/emergencies/') {
-    return ['emergencies', 'pendingT0Count'];
+    return ['emergencies', 'responseUnits', 'operationsAvailable', 'pendingT0Count'];
   }
   if (path === '/healthcare/referrals' || path === '/healthcare/referrals/') {
-    return ['referrals', 'pendingT0Count'];
+    return ['referrals', 'operationsAvailable', 'pendingT0Count'];
   }
   if (/^\/healthcare\/patients\/[^/]+\/?$/.test(path)) {
     return ['patient', 'pendingT0Count'];
@@ -417,24 +442,11 @@ function reconciliationProps(): string[] {
 }
 
 function requestReconciliation() {
-  if (reloadInFlight) {
-    reloadRequested = true;
-    return;
-  }
-  reloadInFlight = true;
-  router.reload({
-    only: reconciliationProps(),
-    onSuccess: () => {
-      lastRefreshedAt.value = new Date();
-    },
-    onFinish: () => {
-      reloadInFlight = false;
-      if (reloadRequested && mounted) {
-        reloadRequested = false;
-        requestReconciliation();
-      }
-    },
-  });
+  if (editing) deferredUpdate.value = true;
+  reconciliation.request();
+}
+function onWorkflowUpdated(event: { dispatch?: { id?: string }; referral?: { id?: string } }) {
+  if (event.dispatch?.id || event.referral?.id) requestReconciliation();
 }
 
 async function probeServer() {
@@ -480,13 +492,29 @@ function playAudioNotification() {
 
 onMounted(() => {
   mounted = true;
+  stopDraftSubscription = healthcareDrafts.subscribe(dirty => {
+    editing = dirty;
+    reconciliation.editing(dirty);
+  });
+  removeStart = router.on('start', event => {
+    activeVisits.add(event.detail.visit.id);
+    reconciliation.mutating(true);
+  });
+  removeFinish = router.on('finish', event => {
+    activeVisits.delete(event.detail.visit.id);
+    reconciliation.mutating(activeVisits.size > 0);
+  });
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
 
+  socketConnection = (echo().connector as unknown as { pusher?: { connection?: SocketConnection } }).pusher?.connection;
+  socketConnection?.bind('state_change', onSocketState);
   echo()
     .private('emergencies')
     .listen('EmergencyCreated', onEmergencyCreated)
     .listen('EmergencyUpdated', onEmergencyUpdated)
+    .listen('DispatchUpdated', onWorkflowUpdated)
+    .listen('ReferralUpdated', onWorkflowUpdated)
     .subscribed(() => {
       subscriptionReady.value = true;
       requestReconciliation();
@@ -505,11 +533,18 @@ onMounted(() => {
 
 onUnmounted(() => {
   mounted = false;
+  reconciliation.stop();
+  stopDraftSubscription?.();
+  socketConnection?.unbind('state_change', onSocketState);
+  removeStart?.();
+  removeFinish?.();
   window.removeEventListener('online', handleOnline);
   window.removeEventListener('offline', handleOffline);
   if (healthTimer) clearInterval(healthTimer);
   echo().private('emergencies').stopListening('EmergencyCreated', onEmergencyCreated);
   echo().private('emergencies').stopListening('EmergencyUpdated', onEmergencyUpdated);
+  echo().private('emergencies').stopListening('DispatchUpdated', onWorkflowUpdated);
+  echo().private('emergencies').stopListening('ReferralUpdated', onWorkflowUpdated);
   echo().leave('emergencies');
 });
 </script>

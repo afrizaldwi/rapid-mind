@@ -35,6 +35,7 @@ final class ClinicalReferralWorkflow
                 'emergency_verification_id', 'clinical_validation_id', 'notes',
             ]),
         ]);
+        HealthcareWorkflowEvents::changed($referral);
     }
 
     public function complete(User $actor, string $referralId, array $input): WorkflowResult
@@ -75,6 +76,8 @@ final class ClinicalReferralWorkflow
                     'old_values' => ['status' => ClinicalReferralStatus::ACTIVE->value],
                     'new_values' => ['status' => ClinicalReferralStatus::COMPLETED->value, 'notes' => $notes],
                 ]);
+
+                HealthcareWorkflowEvents::changed($referral);
 
                 return new WorkflowResult($referral);
             }

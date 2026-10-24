@@ -427,5 +427,9 @@ final class DemoSeeder extends Seeder
             'system_recommendation' => TriageCategory::T3,
             'is_red_flag_override' => false,
         ]);
+        // Additive separated-domain fixtures; no migration or reset is performed.
+        if (app(\App\Domain\Healthcare\HealthcareOperationsRead::class)->ready()) {
+            $this->call(DispatchDemoSeeder::class);
+        }
     }
 }
