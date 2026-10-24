@@ -3,9 +3,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 class ReferralStatusHistory extends Model {
     protected $table = 'referral_status_history';
-    protected $fillable = ['referral_id', 'status', 'changed_by', 'notes'];
+    protected $fillable = ['referral_id', 'previous_status', 'status', 'changed_by', 'notes'];
     protected function casts(): array {
         return [
+            'previous_status' => \App\Enums\ReferralStatus::class,
             'status' => \App\Enums\ReferralStatus::class,
         ];
     }
