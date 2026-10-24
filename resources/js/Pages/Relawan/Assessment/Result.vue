@@ -157,10 +157,9 @@
                     <strong class="text-slate-800 block mb-0.5"
                         >Rekomendasi Sistem (Bukan Diagnosis Medis):</strong
                     >
-                    RAPID-MIND adalah instrumen pendukung keputusan penapisan
-                    awal. Penetapan diagnosis klinis resmi, tata laksana
-                    medikamentosa, dan tindakan rujukan medis sepenuhnya menjadi
-                    kewenangan tenaga kesehatan (dokter/psikiater).
+                    Hasil asesmen ini bersifat REKOMENDASI SISTEM sebagai alat
+                    bantu keputusan awal hingga dilakukan VALIDASI KLINIS resmi
+                    oleh Tenaga Kesehatan / Spesialis Profesional.
                 </div>
             </div>
 
