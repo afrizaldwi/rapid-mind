@@ -317,10 +317,14 @@ export function normalizeEmergencyQueue(emergencies: any[]): HealthcareEmergency
         .sort((a, b) => {
             if (a.status === "PENDING" && b.status !== "PENDING") return -1;
             if (a.status !== "PENDING" && b.status === "PENDING") return 1;
-            return (
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime()
-            );
+            const timeDifference = a.status === "PENDING"
+                ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (timeDifference !== 0) return timeDifference;
+            const firstId = String(a.emergencyId);
+            const secondId = String(b.emergencyId);
+            if (firstId === secondId) return 0;
+            return (firstId < secondId ? -1 : 1) * (a.status === "PENDING" ? 1 : -1);
         });
 }
 

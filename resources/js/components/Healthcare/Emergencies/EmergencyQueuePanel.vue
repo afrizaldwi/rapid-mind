@@ -36,21 +36,23 @@
                 <input
                     v-model="searchModel"
                     type="text"
+                    aria-label="Cari antrean darurat"
                     placeholder="Cari nama, NIK, ID RM..."
-                    class="w-full pl-8 pr-7 py-1.5 bg-slate-50/70 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 focus:bg-white transition"
+                    class="w-full pl-8 pr-7 py-1.5 bg-slate-50/70 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus:border-teal-600 focus:bg-white transition"
                 />
                 <button
                     v-if="searchQuery"
                     type="button"
                     @click="searchModel = ''"
-                    class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
+                    aria-label="Hapus pencarian"
+                    class="absolute inset-y-0 right-0 px-2.5 flex items-center text-slate-400 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700"
                 >
                     &times;
                 </button>
             </div>
 
             <!-- Filter Buttons: Semua, T0-Suspect, T0-Confirmed -->
-            <div class="flex items-center gap-1.5 text-xs">
+            <div class="flex flex-wrap items-center gap-1.5 text-xs">
                 <button
                     type="button"
                     @click="emit('update:selectedFilter', 'ALL')"
@@ -59,7 +61,7 @@
                             ? 'bg-slate-900 text-white font-semibold'
                             : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'
                     "
-                    class="px-2.5 py-1 rounded-lg transition"
+                    class="px-2.5 py-1 rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 >
                     Semua
                 </button>
@@ -71,7 +73,7 @@
                             ? 'bg-slate-900 text-white font-semibold'
                             : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'
                     "
-                    class="px-2.5 py-1 rounded-lg transition"
+                    class="px-2.5 py-1 rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 >
                     T0-Suspect
                 </button>
@@ -83,7 +85,7 @@
                             ? 'bg-slate-900 text-white font-semibold'
                             : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80 font-medium'
                     "
-                    class="px-2.5 py-1 rounded-lg transition"
+                    class="px-2.5 py-1 rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 >
                     T0-Confirmed
                 </button>
@@ -94,11 +96,13 @@
         <div
             class="divide-y divide-slate-100 overflow-y-auto max-h-[calc(100vh-280px)]"
         >
-            <div
+            <button
                 v-for="item in items"
                 :key="item.key"
+                type="button"
                 @click="emit('select', item)"
-                class="p-3.5 transition cursor-pointer text-xs space-y-1 select-none hover:bg-slate-50/70"
+                :aria-current="selectedKey === item.key ? 'true' : undefined"
+                class="block w-full text-left p-3.5 transition cursor-pointer text-xs space-y-1 select-none hover:bg-slate-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                 :class="[
                     selectedKey === item.key
                         ? 'bg-teal-50/50 border-l-2 border-l-teal-600 pl-3'
@@ -153,12 +157,12 @@
                     >
                         {{
                             item.status === "PENDING"
-                                ? "Menunggu validasi medis"
+                                ? "Perlu diakui"
                                 : item.statusLabel
                         }}
                     </span>
                 </div>
-            </div>
+            </button>
 
             <!-- Empty Queue State -->
             <div
@@ -166,10 +170,10 @@
                 class="p-8 text-center text-xs text-slate-400 space-y-1"
             >
                 <p class="font-bold text-slate-600">
-                    Tidak ada antrean yang cocok
+                    {{ hasEmergencies ? "Tidak ada antrean yang cocok" : "Belum ada insiden darurat" }}
                 </p>
                 <p class="text-slate-400 text-[11px]">
-                    Ubah filter prioritas atau kata kunci pencarian.
+                    {{ hasEmergencies ? "Ubah filter prioritas atau kata kunci pencarian." : "Insiden baru akan muncul di antrean ini." }}
                 </p>
             </div>
         </div>
@@ -188,6 +192,7 @@ const props = defineProps<{
     selectedKey: string | null;
     searchQuery: string;
     selectedFilter: HealthcareEmergencyFilter;
+    hasEmergencies: boolean;
 }>();
 
 const emit = defineEmits<{

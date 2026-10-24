@@ -34,6 +34,7 @@
 
             <div
                 v-if="actionErrors.length > 0"
+                role="alert"
                 class="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs font-medium text-rose-900 space-y-1"
             >
                 <p class="font-bold">Perhatian pada tindakan medis:</p>
@@ -49,6 +50,7 @@
                 <!-- LEFT PANEL: CASE QUEUE (~33% width / lg:col-span-4) -->
                 <EmergencyQueuePanel
                     :items="filteredQueue"
+                    :has-emergencies="totalSurvivorsCount > 0"
                     :selected-key="selectedItem?.key ?? null"
                     v-model:search-query="searchQuery"
                     v-model:selected-filter="selectedFilter"
@@ -70,7 +72,7 @@
 
                         <!-- 3. NAVIGATION TABS (Section 17: Text + thin bottom indicator, NO pills) -->
                         <nav
-                            class="flex items-center space-x-6 border-b border-slate-100 px-5 text-xs"
+                            class="flex items-center gap-6 overflow-x-auto border-b border-slate-100 px-5 text-xs"
                         >
                             <button
                                 type="button"
@@ -80,7 +82,7 @@
                                         ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px'
                                         : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'
                                 "
-                                class="transition"
+                                class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
                                 Ringkasan
                             </button>
@@ -92,7 +94,7 @@
                                         ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px'
                                         : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'
                                 "
-                                class="transition"
+                                class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
                                 Asesmen
                             </button>
@@ -104,7 +106,7 @@
                                         ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px'
                                         : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'
                                 "
-                                class="transition"
+                                class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
                                 Tindakan
                             </button>
@@ -116,7 +118,7 @@
                                         ? 'text-teal-800 border-b-2 border-teal-600 font-bold py-3 -mb-px'
                                         : 'text-slate-500 hover:text-slate-800 font-medium py-3 -mb-px'
                                 "
-                                class="transition"
+                                class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
                                 Riwayat
                             </button>
@@ -125,6 +127,7 @@
                         <!-- Action Feedback Notification Banner -->
                         <div
                             v-if="actionFeedback"
+                            role="status"
                             class="mx-5 mt-3 p-2.5 rounded-lg text-xs font-semibold flex items-center justify-between"
                             :class="
                                 actionFeedback.type === 'success'
@@ -211,7 +214,7 @@
                             Pilih Insiden dari Antrean
                         </h3>
                         <p class="text-xs text-slate-400 max-w-xs">
-                            Klik salah satu kasus di panel antrean kiri untuk
+                            Pilih salah satu kasus di panel antrean untuk
                             memeriksa identitas, bukti asesmen, dan tindakan
                             klinis.
                         </p>

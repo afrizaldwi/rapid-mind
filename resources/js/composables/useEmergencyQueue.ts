@@ -36,9 +36,7 @@ export function useEmergencyQueue(
             searchQuery.value,
         ),
     );
-    // The existing worklist template reads a legacy genderLabel field that is
-    // not supplied by normalization; retain its previous selected-item typing.
-    const selectedItem = ref<any>(null);
+    const selectedItem = ref<HealthcareEmergencyQueueItem | null>(null);
 
     function selectItem(item: HealthcareEmergencyQueueItem | null) {
         selectedItem.value = item;
@@ -48,7 +46,9 @@ export function useEmergencyQueue(
     watch(
         queueList,
         (newList) => {
-            if (!selectedItem.value && newList.length > 0) {
+            if (newList.length === 0) {
+                if (selectedItem.value) selectItem(null);
+            } else if (!selectedItem.value) {
                 selectedItem.value = newList[0];
             } else if (selectedItem.value) {
                 const refreshed = newList.find(

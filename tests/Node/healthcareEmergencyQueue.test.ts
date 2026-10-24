@@ -32,16 +32,20 @@ function emergency(
     };
 }
 
-test("pending cases remain newest first ahead of other statuses", () => {
+test("pending cases are oldest first, then other cases newest first with ID tie breaks", () => {
     const raw = [
         emergency("confirmed", "CONFIRMED", "2026-10-14T05:00:00Z"),
         emergency("pending-old", "PENDING", "2026-10-14T01:00:00Z"),
         emergency("reviewing", "REVIEWING", "2026-10-14T04:00:00Z"),
         emergency("pending-new", "PENDING", "2026-10-14T03:00:00Z"),
+        emergency("pending-z", "PENDING", "2026-10-14T01:00:00Z"),
+        emergency("pending-a", "PENDING", "2026-10-14T01:00:00Z"),
+        emergency("confirmed-z", "CONFIRMED", "2026-10-14T05:00:00Z"),
+        emergency("confirmed-a", "CONFIRMED", "2026-10-14T05:00:00Z"),
     ];
     assert.deepEqual(
         normalizeEmergencyQueue(raw).map((item) => item.emergencyId),
-        ["pending-new", "pending-old", "confirmed", "reviewing"],
+        ["pending-a", "pending-old", "pending-z", "pending-new", "confirmed-z", "confirmed-a", "confirmed", "reviewing"],
     );
 });
 
@@ -110,6 +114,19 @@ test("normalization keeps stable emergency keys across refreshed case data", () 
     assert.notEqual(first.key, second.key);
 });
 
+test("normalized demographics use recorded gender and explicit missing value", () => {
+    const [recorded, missing] = normalizeEmergencyQueue([
+        emergency("recorded", "PENDING", "2026-10-14T01:00:00Z", {
+            patient: { name: "Siti Aminah", gender: "Perempuan" },
+        }),
+        emergency("missing", "PENDING", "2026-10-14T02:00:00Z", {
+            patient: { name: "Penyintas" },
+        }),
+    ]);
+    assert.equal(recorded.gender, "Perempuan");
+    assert.equal(missing.gender, "Jenis kelamin tidak tersedia");
+});
+
 test("explicit selection and filter fallback reset state; same-case refresh does not", async () => {
     const renderer = createRenderer({
         patchProp() {},
@@ -158,10 +175,21 @@ test("explicit selection and filter fallback reset state; same-case refresh does
     assert.equal(queue.selectedItem.value.status, "ACKNOWLEDGED");
     assert.equal(resetCount, 1, "same-case prop refresh keeps draft state");
 
+    records.value = [
+        ...records.value,
+        emergency("new-pending", "PENDING", "2026-10-14T03:00:00Z"),
+    ];
+    await nextTick();
+    assert.equal(queue.selectedItem.value.emergencyId, "first", "new arrival does not replace active incident");
+    assert.equal(resetCount, 1);
+
     queue.selectedFilter.value = "CONFIRMED";
     await nextTick();
     assert.equal(queue.selectedItem.value.emergencyId, "second");
     assert.equal(resetCount, 2, "filter fallback resets");
+    records.value = [];
+    await nextTick();
+    assert.equal(queue.selectedItem.value, null, "empty queue clears removed incident");
     app.unmount();
 });
 

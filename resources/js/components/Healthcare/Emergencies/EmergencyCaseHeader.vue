@@ -46,15 +46,15 @@
                 type="button"
                 @click="emit('acknowledge', item)"
                 :disabled="isSubmitting"
-                class="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition"
+                class="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-800"
             >
-                Akui Kasus
+                {{ isSubmitting ? "Mengakui kasus..." : "Akui Kasus" }}
             </button>
             <button
                 v-else-if="['ACKNOWLEDGED', 'REVIEWING'].includes(item.status)"
                 type="button"
                 @click="emit('open-actions')"
-                class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
             >
                 Lanjutkan Verifikasi Medis
             </button>
@@ -62,7 +62,7 @@
                 v-else-if="item.status === 'CONFIRMED' && !item.hasReferral"
                 type="button"
                 @click="emit('open-actions')"
-                class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg transition"
+                class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
             >
                 Terbitkan Rujukan Medis
             </button>
@@ -116,7 +116,7 @@
                 >Jenis Kelamin</span
             >
             <span class="text-slate-800 font-semibold">{{
-                item.genderLabel || "-"
+                item.gender
             }}</span>
         </div>
         <div class="pl-4">
@@ -134,15 +134,13 @@
 <script setup lang="ts">
 import type { HealthcareEmergencyQueueItem } from "@/lib/healthcareEmergency";
 
-type HeaderItem = HealthcareEmergencyQueueItem & { genderLabel?: string };
-
 defineProps<{
-    item: HeaderItem;
+    item: HealthcareEmergencyQueueItem;
     isSubmitting: boolean;
 }>();
 
 const emit = defineEmits<{
-    acknowledge: [item: HeaderItem];
+    acknowledge: [item: HealthcareEmergencyQueueItem];
     "open-actions": [];
 }>();
 </script>
