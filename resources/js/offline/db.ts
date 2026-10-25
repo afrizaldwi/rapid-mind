@@ -78,6 +78,39 @@ export interface RelawanContinuity {
     logout_pending: boolean;
     schema_version: 1;
 }
+export interface WrappedOfflineKey {
+    owner_user_id: number;
+    version: 1;
+    verification?: { iv: string; ciphertext: string };
+    passphrase: {
+        salt: string;
+        iv: string;
+        ciphertext: string;
+        iterations: number;
+    };
+    recovery: {
+        salt: string;
+        iv: string;
+        ciphertext: string;
+        iterations: number;
+    };
+    created_at: string;
+}
+export type ClinicalStore =
+    | "patients"
+    | "patientSnapshots"
+    | "assessments"
+    | "emergencies"
+    | "outbox";
+export interface EncryptedStagingRecord {
+    key: string;
+    owner_user_id: number;
+    record_type: ClinicalStore;
+    record_id: string;
+    version: 1;
+    iv: string;
+    ciphertext: string;
+}
 export class RapidMindDB extends Dexie {
     patients!: Table<LocalPatient, string>;
     patientSnapshots!: Table<LocalPatient, [number, string]>;
@@ -85,6 +118,8 @@ export class RapidMindDB extends Dexie {
     emergencies!: Table<LocalEmergency, string>;
     outbox!: Table<OutboxItem, number>;
     relawanContinuity!: Table<RelawanContinuity, string>;
+    offlineKeys!: Table<WrappedOfflineKey, number>;
+    encryptedStaging!: Table<EncryptedStagingRecord, string>;
     constructor() {
         super("RapidMindOfflineDB");
         this.version(1).stores({
@@ -136,13 +171,22 @@ export class RapidMindDB extends Dexie {
             });
         this.version(3).stores({
             patients: "id, owner_user_id, nik, shelter_id",
-            patientSnapshots: "[owner_user_id+id], id, owner_user_id, nik, shelter_id",
-            assessments: "id, owner_user_id, patient_id, status, sync_state, updated_at",
-            emergencies: "id, owner_user_id, patient_id, sync_state, created_at",
+            patientSnapshots:
+                "[owner_user_id+id], id, owner_user_id, nik, shelter_id",
+            assessments:
+                "id, owner_user_id, patient_id, status, sync_state, updated_at",
+            emergencies:
+                "id, owner_user_id, patient_id, sync_state, created_at",
             outbox: "++id, [owner_user_id+type+entity_id], owner_user_id, status, priority, created_at",
         });
         this.version(4).stores({
             relawanContinuity: "key, owner_user_id",
+        });
+        // Additive only: existing plaintext rows remain untouched until a separately
+        // verified activation. Indexed owner and record IDs contain no clinical payload.
+        this.version(5).stores({
+            offlineKeys: "owner_user_id",
+            encryptedStaging: "key, owner_user_id, record_type",
         });
     }
 }
