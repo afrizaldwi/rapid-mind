@@ -1,5 +1,6 @@
 import {
     db,
+    nextOutboxId,
     requireOwner,
     type LocalAssessment,
     type LocalEmergency,
@@ -9,13 +10,19 @@ import {
 import { assessmentRepository } from "./assessmentRepository";
 import { emergencyRepository } from "./emergencyRepository";
 import { patientRepository } from "./patientRepository";
+import { assertStorageMode, encryptedMode } from "./encryptedClinicalStorage";
+import { encryptedOutboxComplete, encryptedOutboxEnqueue, encryptedOutboxGet, encryptedOutboxList, encryptedOutboxMark, encryptedOutboxRecover } from "./encryptedOutbox";
 
 export const outboxRepository = {
     async list(owner: number) {
-        const items = await db.outbox
+        if (await encryptedMode(owner)) return encryptedOutboxList(owner);
+        const items = await db.transaction("r", db.outbox, db.ownerEncryptionModes, async () => {
+            await assertStorageMode(owner, "LEGACY");
+            return db.outbox
             .where("owner_user_id")
             .equals(requireOwner(owner))
             .toArray();
+        });
         return items
             .filter(
                 (item) =>
@@ -38,6 +45,7 @@ export const outboxRepository = {
         payload: Record<string, unknown>,
     ) {
         requireOwner(owner);
+        if (await encryptedMode(owner)) return encryptedOutboxEnqueue(owner, type, entityId, payload);
         const entity =
             type === "ASSESSMENT"
                 ? await assessmentRepository.get(owner, entityId)
@@ -46,10 +54,10 @@ export const outboxRepository = {
         const now = new Date().toISOString();
         await db.transaction(
             "rw",
-            db.outbox,
-            db.assessments,
-            db.emergencies,
+            [db.outbox, db.encryptedOutboxIndex, db.outboxIdCounter,
+                db.assessments, db.emergencies, db.ownerEncryptionModes],
             async () => {
+                await assertStorageMode(owner, "LEGACY");
                 const existing = (
                     await db.outbox
                         .where("[owner_user_id+type+entity_id]")
@@ -72,6 +80,7 @@ export const outboxRepository = {
                     });
                 } else {
                     await db.outbox.add({
+                        id: await nextOutboxId(),
                         owner_user_id: owner,
                         type,
                         entity_id: entityId,
@@ -99,7 +108,9 @@ export const outboxRepository = {
     },
     async recover(owner: number, item: OutboxItem) {
         requireOwner(owner);
-        await db.transaction("rw", db.outbox, db.assessments, db.emergencies, async () => {
+        if (await encryptedMode(owner)) return encryptedOutboxRecover(owner, item);
+        await db.transaction("rw", db.outbox, db.assessments, db.emergencies, db.ownerEncryptionModes, async () => {
+            await assertStorageMode(owner, "LEGACY");
             const current = item.id ? await db.outbox.get(item.id) : undefined;
             if (
                 current?.owner_user_id !== owner ||
@@ -115,8 +126,12 @@ export const outboxRepository = {
     },
     async get(owner: number, id: number) {
         requireOwner(owner);
+        if (await encryptedMode(owner)) return encryptedOutboxGet(owner, id);
+        return db.transaction("r", db.outbox, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         const item = await db.outbox.get(id);
         return item?.owner_user_id === owner ? item : undefined;
+        });
     },
     async complete(
         owner: number,
@@ -128,14 +143,13 @@ export const outboxRepository = {
         stillActive: () => boolean,
     ) {
         requireOwner(owner);
+        if (await encryptedMode(owner)) return encryptedOutboxComplete(owner, item, canonical, stillActive);
         return db.transaction(
             "rw",
-            db.outbox,
-            db.assessments,
-            db.emergencies,
-            db.patients,
-            db.patientSnapshots,
+            [db.outbox, db.assessments, db.emergencies,
+                db.patients, db.patientSnapshots, db.ownerEncryptionModes, db.localSyncReceipts],
             async () => {
+                await assertStorageMode(owner, "LEGACY");
                 const latest = await this.get(owner, item.id!);
                 if (!latest) throw new Error("Outbox owner changed");
                 if (!stillActive() || latest.revision !== item.revision)
@@ -205,6 +219,15 @@ export const outboxRepository = {
                     }
                 }
                 await db.outbox.delete(item.id!);
+                await db.localSyncReceipts.put({
+                    key: `${owner}:${item.type}:${item.entity_id}`,
+                    owner_user_id: owner,
+                    type: item.type,
+                    entity_id: item.entity_id,
+                    canonical_id: item.entity_id,
+                    revision: item.revision,
+                    accepted_at: new Date().toISOString(),
+                });
                 return true;
             },
         );
@@ -217,6 +240,9 @@ export const outboxRepository = {
         httpStatus?: number,
     ) {
         requireOwner(owner);
+        if (await encryptedMode(owner)) return encryptedOutboxMark(owner, item, status, error, httpStatus);
+        await db.transaction("rw", db.outbox, db.assessments, db.emergencies, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         const current = item.id ? await db.outbox.get(item.id) : undefined;
         if (
             !current ||
@@ -248,5 +274,6 @@ export const outboxRepository = {
                 status === "SYNCING" ? "SYNCING" : "SYNC_FAILED",
                 error,
             );
+        });
     },
 };

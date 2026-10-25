@@ -99,7 +99,8 @@
 import { computed, ref, watch } from "vue";
 import { Siren } from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
-import { db, type LocalEmergency } from "@/offline/db";
+import { type LocalEmergency } from "@/offline/db";
+import { emergencyRepository } from "@/offline/emergencyRepository";
 import { retryEmergency } from "@/offline/emergencyWorkflow";
 
 const props = defineProps<{ owner: number; id: string }>();
@@ -112,8 +113,7 @@ watch(
     ([owner, id], _, onCleanup) => {
         emergency.value = null;
         const subscription: Subscription = liveQuery(async () => {
-            const record = await db.emergencies.get(id);
-            return record?.owner_user_id === owner ? record : null;
+            return (await emergencyRepository.get(owner, id)) ?? null;
         }).subscribe((record) => {
             emergency.value = record;
         });

@@ -1,4 +1,5 @@
 import { db, requireOwner, type RelawanContinuity } from "./db";
+import { lockAllClinicalKeys } from "./encryptedClinicalStorage";
 
 export interface VerifiedRelawan {
     id: number;
@@ -36,6 +37,7 @@ export async function recordVerifiedRelawan(
     return await db.transaction("rw", db.relawanContinuity, async () => {
         const existing = await db.relawanContinuity.get("active");
         if (existing?.logout_pending && !explicitLogin) return false;
+        if (existing && existing.owner_user_id !== user.id) lockAllClinicalKeys();
         const context: RelawanContinuity = {
             key: "active",
             owner_user_id: requireOwner(user.id),
@@ -61,6 +63,7 @@ export async function recordVerifiedRelawan(
 export async function lockRelawanContinuity(
     user?: VerifiedRelawan,
 ): Promise<void> {
+    lockAllClinicalKeys();
     await db.transaction("rw", db.relawanContinuity, async () => {
         const existing = await db.relawanContinuity.get("active");
         if (existing) {

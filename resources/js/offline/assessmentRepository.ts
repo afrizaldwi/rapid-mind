@@ -5,17 +5,26 @@ import {
     type LocalAssessment,
     type SyncState,
 } from "./db";
+import { assertStorageMode, encryptedDelete, encryptedGet, encryptedList, encryptedMode, encryptedMutate } from "./encryptedClinicalStorage";
 export const assessmentRepository = {
     async get(owner: number, id: string) {
         requireOwner(owner);
+        if (await encryptedMode(owner)) return encryptedGet<LocalAssessment>(owner, "assessments", id);
+        return db.transaction("r", db.assessments, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         const record = await db.assessments.get(id);
         return record?.owner_user_id === owner ? record : undefined;
+        });
     },
     async list(owner: number) {
+        if (await encryptedMode(owner)) return encryptedList<LocalAssessment>(owner, "assessments");
+        return db.transaction("r", db.assessments, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         return db.assessments
             .where("owner_user_id")
             .equals(requireOwner(owner))
             .toArray();
+        });
     },
     async save(
         owner: number,
@@ -24,7 +33,16 @@ export const assessmentRepository = {
     ) {
         requireOwner(owner);
         const id = input.id ?? localUuid();
-        await db.transaction("rw", db.assessments, async () => {
+        if (await encryptedMode(owner)) {
+            await encryptedMutate<LocalAssessment>(owner, "assessments", id, (existing) => ({
+                ...existing, ...input, id, owner_user_id: owner,
+                sync_state: input.sync_state ?? existing?.sync_state ?? "LOCAL_SAVED",
+                updated_at: new Date().toISOString(),
+            } as LocalAssessment));
+            return id;
+        }
+        await db.transaction("rw", db.assessments, db.ownerEncryptionModes, async () => {
+            await assertStorageMode(owner, "LEGACY");
             const existing = await db.assessments.get(id);
             if (existing && existing.owner_user_id !== owner)
                 throw new Error("Assessment owner mismatch");
@@ -41,8 +59,17 @@ export const assessmentRepository = {
         return id;
     },
     async update(owner: number, id: string, patch: Partial<LocalAssessment>) {
+        if (await encryptedMode(owner)) {
+            await encryptedMutate<LocalAssessment>(owner, "assessments", id, (existing) => {
+                if (!existing) throw new Error("Assessment unavailable for owner");
+                return { ...existing, ...patch, id, owner_user_id: owner, updated_at: new Date().toISOString() };
+            });
+            return;
+        }
         const existing = await this.get(owner, id);
         if (!existing) throw new Error("Assessment unavailable for owner");
+        await db.transaction("rw", db.assessments, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         await db.assessments.put({
             ...existing,
             ...patch,
@@ -50,19 +77,36 @@ export const assessmentRepository = {
             owner_user_id: owner,
             updated_at: new Date().toISOString(),
         });
+        });
     },
     async replace(owner: number, record: LocalAssessment) {
         const existing = await this.get(owner, record.id);
         if (!existing) throw new Error("Assessment unavailable for owner");
+        if (await encryptedMode(owner)) {
+            await encryptedMutate<LocalAssessment>(owner, "assessments", record.id, (current) => {
+                if (JSON.stringify(current) !== JSON.stringify(existing))
+                    throw new Error("Assessment changed while replacing draft");
+                return { ...record, owner_user_id: owner, updated_at: new Date().toISOString() };
+            });
+            return;
+        }
+        await db.transaction("rw", db.assessments, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         await db.assessments.put({
             ...record,
             owner_user_id: owner,
             updated_at: new Date().toISOString(),
         });
+        });
     },
     async remove(owner: number, id: string) {
         const existing = await this.get(owner, id);
-        if (existing) await db.assessments.delete(id);
+        if (!existing) return;
+        if (await encryptedMode(owner)) return encryptedDelete(owner, "assessments", id, existing);
+        await db.transaction("rw", db.assessments, db.ownerEncryptionModes, async () => {
+            await assertStorageMode(owner, "LEGACY");
+            await db.assessments.delete(id);
+        });
     },
     async setState(
         owner: number,

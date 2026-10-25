@@ -111,6 +111,29 @@ export interface EncryptedStagingRecord {
     iv: string;
     ciphertext: string;
 }
+export interface OwnerEncryptionMode {
+    owner_user_id: number;
+    mode: "ENCRYPTED";
+}
+export interface EncryptedOutboxIndex {
+    id: number;
+    owner_user_id: number;
+    ref: string;
+}
+export interface LocalSyncReceipt {
+    key: string;
+    owner_user_id: number;
+    type: "ASSESSMENT" | "EMERGENCY";
+    entity_id: string;
+    canonical_id: string;
+    revision: number;
+    accepted_at: string;
+    record_digest?: string;
+}
+export interface OutboxIdCounter {
+    key: "global";
+    last_id: number;
+}
 export class RapidMindDB extends Dexie {
     patients!: Table<LocalPatient, string>;
     patientSnapshots!: Table<LocalPatient, [number, string]>;
@@ -120,6 +143,10 @@ export class RapidMindDB extends Dexie {
     relawanContinuity!: Table<RelawanContinuity, string>;
     offlineKeys!: Table<WrappedOfflineKey, number>;
     encryptedStaging!: Table<EncryptedStagingRecord, string>;
+    ownerEncryptionModes!: Table<OwnerEncryptionMode, number>;
+    encryptedOutboxIndex!: Table<EncryptedOutboxIndex, number>;
+    localSyncReceipts!: Table<LocalSyncReceipt, string>;
+    outboxIdCounter!: Table<OutboxIdCounter, string>;
     constructor() {
         super("RapidMindOfflineDB");
         this.version(1).stores({
@@ -188,9 +215,29 @@ export class RapidMindDB extends Dexie {
             offlineKeys: "owner_user_id",
             encryptedStaging: "key, owner_user_id, record_type",
         });
+        this.version(6).stores({
+            ownerEncryptionModes: "owner_user_id",
+            encryptedOutboxIndex: "id, owner_user_id",
+        });
+        this.version(7).stores({
+            localSyncReceipts: "key, owner_user_id, [owner_user_id+type+entity_id]",
+            outboxIdCounter: "key",
+        });
     }
 }
 export const db = new RapidMindDB();
+// Call only inside a read-write transaction containing both ID tables and the counter.
+export async function nextOutboxId(): Promise<number> {
+    const [plain, encrypted, counter] = await Promise.all([
+        db.outbox.orderBy("id").last(),
+        db.encryptedOutboxIndex.orderBy("id").last(),
+        db.outboxIdCounter.get("global"),
+    ]);
+    const id = Math.max(plain?.id ?? 0, encrypted?.id ?? 0, counter?.last_id ?? 0) + 1;
+    if (!Number.isSafeInteger(id)) throw new Error("Identitas antrean habis.");
+    await db.outboxIdCounter.put({ key: "global", last_id: id });
+    return id;
+}
 export function localUuid(): string {
     return crypto.randomUUID();
 }

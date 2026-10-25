@@ -5,17 +5,26 @@ import {
     type LocalEmergency,
     type SyncState,
 } from "./db";
+import { assertStorageMode, encryptedGet, encryptedList, encryptedMode, encryptedMutate } from "./encryptedClinicalStorage";
 export const emergencyRepository = {
     async get(owner: number, id: string) {
         requireOwner(owner);
+        if (await encryptedMode(owner)) return encryptedGet<LocalEmergency>(owner, "emergencies", id);
+        return db.transaction("r", db.emergencies, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         const record = await db.emergencies.get(id);
         return record?.owner_user_id === owner ? record : undefined;
+        });
     },
     async list(owner: number) {
+        if (await encryptedMode(owner)) return encryptedList<LocalEmergency>(owner, "emergencies");
+        return db.transaction("r", db.emergencies, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         return db.emergencies
             .where("owner_user_id")
             .equals(requireOwner(owner))
             .toArray();
+        });
     },
     async save(
         owner: number,
@@ -25,7 +34,17 @@ export const emergencyRepository = {
         requireOwner(owner);
         const id = input.id ?? localUuid();
         const now = new Date().toISOString();
-        await db.transaction("rw", db.emergencies, async () => {
+        if (await encryptedMode(owner)) {
+            await encryptedMutate<LocalEmergency>(owner, "emergencies", id, (existing) => ({
+                ...existing, ...input, id, owner_user_id: owner,
+                created_at: existing?.created_at ?? input.created_at ?? now,
+                updated_at: now,
+                sync_state: input.sync_state ?? existing?.sync_state ?? "LOCAL_SAVED",
+            } as LocalEmergency));
+            return id;
+        }
+        await db.transaction("rw", db.emergencies, db.ownerEncryptionModes, async () => {
+            await assertStorageMode(owner, "LEGACY");
             const existing = await db.emergencies.get(id);
             if (existing && existing.owner_user_id !== owner)
                 throw new Error("Emergency owner mismatch");
@@ -48,21 +67,40 @@ export const emergencyRepository = {
         state: SyncState,
         error?: string,
     ) {
+        if (await encryptedMode(owner)) {
+            await encryptedMutate<LocalEmergency>(owner, "emergencies", id, (existing) => {
+                if (!existing) throw new Error("Emergency unavailable for owner");
+                return { ...existing, sync_state: state, last_error: error, updated_at: new Date().toISOString() };
+            });
+            return;
+        }
         const existing = await this.get(owner, id);
         if (!existing) throw new Error("Emergency unavailable for owner");
+        await db.transaction("rw", db.emergencies, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         await db.emergencies.put({
             ...existing,
             sync_state: state,
             last_error: error,
             updated_at: new Date().toISOString(),
         });
+        });
     },
     async reconcile(
         owner: number,
         canonical: Partial<LocalEmergency> & { id: string },
     ) {
+        if (await encryptedMode(owner)) {
+            await encryptedMutate<LocalEmergency>(owner, "emergencies", canonical.id, (existing) => {
+                if (!existing) throw new Error("Local emergency missing");
+                return { ...existing, ...canonical, owner_user_id: owner, sync_state: "SYNCED", last_error: undefined, updated_at: new Date().toISOString() };
+            });
+            return;
+        }
         const existing = await this.get(owner, canonical.id);
         if (!existing) throw new Error("Local emergency missing");
+        await db.transaction("rw", db.emergencies, db.ownerEncryptionModes, async () => {
+        await assertStorageMode(owner, "LEGACY");
         await db.emergencies.put({
             ...existing,
             ...canonical,
@@ -70,6 +108,7 @@ export const emergencyRepository = {
             sync_state: "SYNCED",
             last_error: undefined,
             updated_at: new Date().toISOString(),
+        });
         });
     },
 };

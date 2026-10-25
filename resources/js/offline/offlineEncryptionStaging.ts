@@ -9,6 +9,7 @@ import {
     type OfflineKeySession,
     unlockOfflineKey,
 } from "./offlineCrypto";
+import { announceSyntheticModeActivation } from "./encryptedClinicalStorage";
 
 const stores: ClinicalStore[] = [
     "patients",
@@ -27,7 +28,7 @@ export async function prepareOwnerKey(owner: number, passphrase: string) {
     const created = await createOfflineKey(owner, passphrase);
     try {
         await db.offlineKeys.add(created.record);
-        created.session.bindPersistedKey(created.record);
+        await created.session.bindPersistedKey(created.record);
     } catch (error) {
         created.session.lock();
         throw error;
@@ -58,7 +59,7 @@ export async function unlockOwnerKey(
             });
         }
         await session.assertMatches(current);
-        session.bindPersistedKey(current);
+        await session.bindPersistedKey(current);
         return session;
     } catch (error) {
         session.lock();
@@ -117,7 +118,10 @@ async function stageOne(
         db.table(store),
         db.encryptedStaging,
         db.offlineKeys,
+        db.ownerEncryptionModes,
         async () => {
+            if (await db.ownerEncryptionModes.get(owner))
+                throw new Error("Staging cannot overwrite active encrypted records");
             const persisted = await db.offlineKeys.get(owner);
             if (
                 !persisted ||
@@ -145,6 +149,8 @@ export async function stageOwnerPlaintext(
     options: { maxRecords?: number } = {},
 ): Promise<{ staged: number; changed: number; scanned: number }> {
     const owner = requireOwner(session.owner);
+    if (await db.ownerEncryptionModes.get(owner))
+        throw new Error("Staging is unavailable after activation");
     if (
         options.maxRecords !== undefined &&
         (!Number.isInteger(options.maxRecords) || options.maxRecords < 1)
@@ -285,6 +291,8 @@ export async function inspectStagedOwner(
     session: OfflineKeySession,
 ): Promise<StagingInspection> {
     const owner = requireOwner(session.owner);
+    if (await db.ownerEncryptionModes.get(owner))
+        throw new Error("Staging inspection is unavailable after activation");
     const wrapped = await db.offlineKeys.get(owner);
     if (!wrapped) throw new Error("Offline key is unavailable");
     await session.assertMatches(wrapped);
@@ -378,4 +386,59 @@ export async function inspectStagedOwner(
             !changedSource &&
             !changedStaging,
     };
+}
+
+// This transition is reachable only from the isolated synthetic browser test.
+// Production builds and the normal development server cannot activate an owner.
+export async function activateSyntheticOwner(session: OfflineKeySession): Promise<void> {
+    if (import.meta.env.MODE !== "staging-fixture")
+        throw new Error("Aktivasi penyimpanan terenkripsi belum tersedia.");
+    const owner = requireOwner(session.owner);
+    const inspection = await inspectStagedOwner(session);
+    if (!inspection.consistentAtInspection)
+        throw new Error("Salinan terenkripsi belum lengkap atau berubah.");
+    const wrapped = await db.offlineKeys.get(owner);
+    if (!wrapped) throw new Error("Kunci offline tidak tersedia.");
+    session.assertPersistedKey(wrapped);
+    const verified = await readSnapshot(owner);
+    if (verified.invalidSource || verified.source.size !== verified.staging.length)
+        throw new Error("Jumlah catatan terenkripsi tidak sesuai.");
+    const copies = new Map(verified.staging.map((copy) => [copy.key, copy]));
+    for (const [key, source] of verified.source) {
+        const copy = copies.get(key);
+        if (!copy) throw new Error("Salinan terenkripsi hilang.");
+        const type = stores.find((store) => key.startsWith(`${store}:${owner}:`));
+        if (!type || copy.owner_user_id !== owner || copy.record_type !== type ||
+            copy.record_id !== key.slice(`${type}:${owner}:`.length) || copy.version !== 1)
+            throw new Error("Identitas catatan terenkripsi tidak sesuai.");
+        const plain = await session.decrypt(copy, owner, type, copy.record_id);
+        if (JSON.stringify(plain) !== JSON.stringify(source))
+            throw new Error("Salinan terenkripsi usang.");
+    }
+    await db.transaction("rw", [
+        ...stores.map((store) => db.table(store)),
+        db.encryptedStaging, db.offlineKeys, db.ownerEncryptionModes,
+        db.encryptedOutboxIndex,
+    ], async () => {
+            if (await db.ownerEncryptionModes.get(owner))
+                throw new Error("Pemilik sudah menggunakan penyimpanan terenkripsi.");
+            const keyNow = await db.offlineKeys.get(owner);
+            if (!keyNow || JSON.stringify(keyNow) !== JSON.stringify(wrapped))
+                throw new Error("Kunci offline berubah selama aktivasi.");
+            session.assertPersistedKey(keyNow);
+            const now = await readSnapshot(owner);
+            if (now.invalidSource ||
+                JSON.stringify([...now.source]) !== JSON.stringify([...verified.source]) ||
+                JSON.stringify(now.staging) !== JSON.stringify(verified.staging))
+                throw new Error("Data lokal berubah selama aktivasi.");
+            for (const copy of verified.staging.filter((item) => item.record_type === "outbox")) {
+                const id = Number(copy.record_id);
+                if (!Number.isSafeInteger(id) || id <= 0 ||
+                    await db.encryptedOutboxIndex.get(id))
+                    throw new Error("Identitas antrean terenkripsi tidak sesuai.");
+                await db.encryptedOutboxIndex.add({ id, owner_user_id: owner, ref: copy.record_id });
+            }
+            await db.ownerEncryptionModes.add({ owner_user_id: owner, mode: "ENCRYPTED" });
+        });
+    announceSyntheticModeActivation(owner);
 }

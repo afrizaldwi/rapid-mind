@@ -11,6 +11,8 @@ import { outboxRepository } from "./outboxRepository";
 import { patientRepository } from "./patientRepository";
 import { syncManager } from "./syncManager";
 import { localPersistenceHealth } from "./localPersistenceHealth";
+import { assertStorageMode, encryptedMode } from "./encryptedClinicalStorage";
+import { createEncryptedEmergencyWithOutbox } from "./encryptedOutbox";
 
 const redFlags = new Set([
     "SUICIDAL_IDEATION",
@@ -121,13 +123,22 @@ export async function createLocalEmergency(
         sync_state: "LOCAL_SAVED",
     };
     const payload = await buildEmergencySyncPayload(owner, emergency);
+    if (await encryptedMode(owner)) {
+        try {
+            await localPersistenceHealth.recordWrite(owner, () =>
+                createEncryptedEmergencyWithOutbox(owner, emergency, payload));
+        } catch {
+            throw new Error("Insiden darurat belum tersimpan di perangkat. Tetap dampingi penyintas dan coba lagi.");
+        }
+        return emergency.id;
+    }
     // One IndexedDB transaction makes the emergency and its priority-1 outbox item durable together.
     await localPersistenceHealth.recordWrite(owner, () => db.transaction(
         "rw",
-        db.emergencies,
-        db.outbox,
-        db.assessments,
+        [db.emergencies, db.outbox, db.encryptedOutboxIndex,
+            db.outboxIdCounter, db.assessments, db.ownerEncryptionModes],
         async () => {
+            await assertStorageMode(owner, "LEGACY");
             await emergencyRepository.save(owner, emergency);
             await outboxRepository.enqueue(
                 owner,

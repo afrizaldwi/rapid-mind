@@ -28,6 +28,12 @@
             </button>
         </div>
     </div>
+    <OfflineEncryptionGate
+        v-else-if="isolatedEncryptionFixture() && currentOwner && !clinicalUnlocked"
+        :key="currentOwner"
+        :owner="currentOwner"
+        @unlocked="onClinicalUnlocked"
+    />
     <div
         v-else
         class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
@@ -225,6 +231,10 @@ import { emergencyRepository } from "@/offline/emergencyRepository";
 import { assessmentRepository } from "@/offline/assessmentRepository";
 import { patientRepository } from "@/offline/patientRepository";
 import RelawanStatusDataSheet from "@/components/Relawan/RelawanStatusDataSheet.vue";
+import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
+import { clinicalKeyReady, lockAllClinicalKeys } from "@/offline/encryptedClinicalStorage";
+import { isolatedEncryptionFixture } from "@/offline/offlineKeyWorkflow";
+import { syncManager } from "@/offline/syncManager";
 import { useRelawanOperationalStatus } from "@/composables/useRelawanOperationalStatus";
 import {
     lockRelawanContinuity,
@@ -252,6 +262,11 @@ const currentOwner = computed(() =>
         ? Number(user.value.id) || null
         : null,
 );
+const clinicalUnlockTick = ref(0);
+const clinicalUnlocked = computed(() => {
+    void clinicalUnlockTick.value;
+    return currentOwner.value ? clinicalKeyReady(currentOwner.value) : false;
+});
 const activeLocalId = ref<string | null>(null);
 const showStatusSheet = ref(false);
 const loggedOutLocally = ref(false);
@@ -263,6 +278,12 @@ const status = useRelawanOperationalStatus(
     currentOwner,
     computed(() => runtime.mode === "ONLINE_SERVER"),
 );
+function onClinicalUnlocked() {
+    clinicalUnlockTick.value++;
+    status.refresh();
+    if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
+        void syncManager.sync(currentOwner.value).catch(() => {});
+}
 const compactStatusLabel = computed(() => {
     switch (status.kind.value) {
         case "local-failure":
@@ -446,6 +467,12 @@ watch([() => runtime.path, currentOwner], () => {
     ++emergencyOpenCheck;
     showEmergencyModal.value = false;
     t0AssessmentContext.value = null;
+});
+watch(currentOwner, (owner, prior) => {
+    if (prior && owner !== prior) {
+        lockAllClinicalKeys();
+        clinicalUnlockTick.value++;
+    }
 });
 function isRoute(path: string) {
     return runtime.path.startsWith(path);

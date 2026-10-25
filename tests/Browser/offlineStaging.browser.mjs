@@ -64,12 +64,12 @@ try {
             outbox: await db.outbox.get(7),
         };
     });
-    assert.equal(upgrade.version, 5);
+    assert.equal(upgrade.version, 7);
     assert.equal(upgrade.patients, 3);
     assert.equal(upgrade.emergency.id, "emergency-101");
     assert.equal(upgrade.outbox.priority, 1);
     console.log(
-        "PASS: isolated Dexie v4 to v5 upgrade preserved plaintext fixtures",
+        "PASS: isolated Dexie v4 to v7 upgrade preserved plaintext fixtures",
     );
 
     const first = await page.evaluate(async () => {
@@ -153,6 +153,15 @@ try {
     console.log(
         "PASS: interrupted staging resumed after browser reopen; passphrase, recovery, and owner isolation",
     );
+
+    const productionGate = await page.evaluate(async () => {
+        const { activateSyntheticOwner } =
+            await import("/resources/js/offline/offlineEncryptionStaging.ts");
+        try { await activateSyntheticOwner(window.stagingSession); return false; }
+        catch { return true; }
+    });
+    assert.equal(productionGate, true);
+    console.log("PASS: normal development mode cannot activate encrypted storage");
 
     const metadataRace = await page.evaluate(async () => {
         const { db } = await import("/resources/js/offline/db.ts");

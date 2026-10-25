@@ -4,6 +4,9 @@ import { resolveRelawanContinuity } from "./relawanContinuity";
 import { resolveOfflineRoute } from "@/relawan/offlineRoutes";
 import { relawanRuntimeKey, type RelawanRuntime } from "@/relawan/runtime";
 import { startRelawanSessionRecovery } from "./sessionRecovery";
+import { clinicalKeyReady, encryptedMode } from "./encryptedClinicalStorage";
+import { isolatedEncryptionFixture } from "./offlineKeyWorkflow";
+import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
 
 const target = document.getElementById("offline-state");
 function message(title: string, detail: string) {
@@ -28,6 +31,25 @@ async function start() {
         return;
     }
     try {
+        if (isolatedEncryptionFixture() &&
+            await encryptedMode(continuity.context.owner_user_id) &&
+            !clinicalKeyReady(continuity.context.owner_user_id)) {
+            const gateHost = document.createElement("div");
+            target.replaceChildren(gateHost);
+            await new Promise<void>((resolve) => {
+                const gate = createApp({
+                    render: () => h(OfflineEncryptionGate, {
+                        owner: continuity.context.owner_user_id,
+                        onUnlocked: () => {
+                            gate.unmount();
+                            target.replaceChildren();
+                            resolve();
+                        },
+                    }),
+                });
+                gate.mount(gateHost);
+            });
+        }
         const route = await resolveOfflineRoute(
             continuity.context.owner_user_id,
             window.location.pathname,

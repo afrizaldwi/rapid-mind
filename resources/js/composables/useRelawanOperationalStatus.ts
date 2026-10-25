@@ -217,6 +217,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
     });
 
     return {
+        refresh: () => activate(owner.value),
         online,
         ready,
         localFailure,

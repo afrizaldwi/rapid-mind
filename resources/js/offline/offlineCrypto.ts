@@ -167,7 +167,8 @@ export class OfflineKeySession {
         this.generation++;
     }
 
-    bindPersistedKey(record: WrappedOfflineKey): void {
+    async bindPersistedKey(record: WrappedOfflineKey): Promise<void> {
+        await this.assertMatches(record);
         this.available(record.owner_user_id);
         this.persistedKey = JSON.stringify(record);
     }
