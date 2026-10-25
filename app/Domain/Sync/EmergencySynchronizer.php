@@ -10,6 +10,7 @@ use App\Enums\EmergencyStatus;
 use App\Enums\RedFlagType;
 use App\Events\EmergencyCreated;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,13 @@ final class EmergencySynchronizer
             $emergency->id = $data['id'];
             if (isset($data['created_at'])) $emergency->created_at = $data['created_at'];
             $emergency->save();
+            AuditLog::create([
+                'actor_id' => $user->id,
+                'action' => 'EMERGENCY_CREATED',
+                'entity_type' => 'EmergencyEvent',
+                'entity_id' => $emergency->id,
+                'new_values' => ['status' => $emergency->status->value, 'source' => 'OFFLINE_SYNC'],
+            ]);
             return [$emergency, true];
         });
 

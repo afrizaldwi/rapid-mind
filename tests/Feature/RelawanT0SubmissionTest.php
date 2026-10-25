@@ -11,6 +11,7 @@ use App\Enums\RedFlagType;
 use App\Enums\UserRole;
 use App\Events\EmergencyCreated;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\Patient;
 use App\Models\Region;
@@ -95,6 +96,7 @@ final class RelawanT0SubmissionTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('patient_id')->assertDontSee('Identitas Rahasia');
 
         $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
         $this->assertDatabaseCount('assessments', 0);
         Event::assertNotDispatched(EmergencyCreated::class);
     }
@@ -111,6 +113,7 @@ final class RelawanT0SubmissionTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
 
         $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
         Event::assertNotDispatched(EmergencyCreated::class);
     }
 
@@ -184,6 +187,7 @@ final class RelawanT0SubmissionTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
 
         $this->assertSame(0, EmergencyEvent::count());
+        $this->assertDatabaseCount('audit_logs', 0);
     }
 
     public function test_foreign_relawan_assessment_is_rejected(): void
@@ -237,7 +241,27 @@ final class RelawanT0SubmissionTest extends TestCase
         $this->assertSame($emergency->id, $response->json('emergency_id'));
         $this->assertSame(RedFlagType::PSYCHOSIS, $emergency->red_flag_type);
         $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $audit = AuditLog::where('action', 'EMERGENCY_CREATED')->sole();
+        $this->assertSame($this->relawan->id, $audit->actor_id);
+        $this->assertSame('EmergencyEvent', $audit->entity_type);
+        $this->assertSame($emergency->id, $audit->entity_id);
+        $this->assertNull($audit->old_values);
+        $this->assertEqualsCanonicalizing(['status' => 'PENDING', 'source' => 'ONLINE'], $audit->new_values);
+        $this->assertNotNull($audit->created_at);
         Event::assertDispatched(EmergencyCreated::class, 1);
+    }
+
+    public function test_audit_write_failure_rolls_back_online_emergency_and_sends_no_event(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        AuditLog::creating(fn () => throw new RuntimeException('Simulated audit write failure'));
+
+        $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::PSYCHOSIS->value])
+            ->assertInternalServerError();
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
     }
 
     public function test_broadcast_failure_keeps_one_emergency_and_returns_json_warning(): void
@@ -255,6 +279,7 @@ final class RelawanT0SubmissionTest extends TestCase
         $emergency = EmergencyEvent::sole();
         $this->assertSame($emergency->id, $response->json('emergency_id'));
         $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $emergency->id)->count());
     }
 
     public function test_broadcast_failure_redirects_to_saved_emergency_with_visible_flash_warning(): void

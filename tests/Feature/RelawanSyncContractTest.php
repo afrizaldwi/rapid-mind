@@ -11,6 +11,7 @@ use App\Enums\RedFlagType;
 use App\Enums\UserRole;
 use App\Events\EmergencyCreated;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\Patient;
 use App\Models\Region;
@@ -150,11 +151,19 @@ final class RelawanSyncContractTest extends TestCase
             ->assertJsonPath('replayed', true)
             ->assertJsonMissingPath('emergency.status');
         $this->assertSame(1, EmergencyEvent::count());
+        $audit = AuditLog::where('action', 'EMERGENCY_CREATED')->sole();
+        $this->assertSame($this->relawan->id, $audit->actor_id);
+        $this->assertSame('EmergencyEvent', $audit->entity_type);
+        $this->assertSame($payload['id'], $audit->entity_id);
+        $this->assertNull($audit->old_values);
+        $this->assertEqualsCanonicalizing(['status' => 'PENDING', 'source' => 'OFFLINE_SYNC'], $audit->new_values);
+        $this->assertNotNull($audit->created_at);
         Event::assertDispatched(EmergencyCreated::class, 1);
         $changed = $payload;
         $changed['red_flag_type'] = RedFlagType::MEDICAL_CRISIS->value;
         $this->postJson('/relawan/sync/emergencies', $changed)->assertStatus(409);
         $this->assertSame(RedFlagType::PSYCHOSIS, EmergencyEvent::sole()->red_flag_type);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->count());
     }
 
     public function test_emergency_reconciles_local_patient_and_minimal_assessment_before_later_complete_sync(): void
@@ -255,10 +264,31 @@ final class RelawanSyncContractTest extends TestCase
         $this->postJson('/relawan/sync/emergencies', $bad)->assertUnprocessable();
         $this->assertSame(0, Patient::count());
         $this->assertSame(0, Assessment::count());
+        $this->assertDatabaseCount('audit_logs', 0);
         $this->postJson('/relawan/sync/emergencies', $payload)->assertCreated();
         $this->actingAs(User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]));
         $this->postJson('/relawan/sync/emergencies', $payload)->assertStatus(409);
         $this->assertSame(1, EmergencyEvent::count());
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->count());
+    }
+
+    public function test_audit_write_failure_rolls_back_offline_emergency_and_dependencies_without_broadcast(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        AuditLog::creating(fn () => throw new RuntimeException('Simulated audit write failure'));
+        $payload = $this->emergency([
+            'patient' => $this->patient(),
+            'assessment_id' => (string) Str::uuid(),
+            'assessment_mode' => 'VERBAL',
+        ]);
+
+        $this->postJson('/relawan/sync/emergencies', $payload)->assertInternalServerError();
+
+        $this->assertDatabaseCount('patients', 0);
+        $this->assertDatabaseCount('assessments', 0);
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
     }
 
     public function test_broadcast_failure_keeps_one_emergency_and_replay_never_dispatches_again(): void
@@ -275,6 +305,7 @@ final class RelawanSyncContractTest extends TestCase
             ->assertJsonPath('replayed', true);
         $this->assertSame(1, $attempts);
         $this->assertSame(1, EmergencyEvent::count());
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $payload['id'])->count());
     }
     public function test_existing_same_shelter_patient_is_available_and_inaccessible_uuid_is_not_overwritten(): void
     {

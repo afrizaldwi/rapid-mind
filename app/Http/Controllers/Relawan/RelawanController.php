@@ -12,6 +12,7 @@ use App\Enums\RedFlagType;
 use App\Enums\TriageCategory;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\FunctionResponse;
 use App\Models\Patient;
@@ -495,17 +496,29 @@ final class RelawanController extends Controller
 
         $redFlag = RedFlagType::from($validated['red_flag_type']);
 
-        $emergency = EmergencyEvent::create([
-            'patient_id' => $patientId,
-            'assessment_id' => $validated['assessment_id'] ?? null,
-            'user_id' => $user->id,
-            'red_flag_type' => $redFlag,
-            'status' => EmergencyStatus::PENDING,
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
-            'shelter_id' => $user->shelter_id,
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        $emergency = DB::transaction(function () use ($patientId, $validated, $user, $redFlag): EmergencyEvent {
+            $emergency = EmergencyEvent::create([
+                'patient_id' => $patientId,
+                'assessment_id' => $validated['assessment_id'] ?? null,
+                'user_id' => $user->id,
+                'red_flag_type' => $redFlag,
+                'status' => EmergencyStatus::PENDING,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'shelter_id' => $user->shelter_id,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            AuditLog::create([
+                'actor_id' => $user->id,
+                'action' => 'EMERGENCY_CREATED',
+                'entity_type' => 'EmergencyEvent',
+                'entity_id' => $emergency->id,
+                'new_values' => ['status' => $emergency->status->value, 'source' => 'ONLINE'],
+            ]);
+
+            return $emergency;
+        });
 
         $realtimeDelivered = true;
         try {
