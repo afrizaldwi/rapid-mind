@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\HealthcareFacility;
+use App\Models\RefreshTokenFamily;
 use App\Models\Shelter;
 use App\Models\User;
 use App\Support\IndonesianPhone;
@@ -104,6 +105,11 @@ final class ProvisioningController extends Controller
                 ...($wasActive && ! $data['is_active'] ? ['token_version' => $user->token_version + 1] : []),
                 ...($role === UserRole::RELAWAN ? ['phone_number' => $data['phone_number']] : []),
             ]);
+            if ($wasActive && ! $data['is_active']) {
+                RefreshTokenFamily::where('user_id', $user->id)
+                    ->whereNull('revoked_at')
+                    ->update(['revoked_at' => now(), 'revoked_reason' => 'account_disabled']);
+            }
             if ((int) $oldAssignment !== (int) $data[$field]) {
                 AuditLog::create([
                     'actor_id' => $request->user()->id,

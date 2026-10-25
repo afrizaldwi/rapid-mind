@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\RefreshTokenFamily;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,8 +30,17 @@ final class AuthenticateJwt
                 $payload = $jwt->getPayload();
                 $user = User::find($payload->get('sub'));
                 $version = $payload->get('ver');
+                $familyId = $payload->get('sid');
                 if (! $user || ! $user->is_active || ! is_int($version)
-                    || $version !== $user->token_version || ! $jwt->checkSubjectModel($user)) {
+                    || $version !== $user->token_version || ! $jwt->checkSubjectModel($user)
+                    || ! is_string($familyId) || ! Str::isUuid($familyId)) {
+                    return $this->unauthorized($request, 'Sesi berakhir. Silakan masuk kembali.');
+                }
+
+                $family = RefreshTokenFamily::find($familyId);
+                if (! $family || $family->user_id !== $user->id
+                    || $family->token_version !== $user->token_version
+                    || $family->revoked_at || $family->expires_at->isPast()) {
                     return $this->unauthorized($request, 'Sesi berakhir. Silakan masuk kembali.');
                 }
             } catch (JWTException) {
@@ -42,6 +53,7 @@ final class AuthenticateJwt
             }
 
             if ($request->is('api/*')) {
+                $request->attributes->set('api_refresh_family_id', $familyId);
                 Auth::guard('api')->setUser($user);
                 Auth::shouldUse('api');
             } else {

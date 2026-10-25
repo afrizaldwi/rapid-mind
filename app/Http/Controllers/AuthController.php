@@ -6,18 +6,15 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Http\Middleware\ValidateWebSessionVersion;
-use App\Models\RefreshToken;
 use App\Models\User;
+use App\Services\OpaqueRefreshTokens;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
-use PHPOpenSourceSaver\JWTAuth\Token;
 
 final class AuthController extends Controller
 {
@@ -38,7 +35,7 @@ final class AuthController extends Controller
         ] : []);
     }
 
-    public function login(Request $request): JsonResponse|RedirectResponse
+    public function login(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse|RedirectResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'string'],
@@ -68,32 +65,17 @@ final class AuthController extends Controller
             return back()->withErrors(['email' => $inactiveMessage]);
         }
 
-        // Generate JWT token
-        $token = JWTAuth::fromUser($user);
-        $refreshToken = (string) Str::uuid();
-
-        RefreshToken::create([
-            'jti' => $refreshToken,
-            'user_id' => $user->id,
-            'expires_at' => now()->addDays(7),
-        ]);
-
-        // API credentials do not establish a browser session.
-        if (! $request->is('api/*')) {
-            Auth::guard('web')->login($user);
-            $request->session()->regenerate();
-            $request->session()->put(ValidateWebSessionVersion::USER_ID, $user->id);
-            $request->session()->put(ValidateWebSessionVersion::VERSION, $user->token_version);
-        }
-
         $redirectPath = $this->getRedirectPath($user);
+        if ($request->is('api/*')) {
+            $issued = $refreshTokens->login($user);
+            if (! $issued) {
+                return response()->json(['message' => 'Akun Anda sedang nonaktif. Hubungi Admin.'], 403);
+            }
 
-        if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
-                'token' => $token,
+                ...$issued,
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl', 60) * 60,
-                'refresh_token' => $refreshToken,
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -103,62 +85,48 @@ final class AuthController extends Controller
                     'facility_id' => $user->facility_id,
                 ],
                 'redirect' => $redirectPath,
-            ]);
+            ])->header('Cache-Control', 'no-store');
         }
+
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+        $request->session()->put(ValidateWebSessionVersion::USER_ID, $user->id);
+        $request->session()->put(ValidateWebSessionVersion::VERSION, $user->token_version);
 
         return redirect()->intended($redirectPath);
     }
 
-    public function refresh(Request $request): JsonResponse
+    public function refresh(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse
     {
-        $token = $request->bearerToken();
-        if (! $token) {
+        $credential = $request->input('refresh_token');
+        if ($request->headers->has('Authorization') || ! is_string($credential)) {
             return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
         }
 
-        $manager = app('tymon.jwt.manager');
-        try {
-            // The legacy JWT refresh window can outlive access-token expiry.
-            // Check its signed claims and current account before rotating it.
-            $manager->setRefreshFlow();
-            $payload = $manager->decode(new Token($token));
-            $user = User::find($payload->get('sub'));
-            if (! $user || ! $user->is_active || ! is_int($payload->get('ver'))
-                || $payload->get('ver') !== $user->token_version
-                || ! JWTAuth::setToken($token)->checkSubjectModel($user)) {
-                return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
-            }
-
-            $newToken = JWTAuth::setToken($token)->claims($user->getJWTCustomClaims())->refresh();
-
-            return response()->json([
-                'token' => $newToken,
-                'token_type' => 'bearer',
-                'expires_in' => config('jwt.ttl', 60) * 60,
-            ]);
-        } catch (\Throwable $e) {
+        $issued = $refreshTokens->rotate($credential);
+        if (! $issued) {
             return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
-        } finally {
-            $manager->setRefreshFlow(false);
         }
+
+        return response()->json([
+            ...$issued,
+            'token_type' => 'bearer',
+            'expires_in' => config('jwt.ttl', 60) * 60,
+        ])->header('Cache-Control', 'no-store');
     }
 
-    public function logout(Request $request): JsonResponse|RedirectResponse
+    public function logout(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse|RedirectResponse
     {
-        try {
-            JWTAuth::parseToken()->invalidate();
-        } catch (\Throwable) {
-            // Ignore if token already invalid
+        if ($request->is('api/*')) {
+            $refreshTokens->revoke($request->user('api'), $request->attributes->get('api_refresh_family_id'));
+
+            return response()->json(['message' => 'Berhasil keluar.'])->header('Cache-Control', 'no-store');
         }
 
         if ($request->hasSession()) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-        }
-
-        if ($request->wantsJson() || $request->is('api/*')) {
-            return response()->json(['message' => 'Berhasil keluar.']);
         }
 
         return redirect('/login');

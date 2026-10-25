@@ -7,11 +7,13 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Http\Middleware\ValidateWebSessionVersion;
 use App\Models\HealthcareFacility;
+use App\Models\RefreshTokenFamily;
 use App\Models\Region;
 use App\Models\Shelter;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Tests\TestCase;
 
@@ -26,7 +28,13 @@ final class AuthenticationBoundaryTest extends TestCase
 
     private function token(User $user, array $claims = []): string
     {
-        $token = JWTAuth::claims($claims)->fromUser($user);
+        $family = RefreshTokenFamily::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'token_version' => $user->fresh()->token_version,
+            'expires_at' => now()->addDays(7),
+        ]);
+        $token = JWTAuth::claims(['sid' => $family->id, ...$claims])->fromUser($user);
         JWTAuth::claims([]);
 
         return $token;
@@ -76,16 +84,19 @@ final class AuthenticationBoundaryTest extends TestCase
         $this->getJson('/api/auth/me', ['Authorization' => 'Bearer '.$token])->assertOk();
     }
 
-    public function test_legacy_refresh_rejects_stale_version_and_keeps_current_version_on_expired_access(): void
+    public function test_legacy_bearer_refresh_is_rejected_and_opaque_refresh_works_after_access_expiry(): void
     {
         $user = $this->user();
         $old = $this->token($user);
         $user->increment('token_version');
         $this->postJson('/api/auth/refresh', [], ['Authorization' => 'Bearer '.$old])->assertUnauthorized();
 
-        $current = $this->token($user->fresh());
+        $user->update(['password' => Hash::make('synthetic-pass')]);
+        $issued = $this->postJson('/api/auth/login', [
+            'email' => $user->email, 'password' => 'synthetic-pass',
+        ])->assertOk()->json();
         $this->travel(61)->minutes();
-        $renewed = $this->postJson('/api/auth/refresh', [], ['Authorization' => 'Bearer '.$current])
+        $renewed = $this->postJson('/api/auth/refresh', ['refresh_token' => $issued['refresh_token']])
             ->assertOk()->json('token');
         $this->getJson('/api/auth/me', ['Authorization' => 'Bearer '.$renewed])->assertOk();
     }
@@ -167,16 +178,22 @@ final class AuthenticationBoundaryTest extends TestCase
     public function test_facility_and_shelter_reassignment_preserve_valid_session(): void
     {
         $relawan = $this->user();
+        $relawanToken = $this->token($relawan);
         $this->actingAs($relawan);
         $region = Region::create(['name' => 'Wilayah Sintetis']);
         $relawan->update(['shelter_id' => Shelter::create(['name' => 'Posko Sintetis', 'region_id' => $region->id, 'is_active' => true])->id]);
         $this->get('/relawan/home')->assertOk();
+        $this->getJson('/api/auth/me', ['Authorization' => 'Bearer '.$relawanToken])
+            ->assertOk()->assertJsonPath('shelter_id', $relawan->shelter_id);
 
         $healthcare = $this->user(UserRole::HEALTHCARE);
-        $this->actingAs($healthcare);
+        $healthcareToken = $this->token($healthcare);
+        $this->actingAs($healthcare, 'web');
         $facility = HealthcareFacility::create(['name' => 'Faskes Sintetis', 'type' => 'RS', 'is_active' => true]);
         $healthcare->update(['facility_id' => $facility->id]);
         $this->get('/healthcare/emergencies')->assertOk();
+        $this->getJson('/api/auth/me', ['Authorization' => 'Bearer '.$healthcareToken])
+            ->assertOk()->assertJsonPath('facility_id', $facility->id);
     }
 
     public function test_admin_disablement_increments_version_and_reactivation_does_not_undo_it(): void
@@ -197,6 +214,7 @@ final class AuthenticationBoundaryTest extends TestCase
         $this->actingAs($admin)->put('/admin/volunteers/'.$volunteer->id, $payload + ['is_active' => false])
             ->assertSessionHasNoErrors();
         $this->assertSame(2, $volunteer->fresh()->token_version);
+        $this->assertSame('account_disabled', RefreshTokenFamily::where('user_id', $volunteer->id)->sole()->revoked_reason);
 
         $this->put('/admin/volunteers/'.$volunteer->id, $payload + ['is_active' => true])
             ->assertSessionHasNoErrors();
