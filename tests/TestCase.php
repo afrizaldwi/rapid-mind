@@ -2,11 +2,30 @@
 
 namespace Tests;
 
+use App\Http\Middleware\ValidateWebSessionVersion;
+use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
 {
+    public function actingAs(Authenticatable $user, $guard = null)
+    {
+        parent::actingAs($user, $guard);
+
+        // actingAs bypasses the login controller; model a freshly issued web session.
+        if ($guard === null || $guard === 'web') {
+            $version = $user instanceof User ? $user->fresh()?->token_version : null;
+            $this->withSession([
+                ValidateWebSessionVersion::USER_ID => $user->getAuthIdentifier(),
+                ValidateWebSessionVersion::VERSION => $version,
+            ]);
+        }
+
+        return $this;
+    }
+
     public function createApplication()
     {
         $app = parent::createApplication();

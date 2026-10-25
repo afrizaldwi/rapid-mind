@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Middleware\ValidateWebSessionVersion;
 use App\Models\RefreshToken;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Token;
 
 final class AuthController extends Controller
 {
@@ -23,8 +25,9 @@ final class AuthController extends Controller
     {
         $reauthentication = $request->boolean('reauth');
 
-        if (Auth::guard('web')->check() && !$reauthentication) {
+        if (Auth::guard('web')->check() && ! $reauthentication) {
             $user = Auth::guard('web')->user();
+
             return redirect($this->getRedirectPath($user));
         }
 
@@ -47,19 +50,21 @@ final class AuthController extends Controller
             ->orWhere('name', $credentials['email'])
             ->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             $errorMessage = 'Email/username atau kata sandi tidak sesuai.';
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json(['message' => $errorMessage], 401);
             }
+
             return back()->withErrors(['email' => $errorMessage]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             $inactiveMessage = 'Akun Anda sedang nonaktif. Hubungi Admin.';
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json(['message' => $inactiveMessage], 403);
             }
+
             return back()->withErrors(['email' => $inactiveMessage]);
         }
 
@@ -73,10 +78,12 @@ final class AuthController extends Controller
             'expires_at' => now()->addDays(7),
         ]);
 
-        // Also log into web session for Inertia page transitions
-        Auth::guard('web')->login($user);
-        if ($request->hasSession()) {
+        // API credentials do not establish a browser session.
+        if (! $request->is('api/*')) {
+            Auth::guard('web')->login($user);
             $request->session()->regenerate();
+            $request->session()->put(ValidateWebSessionVersion::USER_ID, $user->id);
+            $request->session()->put(ValidateWebSessionVersion::VERSION, $user->token_version);
         }
 
         $redirectPath = $this->getRedirectPath($user);
@@ -102,10 +109,28 @@ final class AuthController extends Controller
         return redirect()->intended($redirectPath);
     }
 
-    public function refresh(): JsonResponse
+    public function refresh(Request $request): JsonResponse
     {
+        $token = $request->bearerToken();
+        if (! $token) {
+            return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
+        }
+
+        $manager = app('tymon.jwt.manager');
         try {
-            $newToken = JWTAuth::parseToken()->refresh();
+            // The legacy JWT refresh window can outlive access-token expiry.
+            // Check its signed claims and current account before rotating it.
+            $manager->setRefreshFlow();
+            $payload = $manager->decode(new Token($token));
+            $user = User::find($payload->get('sub'));
+            if (! $user || ! $user->is_active || ! is_int($payload->get('ver'))
+                || $payload->get('ver') !== $user->token_version
+                || ! JWTAuth::setToken($token)->checkSubjectModel($user)) {
+                return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
+            }
+
+            $newToken = JWTAuth::setToken($token)->claims($user->getJWTCustomClaims())->refresh();
+
             return response()->json([
                 'token' => $newToken,
                 'token_type' => 'bearer',
@@ -113,6 +138,8 @@ final class AuthController extends Controller
             ]);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
+        } finally {
+            $manager->setRefreshFlow(false);
         }
     }
 
@@ -124,9 +151,11 @@ final class AuthController extends Controller
             // Ignore if token already invalid
         }
 
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        if ($request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json(['message' => 'Berhasil keluar.']);
@@ -139,7 +168,7 @@ final class AuthController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 

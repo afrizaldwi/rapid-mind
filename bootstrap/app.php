@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->web(append: [
+            \App\Http\Middleware\ValidateWebSessionVersion::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 

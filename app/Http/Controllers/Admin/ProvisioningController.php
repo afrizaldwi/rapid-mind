@@ -95,11 +95,13 @@ final class ProvisioningController extends Controller
                 $this->assertActiveAssignment($role, (int) $data[$field]);
             }
             $oldAssignment = $user->$field;
+            $wasActive = $user->is_active;
             $user->update([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 $field => $data[$field],
                 'is_active' => $data['is_active'],
+                ...($wasActive && ! $data['is_active'] ? ['token_version' => $user->token_version + 1] : []),
                 ...($role === UserRole::RELAWAN ? ['phone_number' => $data['phone_number']] : []),
             ]);
             if ((int) $oldAssignment !== (int) $data[$field]) {

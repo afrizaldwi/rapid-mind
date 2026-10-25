@@ -54,7 +54,7 @@ final class BroadcastChannelAuthorizationTest extends TestCase
         $this->authorize('App.Models.User.' . $other->id)->assertForbidden();
 
         $user->update(['is_active' => false]);
-        $this->authorize('App.Models.User.' . $user->id)->assertForbidden();
+        $this->authorize('App.Models.User.' . $user->id)->assertUnauthorized();
 
         auth()->logout();
         $this->authorize('App.Models.User.' . $user->id)->assertForbidden();
@@ -76,7 +76,7 @@ final class BroadcastChannelAuthorizationTest extends TestCase
         $this->authorize('emergencies')->assertOk();
 
         $healthcare->update(['is_active' => false]);
-        $this->authorize('emergencies')->assertForbidden();
+        $this->authorize('emergencies')->assertUnauthorized();
 
         $this->actingAs($relawan);
         $this->authorize('emergencies')->assertForbidden();
@@ -124,7 +124,7 @@ final class BroadcastChannelAuthorizationTest extends TestCase
         $healthcare->update(['facility_id' => null]);
         $this->authorize('healthcare.facility.' . $facility->id)->assertForbidden();
         $healthcare->update(['facility_id' => $facility->id, 'is_active' => false]);
-        $this->authorize('healthcare.facility.' . $facility->id)->assertForbidden();
+        $this->authorize('healthcare.facility.' . $facility->id)->assertUnauthorized();
 
         $this->actingAs(User::factory()->create(
             ['role' => UserRole::RELAWAN, 'is_active' => true]

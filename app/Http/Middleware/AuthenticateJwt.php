@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,27 +16,43 @@ final class AuthenticateJwt
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // 1. Try to authenticate via standard JWT Bearer header
-        try {
-            if ($user = JWTAuth::parseToken()->authenticate()) {
-                if (!$user->is_active) {
-                    return $this->unauthorized($request, 'Akun Anda sedang nonaktif. Hubungi Admin.');
-                }
-
-                Auth::setUser($user);
-                return $next($request);
+        $authorization = $request->header('Authorization');
+        if ($authorization !== null || $request->is('api/*')) {
+            $token = $request->bearerToken();
+            if (! $token) {
+                return $this->unauthorized($request, 'Sesi berakhir. Silakan masuk kembali.');
             }
-        } catch (JWTException) {
-            // Header JWT token missing or invalid, fall back to web session if available
+
+            try {
+                $jwt = JWTAuth::setToken($token);
+                $payload = $jwt->getPayload();
+                $user = User::find($payload->get('sub'));
+                $version = $payload->get('ver');
+                if (! $user || ! $user->is_active || ! is_int($version)
+                    || $version !== $user->token_version || ! $jwt->checkSubjectModel($user)) {
+                    return $this->unauthorized($request, 'Sesi berakhir. Silakan masuk kembali.');
+                }
+            } catch (JWTException) {
+                return $this->unauthorized($request, 'Sesi berakhir. Silakan masuk kembali.');
+            }
+
+            if (! $request->is('api/*') && Auth::guard('web')->check()
+                && Auth::guard('web')->id() !== $user->id) {
+                return $this->unauthorized($request, 'Sesi berakhir. Silakan masuk kembali.');
+            }
+
+            if ($request->is('api/*')) {
+                Auth::guard('api')->setUser($user);
+                Auth::shouldUse('api');
+            } else {
+                Auth::guard('web')->setUser($user);
+            }
+
+            return $next($request);
         }
 
-        // 2. Check if web session user exists (for Inertia browser page navigation)
+        // Browser navigation uses only the version-bound web session.
         if (Auth::guard('web')->check()) {
-            $user = Auth::guard('web')->user();
-            if (!$user->is_active) {
-                Auth::guard('web')->logout();
-                return $this->unauthorized($request, 'Akun Anda sedang nonaktif. Hubungi Admin.');
-            }
             return $next($request);
         }
 
