@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 // Public & Auth Routes
 Route::get('/', [AuthController::class, 'showLogin'])->name('home');
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:web-login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Web App Manifest fallbacks (ensuring valid JSON and 200 OK across dev/prod environments)
