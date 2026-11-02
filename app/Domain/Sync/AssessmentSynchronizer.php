@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sync;
 
+use App\Domain\Assessment\SrqAnswer;
 use App\Domain\Triage\TriageCalculator;
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
@@ -55,9 +56,15 @@ final class AssessmentSynchronizer
                 $assessment->mode = AssessmentMode::from($data['mode']);
                 $assessment->save();
             }
+            if (array_key_exists('non_verbal_reasons', $data)) {
+                $assessment->update([
+                    'non_verbal_reasons' => $data['non_verbal_reasons'],
+                    'non_verbal_other_note' => $data['non_verbal_other_note'] ?? null,
+                ]);
+            }
 
             foreach ($data['srq_answers'] ?? [] as $question => $answer) {
-                SrqResponse::updateOrCreate(['assessment_id' => $assessment->id, 'question_number' => (int) $question], ['answer' => $answer]);
+                SrqResponse::updateOrCreate(['assessment_id' => $assessment->id, 'question_number' => (int) $question], SrqAnswer::storage($answer));
             }
             $weights = ['R1' => 2, 'R2' => 2, 'R3' => 1, 'R4' => 2, 'R5' => 1];
             foreach ($data['risk_indicators'] ?? [] as $indicator => $answer) {
@@ -69,7 +76,7 @@ final class AssessmentSynchronizer
 
             if ($data['status'] === AssessmentStatus::COMPLETED->value) {
                 $result = $this->calculator->calculate(
-                    array_map('boolval', $data['srq_answers']),
+                    SrqAnswer::definitive($data['srq_answers']),
                     $data['risk_indicators'],
                     $data['function_domains'],
                 );
@@ -94,8 +101,16 @@ final class AssessmentSynchronizer
     {
         if ($assessment->mode->value !== $data['mode']) return false;
         $actual = $this->canonical($assessment);
+        // Omitted metadata is a compatibility-preserving no-op; an explicit
+        // empty list is a conflicting edit once the assessment is completed.
+        if (array_key_exists('non_verbal_reasons', $data)
+            && ($actual['non_verbal_reasons'] !== $data['non_verbal_reasons']
+                || $actual['non_verbal_other_note'] !== ($data['non_verbal_other_note'] ?? null))) {
+            return false;
+        }
         foreach (['srq_answers', 'risk_indicators', 'function_domains'] as $field) {
             $expected = $data[$field] ?? [];
+            if ($field === 'srq_answers') $expected = array_map(SrqAnswer::normalize(...), $expected);
             $stored = $actual[$field];
             ksort($expected);
             ksort($stored);
@@ -112,7 +127,9 @@ final class AssessmentSynchronizer
             'patient' => $assessment->patient->only(['id', 'nik', 'name', 'age', 'gender', 'shelter_id']),
             'mode' => $assessment->mode->value,
             'status' => $assessment->status->value,
-            'srq_answers' => $assessment->srqResponses->pluck('answer', 'question_number')->all(),
+            'non_verbal_reasons' => $assessment->non_verbal_reasons ?? [],
+            'non_verbal_other_note' => $assessment->non_verbal_other_note,
+            'srq_answers' => $assessment->srqResponses->mapWithKeys(fn (SrqResponse $response) => [$response->question_number => $response->responseValue()])->all(),
             'risk_indicators' => $assessment->riskAssessment->pluck('answer', 'indicator')->all(),
             'function_domains' => $assessment->functionAssessment->pluck('level', 'domain')->all(),
             'triage_result' => $assessment->triageResult?->only(['srq_score', 'risk_score', 'function_score', 'total_score', 'system_recommendation', 'is_red_flag_override', 'red_flag_source']),

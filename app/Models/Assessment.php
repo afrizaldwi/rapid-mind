@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Assessment extends Model
 {
     use HasUuids;
-    protected $fillable = ['patient_id', 'user_id', 'status', 'mode', 'started_at', 'completed_at'];
+    protected $fillable = ['patient_id', 'user_id', 'status', 'mode', 'started_at', 'completed_at', 'non_verbal_reasons', 'non_verbal_other_note'];
     protected function casts(): array
     {
         return [
@@ -16,6 +16,7 @@ class Assessment extends Model
             'mode' => \App\Enums\AssessmentMode::class,
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'non_verbal_reasons' => 'array',
         ];
     }
     public function patient()

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Relawan;
 
 use App\Domain\Assessment\AssessmentResume;
+use App\Domain\Assessment\NonVerbalObservations;
+use App\Domain\Assessment\SrqAnswer;
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
@@ -179,7 +181,7 @@ final class RelawanController extends Controller
     {
         $assessment = $this->assessmentShell($assessmentId, ['patient', 'srqResponses']);
 
-        $existingResponses = $assessment?->srqResponses->pluck('answer', 'question_number')->toArray() ?? [];
+        $existingResponses = $assessment?->srqResponses->mapWithKeys(fn (SrqResponse $response) => [$response->question_number => $response->responseValue()])->all() ?? [];
 
         return Inertia::render('Relawan/Assessment/Srq', [
             'assessment' => $assessment,
@@ -193,24 +195,31 @@ final class RelawanController extends Controller
         $assessment = $this->ownedAssessment($assessmentId);
 
         $validated = $request->validate([
+            ...NonVerbalObservations::rules(),
             'responses' => ['required', 'array', 'size:20'],
             'responses.*' => ['required', 'array:question_number,answer'],
             'responses.*.question_number' => ['required', 'integer', 'between:1,20', 'distinct:strict'],
-            'responses.*.answer' => ['required', function ($attribute, $value, $fail) {
-                if (!is_bool($value)) $fail('Jawaban SRQ harus Ya atau Tidak.');
-            }],
+            'responses.*.answer' => ['required', SrqAnswer::rule()],
             'mode' => ['nullable', 'string', 'in:VERBAL,NON_VERBAL'],
         ]);
+        $validated = NonVerbalObservations::normalize($validated);
 
         DB::transaction(function () use ($assessment, $validated) {
+            $assessment = $this->editableAssessment($assessment->id);
             if (isset($validated['mode'])) {
                 $assessment->update(['mode' => AssessmentMode::from($validated['mode'])]);
+            }
+            if (array_key_exists('non_verbal_reasons', $validated)) {
+                $assessment->update([
+                    'non_verbal_reasons' => $validated['non_verbal_reasons'],
+                    'non_verbal_other_note' => $validated['non_verbal_other_note'],
+                ]);
             }
 
             foreach ($validated['responses'] as $resp) {
                 SrqResponse::updateOrCreate(
                     ['assessment_id' => $assessment->id, 'question_number' => $resp['question_number']],
-                    ['answer' => $resp['answer']]
+                    SrqAnswer::storage($resp['answer'])
                 );
             }
         });
@@ -245,6 +254,7 @@ final class RelawanController extends Controller
         $weights = ['R1' => 2, 'R2' => 2, 'R3' => 1, 'R4' => 2, 'R5' => 1];
 
         DB::transaction(function () use ($assessment, $validated, $weights) {
+            $assessment = $this->editableAssessment($assessment->id);
             foreach ($validated['risks'] as $indicator => $answer) {
                 RiskResponse::updateOrCreate(
                     ['assessment_id' => $assessment->id, 'indicator' => $indicator],
@@ -281,6 +291,7 @@ final class RelawanController extends Controller
         ]);
 
         DB::transaction(function () use ($assessment, $validated) {
+            $assessment = $this->editableAssessment($assessment->id);
             foreach ($validated['functions'] as $domain => $level) {
                 FunctionResponse::updateOrCreate(
                     ['assessment_id' => $assessment->id, 'domain' => $domain],
@@ -299,7 +310,7 @@ final class RelawanController extends Controller
         return Inertia::render('Relawan/Assessment/Review', [
             'assessment' => $assessment,
             'patient' => $assessment?->patient,
-            'srqResponses' => $assessment?->srqResponses->pluck('answer', 'question_number') ?? [],
+            'srqResponses' => $assessment?->srqResponses->mapWithKeys(fn (SrqResponse $response) => [$response->question_number => $response->responseValue()]) ?? [],
             'riskResponses' => $assessment?->riskAssessment->pluck('answer', 'indicator') ?? [],
             'functionResponses' => $assessment?->functionAssessment->pluck('level', 'domain') ?? [],
         ]);
@@ -307,41 +318,47 @@ final class RelawanController extends Controller
 
     public function completeAssessment(Request $request, string $assessmentId, TriageCalculator $calculator): JsonResponse|RedirectResponse
     {
-        $assessment = $this->ownedAssessment($assessmentId, ['srqResponses', 'riskAssessment', 'functionAssessment']);
+        $this->ownedAssessment($assessmentId);
+        $result = DB::transaction(function () use ($assessmentId, $calculator) {
+            $assessment = $this->editableAssessment($assessmentId);
+            $assessment->load(['srqResponses', 'riskAssessment', 'functionAssessment']);
 
-        if (
-            !$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
-            || !$this->hasExactResponseSet($assessment->riskAssessment, ['R1', 'R2', 'R3', 'R4', 'R5'], 'indicator', 'answer', [true, false])
-            || !$this->hasExactResponseSet($assessment->functionAssessment, ['F1', 'F2', 'F3'], 'domain', 'level', [0, 1, 3])
-        ) {
-            throw ValidationException::withMessages([
-                'assessment' => 'Asesmen belum lengkap atau memiliki jawaban tidak valid. Periksa SRQ-20, faktor risiko, dan fungsi harian.',
+            if (
+                !$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
+                || !$this->hasExactResponseSet($assessment->riskAssessment, ['R1', 'R2', 'R3', 'R4', 'R5'], 'indicator', 'answer', [true, false])
+                || !$this->hasExactResponseSet($assessment->functionAssessment, ['F1', 'F2', 'F3'], 'domain', 'level', [0, 1, 3])
+            ) {
+                throw ValidationException::withMessages([
+                    'assessment' => 'Asesmen belum lengkap atau memiliki jawaban tidak valid. Periksa SRQ-20, faktor risiko, dan fungsi harian.',
+                ]);
+            }
+
+            $srqMap = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
+            $riskMap = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
+            $functionMap = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
+
+            $result = $calculator->calculate($srqMap, $riskMap, $functionMap);
+
+            TriageResult::updateOrCreate(
+                ['assessment_id' => $assessment->id],
+                [
+                    'srq_score' => $result->srqScore,
+                    'risk_score' => $result->riskScore,
+                    'function_score' => $result->functionScore,
+                    'total_score' => $result->totalScore,
+                    'system_recommendation' => $result->recommendation,
+                    'is_red_flag_override' => $result->isRedFlagOverride,
+                    'red_flag_source' => $result->redFlagSource,
+                ]
+            );
+
+            $assessment->update([
+                'status' => AssessmentStatus::COMPLETED,
+                'completed_at' => now(),
             ]);
-        }
 
-        $srqMap = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
-        $riskMap = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
-        $functionMap = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
-
-        $result = $calculator->calculate($srqMap, $riskMap, $functionMap);
-
-        TriageResult::updateOrCreate(
-            ['assessment_id' => $assessment->id],
-            [
-                'srq_score' => $result->srqScore,
-                'risk_score' => $result->riskScore,
-                'function_score' => $result->functionScore,
-                'total_score' => $result->totalScore,
-                'system_recommendation' => $result->recommendation,
-                'is_red_flag_override' => $result->isRedFlagOverride,
-                'red_flag_source' => $result->redFlagSource,
-            ]
-        );
-
-        $assessment->update([
-            'status' => AssessmentStatus::COMPLETED,
-            'completed_at' => now(),
-        ]);
+            return $result;
+        });
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -350,7 +367,7 @@ final class RelawanController extends Controller
             ]);
         }
 
-        return redirect("/relawan/assessment/{$assessment->id}/result");
+        return redirect("/relawan/assessment/{$assessmentId}/result");
     }
 
     private function hasExactResponseSet($responses, array $expectedKeys, string $key, string $value, array $allowedValues): bool
@@ -378,6 +395,16 @@ final class RelawanController extends Controller
             'triageResult' => $assessment?->triageResult,
             'existingEmergency' => $existingEmergency,
         ]);
+    }
+
+    /** Called inside the same transaction as every legacy assessment write. */
+    private function editableAssessment(string $assessmentId): Assessment
+    {
+        $assessment = Assessment::whereKey($assessmentId)
+            ->where('user_id', Auth::id())->lockForUpdate()->firstOrFail();
+        abort_if($assessment->status === AssessmentStatus::COMPLETED, 409, 'Asesmen selesai tidak dapat diubah.');
+
+        return $assessment;
     }
 
     private function ownedAssessment(string $assessmentId, array $relations = []): Assessment

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Sync;
 
+use App\Domain\Assessment\NonVerbalObservations;
+use App\Domain\Assessment\SrqAnswer;
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
 use App\Enums\RedFlagType;
@@ -29,6 +31,7 @@ final class SyncPayload
     {
         $completed = $request->input('status') === AssessmentStatus::COMPLETED->value;
         $rules = [
+            ...NonVerbalObservations::rules(),
             'id' => ['required', 'uuid'],
             ...self::patientRules(true),
             'mode' => ['required', Rule::enum(AssessmentMode::class)],
@@ -40,14 +43,15 @@ final class SyncPayload
             'risk_indicators' => [$completed ? 'required' : 'sometimes', 'array:R1,R2,R3,R4,R5', ...($completed ? ['size:5'] : [])],
             'function_domains' => [$completed ? 'required' : 'sometimes', 'array:F1,F2,F3', ...($completed ? ['size:3'] : [])],
         ];
-        foreach (range(1, 20) as $n) $rules["srq_answers.$n"] = [$completed ? 'required' : 'sometimes', 'boolean'];
+        foreach (range(1, 20) as $n) $rules["srq_answers.$n"] = [$completed ? 'required' : 'sometimes', SrqAnswer::rule($completed)];
         foreach (['R1', 'R2', 'R3', 'R4', 'R5'] as $key) $rules["risk_indicators.$key"] = [$completed ? 'required' : 'sometimes', 'boolean'];
         foreach (['F1', 'F2', 'F3'] as $key) $rules["function_domains.$key"] = [$completed ? 'required' : 'sometimes', 'integer', Rule::in([0, 1, 3])];
-        $data = $request->validate($rules);
-        foreach (['srq_answers', 'risk_indicators'] as $group) {
-            foreach ($data[$group] ?? [] as $value) {
-                if (!is_bool($value)) throw ValidationException::withMessages([$group => 'Jawaban harus Ya atau Tidak.']);
-            }
+        $data = NonVerbalObservations::normalize($request->validate($rules));
+        foreach ($data['srq_answers'] ?? [] as $question => $answer) {
+            $data['srq_answers'][$question] = SrqAnswer::normalize($answer);
+        }
+        foreach ($data['risk_indicators'] ?? [] as $value) {
+            if (!is_bool($value)) throw ValidationException::withMessages(['risk_indicators' => 'Jawaban harus Ya atau Tidak.']);
         }
         foreach ($data['function_domains'] ?? [] as $value) {
             if (!is_int($value)) throw ValidationException::withMessages(['function_domains' => 'Nilai fungsi harus bilangan bulat.']);
