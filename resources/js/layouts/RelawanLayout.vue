@@ -28,14 +28,27 @@
             </button>
         </div>
     </div>
+    <div
+        v-else-if="ownerStorageMode === 'CHECKING'"
+        class="min-h-screen bg-slate-100 p-6 text-slate-900"
+        role="status"
+    >
+        Memeriksa penyimpanan perangkat…
+    </div>
     <OfflineEncryptionGate
-        v-else-if="isolatedEncryptionFixture() && currentOwner && !clinicalUnlocked"
+        v-else-if="
+            currentOwner &&
+            ownerStorageMode === 'ENCRYPTED' &&
+            !clinicalUnlocked
+        "
         :key="currentOwner"
         :owner="currentOwner"
         @unlocked="onClinicalUnlocked"
     />
     <div
         v-else
+        ref="clinicalViewRoot"
+        :key="clinicalViewKey"
         class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
         :class="isFocusedAssessment ? 'pb-0' : 'pb-20'"
     >
@@ -78,6 +91,16 @@
 
         <!-- Main Content Area -->
         <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
+            <OfflineEncryptionGate
+                v-if="
+                    isolatedEncryptionFixture() &&
+                    ownerStorageMode === 'LEGACY' &&
+                    currentOwner &&
+                    !clinicalUnlocked
+                "
+                :owner="currentOwner"
+                @unlocked="onClinicalUnlocked"
+            />
             <p
                 v-if="logoutError"
                 role="alert"
@@ -218,7 +241,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { BookOpen, ClipboardList, FolderOpen, House, LogOut } from "lucide-vue-next";
+import {
+    BookOpen,
+    ClipboardList,
+    FolderOpen,
+    House,
+    LogOut,
+} from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
 import { router } from "@inertiajs/vue3";
 import { useRelawanRuntime } from "@/relawan/runtime";
@@ -232,7 +261,12 @@ import { assessmentRepository } from "@/offline/assessmentRepository";
 import { patientRepository } from "@/offline/patientRepository";
 import RelawanStatusDataSheet from "@/components/Relawan/RelawanStatusDataSheet.vue";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
-import { clinicalKeyReady, lockAllClinicalKeys } from "@/offline/encryptedClinicalStorage";
+import {
+    clinicalKeyReady,
+    clinicalKeyVersion,
+    encryptedMode,
+    lockAllClinicalKeys,
+} from "@/offline/encryptedClinicalStorage";
 import { isolatedEncryptionFixture } from "@/offline/offlineKeyWorkflow";
 import { syncManager } from "@/offline/syncManager";
 import { useRelawanOperationalStatus } from "@/composables/useRelawanOperationalStatus";
@@ -262,11 +296,21 @@ const currentOwner = computed(() =>
         ? Number(user.value.id) || null
         : null,
 );
-const clinicalUnlockTick = ref(0);
-const clinicalUnlocked = computed(() => {
-    void clinicalUnlockTick.value;
-    return currentOwner.value ? clinicalKeyReady(currentOwner.value) : false;
-});
+const clinicalViewRoot = ref<HTMLElement | null>(null);
+const ownerStorageMode = ref<"CHECKING" | "LEGACY" | "ENCRYPTED">("CHECKING");
+const clinicalUnlocked = computed(() =>
+    currentOwner.value ? clinicalKeyReady(currentOwner.value) : false,
+);
+const clinicalViewKey = computed(
+    () => `${currentOwner.value}:${clinicalKeyVersion()}`,
+);
+function maskClinicalView() {
+    if (clinicalViewRoot.value) {
+        clinicalViewRoot.value.style.display = "none";
+        clinicalViewRoot.value.setAttribute("aria-hidden", "true");
+    }
+}
+let storageModeCheck = 0;
 const activeLocalId = ref<string | null>(null);
 const showStatusSheet = ref(false);
 const loggedOutLocally = ref(false);
@@ -274,12 +318,28 @@ const checkingContinuity = ref(runtime.mode === "ONLINE_SERVER");
 const logoutError = ref("");
 let continuityCheck = 0;
 let offlineContinuitySubscription: Subscription | undefined;
+function refreshOwnerStorageMode(owner: number | null) {
+    const check = ++storageModeCheck;
+    ownerStorageMode.value = "CHECKING";
+    if (!owner) return;
+    void encryptedMode(owner)
+        .then((encrypted) => {
+            if (check === storageModeCheck && owner === currentOwner.value)
+                ownerStorageMode.value = encrypted ? "ENCRYPTED" : "LEGACY";
+        })
+        .catch(() => {
+            // Unknown mode must never expose a possibly encrypted clinical view.
+        });
+}
+watch(currentOwner, refreshOwnerStorageMode, {
+    immediate: true,
+    flush: "sync",
+});
 const status = useRelawanOperationalStatus(
     currentOwner,
     computed(() => runtime.mode === "ONLINE_SERVER"),
 );
 function onClinicalUnlocked() {
-    clinicalUnlockTick.value++;
     status.refresh();
     if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
         void syncManager.sync(currentOwner.value).catch(() => {});
@@ -325,9 +385,12 @@ const compactStatusLabel = computed(() => {
 const isDataRoute = computed(
     () => runtime.path.split("?")[0] === "/relawan/data",
 );
-const isFocusedAssessment = computed(() =>
-    runtime.path.split("?")[0] !== "/relawan/assessment/drafts" &&
-    /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(runtime.path.split("?")[0]),
+const isFocusedAssessment = computed(
+    () =>
+        runtime.path.split("?")[0] !== "/relawan/assessment/drafts" &&
+        /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(
+            runtime.path.split("?")[0],
+        ),
 );
 const recoveryMessage = computed(() => {
     if (runtime.mode === "ONLINE_SERVER") {
@@ -388,9 +451,11 @@ const recoveryMessage = computed(() => {
 });
 
 const assessmentRoute = computed(() =>
-    runtime.path.split("?")[0].match(
-        /^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/,
-    ),
+    runtime.path
+        .split("?")[0]
+        .match(
+            /^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/,
+        ),
 );
 const serverAssessmentContext = computed(() => {
     const route = assessmentRoute.value;
@@ -426,6 +491,7 @@ const showEmergencyModal = ref(false);
 let emergencyOpenCheck = 0;
 async function openEmergencyModal() {
     const check = ++emergencyOpenCheck;
+    const keyVersion = clinicalKeyVersion();
     const path = runtime.path;
     const owner = currentOwner.value;
     t0AssessmentContext.value = null;
@@ -457,7 +523,12 @@ async function openEmergencyModal() {
             }
         }
     }
-    if (check !== emergencyOpenCheck || path !== runtime.path || owner !== currentOwner.value) {
+    if (
+        check !== emergencyOpenCheck ||
+        keyVersion !== clinicalKeyVersion() ||
+        path !== runtime.path ||
+        owner !== currentOwner.value
+    ) {
         return;
     }
     t0AssessmentContext.value = context;
@@ -468,12 +539,30 @@ watch([() => runtime.path, currentOwner], () => {
     showEmergencyModal.value = false;
     t0AssessmentContext.value = null;
 });
-watch(currentOwner, (owner, prior) => {
-    if (prior && owner !== prior) {
-        lockAllClinicalKeys();
-        clinicalUnlockTick.value++;
-    }
-});
+watch(
+    clinicalKeyVersion,
+    () => {
+        // Hide synchronously; Vue then unmounts the old view on its next render.
+        maskClinicalView();
+        refreshOwnerStorageMode(currentOwner.value);
+        ++emergencyOpenCheck;
+        showEmergencyModal.value = false;
+        t0AssessmentContext.value = null;
+        activeLocalId.value = null;
+        showStatusSheet.value = false;
+    },
+    { flush: "sync" },
+);
+watch(
+    currentOwner,
+    (owner, prior) => {
+        if (prior && owner !== prior) {
+            maskClinicalView();
+            lockAllClinicalKeys();
+        }
+    },
+    { flush: "sync" },
+);
 function isRoute(path: string) {
     return runtime.path.startsWith(path);
 }
@@ -530,13 +619,19 @@ function onEmergencyCreated(event: Event) {
 watch(
     currentOwner,
     (owner) => {
+        const keyVersion = clinicalKeyVersion();
         activeLocalId.value = null;
         showStatusSheet.value = false;
         if (!owner || /^\/relawan\/emergencies\//.test(runtime.path)) return;
         void emergencyRepository
             .list(owner)
             .then((items) => {
-                if (owner !== currentOwner.value || activeLocalId.value) return;
+                if (
+                    owner !== currentOwner.value ||
+                    keyVersion !== clinicalKeyVersion() ||
+                    activeLocalId.value
+                )
+                    return;
                 const pending = items.filter(
                     (item) =>
                         item.status === "PENDING" &&

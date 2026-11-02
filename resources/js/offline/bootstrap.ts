@@ -1,11 +1,17 @@
 import "@/../css/app.css";
 import { createApp, h } from "vue";
 import { resolveRelawanContinuity } from "./relawanContinuity";
-import { resolveOfflineRoute } from "@/relawan/offlineRoutes";
+import {
+    resolveOfflineRoute,
+    type OfflineRouteResult,
+} from "@/relawan/offlineRoutes";
 import { relawanRuntimeKey, type RelawanRuntime } from "@/relawan/runtime";
 import { startRelawanSessionRecovery } from "./sessionRecovery";
-import { clinicalKeyReady, encryptedMode } from "./encryptedClinicalStorage";
-import { isolatedEncryptionFixture } from "./offlineKeyWorkflow";
+import {
+    clinicalKeyReady,
+    clinicalKeyVersion,
+    encryptedMode,
+} from "./encryptedClinicalStorage";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
 
 const target = document.getElementById("offline-state");
@@ -31,40 +37,47 @@ async function start() {
         return;
     }
     try {
-        if (isolatedEncryptionFixture() &&
-            await encryptedMode(continuity.context.owner_user_id) &&
-            !clinicalKeyReady(continuity.context.owner_user_id)) {
-            const gateHost = document.createElement("div");
-            target.replaceChildren(gateHost);
-            await new Promise<void>((resolve) => {
-                const gate = createApp({
-                    render: () => h(OfflineEncryptionGate, {
-                        owner: continuity.context.owner_user_id,
-                        onUnlocked: () => {
-                            gate.unmount();
-                            target.replaceChildren();
-                            resolve();
-                        },
-                    }),
-                });
-                gate.mount(gateHost);
-            });
-        }
-        const route = await resolveOfflineRoute(
-            continuity.context.owner_user_id,
-            window.location.pathname,
-        );
-        const stillEligible = await resolveRelawanContinuity();
-        if (
-            stillEligible.state !== "ELIGIBLE" ||
-            stillEligible.context.owner_user_id !==
-                continuity.context.owner_user_id
-        ) {
-            message(
-                "Akses lapangan belum tersedia",
-                "Masuk kembali saat terhubung ke internet. Data lokal tetap dipertahankan.",
-            );
-            return;
+        const owner = continuity.context.owner_user_id;
+        let route: OfflineRouteResult;
+        for (;;) {
+            const encrypted = await encryptedMode(owner);
+            if (encrypted && !clinicalKeyReady(owner))
+                await waitForOfflineUnlock(owner);
+            const version = clinicalKeyVersion();
+            try {
+                route = await resolveOfflineRoute(
+                    owner,
+                    window.location.pathname,
+                );
+            } catch (error) {
+                if (
+                    encrypted &&
+                    (version !== clinicalKeyVersion() ||
+                        !clinicalKeyReady(owner))
+                )
+                    continue;
+                throw error;
+            }
+            const stillEligible = await resolveRelawanContinuity();
+            if (
+                stillEligible.state !== "ELIGIBLE" ||
+                stillEligible.context.owner_user_id !== owner
+            ) {
+                message(
+                    "Akses lapangan belum tersedia",
+                    "Masuk kembali saat terhubung ke internet. Data lokal tetap dipertahankan.",
+                );
+                return;
+            }
+            const modeNow = await encryptedMode(owner);
+            if (
+                modeNow !== encrypted ||
+                (modeNow &&
+                    (version !== clinicalKeyVersion() ||
+                        !clinicalKeyReady(owner)))
+            )
+                continue;
+            break;
         }
         if ("unavailable" in route) {
             message("Halaman tidak tersedia", route.unavailable);
@@ -97,5 +110,24 @@ async function start() {
             "Penyimpanan lokal atau halaman ini belum dapat dibuka. Data yang tersimpan tetap dipertahankan.",
         );
     }
+}
+function waitForOfflineUnlock(owner: number): Promise<void> {
+    if (!target) return Promise.resolve();
+    const gateHost = document.createElement("div");
+    target.replaceChildren(gateHost);
+    return new Promise<void>((resolve) => {
+        const gate = createApp({
+            render: () =>
+                h(OfflineEncryptionGate, {
+                    owner,
+                    onUnlocked: () => {
+                        gate.unmount();
+                        target.replaceChildren();
+                        resolve();
+                    },
+                }),
+        });
+        gate.mount(gateHost);
+    });
 }
 void start();

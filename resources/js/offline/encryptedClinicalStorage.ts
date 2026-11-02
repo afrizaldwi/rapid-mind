@@ -5,9 +5,21 @@ import {
     type EncryptedStagingRecord,
 } from "./db";
 import type { OfflineKeySession } from "./offlineCrypto";
+import { shallowRef } from "vue";
 
 const activeSessions = new Map<number, OfflineKeySession>();
 let accessEpoch = 0;
+const keyGeneration = shallowRef(0);
+
+// Reading this function inside a Vue computed/watch tracks every key change.
+// The generation also lets asynchronous clinical reads reject stale results.
+export function clinicalKeyVersion(): number {
+    return keyGeneration.value;
+}
+
+function publishKeyChange(): void {
+    keyGeneration.value++;
+}
 const modeChannel =
     typeof BroadcastChannel === "undefined"
         ? null
@@ -38,20 +50,25 @@ export async function installClinicalKey(
         if (owner !== session.owner) activeSessions.delete(owner);
     }
     activeSessions.set(session.owner, session);
+    publishKeyChange();
 }
 
 export function lockClinicalKey(owner: number): void {
     accessEpoch++;
     activeSessions.get(owner)?.lock();
     activeSessions.delete(owner);
+    publishKeyChange();
 }
 
 export function lockAllClinicalKeys(): void {
     accessEpoch++;
-    for (const owner of activeSessions.keys()) lockClinicalKey(owner);
+    for (const session of activeSessions.values()) session.lock();
+    activeSessions.clear();
+    publishKeyChange();
 }
 
 export function clinicalKeyReady(owner: number): boolean {
+    void keyGeneration.value;
     return activeSessions.get(owner)?.unlocked === true;
 }
 
