@@ -65,6 +65,134 @@ const route = async (page, path) => {
 const visible = (page, value) =>
     page.evaluate((text) => document.body.innerText.includes(text), value);
 
+// Real repositories + SyncManager, mocked transport, synthetic profile only.
+async function assertTimeoutPreservation(owner) {
+    const tab = await context.newPage();
+    await tab.goto(`${origin}/tests/Browser/stagingBlank.html`);
+    const result = await tab.evaluate(async (owner) => {
+        const { createLocalEmergency } =
+            await import("/resources/js/offline/emergencyWorkflow.ts");
+        const { outboxRepository } =
+            await import("/resources/js/offline/outboxRepository.ts");
+        const { emergencyRepository } =
+            await import("/resources/js/offline/emergencyRepository.ts");
+        const { syncManager } =
+            await import("/resources/js/offline/syncManager.ts");
+        const { emergencyDeliveryStatus } =
+            await import("/resources/js/lib/emergencyDelivery.ts");
+        if (owner === 101) {
+            const { unlockOwnerKey } =
+                await import("/resources/js/offline/offlineEncryptionStaging.ts");
+            const { installClinicalKey } =
+                await import("/resources/js/offline/encryptedClinicalStorage.ts");
+            await installClinicalKey(
+                await unlockOwnerKey(
+                    owner,
+                    "frasa sandi sintetik panjang untuk relawan",
+                    "passphrase",
+                ),
+            );
+        }
+        const meta = document.createElement("meta");
+        meta.name = "csrf-token";
+        meta.content = "synthetic-only";
+        document.head.append(meta);
+        const id = await createLocalEmergency(owner, {
+            redFlagType: "MEDICAL_CRISIS",
+        });
+        const list = outboxRepository.list.bind(outboxRepository);
+        // Leave older fixtures intact and exercise only this test's new event.
+        outboxRepository.list = async (active) =>
+            (await list(active)).filter((item) => item.entity_id === id);
+        const before = (await list(owner)).find(
+            (item) => item.entity_id === id,
+        );
+        const fetchOriginal = window.fetch;
+        let lateResponse;
+        let aborted = false;
+        let requests = 0;
+        window.fetch = async (_url, options) => {
+            requests++;
+            options.signal.addEventListener("abort", () => {
+                aborted = true;
+            });
+            return await new Promise((resolve) => {
+                lateResponse = resolve;
+            });
+        };
+        const lease = syncManager.setOwner(owner);
+        try {
+            const pending = syncManager.sync(owner);
+            while (!lateResponse)
+                await new Promise((resolve) => setTimeout(resolve, 10));
+            const during = await emergencyRepository.get(owner, id);
+            await pending; // Actual production deadline, no test-only timeout override.
+            const after = await outboxRepository.get(owner, before.id);
+            const failed = await emergencyRepository.get(owner, id);
+            lateResponse(new Response(JSON.stringify({ emergency: { id } })));
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            const afterLate = await outboxRepository.get(owner, before.id);
+            let retryBody;
+            window.fetch = async (_url, options) => {
+                retryBody = options.body;
+                return new Response(
+                    JSON.stringify({
+                        emergency: { id },
+                        realtime_delivered: false,
+                    }),
+                );
+            };
+            await syncManager.sync(owner);
+            const accepted = await emergencyRepository.get(owner, id);
+            return {
+                aborted,
+                requests,
+                during: during.sync_state,
+                preserved: !!after && !!afterLate,
+                sameId: after.id === before.id && after.entity_id === id,
+                sameRevision: after.revision === before.revision,
+                samePayload:
+                    JSON.stringify(after.payload) ===
+                    JSON.stringify(before.payload),
+                priority: after.priority,
+                failed: failed.sync_state,
+                error: after.last_error,
+                retrySameBody: retryBody === JSON.stringify(before.payload),
+                removedAfterCanonical: !(await outboxRepository.get(
+                    owner,
+                    before.id,
+                )),
+                accepted: accepted.sync_state,
+                realtime: accepted.realtime_status,
+                display: emergencyDeliveryStatus(accepted),
+            };
+        } finally {
+            syncManager.clearOwner(lease);
+            window.fetch = fetchOriginal;
+            outboxRepository.list = list;
+        }
+    }, owner);
+    assert.equal(result.aborted, true);
+    assert.equal(result.requests, 1);
+    assert.equal(result.during, "SYNCING");
+    assert.equal(result.preserved, true);
+    assert.equal(result.sameId, true);
+    assert.equal(result.sameRevision, true);
+    assert.equal(result.samePayload, true);
+    assert.equal(result.priority, 1);
+    assert.equal(result.failed, "SYNC_FAILED");
+    assert.match(result.error, /Penerimaan server belum terkonfirmasi/);
+    assert.equal(result.retrySameBody, true);
+    assert.equal(result.removedAfterCanonical, true);
+    assert.equal(result.accepted, "SYNCED");
+    assert.equal(result.realtime, "UNAVAILABLE");
+    assert.match(result.display.realtime, /Healthcare belum terkonfirmasi/);
+    await tab.close();
+    console.log(
+        `PASS: owner ${owner} timeout preserves T0, ID, revision, payload and priority; late response ignored; canonical replay reconciles`,
+    );
+}
+
 try {
     if (
         !inside(tempRoot, buildRoot) ||
@@ -181,6 +309,7 @@ try {
         return { recoveryCode: created.recoveryCode };
     });
 
+    await assertTimeoutPreservation(101);
     await route(page, "/relawan/assessment/assessment-101/srq");
     await page.getByText("Penyintas Sintetis", { exact: true }).waitFor();
     assert.equal(await visible(page, "0000000000000101"), true);
@@ -246,6 +375,17 @@ try {
         return failures;
     });
     assert.deepEqual(lockedRepositories, [true, true, true]);
+    await page
+        .getByRole("heading", {
+            name: "Butuh bantuan darurat saat data terkunci?",
+        })
+        .waitFor();
+    assert.equal(await visible(page, "Jangan menunggu data terbuka"), true);
+    assert.equal(
+        await page.getByRole("button", { name: /KIRIM T0/i }).count(),
+        0,
+    );
+    assert.equal(await page.locator('a[href^="sms:"]').count(), 0);
     console.log(
         "PASS: assessment name, NIK, and answers visible before lock; immediate mask, DOM unmount, and read/write rejection after lock",
     );
@@ -316,6 +456,19 @@ try {
     await emergencyTab.getByRole("button", { name: "Buka data" }).click();
     await emergencyTab.getByText("Nama T0 Sintetis").waitFor();
     assert.equal(await visible(emergencyTab, "Catatan darurat sintetis"), true);
+    const sms = await emergencyTab
+        .locator('a[href^="sms:"]')
+        .getAttribute("href");
+    assert.ok(sms.startsWith("sms:?body="));
+    assert.doesNotMatch(
+        decodeURIComponent(sms),
+        /119|Nama T0 Sintetis|Catatan darurat sintetis|PSYCHOSIS/,
+    );
+    assert.equal(await visible(emergencyTab, "tidak mengirim otomatis"), true);
+    assert.equal(
+        await visible(emergencyTab, "Penerimaan server belum terkonfirmasi"),
+        true,
+    );
     await page.evaluate(async () => {
         const { announceSyntheticModeActivation } =
             await import("/resources/js/offline/encryptedClinicalStorage.ts");
@@ -469,6 +622,7 @@ try {
     console.log(
         "PASS: legacy Relawan owner retains ordinary navigation without a blocking encrypted gate",
     );
+    await assertTimeoutPreservation(102);
     await raceTab.evaluate(async () => {
         const { prepareOwnerKey, stageOwnerPlaintext, activateSyntheticOwner } =
             await import("/resources/js/offline/offlineEncryptionStaging.ts");

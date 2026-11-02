@@ -50,6 +50,8 @@ export interface LocalEmergency {
     created_at: string;
     updated_at: string;
     sync_state: SyncState;
+    // Client-side transport metadata, not clinical acknowledgement.
+    realtime_status?: "UNCONFIRMED" | "UNAVAILABLE";
     last_error?: string;
 }
 export interface OutboxItem {
@@ -220,7 +222,8 @@ export class RapidMindDB extends Dexie {
             encryptedOutboxIndex: "id, owner_user_id",
         });
         this.version(7).stores({
-            localSyncReceipts: "key, owner_user_id, [owner_user_id+type+entity_id]",
+            localSyncReceipts:
+                "key, owner_user_id, [owner_user_id+type+entity_id]",
             outboxIdCounter: "key",
         });
     }
@@ -233,7 +236,8 @@ export async function nextOutboxId(): Promise<number> {
         db.encryptedOutboxIndex.orderBy("id").last(),
         db.outboxIdCounter.get("global"),
     ]);
-    const id = Math.max(plain?.id ?? 0, encrypted?.id ?? 0, counter?.last_id ?? 0) + 1;
+    const id =
+        Math.max(plain?.id ?? 0, encrypted?.id ?? 0, counter?.last_id ?? 0) + 1;
     if (!Number.isSafeInteger(id)) throw new Error("Identitas antrean habis.");
     await db.outboxIdCounter.put({ key: "global", last_id: id });
     return id;

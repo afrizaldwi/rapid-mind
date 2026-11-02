@@ -93,11 +93,13 @@
                 Saya sudah menyimpan kode
             </button>
         </div>
+        <LockedEmergencyGuidance />
     </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
+import LockedEmergencyGuidance from "./LockedEmergencyGuidance.vue";
 import {
     enrollIsolatedOwner,
     enrollmentState,

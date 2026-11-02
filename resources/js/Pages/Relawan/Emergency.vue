@@ -64,13 +64,11 @@
                 >
                     <span class="text-slate-600 font-semibold">Transmisi:</span>
                     <span class="font-semibold text-teal-800 text-xs">
-                        {{
-                            localEmergency
-                                ? transmissionLabel
-                                : "Data berhasil dikirim ke tim kesehatan."
-                        }}
+                        {{ delivery.label }}
                     </span>
                 </div>
+                <p class="text-sm text-slate-700">{{ delivery.detail }}</p>
+                <p class="text-sm text-slate-700">{{ delivery.realtime }}</p>
             </div>
 
             <!-- Safety Protocol Guidelines -->
@@ -127,14 +125,14 @@
             <!-- Native SMS Fallback Handoff Button -->
             <div class="space-y-2">
                 <a
-                    :href="smsHref"
+                    :href="emergencySmsHref"
                     class="w-full flex items-center justify-center space-x-2 py-3.5 px-4 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-md transition"
                 >
                     <Smartphone class="h-4 w-4" aria-hidden="true" />
                     <span>Buka SMS Cadangan (Jika Sinyal Data Terputus)</span>
                 </a>
                 <p class="text-[11px] text-slate-500 text-center">
-                    Periksa dan kirim pesan sendiri di aplikasi SMS.
+                    {{ emergencySmsGuidance }}
                 </p>
             </div>
         </div>
@@ -147,13 +145,17 @@ import { ShieldAlert, Siren, Smartphone } from "lucide-vue-next";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import type { LocalEmergency } from "@/offline/db";
+import {
+    emergencyDeliveryStatus,
+    emergencySmsHref,
+    emergencySmsGuidance,
+} from "@/lib/emergencyDelivery";
 
 const props = defineProps<{
     emergency?: any;
     localEmergency?: LocalEmergency;
 }>();
 const runtime = useRelawanRuntime();
-const localEmergency = computed(() => props.localEmergency);
 const emergency = computed(() =>
     props.localEmergency
         ? {
@@ -171,15 +173,13 @@ const emergency = computed(() =>
 const broadcastWarning = computed(
     () => (runtime.pageProps.flash as { error?: string } | undefined)?.error,
 );
-const transmissionLabel = computed(
-    () =>
-        ({
-            LOCAL_SAVED: "Tersimpan di perangkat",
-            PENDING_SYNC: "Menunggu sinkronisasi",
-            SYNCING: "Menunggu sinkronisasi",
-            SYNC_FAILED: "Sinkronisasi belum berhasil",
-            SYNCED: "Data berhasil dikirim ke tim kesehatan.",
-        })[props.localEmergency?.sync_state ?? "LOCAL_SAVED"],
+const delivery = computed(() =>
+    emergencyDeliveryStatus(
+        props.localEmergency ??
+            (broadcastWarning.value
+                ? { sync_state: "SYNCED", realtime_status: "UNAVAILABLE" }
+                : undefined),
+    ),
 );
 
 function formatRedFlag(rf?: string) {
@@ -194,13 +194,4 @@ function formatRedFlag(rf?: string) {
             return "Kegawatdaruratan Medis & Somatik";
     }
 }
-
-const smsHref = computed(() => {
-    const patient = emergency.value.patient?.name || "Tanpa Nama";
-    const posko = emergency.value.shelter?.name || "Tidak tercatat";
-    const text = encodeURIComponent(
-        `[SOS RAPID-MIND T0] ${emergency.value.red_flag_type}. Pasien: ${patient}. Posko: ${posko}. Butuh evakuasi segera PSC 119.`,
-    );
-    return `sms:119?body=${text}`;
-});
 </script>

@@ -18,22 +18,16 @@
                 <span>Status laporan</span><strong>T0-Suspect</strong>
             </div>
             <div class="flex justify-between gap-3">
-                <span>Transmisi</span><strong>{{ transmission }}</strong>
+                <span>Transmisi</span><strong>{{ delivery.label }}</strong>
             </div>
         </div>
 
         <div
             class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
         >
-            <strong>✓ Aman tersimpan di perangkat.</strong>
-            <p v-if="emergency.sync_state !== 'SYNCED'" class="mt-1">
-                Belum diterima server. Sistem akan mencoba kembali saat koneksi
-                tersedia.
-            </p>
-            <p v-if="emergency.sync_state === 'SYNC_FAILED'" class="mt-1">
-                Sinkronisasi belum berhasil. Insiden tetap tersimpan dengan ID
-                yang sama.
-            </p>
+            <strong>✓ Tersimpan di perangkat.</strong>
+            <p class="mt-1">{{ delivery.detail }}</p>
+            <p class="mt-1">{{ delivery.realtime }}</p>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
@@ -77,12 +71,12 @@
             >Lihat detail laporan T0</a
         >
         <a
-            :href="smsHref"
+            :href="emergencySmsHref"
             class="block rounded-xl bg-slate-800 p-3 text-center font-bold text-white"
             >Buka aplikasi SMS cadangan</a
         >
         <p class="text-center text-xs text-slate-600">
-            Periksa dan kirim pesan sendiri di aplikasi SMS.
+            {{ emergencySmsGuidance }}
         </p>
         <button
             v-if="emergency.sync_state === 'SYNCED'"
@@ -102,6 +96,11 @@ import { liveQuery, type Subscription } from "dexie";
 import { type LocalEmergency } from "@/offline/db";
 import { emergencyRepository } from "@/offline/emergencyRepository";
 import { retryEmergency } from "@/offline/emergencyWorkflow";
+import {
+    emergencyDeliveryStatus,
+    emergencySmsHref,
+    emergencySmsGuidance,
+} from "@/lib/emergencyDelivery";
 
 const props = defineProps<{ owner: number; id: string }>();
 defineEmits<{ (e: "close"): void }>();
@@ -122,15 +121,8 @@ watch(
     { immediate: true },
 );
 
-const transmission = computed(
-    () =>
-        ({
-            LOCAL_SAVED: "Tersimpan di perangkat",
-            PENDING_SYNC: "Menunggu sinkronisasi",
-            SYNCING: "Menyinkronkan",
-            SYNCED: "Diterima server",
-            SYNC_FAILED: "Sinkronisasi belum berhasil",
-        })[emergency.value?.sync_state ?? "LOCAL_SAVED"],
+const delivery = computed(() =>
+    emergencyDeliveryStatus(emergency.value ?? { sync_state: "LOCAL_SAVED" }),
 );
 
 const reason = computed(
@@ -142,12 +134,6 @@ const reason = computed(
             MEDICAL_CRISIS: "Kegawatdaruratan medis",
         })[emergency.value?.red_flag_type ?? ""] ?? "Indikator Red Flag",
 );
-
-const smsHref = computed(() => {
-    const item = emergency.value;
-    const message = `[SOS RAPID-MIND T0] ${item?.red_flag_type ?? ""}. Penyintas: ${item?.patient_name || "Tanpa Nama"}. Lokasi: ${item?.latitude != null && item.longitude != null ? `${item.latitude}, ${item.longitude}` : "GPS tidak tersedia"}. Mohon bantuan PSC 119.`;
-    return `sms:119?body=${encodeURIComponent(message)}`;
-});
 
 async function retry() {
     retryError.value = "";

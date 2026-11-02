@@ -257,7 +257,15 @@ class SyncManager {
                                     emergency?: Partial<LocalEmergency> & {
                                         id: string;
                                     };
+                                    realtime_delivered?: boolean | null;
                                 };
+                                if (canonical.emergency) {
+                                    // A successful broadcast call does not verify reception by a person.
+                                    canonical.emergency.realtime_status =
+                                        canonical.realtime_delivered === false
+                                            ? "UNAVAILABLE"
+                                            : "UNCONFIRMED";
+                                }
                                 const completed =
                                     await outboxRepository.complete(
                                         active,
