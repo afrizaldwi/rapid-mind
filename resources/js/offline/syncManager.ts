@@ -7,6 +7,9 @@ import {
 import { outboxRepository } from "./outboxRepository";
 import { jsonRequest, MissingCsrfTokenError } from "./jsonRequest";
 import { resolveRelawanContinuity } from "./relawanContinuity";
+import { assessmentRepository } from "./assessmentRepository";
+import { assessmentSnapshotCurrent } from "./assessmentContract";
+import { queueAssessmentSnapshot } from "./assessmentSync";
 
 export type SyncSessionState =
     | "READY"
@@ -166,6 +169,26 @@ class SyncManager {
                     for (const item of await outboxRepository.list(active)) {
                         if (this.owner !== active || !navigator.onLine) break;
                         if (!item.id) continue;
+                        if (item.type === "ASSESSMENT") {
+                            const local = await assessmentRepository.get(
+                                active,
+                                item.entity_id,
+                            );
+                            if (
+                                local &&
+                                !assessmentSnapshotCurrent(
+                                    local,
+                                    item.assessment_local_revision,
+                                )
+                            ) {
+                                await queueAssessmentSnapshot(
+                                    active,
+                                    item.entity_id,
+                                );
+                                this.syncRequested = true;
+                                continue;
+                            }
+                        }
                         if (
                             item.status === "FAILED" &&
                             item.last_http_status !== undefined &&
@@ -278,6 +301,7 @@ class SyncManager {
                                         active,
                                         snapshot,
                                     );
+                                else if (!completed) this.syncRequested = true;
                             }
                         } catch (error) {
                             const message =

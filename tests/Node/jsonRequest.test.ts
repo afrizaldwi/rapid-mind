@@ -83,6 +83,44 @@ test("bounded sync requests preserve CSRF, credentials, response and unknown out
         },
     );
     await t.test(
+        "abort-aware fetch rejects natively while the caller retains unknown-outcome timeout semantics",
+        async () => {
+            let aborted = false;
+            const mock = t.mock.method(
+                globalThis,
+                "fetch",
+                async (_url, options) =>
+                    new Promise<Response>((_resolve, reject) => {
+                        const onAbort = () => {
+                            aborted = true;
+                            reject(
+                                new DOMException(
+                                    "Synthetic request aborted",
+                                    "AbortError",
+                                ),
+                            );
+                        };
+                        if (options?.signal?.aborted) onAbort();
+                        else
+                            options?.signal?.addEventListener(
+                                "abort",
+                                onAbort,
+                                { once: true },
+                            );
+                    }),
+            );
+            try {
+                await assert.rejects(
+                    jsonRequest("/relawan/sync/assessments", {}, 15),
+                    RequestTimeoutError,
+                );
+                assert.equal(aborted, true);
+            } finally {
+                mock.mock.restore();
+            }
+        },
+    );
+    await t.test(
         "headers alone do not finish the deadline when the response body stalls",
         async () => {
             const mock = t.mock.method(

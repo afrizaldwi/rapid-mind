@@ -113,11 +113,22 @@ async function assertTimeoutPreservation(owner) {
         let requests = 0;
         window.fetch = async (_url, options) => {
             requests++;
-            options.signal.addEventListener("abort", () => {
-                aborted = true;
-            });
-            return await new Promise((resolve) => {
+            return await new Promise((resolve, reject) => {
                 lateResponse = resolve;
+                const onAbort = () => {
+                    aborted = true;
+                    reject(
+                        new DOMException(
+                            "Synthetic request aborted",
+                            "AbortError",
+                        ),
+                    );
+                };
+                if (options.signal.aborted) onAbort();
+                else
+                    options.signal.addEventListener("abort", onAbort, {
+                        once: true,
+                    });
             });
         };
         const lease = syncManager.setOwner(owner);
@@ -309,6 +320,30 @@ try {
         return { recoveryCode: created.recoveryCode };
     });
 
+    if (process.env.RAPID_MIND_B2B_CONTRACT === "1") {
+        const contractTab = await context.newPage();
+        await contractTab.goto(`${origin}/tests/Browser/stagingBlank.html`);
+        const results = await contractTab.evaluate(async () => {
+            const { runAssessmentContractFixture } =
+                await import("/tests/Browser/assessmentContractFixture.ts");
+            return await runAssessmentContractFixture();
+        });
+        for (const result of results) console.log(`PASS B2B: ${result}`);
+        await contractTab.close();
+        await page.evaluate(async () => {
+            const { unlockOwnerKey } =
+                await import("/resources/js/offline/offlineEncryptionStaging.ts");
+            const { installClinicalKey } =
+                await import("/resources/js/offline/encryptedClinicalStorage.ts");
+            await installClinicalKey(
+                await unlockOwnerKey(
+                    101,
+                    "frasa sandi sintetik panjang untuk relawan",
+                    "passphrase",
+                ),
+            );
+        });
+    }
     await assertTimeoutPreservation(101);
     await route(page, "/relawan/assessment/assessment-101/srq");
     await page.getByText("Penyintas Sintetis", { exact: true }).waitFor();

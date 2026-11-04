@@ -1,3 +1,4 @@
+import { canonicalAssessmentResponse } from "./assessmentCanonical";
 import {
     db,
     localUuid,
@@ -16,6 +17,10 @@ import {
     encryptedKey,
     prepareEncrypted,
 } from "./encryptedClinicalStorage";
+import {
+    assessmentSnapshotCurrent,
+    reconcileAssessment,
+} from "./assessmentContract";
 
 type Change = {
     key: string;
@@ -145,6 +150,7 @@ export async function encryptedOutboxEnqueue(
     type: OutboxItem["type"],
     entityId: string,
     payload: Record<string, unknown>,
+    expectedAssessmentRevision?: number,
 ): Promise<void> {
     const entityType = type === "ASSESSMENT" ? "assessments" : "emergencies";
     const entity = await encryptedGet<LocalAssessment | LocalEmergency>(
@@ -154,6 +160,15 @@ export async function encryptedOutboxEnqueue(
     );
     if (!entity)
         throw new Error("Catatan lokal tidak tersedia untuk Relawan ini.");
+    if (
+        type === "ASSESSMENT" &&
+        expectedAssessmentRevision !== undefined &&
+        !assessmentSnapshotCurrent(
+            entity as LocalAssessment,
+            expectedAssessmentRevision,
+        )
+    )
+        throw new Error("Asesmen berubah saat menyiapkan antrean. Coba lagi.");
     const existing = (await encryptedOutboxList(owner)).find(
         (item) =>
             item.type === type &&
@@ -187,6 +202,9 @@ export async function encryptedOutboxEnqueue(
               created_at: now,
               updated_at: now,
           };
+    if (type === "ASSESSMENT")
+        item.assessment_local_revision =
+            (entity as LocalAssessment).local_revision ?? 0;
     const changes = [
         await preparedChange(owner, "outbox", ref, item, existing),
         await preparedChange(
@@ -358,19 +376,32 @@ export async function encryptedOutboxComplete(
         throw new Error("Antrean tidak tersedia.");
     const entityType =
         item.type === "ASSESSMENT" ? "assessments" : "emergencies";
-    const response =
-        item.type === "ASSESSMENT" ? canonical.assessment : canonical.emergency;
-    if (!response || response.id !== item.entity_id)
-        throw new Error("Respons server tidak sesuai catatan.");
     const entity = await encryptedGet<LocalAssessment | LocalEmergency>(
         owner,
         entityType,
         item.entity_id,
     );
     if (!entity) throw new Error("Catatan lokal hilang.");
-    const patient = (response as Record<string, unknown>).patient as
-        | Record<string, unknown>
-        | undefined;
+    const assessmentResponse =
+        item.type === "ASSESSMENT"
+            ? canonicalAssessmentResponse(canonical, entity as LocalAssessment)
+            : undefined;
+    const response = assessmentResponse?.assessment ?? canonical.emergency;
+    if (!response || response.id !== item.entity_id)
+        throw new Error("Respons server tidak sesuai catatan.");
+    if (
+        item.type === "ASSESSMENT" &&
+        !assessmentSnapshotCurrent(
+            entity as LocalAssessment,
+            item.assessment_local_revision,
+        )
+    )
+        return false;
+    const patient = (
+        assessmentResponse
+            ? assessmentResponse.patient
+            : (response as Record<string, unknown>).patient
+    ) as Record<string, unknown> | undefined;
     const changes: Change[] = [
         await preparedChange(owner, "outbox", index.ref, null, current),
         await preparedChange(
@@ -378,8 +409,12 @@ export async function encryptedOutboxComplete(
             entityType,
             item.entity_id,
             {
-                ...entity,
-                ...response,
+                ...(item.type === "ASSESSMENT"
+                    ? reconcileAssessment(
+                          entity as LocalAssessment,
+                          response as Partial<LocalAssessment>,
+                      )
+                    : { ...entity, ...response }),
                 ...(item.type === "ASSESSMENT" && patient?.id
                     ? { patient_id: patient.id }
                     : {}),

@@ -13,6 +13,7 @@ import { syncManager } from "./syncManager";
 import { localPersistenceHealth } from "./localPersistenceHealth";
 import { assertStorageMode, encryptedMode } from "./encryptedClinicalStorage";
 import { createEncryptedEmergencyWithOutbox } from "./encryptedOutbox";
+import { queueAssessmentSnapshot } from "./assessmentSync";
 
 const redFlags = new Set([
     "SUICIDAL_IDEATION",
@@ -126,29 +127,59 @@ export async function createLocalEmergency(
     if (await encryptedMode(owner)) {
         try {
             await localPersistenceHealth.recordWrite(owner, () =>
-                createEncryptedEmergencyWithOutbox(owner, emergency, payload));
+                createEncryptedEmergencyWithOutbox(owner, emergency, payload),
+            );
         } catch {
-            throw new Error("Insiden darurat belum tersimpan di perangkat. Tetap dampingi penyintas dan coba lagi.");
+            throw new Error(
+                "Insiden darurat belum tersimpan di perangkat. Tetap dampingi penyintas dan coba lagi.",
+            );
         }
+        preserveAssessmentContext(owner, emergency.assessment_id);
         return emergency.id;
     }
     // One IndexedDB transaction makes the emergency and its priority-1 outbox item durable together.
-    await localPersistenceHealth.recordWrite(owner, () => db.transaction(
-        "rw",
-        [db.emergencies, db.outbox, db.encryptedOutboxIndex,
-            db.outboxIdCounter, db.assessments, db.ownerEncryptionModes],
-        async () => {
-            await assertStorageMode(owner, "LEGACY");
-            await emergencyRepository.save(owner, emergency);
-            await outboxRepository.enqueue(
-                owner,
-                "EMERGENCY",
-                emergency.id,
-                payload,
-            );
-        },
-    ));
+    await localPersistenceHealth.recordWrite(owner, () =>
+        db.transaction(
+            "rw",
+            [
+                db.emergencies,
+                db.outbox,
+                db.encryptedOutboxIndex,
+                db.outboxIdCounter,
+                db.assessments,
+                db.ownerEncryptionModes,
+            ],
+            async () => {
+                await assertStorageMode(owner, "LEGACY");
+                await emergencyRepository.save(owner, emergency);
+                await outboxRepository.enqueue(
+                    owner,
+                    "EMERGENCY",
+                    emergency.id,
+                    payload,
+                );
+            },
+        ),
+    );
+    preserveAssessmentContext(owner, emergency.assessment_id);
     return emergency.id;
+}
+
+function preserveAssessmentContext(owner: number, id?: string | null) {
+    if (!id) return;
+    // The emergency + priority-1 outbox is already durable. A partial context
+    // uses its own priority-2 assessment item and cannot block the T0 save.
+    void queueAssessmentSnapshot(owner, id)
+        .then(() => syncManager.sync(owner))
+        .catch(async () => {
+            await assessmentRepository
+                .update(owner, id, {
+                    sync_state: "SYNC_FAILED",
+                    last_error:
+                        "Draf tetap tersimpan; antrean konteks asesmen perlu dicoba kembali.",
+                })
+                .catch(() => {});
+        });
 }
 
 export function loadLocalEmergency(owner: number, id: string) {

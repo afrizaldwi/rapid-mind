@@ -1,3 +1,6 @@
+import { srqAnswerFromRow, type SrqAnswer } from "../domain/srq/srqAnswer.ts";
+import { normalizeObservations } from "../domain/assessment/nonVerbalObservations.ts";
+
 export const srqQuestions = [
     "Apakah Anda sering merasa sakit kepala?",
     "Apakah Anda kehilangan nafsu makan?",
@@ -163,9 +166,10 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
     const redFlag =
         raw.red_flag_type ||
         (triage?.is_red_flag_override ? triage.red_flag_source || null : null);
-    const q17Answer = assessment?.srqResponses.find(
+    const q17Row = assessment?.srqResponses.find(
         (response: any) => response.question_number === 17,
-    )?.answer;
+    );
+    const q17Answer = q17Row ? srqAnswerFromRow(q17Row) : undefined;
     let redFlagLabel = "Tanda Bahaya Lapangan";
     if (redFlag === "SUICIDAL_IDEATION")
         redFlagLabel =
@@ -293,6 +297,15 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
         assessmentCreatedAt:
             assessment?.completed_at || assessment?.created_at || null,
         srqResponses: assessment?.srqResponses || [],
+        ...normalizeObservations(
+            assessment?.non_verbal_reasons != null
+                ? {
+                      non_verbal_reasons: assessment.non_verbal_reasons,
+                      non_verbal_other_note:
+                          assessment.non_verbal_other_note ?? null,
+                  }
+                : {},
+        ),
         riskResponses: assessment?.riskResponses || [],
         functionResponses: assessment?.functionResponses || [],
         verifications: raw.verifications || [],
@@ -308,23 +321,33 @@ export function formatRiskAnswer(answer: boolean | null): string {
     return "Tidak tersedia";
 }
 
-export type HealthcareEmergencyQueueItem = ReturnType<typeof normalizeQueueItem>;
+export type HealthcareEmergencyQueueItem = ReturnType<
+    typeof normalizeQueueItem
+>;
 export type HealthcareEmergencyFilter = "ALL" | "PENDING" | "CONFIRMED";
 
-export function normalizeEmergencyQueue(emergencies: any[]): HealthcareEmergencyQueueItem[] {
+export function normalizeEmergencyQueue(
+    emergencies: any[],
+): HealthcareEmergencyQueueItem[] {
     return emergencies
         .map((emergency) => normalizeQueueItem(emergency, true))
         .sort((a, b) => {
             if (a.status === "PENDING" && b.status !== "PENDING") return -1;
             if (a.status !== "PENDING" && b.status === "PENDING") return 1;
-            const timeDifference = a.status === "PENDING"
-                ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            const timeDifference =
+                a.status === "PENDING"
+                    ? new Date(a.createdAt).getTime() -
+                      new Date(b.createdAt).getTime()
+                    : new Date(b.createdAt).getTime() -
+                      new Date(a.createdAt).getTime();
             if (timeDifference !== 0) return timeDifference;
             const firstId = String(a.emergencyId);
             const secondId = String(b.emergencyId);
             if (firstId === secondId) return 0;
-            return (firstId < secondId ? -1 : 1) * (a.status === "PENDING" ? 1 : -1);
+            return (
+                (firstId < secondId ? -1 : 1) *
+                (a.status === "PENDING" ? 1 : -1)
+            );
         });
 }
 
@@ -380,13 +403,13 @@ export function filterEmergencyQueue(
 export function getSrqAnswer(
     item: HealthcareEmergencyQueueItem | null,
     qNumber: number,
-): boolean | null {
+): SrqAnswer | null {
     if (!item?.srqResponses?.length) return null;
     const resp = item.srqResponses.find(
         (response: any) => response.question_number === qNumber,
     );
-    if (!resp || resp.answer === undefined || resp.answer === null) return null;
-    return Boolean(resp.answer);
+    if (!resp) return null;
+    return srqAnswerFromRow(resp);
 }
 
 export function getRiskAnswer(
@@ -405,8 +428,7 @@ export function getFunctionLabel(
     item: HealthcareEmergencyQueueItem | null,
     domain: string,
 ): string {
-    if (!item?.functionResponses?.length)
-        return "Data fungsi tidak tersedia";
+    if (!item?.functionResponses?.length) return "Data fungsi tidak tersedia";
     const resp = item.functionResponses.find(
         (response: any) => response.domain === domain,
     );
@@ -420,7 +442,10 @@ export function getDetectedRedFlags(item: HealthcareEmergencyQueueItem | null) {
     if (!item) return [];
     const list: Array<{ key: string; title: string; evidence: string }> = [];
 
-    if (item.redFlagType === "SUICIDAL_IDEATION" || getSrqAnswer(item, 17) === true) {
+    if (
+        item.redFlagType === "SUICIDAL_IDEATION" ||
+        getSrqAnswer(item, 17) === true
+    ) {
         let evidence =
             item.redFlagType === "SUICIDAL_IDEATION"
                 ? "Jenis Red Flag tercatat: Ideasi / Risiko Bunuh Diri."

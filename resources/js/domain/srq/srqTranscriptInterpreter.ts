@@ -1,4 +1,5 @@
 import { srqSpeechRules } from "./srqSpeechRules.ts";
+import type { SrqAnswers } from "./srqAnswer.ts";
 import { srqQuestions } from "./srqQuestions.ts";
 
 export type SrqSpeechMatch = {
@@ -188,7 +189,7 @@ export function interpretSrqTranscript(
 
 export function selectSrqSpeechAnswerUpdates(
     interpretation: SrqTranscriptInterpretation,
-    currentAnswers: Readonly<Record<number, boolean>>,
+    currentAnswers: Readonly<SrqAnswers>,
     sttOwnedAnswers: ReadonlySet<number>,
     manualOverrides: ReadonlySet<number>,
 ): { accepted: SrqSpeechAnswerUpdate[]; protectedQuestionNumbers: number[] } {
@@ -200,8 +201,9 @@ export function selectSrqSpeechAnswerUpdates(
             continue;
         const canUpdate =
             !manualOverrides.has(match.questionNumber) &&
-            (typeof currentAnswers[match.questionNumber] !== "boolean" ||
-                sttOwnedAnswers.has(match.questionNumber));
+            (currentAnswers[match.questionNumber] === undefined ||
+                (typeof currentAnswers[match.questionNumber] === "boolean" &&
+                    sttOwnedAnswers.has(match.questionNumber)));
         if (canUpdate)
             accepted.push({
                 questionNumber: match.questionNumber,

@@ -30,6 +30,12 @@ return new class extends Migration
         if (DB::table('srq_responses')->whereNull('answer')->exists()) {
             throw new RuntimeException('Klarifikasi respons SRQ sebelum rollback; data tidak dihapus atau dikonversi.');
         }
+        if (DB::table('assessments')->where(function ($query) {
+            $query->whereRaw("non_verbal_reasons IS NOT NULL AND non_verbal_reasons <> '[]'::jsonb")
+                ->orWhereRaw("non_verbal_other_note IS NOT NULL AND non_verbal_other_note <> ''");
+        })->exists()) {
+            throw new RuntimeException('Metadata observasi masih tersimpan; rollback dibatalkan tanpa menghapus data.');
+        }
         DB::statement('ALTER TABLE srq_responses DROP CONSTRAINT srq_response_answer_state_check');
         Schema::table('srq_responses', function (Blueprint $table) {
             $table->dropColumn('answer_state');

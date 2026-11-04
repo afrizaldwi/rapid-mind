@@ -366,14 +366,15 @@ import {
     selectSrqSpeechAnswerUpdates,
 } from "@/domain/srq/srqTranscriptInterpreter";
 import { srqQuestions } from "@/domain/srq/srqQuestions";
+import type { SrqAnswers } from "@/domain/srq/srqAnswer";
 
 const props = defineProps<{
     assessment: any;
     patient: any;
-    responses?: Record<number, boolean>;
+    responses?: SrqAnswers;
 }>();
 
-const answers = ref<Record<number, boolean>>(
+const answers = ref<SrqAnswers>(
     mergeAssessmentDraft("srq_answers", props.responses, {}),
 );
 const runtime = useRelawanRuntime();

@@ -201,6 +201,7 @@ import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
     loadAssessmentContext,
+    exactAssessmentAnswers,
     relawanOwner,
     type ServerAssessment,
     type ServerPatient,
@@ -222,7 +223,7 @@ const props = defineProps<{
 const runtime = useRelawanRuntime();
 const owner = relawanOwner();
 const localPatient = ref<LocalPatient | null>(null);
-const triageResult = ref(normalizeTriage(props.triageResult));
+const triageResult = ref<ReturnType<typeof normalizeTriage>>(null);
 const syncLabel = ref(
     "Tersimpan di perangkat ini; sinkronisasi belum dikonfirmasi.",
 );
@@ -250,7 +251,20 @@ onMounted(async () => {
             props.patient,
             runtime.mode === "OFFLINE_FIELD_MODE",
         );
-        if (context.assessment.status !== "COMPLETED")
+        // The server result route may omit response relations. Preserve its
+        // already-persisted historical result without calculating from gaps.
+        const unloadedServerResult =
+            runtime.mode === "ONLINE_SERVER" &&
+            props.assessment.status === "COMPLETED" &&
+            props.assessment.srq_responses === undefined &&
+            context.assessment.sync_state === "SYNCED" &&
+            Object.keys(context.assessment.srq_answers ?? {}).length === 0 &&
+            normalizeTriage(props.triageResult) !== null;
+        if (
+            context.assessment.status !== "COMPLETED" ||
+            (!exactAssessmentAnswers(context.assessment) &&
+                !unloadedServerResult)
+        )
             throw new Error("Asesmen belum selesai.");
         localPatient.value = context.patient;
         triageResult.value = normalizeTriage(

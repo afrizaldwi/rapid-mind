@@ -1,4 +1,6 @@
 import Dexie, { type Table } from "dexie";
+import type { SrqAnswers } from "../domain/srq/srqAnswer";
+import type { NonVerbalObservations } from "../domain/assessment/nonVerbalObservations";
 
 export type SyncState =
     | "LOCAL_SAVED"
@@ -18,7 +20,7 @@ export interface LocalPatient {
     sync_state: SyncState;
     last_error?: string;
 }
-export interface LocalAssessment {
+export interface LocalAssessment extends NonVerbalObservations {
     id: string;
     owner_user_id: number;
     patient_id: string;
@@ -26,7 +28,8 @@ export interface LocalAssessment {
     mode: "VERBAL" | "NON_VERBAL";
     started_at?: string;
     completed_at?: string;
-    srq_answers?: Record<number, boolean>;
+    srq_answers?: SrqAnswers;
+    local_revision?: number;
     risk_indicators?: Record<string, boolean>;
     function_domains?: Record<string, number>;
     triage_result?: unknown;
@@ -64,6 +67,7 @@ export interface OutboxItem {
     status: "PENDING" | "SYNCING" | "FAILED";
     retry_count: number;
     revision: number;
+    assessment_local_revision?: number;
     last_error?: string;
     last_http_status?: number;
     created_at: string;
