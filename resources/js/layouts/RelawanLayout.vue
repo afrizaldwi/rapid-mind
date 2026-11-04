@@ -281,6 +281,7 @@ import {
     relawanSessionRecovery,
 } from "@/offline/sessionRecovery";
 
+const emit = defineEmits<{ 'clinical-lock': []; 'clinical-ready': []; 'emergency-interrupt': [] }>();
 const runtime = useRelawanRuntime();
 const user = computed(() => ({
     id: runtime.owner,
@@ -305,6 +306,7 @@ const clinicalViewKey = computed(
     () => `${currentOwner.value}:${clinicalKeyVersion()}`,
 );
 function maskClinicalView() {
+    emit("clinical-lock");
     if (clinicalViewRoot.value) {
         clinicalViewRoot.value.style.display = "none";
         clinicalViewRoot.value.setAttribute("aria-hidden", "true");
@@ -339,6 +341,20 @@ const status = useRelawanOperationalStatus(
     currentOwner,
     computed(() => runtime.mode === "ONLINE_SERVER"),
 );
+const clinicalViewAvailable = computed(() => !!currentOwner.value &&
+    ownerStorageMode.value !== "CHECKING" &&
+    (ownerStorageMode.value === "LEGACY" || clinicalUnlocked.value));
+watch(clinicalViewAvailable, available => {
+    if (!available) maskClinicalView();
+}, { flush: "sync" });
+watch([clinicalViewAvailable, clinicalViewKey], ([available]) => {
+    if (available) {
+        clinicalViewRoot.value?.style.removeProperty("display");
+        clinicalViewRoot.value?.removeAttribute("aria-hidden");
+        emit("clinical-ready");
+    }
+}, { immediate: true, flush: "post" });
+
 function onClinicalUnlocked() {
     status.refresh();
     if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
@@ -490,6 +506,7 @@ const t0AssessmentContext = ref<T0AssessmentContext | null>(null);
 const showEmergencyModal = ref(false);
 let emergencyOpenCheck = 0;
 async function openEmergencyModal() {
+    emit("emergency-interrupt");
     const check = ++emergencyOpenCheck;
     const keyVersion = clinicalKeyVersion();
     const path = runtime.path;
@@ -611,6 +628,7 @@ async function logout() {
 function onEmergencyCreated(event: Event) {
     const detail = (event as CustomEvent<{ owner: number; id: string }>).detail;
     if (detail.owner !== currentOwner.value) return;
+    emit("emergency-interrupt");
     if (runtime.mode === "OFFLINE_FIELD_MODE")
         runtime.navigate(`/relawan/emergencies/${detail.id}`);
     else activeLocalId.value = detail.id;

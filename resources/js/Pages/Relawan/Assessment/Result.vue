@@ -1,5 +1,5 @@
 <template>
-    <RelawanLayout>
+    <RelawanLayout @clinical-lock="scope.invalidate" @clinical-ready="loadResult">
         <div class="space-y-6">
             <!-- Result Card -->
             <div
@@ -207,6 +207,7 @@ import {
     type ServerPatient,
 } from "@/offline/assessmentWorkflow";
 import { emergencyRepository } from "@/offline/emergencyRepository";
+import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
 import { normalizeTriage } from "@/offline/triageDisplay";
 import type { LocalPatient } from "@/offline/db";
 
@@ -229,6 +230,11 @@ const syncLabel = ref(
 );
 const loadError = ref("");
 const showEmergencyVerification = ref(false);
+const scope = useClinicalTaskScope(() => {
+    localPatient.value = null;
+    triageResult.value = null;
+    showEmergencyVerification.value = false;
+});
 const existingEmergencyId = ref(props.existingEmergency?.id ?? null);
 const isT0Recommendation = computed(
     () => triageResult.value?.system_recommendation === "T0_SUSPECT",
@@ -239,11 +245,15 @@ function handleEmergencyCreated(event: Event) {
     if (detail.owner === owner) existingEmergencyId.value = detail.id;
 }
 
-onMounted(async () => {
+onMounted(() => {
     window.addEventListener(
         "rapid-mind:emergency-created",
         handleEmergencyCreated,
     );
+});
+async function loadResult() {
+    if (runtime.owner !== owner) return;
+    const current = scope.capture();
     try {
         const context = await loadAssessmentContext(
             owner,
@@ -251,6 +261,7 @@ onMounted(async () => {
             props.patient,
             runtime.mode === "OFFLINE_FIELD_MODE",
         );
+        if (!current()) return;
         // The server result route may omit response relations. Preserve its
         // already-persisted historical result without calculating from gaps.
         const unloadedServerResult =
@@ -281,14 +292,16 @@ onMounted(async () => {
             const localEmergency = (await emergencyRepository.list(owner)).find(
                 (item) => item.assessment_id === props.assessment.id,
             );
+            if (!current()) return;
             existingEmergencyId.value = localEmergency?.id ?? null;
             showEmergencyVerification.value = !existingEmergencyId.value;
         }
     } catch (error) {
+        if (!current()) return;
         loadError.value =
             error instanceof Error ? error.message : "Hasil tidak tersedia.";
     }
-});
+}
 onUnmounted(() =>
     window.removeEventListener(
         "rapid-mind:emergency-created",

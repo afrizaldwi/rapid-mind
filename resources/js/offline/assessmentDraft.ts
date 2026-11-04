@@ -45,16 +45,20 @@ export function saveAssessmentDraft<K extends DraftField>(
     assessment: AssessmentRef,
     field: K,
     answers: DraftValue<K>,
+    isCurrent: () => boolean = () => true,
 ): Promise<void> {
     const owner = requireOwner(assessment.user_id);
     const cleaned = validAnswers(field, answers);
     return enqueue(`${owner}:${assessment.id}`, async () => {
+        if (!isCurrent()) return;
         const existing = await assessmentRepository.get(owner, assessment.id);
+        if (!isCurrent()) return;
         await localPersistenceHealth.recordWrite(owner, async () => {
+            if (!isCurrent()) return;
             if (existing)
-                await assessmentRepository.update(owner, assessment.id, {
-                    [field]: cleaned,
-                    sync_state: "LOCAL_SAVED",
+                await assessmentRepository.update(owner, assessment.id, () => {
+                    if (!isCurrent()) throw new Error("Akses asesmen berubah.");
+                    return { [field]: cleaned, sync_state: "LOCAL_SAVED" };
                 });
             else
                 await assessmentRepository.save(owner, {
@@ -133,13 +137,35 @@ export function saveObservationDraft(
     owner: number,
     id: string,
     observations: NonVerbalObservations,
+    isCurrent: () => boolean = () => true,
 ): Promise<void> {
     const patch = normalizeObservations(observations);
     return enqueue(`${owner}:${id}`, async () => {
-        await assessmentRepository.update(requireOwner(owner), id, {
-            ...patch,
-            sync_state: "LOCAL_SAVED",
-        });
+        if (!isCurrent()) return;
+        await localPersistenceHealth.recordWrite(owner, () =>
+            assessmentRepository.update(requireOwner(owner), id, () => {
+                if (!isCurrent()) throw new Error("Akses asesmen berubah.");
+                return { ...patch, sync_state: "LOCAL_SAVED" };
+            }),
+        );
+        await queueAssessmentSnapshot(owner, id);
+    });
+}
+
+export function saveAssessmentMode(
+    owner: number,
+    id: string,
+    mode: LocalAssessment["mode"],
+    isCurrent: () => boolean = () => true,
+): Promise<void> {
+    return enqueue(`${owner}:${id}`, async () => {
+        if (!isCurrent()) return;
+        await localPersistenceHealth.recordWrite(owner, () =>
+            assessmentRepository.update(requireOwner(owner), id, () => {
+                if (!isCurrent()) throw new Error("Akses asesmen berubah.");
+                return { mode, sync_state: "LOCAL_SAVED" };
+            }),
+        );
         await queueAssessmentSnapshot(owner, id);
     });
 }

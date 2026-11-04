@@ -1,5 +1,5 @@
 <template>
-    <RelawanLayout>
+    <RelawanLayout @clinical-lock="scope.invalidate" @clinical-ready="loadDraft" @emergency-interrupt="interruptAssessment">
         <div class="space-y-6 pb-64">
             <!-- Top Patient & Progress Sticky Bar -->
             <div
@@ -42,7 +42,8 @@
                         <button
                             type="button"
                             @click="toggleMode"
-                            class="px-2 py-0.5 rounded-lg border font-bold inline-flex items-center gap-1.5"
+                            :disabled="!draftReady || !!safety"
+                            class="min-h-14 px-3 rounded-lg border font-bold inline-flex items-center gap-1.5"
                             :class="
                                 isVerbal
                                     ? 'bg-teal-50 text-teal-800 border-teal-300'
@@ -54,7 +55,7 @@
                                 class="h-3.5 w-3.5"
                                 aria-hidden="true"
                             />
-                            <span>{{ isVerbal ? "Verbal" : "Adaptif" }}</span>
+                            <span>{{ isVerbal ? "Verbal" : "Non-Verbal" }}</span>
                         </button>
                     </div>
 
@@ -151,12 +152,20 @@
                 </div>
             </div>
 
+            <NonVerbalObservationFields v-if="!isVerbal || observations.non_verbal_reasons?.length"
+                :model-value="observations" :disabled="!draftReady || !!safety"
+                @toggle="saveObservations(toggleObservation(observations, $event))"
+                @note="saveObservations({ ...observations, non_verbal_other_note: $event })"
+                @clear="saveObservations({ non_verbal_reasons: [], non_verbal_other_note: null })" />
+            <div v-if="metadataError" role="alert" class="rounded-lg bg-amber-50 p-3 text-base text-amber-900">{{ metadataError }} <button type="button" class="min-h-14 underline font-bold" :disabled="!draftReady || metadataPending > 0" @click="retryMetadata">Coba Simpan Draf</button></div>
+
             <!-- SRQ-20 Scrollable Question List -->
             <div class="space-y-4">
                 <div
                     v-for="q in srqQuestions"
                     :key="q.number"
-                    class="bg-white p-5 rounded-xl border transition"
+                    :id="`srq-question-${q.number}`" tabindex="-1"
+                    class="scroll-mt-64 bg-white p-5 rounded-xl border transition"
                     :class="
                         answers[q.number] === true
                             ? 'border-teal-400 shadow-xs'
@@ -189,45 +198,13 @@
                         Pertanyaan
                     </p>
                     <h3
-                        class="mt-1 text-md font-bold leading-snug text-slate-900"
+                        class="mt-1 text-xl font-bold leading-snug text-slate-900"
                     >
                         {{ q.script }}
                     </h3>
 
-                    <!-- Large YA / TIDAK Buttons -->
-                    <div class="grid grid-cols-2 gap-3 mt-4">
-                        <button
-                            type="button"
-                            :disabled="!draftReady"
-                            @click="setManualAnswer(q.number, true)"
-                            class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
-                            :class="
-                                answers[q.number] === true
-                                    ? q.number === 17
-                                        ? 'border-red-600 bg-red-600 text-white shadow-md'
-                                        : 'border-teal-700 bg-teal-700 text-white shadow-md'
-                                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                            "
-                        >
-                            <span v-if="answers[q.number] === true">✓</span>
-                            <span>YA</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            :disabled="!draftReady"
-                            @click="setManualAnswer(q.number, false)"
-                            class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
-                            :class="
-                                answers[q.number] === false
-                                    ? 'border-slate-700 bg-slate-700 text-white shadow-md'
-                                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                            "
-                        >
-                            <span v-if="answers[q.number] === false">✓</span>
-                            <span>TIDAK</span>
-                        </button>
-                    </div>
+                    <SrqResponseControl :number="q.number" :answer="answers[q.number]"
+                        :disabled="!draftReady || !!safety" @select="setManualAnswer(q.number, $event)" />
 
                     <div class="mt-3 border-t border-slate-100 pt-2">
                         <button
@@ -282,7 +259,7 @@
                         type="button"
                         @click="saveAndNext"
                         :disabled="
-                            isSaving || !draftReady || answeredCount !== 20
+                            isSaving || !draftReady || answeredCount !== 20 || !!safety || metadataPending > 0
                         "
                         class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
                     >
@@ -314,13 +291,7 @@
             </div>
         </div>
 
-        <!-- Potential Red Flag Safety Interruption Modal -->
-        <PotentialRedFlag
-            :show="showRedFlagModal"
-            :review-only="redFlagReviewOnly"
-            @escalate="handleEscalate"
-            @dismiss="showRedFlagModal = false"
-        />
+        <SrqSafetyDialog :state="safety" :evidence="safetyEvidence" @confirm="confirmQ17" @dismiss="dismissSafety" @escalate="handleEscalate" />
 
         <!-- T0 Verification Modal -->
         <T0Verification
@@ -335,7 +306,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, nextTick } from "vue";
 import { ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
@@ -343,30 +314,24 @@ import { useRelawanRuntime } from "@/relawan/runtime";
 import {
     mergeAssessmentDraft,
     readAssessmentDraft,
-    saveAssessmentDraft,
+    saveAssessmentDraft, saveObservationDraft, saveAssessmentMode,
 } from "@/offline/assessmentDraft";
 import {
     loadAssessmentContext,
     relawanOwner,
 } from "@/offline/assessmentWorkflow";
 import type { LocalAssessment, LocalPatient } from "@/offline/db";
-import { assessmentRepository } from "@/offline/assessmentRepository";
-import { localPersistenceHealth } from "@/offline/localPersistenceHealth";
-import PotentialRedFlag from "@/components/Relawan/PotentialRedFlag.vue";
 import T0Verification from "@/components/Relawan/T0Verification.vue";
-import { LocalAudioCapture } from "@/stt/audioCapture";
-import { WhisperClient } from "@/stt/whisperClient";
-import type {
-    WhisperBackend,
-    WhisperStatus,
-    WhisperWorkerEvent,
-} from "@/stt/types";
-import {
-    interpretSrqTranscript,
-    selectSrqSpeechAnswerUpdates,
-} from "@/domain/srq/srqTranscriptInterpreter";
+import { useSrqSpeech } from "@/composables/useSrqSpeech";
+import { useSrqResponses } from "@/composables/useSrqResponses";
+import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import SrqResponseControl from "@/components/Relawan/Assessment/SrqResponseControl.vue";
+import SrqSafetyDialog from "@/components/Relawan/Assessment/SrqSafetyDialog.vue";
+import NonVerbalObservationFields from "@/components/Relawan/Assessment/NonVerbalObservationFields.vue";
 import { srqQuestions } from "@/domain/srq/srqQuestions";
 import type { SrqAnswers } from "@/domain/srq/srqAnswer";
+import { toggleObservation } from "@/domain/assessment/observationPresentation";
+import type { NonVerbalObservations } from "@/domain/assessment/nonVerbalObservations";
 
 const props = defineProps<{
     assessment: any;
@@ -385,69 +350,41 @@ const isSaving = ref(false);
 const saveError = ref("");
 const draftWarning = ref("");
 const draftReady = ref(false);
-const sttOwnedAnswers = new Set<number>();
-const manualOverrides = new Set<number>();
 const isVerbal = ref(props.assessment?.mode !== "NON_VERBAL");
-const sttStatus = ref<WhisperStatus>("idle");
-const sttBackend = ref<WhisperBackend | null>(null);
-const sttProgress = ref<number | null>(null);
-const sttMessage = ref(
-    "Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.",
-);
-const transcriptSnippet = ref("");
-const sttInterpretationNotice = ref("");
-const showRedFlagModal = ref(false);
-const redFlagReviewOnly = ref(false);
+const observations = ref<NonVerbalObservations>({});
+const metadataPending = ref(0);
+const metadataError = ref("");
 const showEmergencyVerification = ref(false);
 const expandedGuidance = ref(new Set<number>());
-let whisperClient: WhisperClient | null = null;
-let audioCapture: LocalAudioCapture | null = null;
-let sttSession = 0;
-
-const answeredCount = computed(() => {
-    return Array.from(
-        { length: 20 },
-        (_, index) => answers.value[index + 1],
-    ).filter((value) => typeof value === "boolean").length;
+const scope = useClinicalTaskScope(() => {
+    cleanupStt();
+    reset();
+    showEmergencyVerification.value = false;
+    draftReady.value = false;
+    answers.value = {};
+    observations.value = {};
+    patient.value = null;
+    localAssessment.value = null;
+    metadataPending.value = 0;
+    isSaving.value = false;
+    saveError.value = "";
+    draftWarning.value = "";
+    metadataError.value = "";
 });
-
-const sttButtonDisabled = computed(
-    () =>
-        !draftReady.value ||
-        ["preparing", "processing"].includes(sttStatus.value),
-);
-const sttButtonLabel = computed(() => {
-    switch (sttStatus.value) {
-        case "preparing":
-            return "Menyiapkan STT…";
-        case "ready":
-            return "Mulai Rekam";
-        case "recording":
-            return "Selesai & Transkripsikan";
-        case "processing":
-            return "Memproses di Perangkat…";
-        case "error":
-            return "Coba Siapkan Lagi";
-        default:
-            return "Siapkan STT Offline";
-    }
-});
-const sttStatusLabel = computed(() => {
-    switch (sttStatus.value) {
-        case "preparing":
-            return "STT sedang disiapkan";
-        case "ready":
-            return "STT siap";
-        case "recording":
-            return "Perekaman aktif";
-        case "processing":
-            return "Transkripsi lokal diproses";
-        case "error":
-            return "STT tidak tersedia";
-        default:
-            return "STT lokal belum siap";
-    }
-});
+const { safety, safetyEvidence, answeredCount, setManualAnswer, confirmQ17, dismissSafety,
+    applySpeechTranscript, reset } = useSrqResponses(answers, () => draftReady.value,
+        persistDraft, () => cleanupStt());
+const { sttStatus, sttBackend, sttProgress, sttMessage, transcriptSnippet,
+    sttInterpretationNotice, sttButtonDisabled, sttButtonLabel, sttStatusLabel,
+    handleSttAction, cancelRecording, cleanupStt } = useSrqSpeech(
+        () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
+        text => { const notice = applySpeechTranscript(text); if (notice) sttInterpretationNotice.value = notice; },
+    );
+function interruptAssessment() {
+    cleanupStt();
+    dismissSafety();
+    showEmergencyVerification.value = false;
+}
 
 function toggleGuidance(questionNumber: number) {
     const next = new Set(expandedGuidance.value);
@@ -456,330 +393,104 @@ function toggleGuidance(questionNumber: number) {
     expandedGuidance.value = next;
 }
 
-function setAnswer(qNum: number, value: boolean) {
-    answers.value[qNum] = value;
-
-    // Q17 Safety Gate Interruption
-    if (qNum === 17 && value === true) {
-        showRedFlagModal.value = true;
-    }
-}
-
-function setManualAnswer(qNum: number, value: boolean) {
-    manualOverrides.add(qNum);
-    sttOwnedAnswers.delete(qNum);
-    if (qNum === 17 && value) redFlagReviewOnly.value = false;
-    setAnswer(qNum, value);
-    void persistDraft();
-}
-
 function handleEscalate() {
-    showRedFlagModal.value = false;
+    cleanupStt();
+    dismissSafety();
     showEmergencyVerification.value = true;
 }
 
-async function applySpeechTranscript(transcript: string) {
-    const interpretation = interpretSrqTranscript(transcript);
-    const { accepted, protectedQuestionNumbers } = selectSrqSpeechAnswerUpdates(
-        interpretation,
-        answers.value,
-        sttOwnedAnswers,
-        manualOverrides,
-    );
-
-    for (const update of accepted) {
-        answers.value[update.questionNumber] = update.answer;
-        sttOwnedAnswers.add(update.questionNumber);
-    }
-
-    if (accepted.length > 0) await persistDraft();
-
-    const acceptedNumbers = accepted
-        .map(({ questionNumber }) => `#${questionNumber}`)
-        .join(", ");
-    const unresolvedNumbers = [
-        ...new Set([
-            ...interpretation.matches
-                .filter(({ status }) => status === "conflicting")
-                .map(({ questionNumber }) => questionNumber),
-            ...interpretation.unresolved.flatMap(
-                ({ questionNumbers }) => questionNumbers,
-            ),
-        ]),
-    ];
-    const notices: string[] = [];
-    if (acceptedNumbers)
-        notices.push(`Jawaban terisi dari ucapan: ${acceptedNumbers}.`);
-    if (protectedQuestionNumbers.length > 0)
-        notices.push(
-            `Jawaban manual/tersimpan tidak diubah: ${protectedQuestionNumbers.map((number) => `#${number}`).join(", ")}.`,
-        );
-    if (unresolvedNumbers.length > 0)
-        notices.push(
-            `Perlu diperiksa manual: ${unresolvedNumbers.map((number) => `#${number}`).join(", ")}.`,
-        );
-    if (
-        interpretation.unresolved.some(
-            ({ questionNumbers }) => questionNumbers.length === 0,
-        )
-    )
-        notices.push(
-            "Respons tanpa pertanyaan SRQ yang jelas tidak diterapkan.",
-        );
-    if (notices.length === 0)
-        notices.push(
-            "Ucapan belum cukup jelas untuk mengisi jawaban dengan aman.",
-        );
-    sttInterpretationNotice.value = notices.join(" ");
-
-    const q17Interpretation = interpretation.matches.find(
-        ({ questionNumber }) => questionNumber === 17,
-    );
-    const affirmativeQ17 =
-        q17Interpretation?.status === "matched" &&
-        q17Interpretation.answer === true;
-    const protectedQ17 = protectedQuestionNumbers.includes(17);
-    if (interpretation.requiresSafetyReview) {
-        redFlagReviewOnly.value = true;
-        showRedFlagModal.value = true;
-    } else if (affirmativeQ17) {
-        redFlagReviewOnly.value = protectedQ17 && answers.value[17] !== true;
-        showRedFlagModal.value = true;
-    }
-}
-
 async function toggleMode() {
-    if (!localAssessment.value) return;
+    if (!draftReady.value || !localAssessment.value || safety.value) return;
+    const current = scope.capture();
     const nextMode = isVerbal.value ? "NON_VERBAL" : "VERBAL";
+    if (nextMode === "NON_VERBAL") cleanupStt();
+    isVerbal.value = nextMode === "VERBAL";
+    localAssessment.value.mode = nextMode;
+    metadataPending.value++;
     try {
-        await localPersistenceHealth.recordWrite(owner, () =>
-            assessmentRepository.update(owner, props.assessment.id, {
-                mode: nextMode,
-                sync_state: "LOCAL_SAVED",
-            }),
-        );
-        localAssessment.value.mode = nextMode;
-        isVerbal.value = nextMode === "VERBAL";
-        if (!isVerbal.value) cleanupStt();
-        draftWarning.value = "";
+        await saveAssessmentMode(owner, props.assessment.id, nextMode, current);
+        if (current()) metadataError.value = "";
     } catch {
-        draftWarning.value = "Mode belum tersimpan di perangkat ini.";
-    }
+        if (current()) metadataError.value = "Mode atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.";
+    } finally { if (current()) metadataPending.value--; }
 }
 
-function handleWorkerEvent(event: WhisperWorkerEvent) {
-    switch (event.type) {
-        case "MODEL_PROGRESS":
-            sttStatus.value = "preparing";
-            sttBackend.value = event.backend;
-            if (typeof event.progress === "number")
-                sttProgress.value = event.progress;
-            sttMessage.value =
-                event.backend === "webgpu"
-                    ? "Mencoba menyiapkan Whisper dengan WebGPU."
-                    : "Menyiapkan Whisper dengan WASM / CPU.";
-            break;
-        case "READY":
-            sttStatus.value = "ready";
-            sttBackend.value = event.backend;
-            sttProgress.value = 100;
-            sttMessage.value =
-                "Model siap. Rekam satu ujaran pendek untuk transkripsi Bahasa Indonesia.";
-            break;
-        case "BACKEND_FALLBACK":
-            sttStatus.value = "preparing";
-            sttBackend.value = "wasm";
-            sttProgress.value = null;
-            sttMessage.value =
-                "WebGPU tidak dapat dimulai. Mencoba backend WASM / CPU.";
-            break;
-        case "PROCESSING":
-            sttStatus.value = "processing";
-            sttBackend.value = event.backend;
-            sttMessage.value = "Audio sedang ditranskripsikan secara lokal.";
-            break;
-        case "RESULT":
-            sttStatus.value = "ready";
-            sttBackend.value = event.backend;
-            transcriptSnippet.value = event.transcript;
-            sttInterpretationNotice.value = "";
-            if (event.transcript) {
-                sttMessage.value =
-                    "Transkripsi selesai dan diperiksa dengan aturan SRQ konservatif.";
-                void applySpeechTranscript(event.transcript);
-            } else {
-                sttMessage.value =
-                    "Tidak ada ucapan yang dikenali. Coba rekam lagi di tempat yang lebih tenang.";
-            }
-            break;
-        case "ERROR":
-            sttStatus.value =
-                event.stage === "transcribe" && sttBackend.value
-                    ? "ready"
-                    : "error";
-            sttMessage.value =
-                event.stage === "prepare"
-                    ? "Whisper tidak dapat disiapkan di perangkat ini. Jawaban manual tetap dapat digunakan."
-                    : "Transkripsi gagal. Coba rekam ulang; jawaban manual tetap dapat digunakan.";
-            break;
-    }
-}
-
-function prepareStt() {
-    if (whisperClient && sttStatus.value === "error") {
-        whisperClient.dispose();
-        whisperClient = null;
-    }
-    if (!whisperClient) {
-        const client = new WhisperClient((event) => {
-            if (whisperClient === client) handleWorkerEvent(event);
-        });
-        whisperClient = client;
-    }
-    sttStatus.value = "preparing";
-    sttProgress.value = null;
-    sttMessage.value = navigator.onLine
-        ? "Mengunduh atau membuka model yang sudah tersimpan di cache perangkat."
-        : "Mencoba membuka model yang sebelumnya sudah disiapkan di perangkat.";
-    whisperClient.prepare();
-}
-
-async function startRecording() {
-    const session = sttSession;
-    const capture = new LocalAudioCapture();
-    audioCapture = capture;
-    transcriptSnippet.value = "";
-    sttInterpretationNotice.value = "";
+async function saveObservations(value: NonVerbalObservations) {
+    if (!draftReady.value || safety.value) return;
+    const current = scope.capture();
+    observations.value = value;
+    metadataPending.value++;
     try {
-        await capture.start();
-        if (sttSession !== session || audioCapture !== capture) {
-            capture.cancel();
-            return;
-        }
-        sttStatus.value = "recording";
-        sttMessage.value =
-            "Mikrofon aktif. Ucapkan satu jawaban, lalu selesaikan rekaman.";
-    } catch (error) {
-        if (sttSession !== session || audioCapture !== capture) return;
-        audioCapture = null;
-        sttStatus.value = "ready";
-        if (error instanceof DOMException && error.name === "NotAllowedError") {
-            sttMessage.value =
-                "Izin mikrofon ditolak. Izinkan mikrofon atau gunakan jawaban manual.";
-        } else if (
-            error instanceof DOMException &&
-            error.name === "NotFoundError"
-        ) {
-            sttMessage.value =
-                "Mikrofon tidak ditemukan. Jawaban manual tetap dapat digunakan.";
-        } else {
-            sttMessage.value =
-                "Mikrofon tidak dapat dimulai. Jawaban manual tetap dapat digunakan.";
-        }
-    }
-}
-
-async function stopAndTranscribe() {
-    const capture = audioCapture;
-    const client = whisperClient;
-    const session = sttSession;
-    if (!capture || !client) return;
-    audioCapture = null;
-    sttStatus.value = "processing";
-    sttMessage.value = "Menyiapkan audio untuk Whisper di perangkat.";
-    try {
-        const audio = await capture.stop();
-        if (sttSession !== session || whisperClient !== client) return;
-        client.transcribe(audio);
+        await saveObservationDraft(owner, props.assessment.id, value, current);
+        if (current()) metadataError.value = "";
     } catch {
-        if (sttSession !== session || whisperClient !== client) return;
-        sttStatus.value = "ready";
-        sttMessage.value = "Rekaman tidak dapat diproses. Coba rekam ulang.";
-    }
+        if (current()) metadataError.value = "Observasi atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.";
+    } finally { if (current()) metadataPending.value--; }
 }
-
-function cancelRecording() {
-    audioCapture?.cancel();
-    audioCapture = null;
-    sttStatus.value = "ready";
-    sttMessage.value = "Rekaman dibatalkan. Mikrofon sudah dimatikan.";
-}
-
-function handleSttAction() {
-    if (sttStatus.value === "idle" || sttStatus.value === "error") prepareStt();
-    else if (sttStatus.value === "ready") void startRecording();
-    else if (sttStatus.value === "recording") void stopAndTranscribe();
-}
-
-function cleanupStt() {
-    sttSession += 1;
-    audioCapture?.cancel();
-    audioCapture = null;
-    whisperClient?.dispose();
-    whisperClient = null;
-    sttStatus.value = "idle";
-    sttBackend.value = null;
-    sttProgress.value = null;
-    sttMessage.value =
-        "Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.";
-    transcriptSnippet.value = "";
-    sttInterpretationNotice.value = "";
+async function retryMetadata() {
+    if (!draftReady.value) return;
+    const current = scope.capture();
+    metadataPending.value++;
+    try {
+        await saveAssessmentMode(owner, props.assessment.id, isVerbal.value ? "VERBAL" : "NON_VERBAL", current);
+        await saveObservationDraft(owner, props.assessment.id, observations.value, current);
+        if (current()) metadataError.value = "";
+    } catch {
+        if (current()) metadataError.value = "Mode atau observasi belum tersimpan. Coba lagi.";
+    } finally { if (current()) metadataPending.value--; }
 }
 
 async function persistDraft() {
+    const current = scope.capture();
+    if (!draftReady.value) return;
     try {
         if (!localAssessment.value)
             throw new Error("Asesmen lokal belum siap.");
         await saveAssessmentDraft(
             { ...localAssessment.value, user_id: owner },
             "srq_answers",
-            answers.value,
+            answers.value, current,
         );
-        draftWarning.value = "";
+        if (current()) draftWarning.value = "";
     } catch {
+        if (!current()) return;
         draftWarning.value =
             "Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.";
     }
 }
 
-onMounted(async () => {
+async function loadDraft() {
+    if (runtime.owner !== owner) return;
+    const current = scope.capture();
+    draftReady.value = false;
     try {
-        const context = await loadAssessmentContext(
-            owner,
-            props.assessment,
-            props.patient,
-            runtime.mode === "OFFLINE_FIELD_MODE",
-        );
+        const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === "OFFLINE_FIELD_MODE");
+        if (!current()) return;
+        const local = await readAssessmentDraft(owner, props.assessment.id, "srq_answers");
+        if (!current()) return;
         localAssessment.value = context.assessment;
         isVerbal.value = context.assessment.mode === "VERBAL";
         patient.value = context.patient;
-        const local = await readAssessmentDraft(
-            owner,
-            props.assessment.id,
-            "srq_answers",
-        );
-        const merged = mergeAssessmentDraft(
-            "srq_answers",
-            props.responses,
-            local,
-        );
-        for (const [key, value] of Object.entries(merged)) {
-            if (!manualOverrides.has(Number(key)))
-                (answers.value as Record<string, typeof value>)[key] = value;
+        observations.value = {
+            non_verbal_reasons: context.assessment.non_verbal_reasons ?? [],
+            non_verbal_other_note: context.assessment.non_verbal_other_note ?? null,
+        };
+        answers.value = mergeAssessmentDraft("srq_answers", props.responses, local);
+        draftReady.value = context.assessment.status === "IN_PROGRESS";
+        draftWarning.value = draftReady.value ? "" : "Asesmen selesai tidak dapat diubah.";
+        const target = window.location.hash;
+        if (/^#srq-question-(?:[1-9]|1[0-9]|20)$/.test(target)) {
+            await nextTick();
+            if (current()) document.querySelector<HTMLElement>(target)?.focus();
         }
-        draftReady.value = true;
     } catch (error) {
-        draftWarning.value =
-            error instanceof Error
-                ? error.message
-                : "Asesmen lokal tidak dapat dibaca.";
+        if (current()) draftWarning.value = error instanceof Error ? error.message : "Asesmen lokal tidak dapat dibaca.";
     }
-});
-
-onUnmounted(cleanupStt);
+}
 
 async function saveAndNext() {
-    if (isSaving.value || !draftReady.value) return;
+    if (isSaving.value || !draftReady.value || safety.value || metadataPending.value) return;
+    const current = scope.capture();
     if (answeredCount.value !== 20) {
         saveError.value = "Lengkapi semua jawaban sebelum melanjutkan.";
         return;
@@ -788,13 +499,16 @@ async function saveAndNext() {
     saveError.value = "";
     try {
         await persistDraft();
+        if (!current()) return;
+        if (metadataError.value) throw new Error(metadataError.value);
         if (draftWarning.value) throw new Error(draftWarning.value);
         runtime.navigate(`/relawan/assessment/${props.assessment.id}/risk`);
     } catch {
+        if (!current()) return;
         saveError.value =
             "Jawaban belum tersimpan di perangkat ini. Coba lagi.";
     } finally {
-        isSaving.value = false;
+        if (current()) isSaving.value = false;
     }
 }
 </script>

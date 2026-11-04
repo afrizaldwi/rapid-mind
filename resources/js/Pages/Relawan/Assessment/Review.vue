@@ -1,5 +1,5 @@
 <template>
-    <RelawanLayout>
+    <RelawanLayout @clinical-lock="scope.invalidate" @clinical-ready="loadReview">
         <div class="space-y-6 pb-56">
             <div
                 class="bg-white rounded-xl p-5 shadow-xs border border-slate-200"
@@ -40,6 +40,24 @@
                     {{ localAssessment?.mode }}
                 </p>
             </div>
+
+            <section v-if="unresolved.length" role="alert" class="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-base text-amber-950">
+                <h2 class="font-bold">{{ unresolved.length }} jawaban SRQ perlu diklarifikasi</h2>
+                <p>Skor definitif dan finalisasi belum tersedia. Periksa respons berikut bersama penyintas.</p>
+                <ul class="space-y-2">
+                    <li v-for="item in unresolved" :key="item.number">
+                        <RelawanLink :href="`/relawan/assessment/${assessment.id}/srq#srq-question-${item.number}`" class="inline-flex min-h-14 items-center rounded-lg px-2 underline focus-visible:outline-2 focus-visible:outline-teal-700">
+                            Pertanyaan {{ item.number }}: {{ item.label }} — Klarifikasi
+                        </RelawanLink>
+                    </li>
+                </ul>
+            </section>
+            <section v-if="localAssessment?.non_verbal_reasons?.length" class="space-y-2 rounded-xl border border-slate-300 bg-white p-4 text-base">
+                <h2 class="font-bold">Observasi komunikasi</h2>
+                <ul class="list-disc pl-5"><li v-for="reason in localAssessment.non_verbal_reasons" :key="reason">{{ observationLabels[reason] }}</li></ul>
+                <p v-if="localAssessment.non_verbal_other_note" class="whitespace-pre-wrap break-words">{{ localAssessment.non_verbal_other_note }}</p>
+                <p class="text-sm text-slate-600">Catatan observasi tidak menentukan skor atau diagnosis.</p>
+            </section>
 
             <!-- Subtotal Breakdown -->
             <div class="grid grid-cols-3 gap-3 text-center">
@@ -145,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { Calculator } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
@@ -161,7 +179,10 @@ import {
 import { RiskCalculator } from "@/domain/triage/riskCalculator";
 import type { LocalAssessment, LocalPatient } from "@/offline/db";
 import { SrqCalculator } from "@/domain/triage/srqCalculator";
-import { hasDefinitiveSrqAnswers } from "@/domain/srq/srqAnswer";
+import { hasDefinitiveSrqAnswers, srqAnswerLabel } from "@/domain/srq/srqAnswer";
+
+import { observationLabels } from "@/domain/assessment/observationPresentation";
+import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
 
 const props = defineProps<{
     assessment: ServerAssessment;
@@ -173,6 +194,12 @@ const localAssessment = ref<LocalAssessment | null>(null);
 const localPatient = ref<LocalPatient | null>(null);
 const isSubmitting = ref(false);
 const completionError = ref("");
+const scope = useClinicalTaskScope(() => { localAssessment.value = null; localPatient.value = null; isSubmitting.value = false; });
+const unresolved = computed(() => localAssessment.value ? Array.from({ length: 20 }, (_, index) => {
+    const number = index + 1;
+    const answer = localAssessment.value!.srq_answers?.[number];
+    return { number, answer, label: srqAnswerLabel(answer) };
+}).filter(item => typeof item.answer !== "boolean") : []);
 const assessmentComplete = computed(
     () =>
         !!localAssessment.value &&
@@ -199,7 +226,9 @@ const totalScore = computed(() =>
         ? srqYesCount.value + riskScore.value + functionScore.value
         : null,
 );
-onMounted(async () => {
+async function loadReview() {
+    if (runtime.owner !== owner) return;
+    const current = scope.capture();
     try {
         const context = await loadAssessmentContext(
             owner,
@@ -207,29 +236,34 @@ onMounted(async () => {
             props.patient,
             runtime.mode === "OFFLINE_FIELD_MODE",
         );
+        if (!current()) return;
         localAssessment.value = context.assessment;
         localPatient.value = context.patient;
     } catch (error) {
+        if (!current()) return;
         completionError.value =
             error instanceof Error
                 ? error.message
                 : "Asesmen lokal tidak tersedia.";
     }
-});
+}
 async function finalizeAssessment() {
     if (isSubmitting.value || !assessmentComplete.value) return;
+    const current = scope.capture();
     isSubmitting.value = true;
     completionError.value = "";
     try {
-        await completeLocalAssessment(owner, props.assessment.id);
+        await completeLocalAssessment(owner, props.assessment.id, current);
+        if (!current()) return;
         runtime.navigate(`/relawan/assessment/${props.assessment.id}/result`);
     } catch (error) {
+        if (!current()) return;
         completionError.value =
             error instanceof Error
                 ? error.message
                 : "Asesmen belum dapat diselesaikan.";
     } finally {
-        isSubmitting.value = false;
+        if (current()) isSubmitting.value = false;
     }
 }
 </script>

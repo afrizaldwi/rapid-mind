@@ -3,7 +3,7 @@
         v-if="show"
         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex justify-center items-end sm:items-center p-0 sm:p-4"
     >
-        <div
+        <div ref="dialogPanel" role="dialog" aria-modal="true" aria-labelledby="t0-verification-title" tabindex="-1" @keydown="keydown"
             class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-red-200 overflow-hidden flex flex-col max-h-[92vh]"
         >
             <!-- Header -->
@@ -13,7 +13,7 @@
                 <div class="flex items-center space-x-3">
                     <Siren class="h-6 w-6" aria-hidden="true" />
                     <div>
-                        <h2
+                        <h2 id="t0-verification-title"
                             class="text-lg font-extrabold tracking-wide uppercase"
                         >
                             Verifikasi T0 Darurat
@@ -26,6 +26,7 @@
                 </div>
                 <button
                     type="button"
+                    :disabled="isSubmitting"
                     @click="$emit('close')"
                     class="text-red-200 hover:text-white p-1 rounded-lg"
                     aria-label="Tutup"
@@ -230,6 +231,7 @@
             >
                 <button
                     type="button"
+                    :disabled="isSubmitting"
                     @click="$emit('close')"
                     class="sm:flex-1 py-3 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-100 transition"
                 >
@@ -250,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { MapPin, Siren, X } from "lucide-vue-next";
 import { patientRepository } from "@/offline/patientRepository";
 import type { LocalPatient } from "@/offline/db";
@@ -258,6 +260,8 @@ import { relawanOwner } from "@/offline/assessmentWorkflow";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import { createLocalEmergency } from "@/offline/emergencyWorkflow";
 import { syncManager } from "@/offline/syncManager";
+import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import { useDialogFocus } from "@/composables/useDialogFocus";
 
 const props = defineProps<{
     show: boolean;
@@ -271,6 +275,19 @@ const emit = defineEmits<{
     (e: "close"): void;
 }>();
 
+const dialogPanel = ref<HTMLElement | null>(null);
+const { keydown } = useDialogFocus(dialogPanel, () => props.show, () => { if (!isSubmitting.value) emit("close"); });
+const scope = useClinicalTaskScope(() => {
+    if (dialogPanel.value) dialogPanel.value.style.display = "none";
+    ++patientLoadCheck;
+    availablePatients.value = [];
+    fetchedPatients.value = [];
+    patientSearch.value = "";
+    chosenPatientId.value = "";
+    notes.value = "";
+    coordinates.value = null;
+    selectedRedFlag.value = "";
+});
 const owner = relawanOwner();
 const runtime = useRelawanRuntime();
 const chosenPatientId = ref("");
@@ -351,9 +368,12 @@ const redFlagOptions = [
 ];
 
 function acquireGps() {
+    const current = scope.capture();
+    const check = patientLoadCheck;
     if (typeof navigator !== "undefined" && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
             (pos) => {
+                if (!current() || !props.show || check !== patientLoadCheck) return;
                 coordinates.value = {
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
@@ -372,12 +392,14 @@ watch(
     () => props.show,
     (show) => {
         const check = ++patientLoadCheck;
-        if (!show) return;
+        if (!show) { scope.invalidate(); return; }
+        const current = scope.capture();
         selectedRedFlag.value =
             props.suggestedRedFlag === "SUICIDAL_IDEATION"
                 ? props.suggestedRedFlag
                 : "";
         notes.value = "";
+        isSubmitting.value = false;
         chosenPatientId.value = props.assessmentId
             ? (props.patientId ?? "")
             : "";
@@ -387,11 +409,11 @@ watch(
         void patientRepository
             .list(owner)
             .then((patients) => {
-                if (props.show && check === patientLoadCheck)
+                if (current() && props.show && check === patientLoadCheck)
                     availablePatients.value = patients;
             })
             .catch(() => {
-                if (check === patientLoadCheck) availablePatients.value = [];
+                if (current() && check === patientLoadCheck) availablePatients.value = [];
             });
         if (runtime.mode === "ONLINE_SERVER" && navigator.onLine) {
             void fetch("/relawan/patients/options", {
@@ -406,7 +428,7 @@ watch(
                     return (await response.json()) as ServerPatientOption[];
                 })
                 .then((patients) => {
-                    if (props.show && check === patientLoadCheck && Array.isArray(patients))
+                    if (current() && props.show && check === patientLoadCheck && Array.isArray(patients))
                         fetchedPatients.value = patients;
                 })
                 .catch(() => {
@@ -417,6 +439,7 @@ watch(
         submissionError.value = "";
         acquireGps();
     },
+    { flush: "sync" },
 );
 
 function choosePatient(id: string) {
@@ -435,46 +458,40 @@ function selectRedFlag(type: string) {
 }
 
 async function submitEmergency() {
-    if (isSubmitting.value || !selectedRedFlag.value) return;
+    if (!props.show || isSubmitting.value || !selectedRedFlag.value) return;
+    const current = scope.capture();
+    const input = {
+        patientId: chosenPatientId.value || null, assessmentId: props.assessmentId,
+        redFlagType: selectedRedFlag.value, shelterId: runtime.shelterId, notes: notes.value,
+        latitude: coordinates.value?.lat ?? null, longitude: coordinates.value?.lng ?? null,
+    };
     submissionError.value = "";
     isSubmitting.value = true;
     let id: string;
     try {
-        if (
-            chosenPatientId.value &&
-            !(await patientRepository.get(owner, chosenPatientId.value))
-        ) {
-            const serverPatient = serverPatientOptions.value.find(
-                (patient) => patient.id === chosenPatientId.value,
-            );
-            if (serverPatient)
-                await patientRepository.saveServerSnapshot(
-                    owner,
-                    serverPatient,
-                );
+        const patient = input.patientId ? await patientRepository.get(owner, input.patientId) : null;
+        if (!current() || !props.show) return;
+        if (input.patientId && !patient) {
+            const serverPatient = serverPatientOptions.value.find(patient => patient.id === input.patientId);
+            if (serverPatient) await patientRepository.saveServerSnapshot(owner, serverPatient);
         }
-        id = await createLocalEmergency(owner, {
-            patientId: chosenPatientId.value || null,
-            assessmentId: props.assessmentId,
-            redFlagType: selectedRedFlag.value,
-            shelterId: runtime.shelterId,
-            notes: notes.value,
-            latitude: coordinates.value?.lat ?? null,
-            longitude: coordinates.value?.lng ?? null,
-        });
+        if (!current() || !props.show) return;
+        // Once started, the existing atomic emergency/outbox write retains its durability guarantee.
+        id = await createLocalEmergency(owner, input);
     } catch (error) {
+        if (!current() || !props.show) return;
         submissionError.value = `T0 BELUM TERSIMPAN. ${error instanceof Error ? error.message : "Coba simpan kembali."}`;
         isSubmitting.value = false;
         return;
     }
+    if (!current() || !props.show) return;
     isSubmitting.value = false;
     window.dispatchEvent(
         new CustomEvent("rapid-mind:emergency-created", {
             detail: { owner, id },
         }),
     );
-    emit("close");
-    await nextTick();
     if (runtime.mode === "ONLINE_SERVER") void syncManager.sync(owner);
+    emit("close");
 }
 </script>

@@ -249,6 +249,7 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
         name: "Penyintas Sintetis",
     });
     return {
+        load,
         assessments: assessments.exports.assessmentRepository,
         patients: patients.exports.patientRepository,
         outbox: outbox.exports.outboxRepository,

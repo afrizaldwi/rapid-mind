@@ -249,11 +249,19 @@ export function resumeStage(a: LocalAssessment): string {
     return "review";
 }
 
-export async function completeLocalAssessment(owner: number, id: string) {
+export async function completeLocalAssessment(
+    owner: number, id: string, isCurrent: () => boolean = () => true,
+) {
+    const assertCurrent = () => {
+        if (!isCurrent()) throw new Error("Akses asesmen berubah. Tinjau kembali sebelum menyelesaikan.");
+    };
+    assertCurrent();
     const local = await assessmentRepository.get(owner, id);
+    assertCurrent();
     if (!local || !exactAssessmentAnswers(local))
         throw new Error("Asesmen belum lengkap atau tidak tersedia.");
     const patient = await patientRepository.get(owner, local.patient_id);
+    assertCurrent();
     if (!patient) throw new Error("Penyintas lokal tidak tersedia.");
     const triage = new TriageCalculator().calculate(
         local.srq_answers!,
@@ -264,6 +272,7 @@ export async function completeLocalAssessment(owner: number, id: string) {
     if (local.status === "IN_PROGRESS") {
         await localPersistenceHealth.recordWrite(owner, () =>
             assessmentRepository.update(owner, id, (current) => {
+                assertCurrent();
                 if (
                     (current.local_revision ?? 0) !==
                     (local.local_revision ?? 0)
