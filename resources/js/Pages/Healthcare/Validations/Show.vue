@@ -39,6 +39,7 @@
                             >
                             <span class="text-slate-300">·</span>
                             <span
+                                v-if="assessmentContext.finalized"
                                 class="inline-flex items-center gap-1.5 font-bold"
                                 :class="
                                     assessment.triage_result
@@ -114,7 +115,11 @@
                                 >SRQ-20</span
                             >
                             <span class="text-sm font-bold text-slate-900">
-                                {{ assessment.triage_result?.srq_score }}/20
+                                {{
+                                    assessmentContext.srqScore !== null
+                                        ? `${assessmentContext.srqScore}/20`
+                                        : "Belum tersedia"
+                                }}
                             </span>
                         </div>
                         <div>
@@ -123,7 +128,11 @@
                                 >Faktor Risiko</span
                             >
                             <span class="text-sm font-bold text-slate-900">
-                                {{ assessment.triage_result?.risk_score }}/8
+                                {{
+                                    assessmentContext.riskScore !== null
+                                        ? `${assessmentContext.riskScore}/8`
+                                        : "Belum tersedia"
+                                }}
                             </span>
                         </div>
                         <div>
@@ -132,7 +141,11 @@
                                 >Fungsi Harian</span
                             >
                             <span class="text-sm font-bold text-slate-900">
-                                {{ assessment.triage_result?.function_score }}/9
+                                {{
+                                    assessmentContext.functionScore !== null
+                                        ? `${assessmentContext.functionScore}/9`
+                                        : "Belum tersedia"
+                                }}
                             </span>
                         </div>
                         <div>
@@ -141,13 +154,18 @@
                                 >Total Skor</span
                             >
                             <span class="text-sm font-bold text-slate-900">
-                                {{ assessment.triage_result?.total_score }}/37
+                                {{
+                                    assessmentContext.totalScore !== null
+                                        ? `${assessmentContext.totalScore}/37`
+                                        : "Belum tersedia"
+                                }}
                             </span>
                         </div>
                     </div>
 
                     <p
                         v-if="
+                            assessmentContext.finalized &&
                             assessment.triage_result?.system_recommendation ===
                                 'T1' &&
                             assessment.triage_result?.function_score >= 6
@@ -164,6 +182,8 @@
                     </p>
                 </div>
             </div>
+
+            <AssessmentContextSummary :context="assessmentContext" />
 
             <!-- 2. Detailed Assessment Evidence (Unified Surface with 3 Columns) -->
             <div
@@ -193,30 +213,15 @@
                                 butir
                             </span>
                         </div>
-                        <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                            <div
-                                v-for="r in assessment.srq_responses"
-                                :key="r.id"
-                                class="text-[11px] py-1 border-b border-slate-50 flex items-start justify-between gap-2"
-                            >
-                                <span class="text-slate-600 leading-snug">
-                                    {{ r.question_number }}.
-                                    {{
-                                        srqLabels[r.question_number] ||
-                                        "Pertanyaan SRQ-20"
-                                    }}
-                                </span>
-                                <span
-                                    class="font-semibold shrink-0"
-                                    :class="
-                                        srqAnswerFromRow(r) === true
-                                            ? 'text-rose-700'
-                                            : 'text-slate-400'
-                                    "
-                                >
-                                    {{ srqAnswerLabel(srqAnswerFromRow(r)) }}
-                                </span>
-                            </div>
+                        <div
+                            class="max-h-96 overflow-y-auto rounded-lg focus-visible:outline-2 focus-visible:outline-teal-700"
+                            tabindex="0"
+                            role="region"
+                            aria-label="Jawaban SRQ-20"
+                        >
+                            <SrqResponseList
+                                :responses="assessmentContext.responses"
+                            />
                         </div>
                     </div>
 
@@ -485,6 +490,9 @@
                             class="w-full sm:w-64 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                             required
                         >
+                            <option disabled value="">
+                                Pilih hasil evaluasi klinis
+                            </option>
                             <option value="T1">
                                 T1 (Distres Berat / Evaluasi Klinis)
                             </option>
@@ -598,7 +606,10 @@
                     <div class="pt-2">
                         <button
                             type="submit"
-                            :disabled="form.processing"
+                            :disabled="
+                                form.processing ||
+                                !assessmentContext.validationReady
+                            "
                             class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition"
                         >
                             {{
@@ -615,7 +626,9 @@
 </template>
 
 <script setup lang="ts">
-import { srqAnswerFromRow, srqAnswerLabel } from "@/domain/srq/srqAnswer";
+import { healthcareAssessmentPresentation } from "@/lib/healthcareAssessmentPresentation";
+import AssessmentContextSummary from "@/components/Healthcare/Assessments/AssessmentContextSummary.vue";
+import SrqResponseList from "@/components/Healthcare/Assessments/SrqResponseList.vue";
 import { useHealthcareDraft } from "@/composables/useHealthcareDraft";
 import { computed, ref } from "vue";
 import { Link, useForm } from "@inertiajs/vue3";
@@ -627,12 +640,16 @@ const props = defineProps<{
     facilities: { id: number; name: string; type: string }[];
 }>();
 
+const assessmentContext = computed(() =>
+    healthcareAssessmentPresentation(props.assessment),
+);
 const saveError = ref("");
 const formError = computed(() => (form.errors as Record<string, string>).form);
 
 const form = useForm({
-    clinical_result:
-        props.assessment.triage_result?.system_recommendation || "T1",
+    clinical_result: assessmentContext.value.validationReady
+        ? assessmentContext.value.systemRecommendation!
+        : "",
     diagnosis_notes: "",
     intervention_plan: "",
     referral_required: false,
@@ -645,6 +662,15 @@ const draft = useHealthcareDraft(
 );
 
 function submit() {
+    if (
+        !assessmentContext.value.validationReady ||
+        form.processing ||
+        !["T1", "T2", "T3"].includes(form.clinical_result)
+    ) {
+        saveError.value =
+            "Konteks asesmen belum lengkap atau validasi sedang disimpan.";
+        return;
+    }
     const saved = draft.submitted();
     saveError.value = "";
     form.post(`/healthcare/validations/${props.assessment.id}`, {
@@ -659,29 +685,6 @@ function submit() {
         },
     });
 }
-
-const srqLabels: Record<number, string> = {
-    1: "Sering merasa sakit kepala",
-    2: "Nafsu makan menurun",
-    3: "Sulit tidur nyenyak",
-    4: "Mudah merasa takut",
-    5: "Tangan terasa gemetar",
-    6: "Merasa cemas, tegang, atau khawatir",
-    7: "Pencernaan terasa buruk",
-    8: "Sulit berpikir jernih",
-    9: "Merasa tidak bahagia",
-    10: "Lebih sering menangis",
-    11: "Sulit menikmati kegiatan sehari-hari",
-    12: "Kesulitan mengambil keputusan",
-    13: "Hasil kerja atau tugas posko terganggu",
-    14: "Merasa tidak mampu berbuat hal bermanfaat",
-    15: "Kehilangan minat total pada berbagai hal",
-    16: "Merasa diri tidak berharga atau gagal",
-    17: "Pemikiran untuk mengakhiri hidup",
-    18: "Merasa lelah sepanjang waktu",
-    19: "Tidak nyaman di perut atau ulu hati",
-    20: "Mudah merasa lelah",
-};
 
 const riskLabels: Record<string, string> = {
     R1: "Kehilangan Berat",

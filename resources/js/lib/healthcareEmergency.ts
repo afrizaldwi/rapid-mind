@@ -1,5 +1,5 @@
-import { srqAnswerFromRow, type SrqAnswer } from "../domain/srq/srqAnswer.ts";
-import { normalizeObservations } from "../domain/assessment/nonVerbalObservations.ts";
+import { type SrqAnswer } from "../domain/srq/srqAnswer.ts";
+import { healthcareAssessmentPresentation } from "./healthcareAssessmentPresentation.ts";
 
 export const srqQuestions = [
     "Apakah Anda sering merasa sakit kepala?",
@@ -144,7 +144,10 @@ function normalizeAssessment(raw: any) {
 export function normalizeQueueItem(raw: any, isEmergency: boolean) {
     const patient = raw.patient;
     const assessment = normalizeAssessment(isEmergency ? raw.assessment : raw);
-    const triage = assessment?.triageResult ?? raw.triage_result ?? null;
+    const assessmentContext = healthcareAssessmentPresentation(assessment);
+    const triage = assessmentContext.finalized
+        ? (assessment?.triageResult ?? raw.triage_result ?? null)
+        : null;
     let priority: "T0" | "T1" | "T2" | "T3" = "T2";
     let priorityLabel = "T2 Terjadwal";
 
@@ -166,10 +169,7 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
     const redFlag =
         raw.red_flag_type ||
         (triage?.is_red_flag_override ? triage.red_flag_source || null : null);
-    const q17Row = assessment?.srqResponses.find(
-        (response: any) => response.question_number === 17,
-    );
-    const q17Answer = q17Row ? srqAnswerFromRow(q17Row) : undefined;
+    const q17Answer = assessmentContext.responses[16].answer;
     let redFlagLabel = "Tanda Bahaya Lapangan";
     if (redFlag === "SUICIDAL_IDEATION")
         redFlagLabel =
@@ -196,10 +196,23 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
     else if (status === "DOWNGRADED") statusLabel = "Diturunkan";
     else if (status === "COMPLETED") statusLabel = "Selesai Tervalidasi";
 
+    if (!isEmergency && !assessmentContext.finalized)
+        statusLabel = "Asesmen belum lengkap";
+
     let semanticPriority = priority as string;
     let semanticPriorityLabel = priorityLabel;
     let semanticStatusDescription = "Menunggu validasi medis";
-    if (priority === "T0") {
+    if (!isEmergency && !assessmentContext.finalized) {
+        priorityLabel = semanticPriorityLabel =
+            "Belum ada rekomendasi definitif";
+        semanticPriority = "UNCLASSIFIED";
+        semanticStatusDescription = "Asesmen belum lengkap / perlu klarifikasi";
+    } else if (priority === "T0" && !isEmergency) {
+        priorityLabel = semanticPriorityLabel = "Rekomendasi T0-Suspect";
+        semanticPriority = "T0_SUSPECT";
+        semanticStatusDescription =
+            "Rekomendasi sistem; pengiriman darurat belum tercatat pada data ini.";
+    } else if (priority === "T0") {
         if (status === "CONFIRMED") {
             semanticPriority = semanticPriorityLabel = "T0-CONFIRMED";
             semanticStatusDescription = "Terkonfirmasi medis";
@@ -226,11 +239,7 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
         semanticStatusDescription = "Dukungan komunitas";
     }
 
-    const numberOrNull = (value: unknown) =>
-        value === undefined || value === null ? null : Number(value);
-    const srqScore = numberOrNull(triage?.srq_score);
-    const riskScore = numberOrNull(triage?.risk_score);
-    const functionScore = numberOrNull(triage?.function_score);
+    const { srqScore, riskScore, functionScore } = assessmentContext;
     const r3Answer = assessment?.riskResponses.find(
         (response: any) => response.indicator === "R3",
     )?.answer;
@@ -242,11 +251,14 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
               : "Data tidak tersedia";
     const clinicalSummary = !assessment
         ? "Asesmen terstruktur belum tersedia"
-        : !triage
-          ? "Skor triase belum tersedia"
-          : `SRQ ${srqScore ?? "-"}/20 • Risiko ${riskScore ?? "-"}/8 • Fungsi ${functionScore ?? "-"}/9`;
+        : !assessmentContext.finalized
+          ? assessmentContext.statusLabel
+          : !triage
+            ? "Skor triase belum tersedia"
+            : `SRQ ${srqScore ?? "-"}/20 • Risiko ${riskScore ?? "-"}/8 • Fungsi ${functionScore ?? "-"}/9`;
 
     return {
+        assessmentContext,
         key: `${isEmergency ? "emg" : "asm"}-${raw.id}`,
         raw,
         isEmergency,
@@ -297,15 +309,7 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
         assessmentCreatedAt:
             assessment?.completed_at || assessment?.created_at || null,
         srqResponses: assessment?.srqResponses || [],
-        ...normalizeObservations(
-            assessment?.non_verbal_reasons != null
-                ? {
-                      non_verbal_reasons: assessment.non_verbal_reasons,
-                      non_verbal_other_note:
-                          assessment.non_verbal_other_note ?? null,
-                  }
-                : {},
-        ),
+        ...assessmentContext.observations,
         riskResponses: assessment?.riskResponses || [],
         functionResponses: assessment?.functionResponses || [],
         verifications: raw.verifications || [],
@@ -409,7 +413,7 @@ export function getSrqAnswer(
         (response: any) => response.question_number === qNumber,
     );
     if (!resp) return null;
-    return srqAnswerFromRow(resp);
+    return item.assessmentContext.responses[qNumber - 1]?.answer ?? null;
 }
 
 export function getRiskAnswer(
@@ -421,7 +425,7 @@ export function getRiskAnswer(
         (response: any) => response.indicator === code,
     );
     if (!resp || resp.answer === undefined || resp.answer === null) return null;
-    return Boolean(resp.answer);
+    return typeof resp.answer === "boolean" ? resp.answer : null;
 }
 
 export function getFunctionLabel(

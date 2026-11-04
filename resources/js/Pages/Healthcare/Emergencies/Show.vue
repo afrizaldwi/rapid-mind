@@ -7,14 +7,42 @@
                     href="/healthcare/emergencies"
                     class="text-xs font-semibold text-teal-800 hover:text-teal-900 flex items-center gap-1 transition"
                 >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        />
                     </svg>
                     <span>Kembali ke Antrean Kasus</span>
                 </Link>
-                <div class="flex items-center gap-1.5 text-xs font-semibold" :class="emergency.status === 'PENDING' ? 'text-rose-700' : 'text-amber-800'">
-                    <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="emergency.status === 'PENDING' ? 'bg-rose-600' : 'bg-amber-600'"></span>
-                    <span>{{ emergency.status === 'PENDING' ? 'Menunggu Validasi' : emergency.status }}</span>
+                <div
+                    class="flex items-center gap-1.5 text-xs font-semibold"
+                    :class="
+                        emergency.status === 'PENDING'
+                            ? 'text-rose-700'
+                            : 'text-amber-800'
+                    "
+                >
+                    <span
+                        class="w-1.5 h-1.5 rounded-full shrink-0"
+                        :class="
+                            emergency.status === 'PENDING'
+                                ? 'bg-rose-600'
+                                : 'bg-amber-600'
+                        "
+                    ></span>
+                    <span>{{
+                        emergency.status === "PENDING"
+                            ? "Menunggu Validasi"
+                            : emergency.status
+                    }}</span>
                 </div>
             </div>
 
@@ -32,62 +60,125 @@
             </div>
 
             <!-- Main Patient & Case Summary (Single Unified Clinical Surface) -->
-            <div class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div
+                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+            >
+                <div
+                    class="flex flex-col sm:flex-row sm:items-start justify-between gap-3"
+                >
                     <div class="space-y-1">
-                        <div class="flex items-center gap-1.5 text-xs font-bold text-rose-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>
-                            <span>{{ formatRedFlag(emergency.red_flag_type) }}</span>
+                        <div
+                            class="flex items-center gap-1.5 text-xs font-bold text-rose-700"
+                        >
+                            <span
+                                class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"
+                            ></span>
+                            <span>{{
+                                formatRedFlag(emergency.red_flag_type)
+                            }}</span>
                         </div>
-                        <h2 class="text-xl font-bold text-slate-900 tracking-tight">
-                            {{ emergency.patient?.name || "Penyintas Tanpa Nama" }}
+                        <h2
+                            class="text-xl font-bold text-slate-900 tracking-tight"
+                        >
+                            {{
+                                emergency.patient?.name ||
+                                "Penyintas Tanpa Nama"
+                            }}
                         </h2>
                         <p class="text-xs text-slate-500">
-                            NIK: <span class="font-mono text-slate-700">{{ emergency.patient?.nik || "Tidak tercatat" }}</span>
-                            • Usia: {{ emergency.patient?.age ?? "-" }} th
-                            • {{ emergency.patient?.gender || "-" }}
+                            NIK:
+                            <span class="font-mono text-slate-700">{{
+                                emergency.patient?.nik || "Tidak tercatat"
+                            }}</span>
+                            • Usia: {{ emergency.patient?.age ?? "-" }} th •
+                            {{ emergency.patient?.gender || "-" }}
                         </p>
                     </div>
 
                     <div class="text-left sm:text-right text-xs">
-                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Waktu Sinyal SOS</span>
+                        <span
+                            class="text-slate-400 block text-[10px] uppercase font-semibold"
+                            >Waktu Sinyal SOS</span
+                        >
                         <span class="font-bold text-slate-800">
-                            {{ new Date(emergency.created_at).toLocaleTimeString("id-ID") }} WIB
+                            {{
+                                new Date(
+                                    emergency.created_at,
+                                ).toLocaleTimeString("id-ID")
+                            }}
+                            WIB
                         </span>
                     </div>
                 </div>
 
                 <!-- Metadata Row: Divided info row, NO nested cards -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs">
+                <div
+                    class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs"
+                >
                     <div>
-                        <span class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider">Posko Lapangan</span>
-                        <span class="font-semibold text-slate-800">{{ emergency.shelter?.name || "Posko tidak diketahui" }}</span>
+                        <span
+                            class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
+                            >Posko Lapangan</span
+                        >
+                        <span class="font-semibold text-slate-800">{{
+                            emergency.shelter?.name || "Posko tidak diketahui"
+                        }}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider">Relawan Pelapor</span>
-                        <span class="font-semibold text-slate-800">{{ emergency.user?.name || "Relawan" }}</span>
+                        <span
+                            class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
+                            >Relawan Pelapor</span
+                        >
+                        <span class="font-semibold text-slate-800">{{
+                            emergency.user?.name || "Relawan"
+                        }}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider">Koordinat GPS</span>
+                        <span
+                            class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
+                            >Koordinat GPS</span
+                        >
                         <span class="font-mono font-semibold text-slate-800">
-                            {{ formatCoordinates(emergency.latitude, emergency.longitude) }}
+                            {{
+                                formatCoordinates(
+                                    emergency.latitude,
+                                    emergency.longitude,
+                                )
+                            }}
                         </span>
                     </div>
                     <div>
-                        <span class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider">Status Triase Awal</span>
-                        <span class="font-semibold text-rose-700">T0-Suspect</span>
+                        <span
+                            class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
+                            >Status Triase Awal</span
+                        >
+                        <span class="font-semibold text-rose-700"
+                            >T0-Suspect</span
+                        >
                     </div>
                 </div>
 
                 <!-- Volunteer Contact Section -->
-                <div class="pt-3 border-t border-slate-100 text-xs flex flex-wrap items-center justify-between gap-2">
+                <div
+                    class="pt-3 border-t border-slate-100 text-xs flex flex-wrap items-center justify-between gap-2"
+                >
                     <div>
-                        <span class="text-slate-400 text-[10px] font-semibold uppercase block">Kontak Relawan</span>
-                        <span class="font-semibold text-slate-800">{{ emergency.user?.name || "Relawan" }}</span>
-                        <span v-if="emergency.user?.phone_number" class="text-slate-600 font-mono ml-2">
+                        <span
+                            class="text-slate-400 text-[10px] font-semibold uppercase block"
+                            >Kontak Relawan</span
+                        >
+                        <span class="font-semibold text-slate-800">{{
+                            emergency.user?.name || "Relawan"
+                        }}</span>
+                        <span
+                            v-if="emergency.user?.phone_number"
+                            class="text-slate-600 font-mono ml-2"
+                        >
                             ({{ emergency.user.phone_number }})
                         </span>
-                        <span v-else class="text-slate-400 text-[11px] ml-2">Nomor telepon belum tersedia</span>
+                        <span v-else class="text-slate-400 text-[11px] ml-2"
+                            >Nomor telepon belum tersedia</span
+                        >
                     </div>
                     <a
                         v-if="emergency.user?.phone_number"
@@ -99,9 +190,17 @@
                 </div>
 
                 <!-- Observation Notes -->
-                <div v-if="emergency.notes" class="pt-3 border-t border-slate-100 text-xs">
-                    <span class="text-slate-400 text-[10px] font-semibold uppercase block">Catatan Observasi Lapangan</span>
-                    <p class="text-slate-700 italic mt-0.5">"{{ emergency.notes }}"</p>
+                <div
+                    v-if="emergency.notes"
+                    class="pt-3 border-t border-slate-100 text-xs"
+                >
+                    <span
+                        class="text-slate-400 text-[10px] font-semibold uppercase block"
+                        >Catatan Observasi Lapangan</span
+                    >
+                    <p class="text-slate-700 italic mt-0.5">
+                        "{{ emergency.notes }}"
+                    </p>
                 </div>
             </div>
 
@@ -112,13 +211,16 @@
             >
                 <div class="space-y-1">
                     <div class="flex items-center gap-1.5 text-rose-700">
-                        <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                        <span
+                            class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"
+                        ></span>
                         <h3 class="font-bold text-slate-900 text-sm">
                             Langkah 1: Akui Kasus Darurat (Acknowledge)
                         </h3>
                     </div>
                     <p class="text-xs text-slate-500 max-w-xl leading-relaxed">
-                        Tekan tombol akui untuk memberitahu relawan di posko bahwa tim medis sedang meninjau kasus ini.
+                        Tekan tombol akui untuk memberitahu relawan di posko
+                        bahwa tim medis sedang meninjau kasus ini.
                     </p>
                 </div>
 
@@ -142,13 +244,19 @@
                         Langkah 2: Verifikasi Sekunder Tenaga Medis
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Lakukan tele-konsultasi dengan relawan di tempat atau dokter jaga posko.
+                        Lakukan tele-konsultasi dengan relawan di tempat atau
+                        dokter jaga posko.
                     </p>
                 </div>
 
-                <form @submit.prevent="submitVerification" class="space-y-4 text-xs">
+                <form
+                    @submit.prevent="submitVerification"
+                    class="space-y-4 text-xs"
+                >
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        <label
+                            class="block text-xs font-semibold text-slate-700 mb-1.5"
+                        >
                             Metode Verifikasi
                         </label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -162,8 +270,18 @@
                                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                                 "
                             >
-                                <svg class="w-4 h-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                <svg
+                                    class="w-4 h-4 shrink-0 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                    />
                                 </svg>
                                 <span>Panggilan Telepon</span>
                             </button>
@@ -177,8 +295,18 @@
                                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                                 "
                             >
-                                <svg class="w-4 h-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                <svg
+                                    class="w-4 h-4 shrink-0 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                    />
                                 </svg>
                                 <span>Video Call</span>
                             </button>
@@ -192,8 +320,18 @@
                                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                                 "
                             >
-                                <svg class="w-4 h-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                <svg
+                                    class="w-4 h-4 shrink-0 text-slate-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                    />
                                 </svg>
                                 <span>Tim Lapangan</span>
                             </button>
@@ -201,7 +339,9 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        <label
+                            class="block text-xs font-semibold text-slate-700 mb-1"
+                        >
                             Catatan Hasil Verifikasi Klinis
                         </label>
                         <textarea
@@ -232,15 +372,23 @@
                         Langkah 3: Keputusan Klasifikasi Klinis Dokter
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Konfirmasi T0 atau turunkan (downgrade) ke T1 / T2 / T3 sesuai kondisi klinis riil.
+                        Konfirmasi T0 atau turunkan (downgrade) ke T1 / T2 / T3
+                        sesuai kondisi klinis riil.
                     </p>
                 </div>
 
-                <form @submit.prevent="submitClassification" class="space-y-4 text-xs">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <form
+                    @submit.prevent="submitClassification"
+                    class="space-y-4 text-xs"
+                >
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5"
+                    >
                         <button
                             type="button"
-                            @click="decisionForm.clinical_result = 'T0_CONFIRMED'"
+                            @click="
+                                decisionForm.clinical_result = 'T0_CONFIRMED'
+                            "
                             class="p-3 rounded-lg border text-left transition"
                             :class="
                                 decisionForm.clinical_result === 'T0_CONFIRMED'
@@ -249,8 +397,17 @@
                             "
                         >
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-rose-700 uppercase">T0 Terkonfirmasi</span>
-                                <span v-if="decisionForm.clinical_result === 'T0_CONFIRMED'">✓</span>
+                                <span
+                                    class="text-xs font-bold text-rose-700 uppercase"
+                                    >T0 Terkonfirmasi</span
+                                >
+                                <span
+                                    v-if="
+                                        decisionForm.clinical_result ===
+                                        'T0_CONFIRMED'
+                                    "
+                                    >✓</span
+                                >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
                                 Krisis akut. Butuh rujukan segera.
@@ -268,8 +425,14 @@
                             "
                         >
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-orange-700 uppercase">Diturunkan ke T1</span>
-                                <span v-if="decisionForm.clinical_result === 'T1'">✓</span>
+                                <span
+                                    class="text-xs font-bold text-orange-700 uppercase"
+                                    >Diturunkan ke T1</span
+                                >
+                                <span
+                                    v-if="decisionForm.clinical_result === 'T1'"
+                                    >✓</span
+                                >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
                                 Bukan ancaman nyawa, rawat jalan posko.
@@ -287,8 +450,14 @@
                             "
                         >
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-amber-700 uppercase">Diturunkan ke T2</span>
-                                <span v-if="decisionForm.clinical_result === 'T2'">✓</span>
+                                <span
+                                    class="text-xs font-bold text-amber-700 uppercase"
+                                    >Diturunkan ke T2</span
+                                >
+                                <span
+                                    v-if="decisionForm.clinical_result === 'T2'"
+                                    >✓</span
+                                >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
                                 Distres sedang, konseling posko.
@@ -306,8 +475,14 @@
                             "
                         >
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-emerald-700 uppercase">Diturunkan ke T3</span>
-                                <span v-if="decisionForm.clinical_result === 'T3'">✓</span>
+                                <span
+                                    class="text-xs font-bold text-emerald-700 uppercase"
+                                    >Diturunkan ke T3</span
+                                >
+                                <span
+                                    v-if="decisionForm.clinical_result === 'T3'"
+                                    >✓</span
+                                >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
                                 Kondisi stabil, dukungan dasar.
@@ -316,7 +491,9 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        <label
+                            class="block text-xs font-semibold text-slate-700 mb-1"
+                        >
                             Catatan Justifikasi Klinis
                         </label>
                         <textarea
@@ -347,18 +524,34 @@
                         Langkah 4: Rujukan Medis
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        T0 telah dikonfirmasi. Buat tiket rujukan ke fasilitas kesehatan lanjutan jika diperlukan.
+                        T0 telah dikonfirmasi. Buat tiket rujukan ke fasilitas
+                        kesehatan lanjutan jika diperlukan.
                     </p>
                 </div>
 
                 <template v-if="emergency.referrals?.length">
-                    <ClinicalReferralCard v-for="referral in emergency.operations?.referrals || []" :key="referral.id" :referral="referral" :available="!!emergency.operations?.available" />
-                    <p v-if="!emergency.operations?.available">Rujukan tercatat. Lihat daftar Rujukan untuk alur kompatibilitas.</p>
+                    <ClinicalReferralCard
+                        v-for="referral in emergency.operations?.referrals ||
+                        []"
+                        :key="referral.id"
+                        :referral="referral"
+                        :available="!!emergency.operations?.available"
+                    />
+                    <p v-if="!emergency.operations?.available">
+                        Rujukan tercatat. Lihat daftar Rujukan untuk alur
+                        kompatibilitas.
+                    </p>
                 </template>
 
-                <form v-else @submit.prevent="submitReferral" class="space-y-3 text-xs">
+                <form
+                    v-else
+                    @submit.prevent="submitReferral"
+                    class="space-y-3 text-xs"
+                >
                     <div>
-                        <label class="mb-1 block text-xs font-semibold text-slate-700">
+                        <label
+                            class="mb-1 block text-xs font-semibold text-slate-700"
+                        >
                             Fasilitas Kesehatan Tujuan Rujukan
                         </label>
                         <select
@@ -379,7 +572,9 @@
                         </select>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-semibold text-slate-700">
+                        <label
+                            class="mb-1 block text-xs font-semibold text-slate-700"
+                        >
                             Catatan Rujukan (Opsional)
                         </label>
                         <textarea
@@ -391,7 +586,11 @@
                     </div>
                     <button
                         type="submit"
-                        :disabled="isSubmitting || !emergency.patient_id || !referralForm.facility_id"
+                        :disabled="
+                            isSubmitting ||
+                            !emergency.patient_id ||
+                            !referralForm.facility_id
+                        "
                         class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition"
                     >
                         Terbitkan Rujukan Medis
@@ -399,14 +598,33 @@
                 </form>
             </div>
 
-            <DispatchPanel v-if="emergency.status === 'CONFIRMED'" :emergency-id="emergency.id" :operations="emergency.operations" :units="responseUnits || []" />
+            <DispatchPanel
+                v-if="emergency.status === 'CONFIRMED'"
+                :emergency-id="emergency.id"
+                :operations="emergency.operations"
+                :units="responseUnits || []"
+            />
             <OperationsTimeline :operations="emergency.operations" />
+            <details class="rounded-xl border border-slate-200 bg-white p-4">
+                <summary
+                    class="min-h-11 cursor-pointer rounded-lg py-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-teal-700"
+                >
+                    Konteks Asesmen Lapangan
+                </summary>
+                <EmergencyAssessmentTab :item="assessmentItem" />
+            </details>
+
             <!-- Verification History & Audit Trail -->
             <div
-                v-if="emergency.verifications && emergency.verifications.length > 0"
+                v-if="
+                    emergency.verifications &&
+                    emergency.verifications.length > 0
+                "
                 class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-3"
             >
-                <h3 class="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                <h3
+                    class="font-bold text-slate-900 text-xs uppercase tracking-wider"
+                >
                     Riwayat Verifikasi & Audit Tim Medis
                 </h3>
                 <div class="divide-y divide-slate-100 text-xs">
@@ -422,12 +640,20 @@
                             <span class="text-slate-400 text-[11px] ml-1.5">
                                 ({{ v.method || "Verifikasi" }})
                             </span>
-                            <p v-if="v.notes" class="text-slate-600 text-[11px]">
+                            <p
+                                v-if="v.notes"
+                                class="text-slate-600 text-[11px]"
+                            >
                                 "{{ v.notes }}"
                             </p>
                         </div>
                         <span class="text-slate-400 text-[11px] shrink-0">
-                            {{ new Date(v.created_at).toLocaleTimeString("id-ID") }} WIB
+                            {{
+                                new Date(v.created_at).toLocaleTimeString(
+                                    "id-ID",
+                                )
+                            }}
+                            WIB
                         </span>
                     </div>
                 </div>
@@ -437,6 +663,8 @@
 </template>
 
 <script setup lang="ts">
+import EmergencyAssessmentTab from "@/components/Healthcare/Emergencies/EmergencyAssessmentTab.vue";
+import { normalizeQueueItem } from "@/lib/healthcareEmergency";
 import { useHealthcareDraft } from "@/composables/useHealthcareDraft";
 import ClinicalReferralCard from "@/components/Healthcare/Operations/ClinicalReferralCard.vue";
 import DispatchPanel from "@/components/Healthcare/Operations/DispatchPanel.vue";
@@ -455,6 +683,9 @@ const props = defineProps<{
 
 const isSubmitting = ref(false);
 const page = usePage();
+const assessmentItem = computed(() =>
+    normalizeQueueItem(props.emergency, true),
+);
 const actionErrors = computed(() =>
     Object.entries(page.props.errors ?? {}).map(([key, message]) => ({
         key,
@@ -477,12 +708,20 @@ const referralForm = ref({
     notes: "",
 });
 
-const verificationDraft = useHealthcareDraft(() => verificationForm.value,
-    () => ['PENDING', 'ACKNOWLEDGED'].includes(props.emergency.status));
-const decisionDraft = useHealthcareDraft(() => decisionForm.value,
-    () => props.emergency.status === 'REVIEWING');
-const referralDraft = useHealthcareDraft(() => referralForm.value,
-    () => props.emergency.status === 'CONFIRMED' && !props.emergency.referrals?.length);
+const verificationDraft = useHealthcareDraft(
+    () => verificationForm.value,
+    () => ["PENDING", "ACKNOWLEDGED"].includes(props.emergency.status),
+);
+const decisionDraft = useHealthcareDraft(
+    () => decisionForm.value,
+    () => props.emergency.status === "REVIEWING",
+);
+const referralDraft = useHealthcareDraft(
+    () => referralForm.value,
+    () =>
+        props.emergency.status === "CONFIRMED" &&
+        !props.emergency.referrals?.length,
+);
 
 function acknowledgeCase() {
     isSubmitting.value = true;

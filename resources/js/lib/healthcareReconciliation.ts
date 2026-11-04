@@ -13,7 +13,14 @@ export function createHealthcareReconciler(
     let mutating = false;
     let alive = true;
     function flush() {
-        if (!alive || !pending || running || scheduled || (editing && !manual) || mutating)
+        if (
+            !alive ||
+            !pending ||
+            running ||
+            scheduled ||
+            (editing && !manual) ||
+            mutating
+        )
             return;
         scheduled = true;
         schedule(() => {
@@ -61,7 +68,9 @@ export function createHealthcareDraftRegistry() {
     }
     return {
         set(owner: symbol, dirty: boolean) {
-            const changed = dirty ? !dirtyOwners.has(owner) : dirtyOwners.has(owner);
+            const changed = dirty
+                ? !dirtyOwners.has(owner)
+                : dirtyOwners.has(owner);
             if (dirty) dirtyOwners.add(owner);
             else dirtyOwners.delete(owner);
             if (changed) notify();
@@ -72,9 +81,18 @@ export function createHealthcareDraftRegistry() {
         subscribe(listener: (dirty: boolean) => void) {
             listeners.add(listener);
             listener(dirtyOwners.size > 0);
-            return () => { listeners.delete(listener); };
+            return () => {
+                listeners.delete(listener);
+            };
         },
     };
 }
 
 export const healthcareDrafts = createHealthcareDraftRegistry();
+
+// Partial assessment context may arrive after EmergencyCreated without another emergency event.
+export function isEmergencyContextRoute(url: string): boolean {
+    return /^\/healthcare\/emergencies(?:\/[^/]+)?\/?$/.test(
+        url.split(/[?#]/, 1)[0],
+    );
+}
