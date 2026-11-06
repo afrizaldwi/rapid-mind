@@ -9,6 +9,36 @@
 
 ---
 
+# Current authority and implementation alignment — 7 November 2026
+
+The [D1 baseline](CURRENT_IMPLEMENTATION.md) supersedes conflicting historical
+examples below. Clinical classification, Referral and Dispatch remain independent;
+Healthcare owns case-specific decisions and Admin remains aggregate/provisioning.
+
+UI/backend integration, read projections, separate histories and Healthcare-only
+ID events/listeners exist. Schema readiness controls availability; intermediate
+legacy movement records retain compatibility controls. Internal Referral completion
+is not hospital acceptance/treatment; Dispatch assignment is not external contact
+or capacity reservation. The retained `ON_SITE → COMPLETED` branch is supported;
+transport is not mandatory for every dispatch. Final legacy retirement and live
+runtime/browser acceptance are not established by this documentation review.
+See [2D/2E evidence](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md).
+
+**Relawan visibility supersession:** §31 and locked decision 30 are historical
+proposals. Relawan receives only its original T0-Suspect report and local/server
+delivery state, never Healthcare review/confirmation/downgrade, referral or
+Dispatch milestones. Server receipt does not imply a human response.
+
+**APPROVED TEAM SUPERSESSION — 7 November 2026:** Healthcare may explicitly and
+auditably downgrade T0-Suspect to T1/T2/T3; the T1/T2-only restriction is historical.
+Source supports this product decision, without external protocol certification.
+Necessary case details still require case/facility authorization, not role-wide
+patient access. Internal assignment is not physical pickup. November Safety
+C1 acceptance, C2 integration and C3 final acceptance remain pending; October STT
+C1/C2 results are unrelated (see the [ledger](workflow-verification.md#november-safety-evidence)).
+
+---
+
 # 1. Source Constraints
 
 This design is derived from and must remain consistent with:
@@ -1205,6 +1235,10 @@ Do not silently queue these Healthcare mutations as if they were equivalent to t
 
 # 31. Relawan-Facing Operational Updates
 
+> **SUPERSEDED — 7 November alignment:** the response/clinical milestones below
+> are historical proposals and must not be exposed to Relawan. Show T0-Suspect
+> and delivery state only; Healthcare owns the downstream states.
+
 The Relawan should receive only useful operational milestones.
 
 Safe/useful progression:
@@ -1455,7 +1489,7 @@ The following are the current design baseline:
 27. Stale forms must not overwrite newer canonical server state.
 28. Realtime disconnection is explicitly distinguished from server/API failure.
 29. Healthcare state-changing actions must not falsely appear saved during server failure.
-30. Relawan receives useful response milestones but not dense internal Healthcare details.
+30. **Historical — superseded by the November visibility rule above:** Relawan receives useful response milestones but not dense internal Healthcare details.
 31. Healthcare referral/dispatch controls remain keyboard accessible.
 32. Teal remains the standard interaction color; T0 red remains protected for emergency semantics.
 33. Admin remains macro/provisioning-oriented; Healthcare remains patient/action-oriented.

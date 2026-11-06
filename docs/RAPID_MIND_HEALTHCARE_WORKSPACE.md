@@ -9,9 +9,64 @@
 
 ---
 
-# Current Implementation Alignment — 24 October 2026
+# Current Implementation Alignment — 7 November 2026
 
-This section describes the current source. The numbered sections below retain
+This source/documentation review adopts the [D1 baseline](CURRENT_IMPLEMENTATION.md),
+not new runtime acceptance. Later-approved safety requirements govern conflicting
+historical workflow/UX examples.
+
+- Referral/Dispatch UI/backend integration, schema-aware read projections,
+  histories and deterministic fixture seeder are implemented. Emergency actions
+  and detail show sibling clinical Referral and Respons Lapangan controls;
+  patient history and the referral list show independent operational data.
+- New controls require Dispatch/history/unit tables and the Referral verification
+  column. Missing schema reports unavailable operations, not an empty successful
+  dispatch. ACTIVE referrals use clinical completion when ready; intermediate
+  legacy movement rows/endpoint/cast remain compatibility paths. No runtime
+  schema deployment or final legacy retirement is established by this review.
+- Healthcare-only ID events (`DispatchUpdated`, `ReferralUpdated`) and layout
+  listeners reconcile canonical props after committed changes. Live transport
+  and browser acceptance are not established by source or isolated tests.
+- A confirmed case remains active while Dispatch is absent/unfinished or any
+  Referral is unfinished. Clinical classification, Referral and Dispatch remain
+  distinct. Completion of internal referral work is not facility acceptance or
+  treatment; dispatch assignment does not contact/reserve an external unit.
+- P1 observations and P2 SRQ display preserve non-verbal reasons and all four
+  states; unresolved/missing/malformed evidence is not NO/zero. Display persisted
+  valid scoring evidence without manufacturing recommendations. Missing assessment
+  data does not itself disable eligible emergency acknowledgement/verification.
+  Relawan receives neither these clinical states nor referral/dispatch progress.
+
+[Recorded 2D/2E evidence](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md)
+is isolated automated coverage, not current live-browser or cutover proof.
+November Safety C1 remains **IMPLEMENTED — ACCEPTANCE PENDING**; C2 integration
+and C3 final acceptance remain pending. See the
+[November ledger](workflow-verification.md#november-safety-evidence).
+
+**APPROVED TEAM DECISION — 7 November 2026:** Healthcare may downgrade T0-Suspect
+to T1/T2/T3 through an explicit audited decision. This supersedes the earlier
+§21 T1/T2-only product restriction and resolves the prior discrepancy. Current
+controller/UI support exists; external clinical-protocol certification is not claimed.
+
+Necessary case information must remain subject to case/facility authorization;
+Healthcare role membership alone is not universal patient-record permission.
+`HealthcareController` list/detail reads and classification lookup are broad in
+the inspected source, `HealthcareWorkflowAccess` checks role/activity only, and
+`routes/channels.php` has a role-wide emergency channel. These are authorization
+implementation gaps requiring review, not approval of unrestricted access.
+Official anonymized Admin reports must use validated outcomes; current mixed
+queries and missing downgrade categories are documented in
+[the Admin gap matrix](RAPID_MIND_ADMIN_WORKSPACE.md). Internal Dispatch assignment
+records coordination, not proof of external contact or physical pickup.
+
+---
+
+# Historical Implementation Alignment — 24 October 2026
+
+This section preserves the October source snapshot and reported test results.
+Its backend-only/no-Dispatch-UI/no-Dispatch-event and pending-2D/2E claims are
+superseded by the November alignment above. All "current"/"today" references
+in this block refer to that October baseline. The numbered sections below retain
 the intended Healthcare UX and clinical/operational rationale. A Vue surface or
 Laravel route is not treated as browser-verified behavior unless the verification
 ledger records that evidence.
@@ -83,21 +138,24 @@ uses `Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` sections.
   2C adds no Dispatch broadcast or subscription. Existing emergency-origin
   broadcasts remain separate from backend dispatch persistence.
 
-## Clinical protocol discrepancy requiring an owner decision
+## Historical product discrepancy — superseded 7 November 2026
 
-The historical design requirement in section 21 permits only T1/T2 downgrade
-from T0-Suspect. Current source (`EmergencyActionsTab.vue` and
-`HealthcareController::classify`) also exposes and accepts T3, mapping it to
+The following account records the unresolved October decision boundary. The final
+team decision above now permits T1/T2/T3; no historical test result is changed.
+
+The design requirement in section 21 permitted only T1/T2 downgrade
+from T0-Suspect. The source inspected at that time (`EmergencyActionsTab.vue` and
+`HealthcareController::classify`) also exposed and accepted T3, mapping it to
 `DOWNGRADED`.
 
-**REQUIRES OWNER DECISION:** this document does not authorize T3, remove it, or
-reinterpret the clinical protocol. Until the owner resolves the discrepancy,
-future work must preserve both facts: the earlier Healthcare design requirement restricts
-T0 downgrade to T1/T2, while the current implementation accepts T3.
+**Historical finding — superseded 7 November 2026 (originally REQUIRES OWNER DECISION):** the document then recorded the discrepancy without authorizing T3,
+removing it, or reinterpreting the clinical protocol. Pending the owner's decision,
+work was required to preserve both recorded facts: the earlier Healthcare design
+restricted T0 downgrade to T1/T2, while the implementation accepted T3.
 
 For the compact live inventory and evidence boundaries, see
-`CURRENT_IMPLEMENTATION.md`, `checkpoint-2b-domain-foundation.md`,
-`checkpoint-2c-backend-workflows.md`, and `workflow-verification.md`.
+`CURRENT_IMPLEMENTATION.md`, `checkpoints/checkpoint-2b-domain-foundation.md`,
+`checkpoints/checkpoint-2c-backend-workflows.md`, and `workflow-verification.md`.
 
 ---
 
@@ -637,9 +695,13 @@ Use one outcome selector and one auditable save action.
 
 ---
 
-# 21. No T3 in T0 Downgrade Flow
+# 21. Historical T1/T2-only Downgrade Flow — superseded
 
-Current baseline:
+> **Approved 7 November 2026:** explicit, auditable Healthcare downgrade may be
+> T1, T2 or T3. The original restriction below is retained as historical design,
+> not an active product rule or external clinical protocol.
+
+The baseline at that time was:
 
 ```text
 T0-Confirmed
@@ -647,7 +709,9 @@ or
 downgrade to T1/T2
 ```
 
-Do not expose T3 unless the clinical protocol is explicitly revised.
+The earlier design instructed that T3 was not to be exposed without an explicit
+clinical-protocol revision. The approved product decision above superseded that
+restriction; it did not establish external clinical-protocol certification.
 
 ---
 
@@ -1426,8 +1490,8 @@ Healthcare should not become the regional analytical command center.
 21. Clinical history uses progressive disclosure.
 22. Secondary verification does not invent an unsupported clinical checklist.
 23. No prominent countdown timer pressures clinical review.
-24. Current T0 validation outcomes are T0 / T1 / T2.
-25. T3 is not exposed as a T0 downgrade unless protocol changes.
+24. **Historical — superseded 7 November 2026:** T0 validation outcomes were restricted to T0 / T1 / T2 in the earlier design.
+25. **Historical — superseded 7 November 2026:** The earlier design excluded T3 as a T0 downgrade pending a protocol change.
 26. `T0-Confirmed` means clinical confirmation only.
 27. Referral/dispatch are separate downstream states.
 28. Original T0-Suspect is never overwritten.

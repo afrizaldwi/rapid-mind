@@ -27,39 +27,28 @@ RAPID-MIND is a decision-support system, not an autonomous diagnostic system.
 
 ---
 
-## Current Priority: Demo Sprint
+## Current Priorities: P0–P2 Safety
 
-The immediate priority is a working end-to-end prototype for a team demo.
+The immediate target is a secure, reliable localhost competition demonstration.
+Work in narrow checkpoints, in this priority order:
 
-Prefer a coherent working workflow over broad architectural completeness.
+- **P0 — privacy and T0 safety:** AES-256-GCM encryption of offline clinical
+  data with correct key lifecycle, verified real-user activation/migration and
+  plaintext cleanup, offline lock/recovery, and reliable emergency delivery.
+- **P1 — non-verbal observations:** multiple observational reasons and optional
+  explanation where appropriate, preserved through offline drafts and sync and
+  visible to Healthcare. Observations are neither diagnoses nor scoring inputs.
+- **P2 — four-state SRQ safety:** preserve `YES`, `NO`, `UNCLEAR`, `UNANSWERED`
+  across client, storage, API, server, and Healthcare. Unresolved required answers
+  must not produce a definitive score or score-based triage recommendation.
+  Apparent SRQ-17 `YES` requires explicit human confirmation; keep manual T0
+  available independently of assessment completion.
 
-Critical demo path:
-
-```text
-Relawan
-→ patient / assessment
-→ SRQ-20
-→ risk factors
-→ daily function
-→ system triage recommendation
-→ T0-Suspect
-→ Healthcare receives emergency
-→ Healthcare validates
-→ referral / follow-up
-→ Admin observes aggregate operational state
-```
-
-During this sprint:
-
-- prioritize working happy paths;
-- use real persistence where practical;
-- use real Reverb/Echo realtime where required;
-- keep business-state transitions correct;
-- allow temporary implementation shortcuts when clearly isolated;
-- defer production-grade security hardening if it blocks the demo;
-- do not represent temporary shortcuts as production-ready.
-
-A smaller complete workflow is better than many unfinished screens.
+Use real persistence and the established Reverb/Echo infrastructure. Preserve
+correct business transitions and safety controls throughout the workflow.
+Do not expand into Admin/heatmap, STT enhancements, deployment, hospital-wide
+EMR features, or other backlog work unless the owner explicitly chooses it.
+Passing a checkpoint does not automatically authorize the next phase.
 
 ---
 
@@ -71,15 +60,18 @@ For requirements, use this priority:
 
 ```text
 1. Explicit current instructions from the project owner
-2. docs/workflow.md — finalized functional and product requirements
-3. Approved domain-specific safety requirements and explicit later decisions
-4. Final screen inventory and dedicated UX specifications — interaction detail
-5. Technical plan — architecture and implementation sequence
+2. Later-approved safety requirements and explicit agreed decisions
+3. Approved dedicated domain/UX specifications and final screen inventory
+4. docs/workflow.md — original functional vision, subject to later decisions
+5. Technical plan — architecture baseline and implementation sequence
 6. Actual repository source — evidence of current implementation
 ```
 
 When sources conflict, identify the conflicting requirements explicitly. Do not
 silently rewrite clinical policy or replace a working architectural decision.
+Specific later-approved requirements supersede older conflicting concepts,
+including older workflow/technical-plan language about deferred encryption,
+automatic SMS, or binary-only SRQ. Document age alone is not approval.
 A requirement in `docs/workflow.md` does not prove that a feature exists or was
 tested. Use source inspection and appropriately scoped verification for status.
 
@@ -92,9 +84,16 @@ RAPID_MIND_HEALTHCARE_WORKSPACE.md
 RAPID_MIND_REFERRAL_RESPONSE_INTERACTION.md
 RAPID_MIND_ADMIN_WORKSPACE.md
 RAPID_MIND_AUTH_PROVISIONING.md
+RAPID_MIND_OFFLINE_SECURITY_DESIGN.md
+RAPID_MIND_VISUAL_FOUNDATION.md
 ```
 
-These documents may exist outside the Git repository.
+Locate specifications by basename; they may exist outside the Git repository.
+Report unavailable sources rather than inventing their requirements.
+
+When available, use the local `.agents/skills/rapid-mind/SKILL.md` and its
+references for context. The skill is optional and may be absent for other
+contributors; the safety and execution rules in this file remain self-contained.
 
 Do not invent clinical thresholds, Red Flag rules, scoring formulas, diagnosis categories, or operational policies not supported by the project sources.
 
@@ -304,6 +303,35 @@ Admin must not perform patient-specific clinical validation, T0 confirmation/dow
 
 ---
 
+## Approved Team Decisions — 2026-11-07 (Asia/Jakarta)
+
+Relawan collects field information and submits its own T0-Suspect report, seeing
+only that report and local/server delivery state. Healthcare receives necessary
+case details only within authorized case/facility scope and performs secondary
+and clinical verification. Role membership alone must not be treated as proof of
+access to every patient's record. Internal Dispatch assignment is not evidence
+of external vehicle contact, physical pickup or completed field response.
+
+Healthcare may explicitly and auditably downgrade T0-Suspect to **T1, T2 or T3**.
+This owner/team decision supersedes the earlier T1/T2-only product restriction;
+it is not external clinical-protocol certification.
+
+Official Admin case counts and geographic distribution must use Healthcare-
+validated outcomes without identifiable patient information. Keep system
+recommendations, unverified suspects and validated outcomes separate and correctly
+labeled. Define counting unit, deduplication, category coverage and geographic/time
+attribution before calling a mixed aggregate an official count. Current source
+has gaps; see `docs/RAPID_MIND_ADMIN_WORKSPACE.md`. This documentation decision
+neither fixes queries nor grants additional clinical-record access.
+
+P1 reasons allow multiple selections and optional OTHER notes, without diagnosis,
+scoring or automatic T0 effects. P2 remains four-state; three explicit UI choices
+are permitted if unanswered remains separately represented. Current source has
+four response controls. Apparent Q17 YES requires human confirmation before
+persistence. These decisions do not close November Safety C1/C2/C3 acceptance.
+
+---
+
 ## Critical Domain Rules
 
 T0 is a separate emergency event, not merely a stronger T1.
@@ -348,6 +376,14 @@ realtime freshness
 
 Do not display successful synchronization when only a local save occurred.
 
+Require the approved explicit human verification and final send action before
+creating T0-Suspect. A first emergency tap, STT inference, or unconfirmed SRQ-17
+interpretation must never silently create or transmit it.
+Persist the emergency and a high-priority, idempotent outbox operation atomically
+before attempting network delivery. Missing internet, GPS, or complete identity
+must not prevent safe offline T0 creation. An SMS composer handoff is not proof
+of sending or delivery; a browser-only PWA cannot guarantee silent SMS.
+
 ---
 
 ## Assessment and Clinical Safety
@@ -374,6 +410,28 @@ confirm clinical decisions
 ```
 
 STT failure must not block manual completion of SRQ-20.
+Keep unclear, unanswered, missing, and malformed evidence distinguishable; never
+coerce it to NO or zero. Non-verbal observations must not change SRQ, risk,
+function, integrated scoring, or T0 state by themselves.
+
+---
+
+## Privacy and Offline Data Safety
+
+Authentication is not encryption. Protect clinical data, full NIK, private
+notes, keys, and sensitive payloads from exposure through logs, unencrypted
+IndexedDB, UI/service worker caches, broadcasts, analytics, and nonessential
+notifications. Enforce server-side RBAC, facility/case scope, resource
+authorization, and audit history; Admin receives permitted aggregates rather
+than unrestricted patient-level clinical records.
+
+Preserve unsynchronized fieldwork across token expiry, reload, supported offline
+restart, and recoverable failures. Enforce owner isolation, lock/recovery, and
+stale-client/cross-tab safeguards; ambiguous encryption state must fail closed
+without silently falling back to plaintext or deleting unknown local data.
+Real-user activation, migration, and plaintext cleanup need scoped authorization
+and evidence, including an old-writer barrier. Synthetic fixtures alone do not
+prove confidentiality or safe cutover of real-user storage.
 
 ---
 
@@ -446,28 +504,24 @@ Do not use permanent flashing, pulsing, bouncing, or continuous emergency animat
 
 ---
 
-## Demo Build Priority
+## Planning Snapshot — 2026-11-07 (Asia/Jakarta)
 
-Unless the user gives a different task order:
+This is planning context, not verified completion or acceptance:
 
-```text
-1. Application starts reliably
-2. Minimal domain/database structure
-3. Login and role entry
-4. Relawan workflow
-5. Assessment and triage
-6. T0 creation
-7. Healthcare realtime reception
-8. Healthcare validation
-9. Referral / follow-up
-10. Admin aggregate visibility
-11. Offline improvements
-12. STT improvements
-13. Visual polish
-14. Security hardening
-```
+- **C1 — acceptance pending:** implementation and isolated tests are reported;
+  natural background/foreground lock acceptance remains unresolved, and native
+  mobile background lock remains `NOT TESTED`.
+- **C2 — local integration:** planned Relawan PWA → offline outbox/sync →
+  Laravel/PostgreSQL → Healthcare checks, including realtime, authorization,
+  replay/idempotency, failure semantics, and privacy.
+- **C3 — safety acceptance:** planned final local P0–P2 regression and signoff,
+  including unresolved C1 conditions.
 
-Admin analytics must not delay the Relawan → T0 → Healthcare workflow.
+Verify current source and evidence before using these labels. When the local
+skill is available, keep detailed changing progress in its
+`references/STATUS.md`, not a growing status log here. `IMPLEMENTED`, `PASS`,
+`ACCEPTED`, and `NOT TESTED` are distinct; fixture/build success does not prove
+live integration or real-device acceptance. Production deployment stays deferred.
 
 ---
 
@@ -476,7 +530,7 @@ Admin analytics must not delay the Relawan → T0 → Healthcare workflow.
 Temporary shortcuts are acceptable when they:
 
 - materially help complete the demo;
-- preserve core business semantics;
+- preserve core business semantics and all P0–P2 safety controls;
 - are isolated enough to replace later;
 - are reported clearly;
 - are not presented as production-ready.
@@ -487,11 +541,13 @@ Potential acceptable shortcuts:
 seeded demo accounts
 seeded synthetic data
 simplified account lifecycle
-limited edge-case handling
 minimal Admin analytics
 minimal referral lifecycle
-deferred advanced security
 ```
+
+Critical encryption, privacy, authorization, data preservation, and emergency
+integrity controls must not be deferred as demo shortcuts. Hosting and unrelated
+production hardening may wait; these safety requirements may not.
 
 Not acceptable:
 
@@ -629,4 +685,5 @@ exact files and results so the project owner can review before the next phase.
 8. Report accurately
 ```
 
-During the current demo sprint, prioritize a working end-to-end RAPID-MIND workflow while preserving the permanent role and domain boundaries.
+Prioritize P0–P2 safety in the working Relawan → T0 → Healthcare workflow.
+Stop at the requested checkpoint for owner review; preserve role/domain boundaries.

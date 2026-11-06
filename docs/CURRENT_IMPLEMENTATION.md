@@ -1,10 +1,21 @@
 # RAPID-MIND — Current Implementation Reference
 
-**Reviewed:** 24 October 2026  
-**Application source baseline:** `demo` at `7839420` (Checkpoint 2C)  
-**Purpose:** concise source-aligned inventory; not a product-requirements replacement  
-**Requirements authority:** `docs/workflow.md` (read-only)  
-**Evidence authority:** `docs/workflow-verification.md` and dated checkpoint reports
+**Reviewed:** 7 November 2026 (Asia/Jakarta), documentation D1
+
+**Application source baseline:** `demo` at `e85b981`
+
+**Previous inventory baseline:** 24 October 2026, `7839420` (Checkpoint 2C)
+
+**Purpose:** concise source-aligned inventory; not a product-requirements replacement
+
+**Requirements authority:** current owner instructions, later-approved safety decisions,
+then approved domain/UX specifications and the original `docs/workflow.md` vision
+
+**Evidence authority:** dated checkpoint reports and `docs/workflow-verification.md`
+
+D1 inspected source, test sources and existing reports only. No tests, runtime,
+browser, migration or enrollment was rerun. `IMPLEMENTED` is not `PASS` or
+`ACCEPTED`; dated test results apply only to their recorded scope.
 
 Status labels in this document mean:
 
@@ -24,15 +35,43 @@ mental-health decision-support prototype, not an autonomous diagnostic system.
 **IMPLEMENTED stack:** Laravel 13, Vue 3, Inertia.js, TypeScript, Tailwind CSS,
 PostgreSQL/PostGIS, Eloquent, Laravel Reverb/Echo, queue/scheduler services,
 IndexedDB/Dexie, a Relawan-scoped PWA/service worker, MapLibre, ECharts, Nginx,
-and Docker Compose. Web navigation uses the Laravel session accepted by
-`auth.jwt`; API-style bearer JWT support and refresh tokens also exist.
+and Docker Compose. Web navigation without an Authorization header uses a
+version-bound Laravel session. API routes require bearer JWT authentication;
+user activity, token version and refresh-family validity are checked. A web
+session alone does not authenticate API requests. Authentication does not unlock
+clinical ciphertext; offline key access has its own passphrase/recovery lifecycle.
+
+## Final team decision update — 7 November 2026
+
+The owner/team approved Healthcare T0 downgrade to T1/T2/T3, superseding the old
+T1/T2-only design. Controller classification accepts those results, maps them to
+DOWNGRADED, and writes verification/audit records in a locked transaction. This
+is explicit Healthcare-owned product behavior, not external protocol certification.
+
+Healthcare receives necessary details subject to case/facility authorization,
+not universal access granted by the role. Inspected list/detail reads use broad
+queries/ID lookup without case/facility filters; workflow access checks role and
+activity, and the emergency broadcast channel is role-wide. This is a scoped
+source finding requiring authorization review, not proof of approved unrestricted
+patient access. Internal Dispatch assignment does not establish external vehicle
+contact, pickup or physical response.
+
+P1 remains multi-select observational reasons with optional OTHER note and no
+scoring/diagnostic/T0 effect. P2 permits three explicit visible choices if
+UNANSWERED remains distinct on untouched/reset input; current
+`resources/js/components/Relawan/Assessment/SrqResponseControl.vue` renders four
+controls. Q17 confirmation before persistence and scoring guards remain unchanged.
+No UI redesign is implemented or requested here. Relawan remains limited to its
+own report and delivery state. Official Admin reporting requirements/gaps are in
+[the Admin specification](RAPID_MIND_ADMIN_WORKSPACE.md). C1 acceptance and C2/C3
+remain pending; real-user migration/plaintext cleanup remain P0 objectives.
 
 ## 2. Role architecture
 
 | Role | Implemented responsibility | Explicit boundary |
 |---|---|---|
 | RELAWAN | PFA, patient/assessment context, SRQ-20, risk factors, daily function, system triage recommendation, verified T0-Suspect creation, local persistence and synchronization | Does not clinically confirm T0 and does not receive Healthcare referral/dispatch state |
-| HEALTHCARE | T0 acknowledgement, secondary verification, clinical classification, non-T0 validation, referral decisions, patient history, and patient-specific backend dispatch commands | Does not provision users/facility master data; dispatch does not change clinical classification |
+| HEALTHCARE | T0 acknowledgement, secondary verification, clinical classification, non-T0 validation, referral decisions, patient history, and patient-specific Dispatch UI/backend commands | Does not provision users/facility master data; dispatch does not change clinical classification |
 | ADMIN | Account/facility/Posko provisioning, regional aggregates, marker maps, Relawan assignment, and resource-need/allocation records | No patient-specific acknowledgement, classification, referral decision, or dispatch progression |
 
 ## 3. Navigation and route inventory
@@ -66,6 +105,7 @@ POST /relawan/assessment/{assessmentId}/complete
 GET  /relawan/assessment/{assessmentId}/result
 POST /relawan/sync/assessments
 POST /relawan/sync/emergencies
+GET  /relawan/offline-enrollment-status
 POST /relawan/emergencies
 GET  /relawan/emergencies/{emergencyId}
 ```
@@ -81,7 +121,7 @@ Visible sidebar in `resources/js/layouts/HealthcareLayout.vue`:
 |---|---|---|---|
 | Triase & Kedaruratan | `/healthcare/emergencies` | `resources/js/Pages/Healthcare/Emergencies/Index.vue` | **IMPLEMENTED** |
 | Validasi Klinis | `/healthcare/validations` | `resources/js/Pages/Healthcare/Validations/Index.vue` | **IMPLEMENTED** |
-| Rujukan | `/healthcare/referrals` | `resources/js/Pages/Healthcare/Referrals/Index.vue` | **PARTIAL — legacy lifecycle UI** |
+| Rujukan | `/healthcare/referrals` | `resources/js/Pages/Healthcare/Referrals/Index.vue` | **IMPLEMENTED — clinical completion + legacy compatibility** |
 | Data Pasien & Riwayat | `/healthcare/patients` | `resources/js/Pages/Healthcare/Patients/Index.vue` | **IMPLEMENTED** |
 
 Read/detail routes:
@@ -103,13 +143,13 @@ POST /healthcare/validations/{assessmentId}
 POST /healthcare/referrals/{referralId}/status
 ```
 
-Independent Referral/Dispatch commands from Checkpoint 2C:
+Independent Referral/Dispatch commands (2C backend, 2D/2E UI integration; schema required):
 
 ```text
-POST /healthcare/emergencies/{emergencyId}/dispatches       BACKEND ONLY
-POST /healthcare/dispatches/{dispatchId}/status             BACKEND ONLY
-POST /healthcare/dispatches/{dispatchId}/referral           BACKEND ONLY
-POST /healthcare/referrals/{referralId}/complete            BACKEND ONLY
+POST /healthcare/emergencies/{emergencyId}/dispatches
+POST /healthcare/dispatches/{dispatchId}/status
+POST /healthcare/dispatches/{dispatchId}/referral
+POST /healthcare/referrals/{referralId}/complete
 ```
 
 ### Admin
@@ -140,6 +180,25 @@ three daily-function domains, review, system triage recommendation, and outbox
 synchronization. A verified T0-Suspect is persisted locally before transmission,
 uses priority 1 ahead of routine assessment synchronization, and supports
 unidentified emergencies. Manual answers remain authoritative over STT.
+
+**P1 — IMPLEMENTED:** non-verbal observations support `NOT_SPEAKING`,
+`SEVERE_DISTRESS`, `SPEECH_DIFFICULTY`, `HEARING_COMMUNICATION_BARRIER`,
+`CHOOSES_NOT_TO_SPEAK`, `UNKNOWN`, and `OTHER`. Multiple distinct reasons are
+allowed, except UNKNOWN must stand alone. OTHER can have an optional note up to
+500 characters; notes require OTHER. Draft/sync and Healthcare presentation retain
+these observations without diagnosing or changing SRQ/risk/function/triage/T0.
+
+**P2 — IMPLEMENTED:** YES/NO/UNCLEAR/UNANSWERED survive client/storage/API/server
+and Healthcare boundaries. Definitive YES/NO retain boolean compatibility;
+unresolved persisted rows use nullable `answer` plus `answer_state`. Missing or
+malformed evidence is not NO/zero. Scoring requires all 20 definitive answers.
+Manual or STT apparent Q17 YES requires explicit confirmation before persistence;
+protected manual answers remain authoritative. Final T0 verification/submission
+is separate and available without a complete assessment.
+
+The additive schema is defined in
+`database/migrations/2026_11_03_000000_add_assessment_observations_and_srq_states.php`;
+its application to the current runtime database was not checked by D1.
 
 **PARTIAL:** browser/device support varies. Native SMS is a user-mediated `sms:`
 handoff, not confirmed automatic delivery. Fresh offline authentication,
@@ -201,10 +260,13 @@ Creation and new completion commands write status history and audit records in
 the same transaction. Source provenance, patient, facility, actor, and notes are
 preserved.
 
-**PARTIAL:** `Referral.status` still casts to the legacy `ReferralStatus`, and the
-existing Vue page plus `/referrals/{id}/status` still expose movement-like states.
-This compatibility path remains until the coordinated database/application
-cutover owned by Checkpoints 2F + 2G.
+**IMPLEMENTED WITH COMPATIBILITY:** with additive schema available, ACTIVE rows
+use the independent clinical-completion UI/endpoint. Completion means internal
+referral work is finished, not that a facility accepted/admitted/treated the
+patient. `Referral.status` still casts to the legacy `ReferralStatus`;
+intermediate legacy rows retain movement controls and `/referrals/{id}/status`.
+Without schema readiness, legacy controls remain the fallback. Final legacy
+retirement/constraint cutover and runtime verification remain pending evidence.
 
 ### EmergencyDispatch
 
@@ -225,59 +287,97 @@ history/audit writes, and database uniqueness/foreign-key barriers. T0 dispatch
 may exist without a referral or identified patient. Dispatch progression never
 changes clinical classification or completes a referral.
 
-**BACKEND ONLY:** current pages receive no Dispatch read projection and expose no
-Dispatch controls. There is no cancellation, reassignment, capacity reservation,
-fleet management, external team contact, or facility-acceptance workflow.
+**IMPLEMENTED UI + BACKEND:** selected-case actions and emergency detail expose
+sibling Referral/Dispatch controls. `HealthcareOperationsRead` supplies compact
+operations, active units, server target choices, histories and enum-derived next
+statuses; the patient view includes separate operational history. Confirmed T0
+remains in the active queue while Dispatch is absent/unfinished or any Referral
+is unfinished. Referral completion alone does not remove it.
 
-## 6. UI versus backend-only capability
+Read readiness checks Dispatch/history/unit tables and the Referral verification
+column. Missing prerequisites produce `operations.available: false`, empty unit
+options and disabled new controls, conservatively retaining confirmed cases.
+Source availability does not establish deployed schema or successful mutations.
+There is no cancellation, reassignment, capacity reservation, fleet management,
+external team contact, or facility-acceptance workflow.
+
+## 6. UI/backend integration and prerequisites
 
 | Capability | Current status |
 |---|---|
 | T0 acknowledgement, verification, classification | **IMPLEMENTED UI + backend** |
 | Explicit T0/non-T0 referral creation | **IMPLEMENTED UI + backend** |
 | Legacy referral movement progression | **IMPLEMENTED compatibility UI + backend** |
-| Independent clinical referral completion | **BACKEND ONLY** |
-| Dispatch assignment/progression/linking | **BACKEND ONLY** |
+| Independent clinical referral completion | **IMPLEMENTED UI + backend; schema required** |
+| Dispatch assignment/progression/linking | **IMPLEMENTED UI + backend; schema required** |
 | Response-unit registry persistence | **IMPLEMENTED foundation; no CRUD UI** |
-| Dispatch read props, queue projection, patient timeline | **PLANNED — 2D** |
-| Separated-domain synthetic demo fixtures | **PLANNED — 2E** |
-| Dispatch realtime updates | **PLANNED; no event/subscription yet** |
+| Dispatch read props, queue projection, patient timeline | **IMPLEMENTED — 2D/2E; schema-aware** |
+| Separated-domain synthetic demo fixtures | **IMPLEMENTED seeder; runtime execution not established here** |
+| Dispatch/Referral realtime updates | **IMPLEMENTED events/listeners; live transport not verified by D1** |
 
-## 7. Realtime and offline/PWA
+## 7. Realtime, P0 privacy and offline/PWA
 
-- **IMPLEMENTED:** `HealthcareLayout.vue` is the sole private `emergencies`
-  subscription owner. `EmergencyCreated` and `EmergencyUpdated` trigger bounded,
-  route-aware Inertia reconciliation; new emergencies use a finite audio cue.
-  HTTP health and socket readiness are represented separately.
-- **IMPLEMENTED:** Relawan uses owner-scoped Dexie repositories, stable UUIDs,
-  priority outbox processing, a Relawan-scoped service worker, continuity/session
-  recovery, and same-owner Web Locks when supported.
-- **NOT IMPLEMENTED:** Dispatch-specific broadcasting/subscriptions and Admin
-  realtime aggregate subscriptions.
-- **UNVERIFIED HERE:** no browser, PWA, offline, Reverb transport, or device test
-  was executed during this documentation-only checkpoint. Consult the ledger for
-  dated earlier evidence and limitations.
+- **IMPLEMENTED:** `HealthcareLayout.vue` owns the Healthcare-only private
+  `emergencies` subscription. Emergency events and ID-only `DispatchUpdated` /
+  `ReferralUpdated` reconcile route-appropriate canonical props. Operational
+  notifications emit only after transaction commit; rollback/replay do not emit
+  duplicate notifications, and transport failures do not undo persistence.
+  Coalescing/draft deferral and separate HTTP/socket readiness remain in place.
+- **IMPLEMENTED P0:** enrolled-owner clinical records/outbox use AES-256-GCM,
+  wrapped keys, explicit lock/recovery and owner/generation fences. Ordinary
+  enrollment requires server-approved exact `http://localhost:8080` local policy,
+  default-off opt-in and a matching active Relawan web session. Existing enrolled
+  owners can unlock offline; API authentication and offline decryption are separate.
+- **IMPLEMENTED:** initialization fails closed for legacy/unknown/inconsistent
+  storage; no automatic historical migration or deletion occurs. Retention checks
+  are read-only eligibility decisions, not automatic purge. Old/raw same-origin
+  writers remain a cutover limitation. See
+  [offline security](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md) for the current contract.
+- **IMPLEMENTED:** clinical no-store/history protection, locked-DOM masking,
+  owner-scoped repositories, stable UUIDs, priority outbox, session recovery,
+  same-owner Web Locks where supported, and static-asset PWA readiness/update gates.
+  Browser cache/privacy success is limited to the recorded C1 fixture scope.
+- **NOT IMPLEMENTED:** Admin realtime aggregate subscriptions.
+- **UNVERIFIED BY D1:** live transport, current database/configuration, real-device
+  behavior, general real-user activation/migration/cleanup, and production readiness.
 
-## 8. Partial and pending work
+## 8. Checkpoint evidence and pending acceptance — 7 November 2026
 
-- **PENDING — 2D + 2E:** Dispatch read models/props and UI, separate sibling
-  Referral/Dispatch controls, frontend integration, queue/patient
-  projections, Dispatch realtime reconciliation, and deterministic synthetic
-  fixtures.
-- **PENDING — 2F + 2G:** coordinated database/application cutover and final
-  verification. Checkpoints 2D + 2E do not remove legacy endpoints, Referral casts,
-  or existing constraints. No development database reset or destructive migration
-  is authorized yet.
-- **PENDING:** full density heatmap, Admin realtime aggregates, PDF/Excel export,
-  live volunteer GPS, response-unit CRUD/fleet operations, continuous STT, and
-  complete offline Whisper behavior.
-- **UNVERIFIED:** development-database migration/cutover and production readiness.
+October **STT C1/C2** mean speech foundation/interpretation. November **Safety
+C1/C2** mean browser/privacy/PWA and local integration. Historical STT passes do
+not close November acceptance gates.
+
+| Scope | Source status | Previously recorded verification and limits |
+|---|---|---|
+| Referral/Dispatch 2D/2E | UI, projections, events/listeners and deterministic fixture seeder implemented | [2D/2E report](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md): 173 Laravel tests / 2,057 assertions, 9 Node/Vue tests, typecheck/build and other focused checks; isolated testing DB, no live browser/Reverb acceptance. Not rerun by D1. |
+| B4.4 local enrollment | Server-authorized ordinary-asset localhost enrollment implemented | [B4.4 report](checkpoints/checkpoint-b44-controlled-development-activation.md): owner dummy-profile enrollment and scoped browser acceptance passed; corrected SRQ map and 61/61 interception matcher assertions recorded. Not general real-clinical-user migration or production activation. |
+| November Safety C1 | **IMPLEMENTED — ACCEPTANCE PENDING** | [C1 report](checkpoints/checkpoint-c1-local-browser-integration.md): 29 Node files / 0 failures, 82 PHP tests / 302 assertions, typecheck/build/lint; Chromium 18 PASS / 1 NOT TESTED. Ordinary production-built assets/actual worker, synthetic authentication/server responses. Not rerun by D1. |
+| November Safety C2 | **PENDING integration acceptance** | Relawan → outbox/sync → live Laravel/PostgreSQL → Healthcare, authorization, realtime, replay/failure semantics and privacy are not established by C1 or old STT C2 results. |
+| November Safety C3 | **PENDING final acceptance** | Final local P0–P2 regression/signoff, including unresolved C1 conditions; no production certification implied. |
+
+Natural background/foreground lock remains **NOT TESTED** in C1: automated
+minimization/tab switching did not produce a trusted hidden transition. A
+synthetic visibility-handler pass does not close it; native mobile background
+lock remains unverified. C1 also did not submit a browser T0, exercise live
+backend authentication/sync, or verify migration between different release asset
+graphs. These remain distinct from successful isolated offline restart.
+
+Referral/Dispatch schema deployment, final legacy retirement/constraint cutover
+and runtime acceptance are not established by this source review. The dated
+[2F-B2.2 report](checkpoints/checkpoint-2fb2-additive-deployment.md) records an
+attempt stopped before migrations, not current service/database state. No reset,
+migration, seeding or activation is authorized by D1.
+
+Full density heatmap, Admin realtime aggregates, exports, live volunteer GPS,
+response-unit CRUD/fleet features, continuous STT and complete offline Whisper
+remain backlog. P0–P2 and C1–C3 take priority; no next phase starts automatically.
 
 ## 9. Known requirement and design deviations
 
-1. **REQUIRES OWNER DECISION — T3 T0 downgrade:** the earlier Healthcare design
-   baseline restricts downgrade to T1/T2, while current emergency UI/controller
-   accepts T3. This reference records the conflict without changing policy.
+1. **APPROVED TEAM DECISION — 7 November 2026:** Healthcare may explicitly and
+   auditably downgrade T0-Suspect to T1/T2/T3. This supersedes the earlier T1/T2-only
+   restriction and matches current controller/UI support. No external clinical
+   protocol certification or new runtime test is implied.
 2. **PARTIAL — offline fallback:** `docs/workflow.md` describes automatic SMS and
    broad Background Sync behavior; current browser SMS is user-mediated and the
    document-side outbox remains central to synchronization.
@@ -285,26 +385,42 @@ fleet management, external team contact, or facility-acceptance workflow.
    current maps use Posko/Faskes markers and aggregate T0 emphasis.
 4. **PARTIAL — Admin realtime:** requirements describe live aggregate updates;
    current Admin layout has browser connectivity state but no Echo subscription.
-5. **PARTIAL — Referral UI:** the separated Referral lifecycle exists in schema
-   and backend commands, while the visible page still uses the legacy combined
-   movement lifecycle until cutover.
-6. **PARTIAL — Admin metrics:** summary/analytics T0 populations and confirmation
-   wording are not fully uniform; documentation does not conceal this as a single
-   clinically verified measure.
-7. **DESIGN CONFLICT — Relawan visibility:** current safety direction restricts
-   Relawan to T0-Suspect and transmission state. Any older referral/response spec
-   suggesting Healthcare milestones for Relawan is not current implementation.
+5. **PARTIAL — Referral compatibility:** independent completion UI/backend is
+   implemented when schema is ready; intermediate legacy movement rows, the old
+   endpoint and model cast remain until separately verified retirement/cutover.
+6. **IMPLEMENTATION GAP — official Admin metrics:** approved counts/geography
+   must use Healthcare-validated outcomes only, without patient identity. Current
+   categories, trends and maps mix recommendations/suspects; raw validated totals
+   omit emergency downgrade categories and lack cross-source deduplication. The
+   current confirmed-total KPI has no recommendation fallback. See the detailed
+   query/gap matrix in `docs/RAPID_MIND_ADMIN_WORKSPACE.md`; nothing is fixed here.
+7. **SUPERSEDED DESIGN — Relawan visibility:** the approved team decision limits
+   Relawan to its own T0-Suspect report and delivery state. Older proposals to
+   expose Healthcare milestones are superseded, not pending policy decisions.
 
 ## 10. References
 
-- Final requirements: `docs/workflow.md`
+Focused source/test anchors (repository-relative; inspected, not executed by D1):
+
+- `app/Domain/Assessment/SrqAnswer.php`, `app/Domain/Assessment/NonVerbalObservations.php`
+- `app/Domain/Sync/AssessmentSynchronizer.php`, `resources/js/offline/assessmentContract.ts`
+- `resources/js/composables/useSrqResponses.ts`, `resources/js/lib/healthcareAssessmentPresentation.ts`
+- `app/Domain/Healthcare/HealthcareOperationsRead.php`, `app/Domain/Healthcare/HealthcareWorkflowEvents.php`
+- `resources/js/components/Healthcare/Operations/DispatchPanel.vue`, `resources/js/components/Healthcare/Operations/ClinicalReferralCard.vue`
+- `tests/Feature/AssessmentResponseContractTest.php`, `tests/Feature/HealthcareWorkflowRealtimeTest.php`
+- `tests/Node/relawanSrqSafety.test.ts`, `tests/Node/healthcareAssessmentPresentation.test.ts`
+
+Documentation and checkpoint references:
+
+- Requirements: current owner/later-approved safety decisions, approved domain
+  specifications, and original `docs/workflow.md` subject to those decisions
 - Technical architecture/status: `docs/RAPID_MIND_TECHNICAL_PLAN.md`
 - Admin design and current alignment: `docs/RAPID_MIND_ADMIN_WORKSPACE.md`
 - Healthcare design and current alignment: `docs/RAPID_MIND_HEALTHCARE_WORKSPACE.md`
-- Referral/response target UX (alignment deferred until 2D + 2E):
+- Referral/response target UX (historical Relawan-visibility conflict remains):
   `docs/RAPID_MIND_REFERRAL_RESPONSE_INTERACTION.md`
-- Domain foundation: `docs/checkpoint-2b-domain-foundation.md`
-- Backend workflows: `docs/checkpoint-2c-backend-workflows.md`
+- Domain foundation: `docs/checkpoints/checkpoint-2b-domain-foundation.md`
+- Backend workflows: `docs/checkpoints/checkpoint-2c-backend-workflows.md`
 - Verification history: `docs/workflow-verification.md`
 
 The most relevant source entry points are `routes/web.php`,

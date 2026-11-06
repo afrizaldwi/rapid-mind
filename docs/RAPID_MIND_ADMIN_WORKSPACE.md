@@ -9,9 +9,59 @@
 
 ---
 
-# Current Implementation Alignment — 24 October 2026
+# Final team reporting decision and source gaps — 7 November 2026
 
-This section is the source-aligned description of the current Admin workspace.
+**Approved requirement:** official counts and geographic distribution use only
+Healthcare-validated outcomes, without identifiable patient information. System
+recommendations and unverified T0-Suspect reports must remain separate populations,
+with explicit labels. Technical delivery is not validation; internal Dispatch
+assignment does not prove external contact or pickup. Admin has no clinical role.
+This is a requirement/source review, not an implementation fix or runtime pass.
+
+**Inspected source baseline:** `demo` at `e85b981`:
+`app/Http/Controllers/Admin/AdminController.php`,
+`resources/js/Pages/Admin/Summary.vue`, `resources/js/Pages/Admin/Analytics.vue`,
+`resources/js/Pages/Admin/Map.vue`, and
+`tests/Feature/AdminAnalyticsIntegrityTest.php` (test source, not rerun).
+
+| Surface / query | Actual current population | Gap against official validated reporting |
+|---|---|---|
+| Summary `kpis.totalConfirmed` | CONFIRMED EmergencyEvent rows + ClinicalValidation rows with T1/T2/T3 results; frontend reads this value directly | No recommendation fallback exists in current source. Still a raw sum across event/assessment records, not a defined unique-case or unique-person count. No cross-source/latest-outcome reconciliation. |
+| Summary category KPIs | T0 includes PENDING/ACKNOWLEDGED/REVIEWING/CONFIRMED; T1/T2/T3 count system TriageResult rows without the completed-assessment restriction used by distribution | Unverified suspects and recommendations are not official validated categories; KPI and chart populations also differ. |
+| Summary / Analytics distributions | Summary T0 uses active statuses; Analytics T0 uses all emergency rows. T1/T2/T3 use system recommendations from completed assessments | Mixed provenance; Analytics includes downgraded/historical emergency rows in T0. No unified Healthcare-outcome distribution. |
+| Posko category totals and map T0 emphasis | Completed system recommendations grouped by current patient shelter; emergency rows grouped by event shelter and active statuses | `total_cases` sums overlapping event/assessment populations; repeated assessments/events or one patient in both streams can inflate a unique-case interpretation. These are not validated-only geographic counts. |
+| Trend dates and coverage | Summary T0 trend counts all emergency creations; T1/T2/T3 trends use completed-assessment recommendations. Analytics trend contains no T0 series | Not validation-time trends, with inconsistent T0 coverage/time semantics. |
+| Downgraded emergency outcomes | T1/T2/T3 decisions are stored in EmergencyVerification; validated T1/T2/T3 counters read ClinicalValidation only | Healthcare's downgraded T1/T2/T3 outcomes are missing from those validated-category counters, including newly approved T3. |
+| Privacy boundary | Inspected reporting payloads omit direct patient names/NIK and use institutional aggregates; Summary also sends event ID, shelter, status and creation time in early-warning rows | Not proof of full anonymity or aggregate-only minimization: event linkability and sparse geographic cells require review. No current browser/privacy acceptance for these reporting decisions is claimed. |
+
+**Implementation gaps — not fixed:** define the reporting unit (case/event/person),
+canonical outcome reconciliation and deduplication, category completeness,
+validation-time/geographic attribution (including missing shelter), and approved
+aggregate privacy/minimization. Do not silently discard unknown geography or
+replace absent validation with system recommendations. Separate any permitted
+operational suspect workload from official validated reporting. The team has not
+specified a new deduplication algorithm or aggregation unit in this checkpoint.
+
+Healthcare authorization is also separate: role-gated routes and the inspected
+workflow role check do not establish per-case/facility permission for all records.
+Broad reads in `HealthcareController` and the role-wide `emergencies` channel
+require an authorization/minimization review; a facility-specific channel existing
+elsewhere does not scope those routes. See
+[Healthcare alignment](RAPID_MIND_HEALTHCARE_WORKSPACE.md).
+
+These findings do not invalidate historical tests within their old scope. They
+show why those tests do not prove the newly approved official reporting contract.
+P0–P2 and [November C1/C2/C3 status](workflow-verification.md#november-safety-evidence)
+remain unchanged; production readiness and general real-user migration/cleanup
+are not established.
+
+---
+
+# Historical Implementation Alignment — 24 October 2026
+
+This section retains the October snapshot. Its fallback description and any
+suggestion that mixed counts are official validated outcomes are superseded by
+the inspected November query definitions above; historical design targets remain.
 The numbered sections that follow preserve the original product and UX rationale.
 Where they prescribe four destinations, a map-first landing page, exports,
 realtime aggregates, or a density heatmap, those passages are **historical design

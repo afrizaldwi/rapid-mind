@@ -1,5 +1,13 @@
 # RAPID-MIND — Documentation Audit and Alignment Plan
 
+> **Later owner/team supersession — 7 November 2026:** explicit, auditable
+> Healthcare T0-Suspect downgrade to T1/T2/T3 is now approved product behavior.
+> Earlier T1/T2-only restrictions, unresolved T3 findings or demo blockers below
+> are historical, not active prohibitions. This is not external clinical protocol
+> certification and changes no recorded execution/test result or runtime state.
+> Current official Admin reporting requirements and source gaps are linked from
+> [the current baseline](CURRENT_IMPLEMENTATION.md).
+
 **Audit date:** 24 October 2026  
 **Repository:** https://github.com/afrizaldwi/rapid-mind  
 **Published baseline:** `main` at `d98495df708deabce9d24fb068dbaa056c72bf35` (Checkpoint 2B domain foundation)  

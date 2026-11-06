@@ -1456,6 +1456,12 @@ Healthcare may record `T0_CONFIRMED` in its own clinical workflow. Relawan must 
 
 # 51. Healthcare Downgrade
 
+> **APPROVED TEAM SUPERSESSION — 7 November 2026:** Healthcare may explicitly
+> and auditably downgrade T0-Suspect to T1/T2/T3. This supersedes the earlier
+> T1/T2-only product restriction and matches source support. It does not certify
+> an external clinical protocol. Relawan still receives no clinical outcome.
+> See [the current baseline](CURRENT_IMPLEMENTATION.md).
+
 Healthcare may record a T1/T2/T3 downgrade in its own clinical workflow. Relawan must not receive or display the downgrade or any derived clinical label. The original Relawan report remains `T0-Suspect`.
 
 ---

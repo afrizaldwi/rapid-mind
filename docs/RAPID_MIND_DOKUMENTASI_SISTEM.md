@@ -1,9 +1,44 @@
 # DOKUMENTASI SISTEM LENGKAP: RAPID-MIND
 **Rapid Assessment & Psychosocial Intervention Delivery - Mental Health In Disaster**
 
-> Dokumen ini memuat rancangan dan riwayat implementasi. Kebutuhan produk final ada di [workflow.md](workflow.md); status implementasi dan bukti uji ada di [rencana teknis](RAPID_MIND_TECHNICAL_PLAN.md) dan [ledger verifikasi](workflow-verification.md). Pernyataan rancangan di bawah tidak otomatis berarti fitur sudah diimplementasikan atau diuji.
+> Dokumen ini memuat rancangan dan riwayat implementasi. Baseline kebutuhan asli ada di [workflow.md](workflow.md), tunduk pada keputusan pemilik dan persyaratan keselamatan yang disetujui kemudian; status implementasi dan bukti uji ada di [rencana teknis](RAPID_MIND_TECHNICAL_PLAN.md) dan [ledger verifikasi](workflow-verification.md). Pernyataan rancangan di bawah tidak otomatis berarti fitur sudah diimplementasikan atau diuji.
 
 ---
+
+## Penyelarasan terkini — 7 November 2026
+
+Gunakan [baseline D1](CURRENT_IMPLEMENTATION.md) dan
+[bukti November](workflow-verification.md#november-safety-evidence) untuk status
+terkini. Bagian bernomor di bawah mempertahankan rancangan/riwayat lama. Pernyataan
+biner SRQ, eskalasi T0 otomatis, siklus rujukan gabungan, serta inventaris rute,
+skema dan pengujian lama tidak menggantikan baseline terkini.
+
+- P0: enrollment terenkripsi lokal terkontrol tersedia; migrasi pengguna riil
+  dan pembersihan plaintext masih tujuan, bukan kemampuan yang telah selesai.
+  Retensi hanya memeriksa kelayakan, bukan menghapus otomatis. Autentikasi bukan
+  enkripsi; navigasi web memakai sesi berbatas versi, API memerlukan bearer JWT.
+- P1/P2: alasan observasi non-verbal tidak menentukan diagnosis/skor; SRQ memakai
+  YES/NO/UNCLEAR/UNANSWERED. Jawaban wajib yang belum definitif menghalangi skor
+  definitif. Q17 Ya perlu konfirmasi sebelum disimpan, terpisah dari kirim T0.
+- Relawan melihat T0-Suspect dan status pengiriman saja. Healthcare memiliki
+  verifikasi klinis, rujukan dan Dispatch yang terpisah. Integrasi UI/backend
+  tersedia dengan prasyarat skema dan kompatibilitas lama; penerimaan runtime
+  akhir belum ditetapkan. Admin memiliki peta marker, bukan heatmap kepadatan,
+  dan belum memiliki langganan agregat realtime. SMS hanya handoff pengguna.
+- November Safety C1: **IMPLEMENTED — ACCEPTANCE PENDING**, Chromium tercatat
+  **18 PASS / 1 NOT TESTED**; autentikasi/server memakai fixture sintetis,
+  sedangkan lock background/foreground alami belum teruji. C2 integrasi/C3 penerimaan akhir masih pending. October STT C1/C2
+  berbeda. Aset production-built di localhost bukan bukti kesiapan deployment.
+- **Keputusan tim disetujui 7 November 2026:** Healthcare dapat menurunkan
+  T0-Suspect secara eksplisit dan teraudit ke T1/T2/T3. Ini menggantikan batas
+  produk lama T1/T2, bukan sertifikasi protokol klinis eksternal.
+- Laporan resmi Admin harus memakai hasil validasi Healthcare tanpa identitas
+  pasien. Query distribusi/peta/tren masih mencampur rekomendasi/suspect; kategori
+  hasil downgrade dan deduplikasi belum lengkap. Lihat [gap Admin](RAPID_MIND_ADMIN_WORKSPACE.md).
+  Role Healthcare saja tidak membuktikan izin setiap rekam pasien; scope kasus/
+  fasilitas masih perlu ditinjau. Penugasan Dispatch bukan bukti kontak kendaraan
+  eksternal atau penjemputan fisik. Tiga pilihan SRQ boleh digunakan bila keadaan
+  belum dijawab tetap terpisah; UI saat ini mempunyai empat kontrol.
 
 ## DAFTAR ISI
 1. [Ringkasan Eksekutif & Latar Belakang Proyek](#1-ringkasan-eksekutif--latar-belakang-proyek)

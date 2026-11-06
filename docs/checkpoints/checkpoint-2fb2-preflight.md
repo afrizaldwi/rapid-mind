@@ -1,5 +1,13 @@
 # Checkpoint 2F-B2.1 — Additive schema deployment preflight
 
+> **Later owner/team supersession — 7 November 2026:** explicit, auditable
+> Healthcare T0-Suspect downgrade to T1/T2/T3 is now approved product behavior.
+> Earlier T1/T2-only restrictions, unresolved T3 findings or demo blockers below
+> are historical, not active prohibitions. This is not external clinical protocol
+> certification and changes no recorded execution/test result or runtime state.
+> Current official Admin reporting requirements and source gaps are linked from
+> [the current baseline](../CURRENT_IMPLEMENTATION.md).
+
 Date: 24 October 2026, Asia/Jakarta (WIB). Times below are UTC unless stated.
 Inspected revision: `4ff000326de49c44a8a1f5f1d517ddd8fd3e6958`, branch `demo`.
 

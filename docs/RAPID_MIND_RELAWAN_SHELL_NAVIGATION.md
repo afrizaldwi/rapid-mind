@@ -9,6 +9,47 @@
 
 ---
 
+# Current interaction alignment — 7 November 2026
+
+Later-approved P0–P2 safety decisions govern conflicting examples below. The
+[reviewed D1 baseline](CURRENT_IMPLEMENTATION.md) defines the implemented contract;
+this specification adds no new clinical rules or verification claim.
+
+- Show all four SRQ states: `YES` / `NO` / `UNCLEAR` / `UNANSWERED` (Indonesian
+  labels: `Ya`, `Tidak`, `Respons Tidak Jelas`, `Belum dijawab`). Count definitive
+  answers separately; unresolved/missing/malformed required answers cannot be
+  treated as NO/zero or produce definitive scoring/recommendation.
+- Non-verbal mode retains manual four-state input and multiple observational
+  reasons, with UNKNOWN exclusive and an optional OTHER note. Reasons describe
+  observed communication, not diagnosis or SRQ/risk/function/triage/T0 inputs.
+  Preserve answers/observations through mode changes, drafts and sync.
+- Manual or STT apparent Q17 YES opens confirmation before persisting YES;
+  cancellation preserves the previous answer. Protected manual answers remain
+  authoritative. Q17 confirmation is separate from verification/final T0 send;
+  manual T0 remains available without completing SRQ, GPS or identity.
+- Relawan sees T0-Suspect plus local/server delivery state only. No Healthcare
+  handling, clinical result, referral or dispatch progress is exposed.
+- P0 lock/enrollment/retention follow [offline security](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md).
+  Local encryption is not implied by login; retention eligibility is not deletion.
+  Real-user migration/plaintext cleanup remain objectives, not completed rollout.
+
+**Team clarification — 7 November 2026:** the four-state data contract does not
+require four visible answer buttons. Three explicit choices are allowed while
+unanswered remains separately represented on untouched/reset input. Current
+`SrqResponseControl.vue` has four controls; no UI change is claimed here. Healthcare
+may now explicitly/auditably downgrade T0-Suspect to T1/T2/T3, but Relawan receives
+none of those outcomes. Necessary details are subject to authorization, not
+universal Healthcare-role access. Internal Dispatch is not proof of pickup.
+
+Binary-only illustrations, inferential observation wording and future continuous
+STT below are historical design targets where they conflict with this note.
+Current speech remains assistive; enhancements do not outrank P0–P2. October STT
+C1/C2 do not close November Safety C1/C2. Safety C1 acceptance remains pending;
+C2 integration/C3 final acceptance remain pending (see the
+[evidence ledger](workflow-verification.md#november-safety-evidence)).
+
+---
+
 # 1. Source Constraints
 
 This design is derived from and must remain consistent with:
@@ -1158,6 +1199,10 @@ Do not assume full audio/transcripts should be permanently stored.
 
 # 31. Non-Verbal Mode
 
+> **Current supersession:** the binary illustrations below are historical.
+> Use all four states and separate observational reasons as specified in the
+> November alignment; observation alone must not fill a symptom answer.
+
 When `NON-VERBAL` is selected:
 
 - the microphone control disappears;
@@ -1251,6 +1296,9 @@ Do not make unsupported assumptions about browser/offline speech-recognition cap
 ---
 
 # 34. SRQ-20 Question 17 — Safety Exception
+
+> **Current Q17 gate:** confirm apparent YES before persisting it, including
+> manual input. This is separate from final T0 verification/submission.
 
 Question 17 is not treated as an ordinary item.
 

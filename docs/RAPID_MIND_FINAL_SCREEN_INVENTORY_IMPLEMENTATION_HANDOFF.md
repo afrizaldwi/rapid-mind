@@ -9,6 +9,38 @@
 
 ---
 
+# November alignment — 7 November 2026
+
+The reviewed [D1 baseline](CURRENT_IMPLEMENTATION.md) and current owner/later-approved
+safety decisions govern conflicting historical handoff examples. This is an
+interaction reference, not evidence that every required screen/behavior passed.
+
+| Historical handoff area | Current interpretation |
+|---|---|
+| A2.5 binary SRQ / non-verbal examples | YES/NO/UNCLEAR/UNANSWERED remain distinct. Unresolved required answers block definitive scoring; observations are separately recorded reasons, not diagnoses or score inputs. |
+| A2.5/A2.12 Q17 interruption | Apparent manual/STT YES requires human confirmation before persistence; protected manual answers remain authoritative. Final T0 verification/send is a separate gate. Manual T0 stays available without complete SRQ/GPS/identity. |
+| Continuous STT requirements / implementation order | Historical targets, not implemented continuous-runtime claims or authorization to prioritize enhancements over P0–P2. Manual completion remains available. |
+| Referral/Dispatch handoff | UI/backend, schema-aware read projections, histories and events/listeners exist. Schema prerequisites, legacy compatibility and unverified final cutover/runtime acceptance remain. Internal work completion is not hospital acceptance/treatment or dispatch completion. |
+| Relawan emergency/status surfaces | Original T0-Suspect and delivery state only; no Healthcare handling, clinical results, referral or dispatch progression. |
+| Privacy/offline/security deferral | Use [offline security](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md). Enrolled local encryption exists, but general real-user migration/plaintext cleanup remain P0 objectives. No silent SMS, auto-purge or automatic T0 creation from inference. |
+| T0 downgrade to T3 | **APPROVED TEAM SUPERSESSION — 7 November 2026:** Healthcare explicitly/auditably chooses T1/T2/T3. Old T1/T2-only restrictions are historical; source support is not external protocol certification. |
+
+Official Admin case counts/geography must use Healthcare-validated outcomes,
+without identifiable patient data. Current mixed-source, missing-category and
+deduplication gaps are recorded in [the Admin specification](RAPID_MIND_ADMIN_WORKSPACE.md),
+not fixed by this handoff. Healthcare details require case/facility authorization;
+role membership alone does not grant every record. Three explicit SRQ choices
+are permitted with unanswered kept separately; current UI renders four controls.
+
+November Safety C1 is **IMPLEMENTED — ACCEPTANCE PENDING**, with recorded Chromium
+**18 PASS / 1 NOT TESTED**, synthetic authentication/server responses and unresolved
+natural background/foreground locking. November Safety C2 integration and C3 final
+acceptance remain pending. October STT C1/C2 are separate historical checkpoints.
+Production-built localhost assets do not establish production deployment readiness.
+See [November evidence](workflow-verification.md#november-safety-evidence).
+
+---
+
 # 0. Purpose and Authority
 
 This document consolidates the agreed RAPID-MIND UI/UX decisions into one implementation-oriented reference.
@@ -41,7 +73,7 @@ The source material used to derive this handoff is:
 
 ## 0.1 Authority order and current status
 
-`docs/workflow.md` is the finalized functional and product workflow. Explicit current project-owner instructions and approved domain safety decisions also govern implementation. This handoff and dedicated UX specifications supply detailed interaction design; the technical plan supplies architecture and sequence. Source code shows current implementation, not product authority. Identify conflicts explicitly instead of silently treating an earlier UX or technical assumption as a change to clinical policy. Required screens are not necessarily implemented or tested.
+`docs/workflow.md` is the original functional/product baseline. Current owner instructions and later-approved safety decisions supersede older conflicting workflow assumptions. This handoff and dedicated UX specifications supply detailed interaction design; the technical plan supplies architecture and sequence. Source code shows current implementation, not product authority. Identify conflicts explicitly instead of silently treating an earlier UX or technical assumption as a change to clinical policy. Required screens are not necessarily implemented or tested.
 
 **Historical document:** the 29 September handoff remains useful for detailed UX. The later Healthcare Emergency Worklist refactor at commit `b4779f1` (16 October 2026) extracted seven Vue components and `useEmergencyQueue.ts` / `useEmergencyActions.ts`. Three focused Node regression files include coverage for corrected same-tick form synchronization. The project-owner request summarizes Checkpoint 4C/4D Antigravity reports describing browser regression and a cross-role workflow; these are reported evidence, not verification rerun for this documentation update. Current limits and differences are tracked in `RAPID_MIND_TECHNICAL_PLAN.md` and `workflow-verification.md`.
 
@@ -571,6 +603,10 @@ Every meaningful change must be locally persisted.
 ---
 
 ## A2.5 Assessment — SRQ-20
+
+> **Current supersession:** the binary controls and continuous-session example
+> below are historical. Apply the November four-state, separate-observation and
+> explicit Q17-confirmation rules above; do not infer runtime acceptance.
 
 **Route**
 
@@ -1134,7 +1170,9 @@ OR
 → T2
 ```
 
-No T3 downgrade option from a T0 emergency verification.
+**Historical restriction — superseded 7 November 2026:** No T3 downgrade option
+from a T0 emergency verification. The approved product decision now permits
+explicit audited Healthcare downgrade to T1/T2/T3.
 
 ---
 

@@ -3,12 +3,106 @@
 **Project:** RAPID-MIND  
 **Document type:** Technical architecture + implementation plan  
 **Status:** Working baseline for development  
-**Primary source:** `docs/workflow.md` (finalized product workflow)
-**Last documentation alignment:** 2026-10-24
+**Requirements authority:** current owner instructions and later-approved safety decisions; approved domain specifications; original `docs/workflow.md` subject to those decisions
+**Last documentation alignment:** 2026-11-07 (D1; source baseline `demo` at `e85b981`)
 
 ---
 
-## Current authority and implementation status — 24 October 2026
+## Current safety and implementation baseline — 7 November 2026
+
+D1 re-inspected source, test sources, applicable specifications and dated reports.
+No test, build, browser run, live database/configuration check, enrollment or
+cutover was performed. `IMPLEMENTED` describes source; `PASS` needs an executed
+scoped check; `ACCEPTED` needs all agreed exit criteria. Historical results below
+are retained with their original limits and are not D1 reruns.
+
+### Priority and current contracts
+
+- **P0 — privacy/T0:** encrypted-first AES-256-GCM clinical storage, wrapped-key
+  lifecycle, lock/recovery, explicit human T0 verification and atomic priority-1
+  outbox are implemented. Missing network/GPS/full identity must not prevent safe
+  offline T0. Local save, server receipt, Healthcare decisions, referral and
+  Dispatch remain separate. Browser SMS handoff is not guaranteed delivery.
+- **Local enrollment:** ordinary assets require server-authorized exact
+  `http://localhost:8080`, local environment/configured URL/direct Host, default-off
+  `OFFLINE_ENCRYPTION_LOCAL_ENROLLMENT`, and matching active Relawan web session.
+  Existing enrolled owners can unlock offline. Browser navigation uses a
+  version-bound session; API routes require bearer JWT with user/version and
+  refresh-family checks. Authentication does not decrypt local clinical data.
+- **Migration/retention:** legacy or inconsistent storage blocks ordinary access;
+  missing mode is not plaintext permission. Fresh enrollment does not migrate old
+  rows. Retention computes eligibility, not automatic deletion. Old-client/native
+  IndexedDB writers require separate cutover safeguards. Controlled dummy-profile
+  enrollment evidence does not prove general real-user migration/cleanup or
+  production activation. See [offline security](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md).
+- **P1 — observations:** multiple validated reasons, exclusive UNKNOWN and optional
+  OTHER note (maximum 500 characters) persist through drafts/sync and Healthcare
+  presentation without diagnosis, scoring or automatic T0 effects.
+- **P2 — SRQ:** YES/NO/UNCLEAR/UNANSWERED span client/storage/API/server/Healthcare;
+  definitive booleans remain compatible. Required unresolved/malformed answers
+  block definitive scoring. Apparent manual/STT Q17 YES needs human confirmation
+  before persistence; final T0 sending is separate. Manual T0 remains independent.
+
+These later-approved safety contracts supersede older binary-only SRQ, automatic
+T0/SMS, deferred encryption and auto-purge assumptions. Preserve architecture,
+role boundaries and the historical record; do not defer critical privacy or
+emergency integrity to finish a demo. Older §8.2 "eventually" encryption and
+§§20–22 build priorities are historical planning, not current authorization.
+
+### Current integration and acceptance boundaries
+
+| Scope | Source / recorded status | Remaining boundary |
+|---|---|---|
+| Referral/Dispatch 2D/2E | Implemented UI/backend, read projections, histories, fixture seeder and ID-only events on the Healthcare-only channel; [recorded isolated automated evidence](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md) | Requires additive Dispatch/history/unit tables and Referral verification column. Missing schema disables new controls; legacy compatibility remains. Source/test results do not establish current DB deployment, live transport/browser acceptance or final legacy retirement. |
+| B4.4 | [Recorded controlled-local enrollment acceptance](checkpoints/checkpoint-b44-controlled-development-activation.md) with ordinary assets and owner dummy-profile setup | Not production activation, general real-clinical-user cutover or automatic historical migration. |
+| November Safety C1 | **IMPLEMENTED — ACCEPTANCE PENDING**; [report](checkpoints/checkpoint-c1-local-browser-integration.md) records 29 Node files / 0 failures, 82 PHP tests / 302 assertions, typecheck/build/lint, Chromium **18 PASS / 1 NOT TESTED** | Actual generated worker/ordinary production-built assets, synthetic authentication/server responses. Natural background/foreground locking remains NOT TESTED; synthetic hidden-state stimulus is not native acceptance. Mobile background lock, live backend auth/sync and different-release asset migration are unverified. |
+| November Safety C2 | **PENDING** local Relawan → outbox/sync → Laravel/PostgreSQL → Healthcare integration acceptance | Must cover authorization, realtime, replay/idempotency, failures and privacy; no completion inferred from existing synchronization code or old browser results. |
+| November Safety C3 | **PENDING** final local P0–P2 regression/signoff | Includes outstanding C1 conditions; no production readiness or clinical-policy certification implied. |
+
+October **STT C1/C2** below refer to speech foundation/transcript interpretation.
+They are distinct from November **Safety C1/C2**. Historical STT passes do not
+close current browser/privacy or integration acceptance gates. Do not start new
+Admin/heatmap, STT-enhancement, deployment or other backlog phases automatically.
+
+Referral completion UI is schema-dependent and means completion of internal work,
+not hospital acceptance/treatment or Dispatch completion. Dispatch can serve an
+unidentified confirmed T0 without Referral. Final legacy endpoint/cast/constraint
+retirement and runtime acceptance remain unestablished here. The
+[2F-B2.2 maintenance report](checkpoints/checkpoint-2fb2-additive-deployment.md)
+is a dated stopped attempt, not evidence of current container/database state.
+
+**APPROVED TEAM SUPERSESSION — 7 November 2026:** Healthcare may explicitly and
+auditably downgrade T0-Suspect to T1/T2/T3. This supersedes the historical
+T1/T2-only restriction and resolves the prior product discrepancy. Controller/UI
+support exists; this is not external clinical-protocol certification or new runtime
+acceptance. Earlier unresolved-T3 references below retain their historical scope.
+
+Official Admin counts/geography must use Healthcare-validated outcomes without
+patient identifiers, separate from recommendations and unverified suspects. Current
+queries do not yet meet that full contract: distributions/maps/trends mix sources,
+validated counters omit emergency downgrade categories, and deduplication/counting
+unit are undefined. The current confirmed-total KPI has no recommendation fallback.
+See [Admin query evidence](RAPID_MIND_ADMIN_WORKSPACE.md). Necessary Healthcare
+case details require case/facility authorization; inspected broad reads/role-only
+checks do not establish that scope. Do not equate Dispatch assignment with external
+vehicle contact or pickup. Three SRQ choices are permissible with UNANSWERED
+preserved; current UI has four controls, and Q17 human confirmation remains.
+
+The compact [current inventory](CURRENT_IMPLEMENTATION.md) lists current contracts,
+source anchors and evidence limits. Later-approved safety requirements outrank
+older conflicting workflow/UX concepts; source shows implementation, not clinical
+approval. The local skill may carry detailed changing progress when available,
+but these tracked documents do not depend on its presence.
+
+---
+
+## Historical authority and implementation status — 24 October 2026
+
+The following October snapshot, architecture and execution records are retained
+for provenance. All uses of "current", "pending" or "complete" below refer to
+their recorded baseline. In particular, backend-only Dispatch, pending 2D/2E,
+workflow-first precedence and October STT C1/C2 labels do not override the November
+baseline above. Historical test counts/results and original decisions are unchanged.
 
 `docs/workflow.md` is the finalized product and functional workflow. This plan supplies architecture, sequencing, and historical implementation checkpoints; the repository source determines current implementation. When workflow, safety decisions, UX detail, and implemented behavior differ, record the difference explicitly before changing clinical policy or working architecture. A workflow requirement alone is not implementation or test evidence.
 

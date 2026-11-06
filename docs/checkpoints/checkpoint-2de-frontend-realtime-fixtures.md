@@ -1,5 +1,13 @@
 # Checkpoint 2D + 2E — Healthcare integration, realtime, and synthetic fixtures
 
+> **Later owner/team supersession — 7 November 2026:** explicit, auditable
+> Healthcare T0-Suspect downgrade to T1/T2/T3 is now approved product behavior.
+> Earlier T1/T2-only restrictions, unresolved T3 findings or demo blockers below
+> are historical, not active prohibitions. This is not external clinical protocol
+> certification and changes no recorded execution/test result or runtime state.
+> Current official Admin reporting requirements and source gaps are linked from
+> [the current baseline](../CURRENT_IMPLEMENTATION.md).
+
 Implemented 24 October 2026 against the current local application. This checkpoint
 adds integration code and isolated automated evidence. It does **not** perform the
 coordinated database/application cutover or establish browser/runtime readiness.

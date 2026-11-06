@@ -3,9 +3,44 @@
 **Document:** Implementation Change Notes & Technical Log  
 **Date:** 2026-09-29  
 **Branch:** `demo`  
-**Milestone:** End-to-End Implementation Complete (Phases 1 through 12)
+**Historical milestone (29 September 2026):** End-to-End Implementation Complete (Phases 1 through 12)
 
 ---
+
+## Final team decision supersession — 7 November 2026
+
+The owner/team now approves explicit, auditable Healthcare downgrade to T1/T2/T3,
+superseding earlier T1/T2-only restrictions and unresolved-T3 wording in the dated
+records below. This is a product decision, not external protocol certification.
+No historical result or NOT TESTED entry is converted into a new pass.
+See [the current baseline](CURRENT_IMPLEMENTATION.md) and
+[Admin reporting requirements/query gaps](RAPID_MIND_ADMIN_WORKSPACE.md).
+
+Official Admin reporting must separate Healthcare-validated outcomes from system
+recommendations/unverified suspects and omit patient identity. Current source has
+mixed distributions, omitted downgrade categories, undefined cross-source counting/
+deduplication and unresolved access/minimization gaps; no code was fixed here.
+Current confirmed-total source has no recommendation fallback. Healthcare needs
+case/facility permission; role membership is not universal record authorization.
+Internal Dispatch assignment does not prove vehicle contact or pickup. Three
+explicit SRQ choices are permissible with unanswered separate; source still has
+four controls. Q17 confirmation, P1 observational semantics and Relawan visibility
+remain unchanged. November Safety C1 acceptance and C2/C3 remain pending.
+
+## Reading guide — documentation alignment, 7 November 2026
+
+The September milestone, executive summary and numbered implementation/test
+records below are historical, including later edits describing October STT.
+They are not a current completeness, security or runtime certification. Preserve
+their original dates/results; consult [the D1 baseline](CURRENT_IMPLEMENTATION.md)
+and [November evidence](workflow-verification.md#november-safety-evidence).
+
+Current priorities are P0 privacy/T0 integrity, P1 non-verbal observations and P2
+four-state SRQ safety. Older automatic-T0 shorthand, combined Referral/Dispatch,
+three-axis Relawan status, Admin heatmap/channel-access claims and broad security
+deferral are superseded by those source-aligned contracts. `vue-tsc` success is
+a scoped compiler result, not proof of universal type/runtime safety. Historical
+service/migration counts are not today's environment inventory.
 
 ## 1. Executive Summary
 
@@ -833,3 +868,36 @@ Automated verification passed: complete Docker Laravel suite (`161` tests, `2,05
 **Reported historical verification:** Checkpoint 4B reported passing Vue TypeScript checks, production frontend build, and three focused Node regression test files. Checkpoint 4C reported non-destructive Antigravity browser regression of the refactored worklist. Checkpoint 4D reported two-session Relawan → Healthcare Reverb delivery and real submissions for acknowledgement, secondary verification, clinical classification, and explicit referral, with persistence and Inertia reconciliation observed. These outcomes come from the project-owner request; this documentation checkpoint did not rerun checks, inspect a live database, or conduct browser testing. The detailed report artifacts were not included.
 
 **Open limits:** No production security certification; no complete offline connectivity-failure or mid-flight POST disconnect/reconnect test in Checkpoints 4C/4D; no submitted T3 clinical downgrade in 4D. The legacy `genderLabel` reference and frontend/backend pending-emergency order difference remain. See `RAPID_MIND_TECHNICAL_PLAN.md` for the workflow/implementation conflict list and `workflow-verification.md` for evidence categories.
+
+---
+
+## D2–D4 documentation alignment — 7 November 2026
+
+Source baseline `demo` at `e85b981`; this entry records documentation changes only.
+D1 contracts/history were preserved. The ledger now indexes later 2D/2E, B4.4 and
+November Safety C1 evidence separately from old September/October observations.
+No old test result was rerun or reclassified.
+
+- Referral/Dispatch UI/backend integration, projections and realtime handlers
+  exist; schema deployment prerequisites, legacy compatibility and unverified
+  final cutover/runtime acceptance remain. Internal assignment/completion is not
+  external unit contact, hospital admission or completed treatment.
+- B4.4 records controlled-local dummy-profile enrollment, not general real-user
+  migration/cleanup or production readiness. Those migration/cleanup goals remain
+  P0 objectives. Retention eligibility does not delete rows automatically.
+- November Safety C1 is **IMPLEMENTED — ACCEPTANCE PENDING**: recorded Chromium
+  **18 PASS / 1 NOT TESTED**, synthetic authentication/server responses, unresolved
+  natural background/foreground locking. November Safety C2 integration and C3
+  final acceptance remain **PENDING**. October STT C1/C2 are separate historical
+  speech checkpoints; production-built localhost tests do not prove deployment.
+- Domain/handoff supersession notes now point to the current four-state SRQ,
+  observational reasons, explicit Q17 confirmation and Relawan visibility rules.
+  README/index/authentication wording was aligned. T0 downgrade to T3 remains
+  **REQUIRES OWNER DECISION** at D2–D4; this historical status is superseded by
+  the final team approval above. No formula changed.
+
+See [the evidence ledger](workflow-verification.md#november-safety-evidence) for
+original report dates, counts and limitations. No application code, tests,
+migrations, dependencies, configuration or `workflow.md` changed in D2–D4.
+Verification for this task is source/document/diff/reference/whitespace inspection,
+not a new automated application, browser, runtime, offline or realtime pass.
