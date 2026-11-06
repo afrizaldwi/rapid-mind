@@ -6,8 +6,12 @@ import {
 } from "./db";
 import type { OfflineKeySession } from "./offlineCrypto";
 import { shallowRef } from "vue";
+import { captureClinicalAccess, assertClinicalAccess, invalidateClinicalAccess, onClinicalInvalidation } from "./clinicalAccessFence";
+import { encryptedEnrollmentEnabled, syntheticLegacyFixture, keyIdentity } from "./clinicalStorageInitialization";
 
 const activeSessions = new Map<number, OfflineKeySession>();
+const preparedTickets = new WeakMap<EncryptedStagingRecord, ReturnType<typeof captureClinicalAccess>>();
+const accessTickets = new Map<number, ReturnType<typeof captureClinicalAccess>>();
 let accessEpoch = 0;
 const keyGeneration = shallowRef(0);
 
@@ -36,6 +40,7 @@ export async function installClinicalKey(
     session: OfflineKeySession,
 ): Promise<void> {
     if (!session.unlocked) throw new Error("Kunci data offline terkunci.");
+    const ticket = captureClinicalAccess();
     const epoch = accessEpoch;
     const persisted = await db.offlineKeys.get(session.owner);
     if (!persisted) throw new Error("Kunci data offline tidak tersedia.");
@@ -49,22 +54,33 @@ export async function installClinicalKey(
         if (owner !== session.owner || previous !== session) previous.lock();
         if (owner !== session.owner) activeSessions.delete(owner);
     }
+    assertClinicalAccess(ticket);
+    if (!syntheticLegacyFixture()) {
+        const context = await db.relawanContinuity.get("active");
+        const mode = await db.ownerEncryptionModes.get(session.owner);
+        if (!encryptedEnrollmentEnabled() || context?.owner_user_id !== session.owner || context.logout_pending ||
+            context.role !== "RELAWAN" || !mode?.confirmed_at || mode.mode !== "ENCRYPTED" ||
+            mode.key_identity !== keyIdentity(latest)) throw new Error("Inisialisasi atau sesi klinis belum sesuai.");
+        assertClinicalAccess(ticket);
+        session.assertPersistedKey((await db.offlineKeys.get(session.owner))!);
+        assertClinicalAccess(ticket);
+    }
     activeSessions.set(session.owner, session);
+    accessTickets.set(session.owner, ticket);
     publishKeyChange();
 }
 
-export function lockClinicalKey(owner: number): void {
-    accessEpoch++;
-    activeSessions.get(owner)?.lock();
-    activeSessions.delete(owner);
-    publishKeyChange();
-}
-
-export function lockAllClinicalKeys(): void {
+function clearKeys(): void {
     accessEpoch++;
     for (const session of activeSessions.values()) session.lock();
     activeSessions.clear();
+    accessTickets.clear();
     publishKeyChange();
+}
+onClinicalInvalidation(clearKeys);
+export function lockClinicalKey(_owner: number): void { lockAllClinicalKeys(); }
+export function lockAllClinicalKeys(): void {
+    invalidateClinicalAccess();
 }
 
 export function clinicalKeyReady(owner: number): boolean {
@@ -73,25 +89,41 @@ export function clinicalKeyReady(owner: number): boolean {
 }
 
 export async function encryptedMode(owner: number): Promise<boolean> {
-    return (
-        (await db.ownerEncryptionModes.get(requireOwner(owner)))?.mode ===
-        "ENCRYPTED"
-    );
+    const mode = await db.ownerEncryptionModes.get(requireOwner(owner));
+    if (syntheticLegacyFixture()) return mode?.mode === "ENCRYPTED";
+    if (!encryptedEnrollmentEnabled() || mode?.mode !== "ENCRYPTED" ||
+        !Number.isFinite(Date.parse(mode.confirmed_at ?? "")) || !mode.key_identity || !mode.recovery_revision) {
+        if (activeSessions.size) lockAllClinicalKeys();
+        throw new Error("Penyimpanan klinis belum diinisialisasi atau diblokir. Data tetap tersimpan.");
+    }
+    return true;
 }
 
-export async function assertStorageMode(
-    owner: number,
-    expected: "LEGACY" | "ENCRYPTED",
-): Promise<void> {
+export async function assertStorageMode(owner: number, expected: "LEGACY" | "ENCRYPTED"): Promise<void> {
     const encrypted = await encryptedMode(owner);
     if ((encrypted ? "ENCRYPTED" : "LEGACY") !== expected)
         throw new Error("Mode penyimpanan berubah. Muat ulang data lokal.");
     if (encrypted) {
         const session = activeSessions.get(owner);
+        const ticket = accessTickets.get(owner);
         const wrapped = await db.offlineKeys.get(owner);
-        if (!session || !wrapped || !session.unlocked)
+        if (!session || !wrapped || !session.unlocked || !ticket) {
+            if (session) lockAllClinicalKeys();
             throw new Error("Buka kunci data offline Relawan ini.");
-        session.assertPersistedKey(wrapped);
+        }
+        assertClinicalAccess(ticket);
+        try { session.assertPersistedKey(wrapped); }
+        catch (error) { lockAllClinicalKeys(); throw error; }
+        if (!syntheticLegacyFixture()) {
+            const mode = await db.ownerEncryptionModes.get(owner);
+            const continuity = await db.relawanContinuity.get("active");
+            if (mode?.key_identity !== keyIdentity(wrapped) || continuity?.owner_user_id !== owner ||
+                continuity.logout_pending || continuity.role !== "RELAWAN") {
+                lockAllClinicalKeys();
+                throw new Error("Konteks Relawan berubah. Masuk kembali.");
+            }
+            assertClinicalAccess(ticket);
+        }
     }
 }
 
@@ -125,11 +157,13 @@ export async function encryptedGet<T>(
     type: ClinicalStore,
     id: string,
 ): Promise<T | undefined> {
+    const ticket = captureClinicalAccess();
     const session = await sessionFor(owner);
     const copy = await db.encryptedStaging.get(encryptedKey(type, owner, id));
-    if (!copy) return undefined;
+    if (!copy) { assertClinicalAccess(ticket); return undefined; }
     const value = await session.decrypt<T>(copy, owner, type, id);
     await assertStorageMode(owner, "ENCRYPTED");
+    assertClinicalAccess(ticket);
     return value;
 }
 
@@ -137,6 +171,7 @@ export async function encryptedList<T>(
     owner: number,
     type: ClinicalStore,
 ): Promise<T[]> {
+    const ticket = captureClinicalAccess();
     const session = await sessionFor(owner);
     const copies = (
         await db.encryptedStaging.where("owner_user_id").equals(owner).toArray()
@@ -147,6 +182,7 @@ export async function encryptedList<T>(
             await session.decrypt<T>(copy, owner, type, copy.record_id),
         );
     await assertStorageMode(owner, "ENCRYPTED");
+    assertClinicalAccess(ticket);
     return values;
 }
 
@@ -156,6 +192,7 @@ export async function encryptedMutate<T>(
     id: string,
     transform: (current: T | undefined) => T,
 ): Promise<void> {
+    const ticket = captureClinicalAccess();
     const session = await sessionFor(owner);
     const key = encryptedKey(type, owner, id);
     const before = await db.encryptedStaging.get(key);
@@ -163,9 +200,11 @@ export async function encryptedMutate<T>(
         ? await session.decrypt<T>(before, owner, type, id)
         : undefined;
     const next = await session.encrypt(type, id, transform(current));
+    assertClinicalAccess(ticket);
     await db.transaction(
         "rw",
         db.ownerEncryptionModes,
+        db.relawanContinuity,
         db.offlineKeys,
         db.encryptedStaging,
         async () => {
@@ -175,7 +214,9 @@ export async function encryptedMutate<T>(
                 throw new Error(
                     "Data lokal berubah bersamaan. Ulangi penyimpanan.",
                 );
+            assertClinicalAccess(ticket);
             await db.encryptedStaging.put(next);
+            assertClinicalAccess(ticket);
         },
     );
 }
@@ -186,6 +227,7 @@ export async function encryptedDelete(
     id: string,
     expected?: unknown,
 ): Promise<void> {
+    const ticket = captureClinicalAccess();
     const session = await sessionFor(owner);
     const key = encryptedKey(type, owner, id);
     const before = await db.encryptedStaging.get(key);
@@ -199,6 +241,7 @@ export async function encryptedDelete(
     await db.transaction(
         "rw",
         db.ownerEncryptionModes,
+        db.relawanContinuity,
         db.offlineKeys,
         db.encryptedStaging,
         async () => {
@@ -208,7 +251,9 @@ export async function encryptedDelete(
                 throw new Error(
                     "Data lokal berubah bersamaan. Ulangi tindakan.",
                 );
+            assertClinicalAccess(ticket);
             await db.encryptedStaging.delete(key);
+            assertClinicalAccess(ticket);
         },
     );
 }
@@ -219,5 +264,15 @@ export async function prepareEncrypted(
     id: string,
     value: unknown,
 ): Promise<EncryptedStagingRecord> {
-    return (await sessionFor(owner)).encrypt(type, id, value);
+    const session = await sessionFor(owner);
+    const ticket = accessTickets.get(owner)!;
+    const envelope = await session.encrypt(type, id, value);
+    assertClinicalAccess(ticket);
+    preparedTickets.set(envelope, ticket);
+    return envelope;
+}
+export function assertPreparedClinicalRecord(envelope: EncryptedStagingRecord): void {
+    const ticket = preparedTickets.get(envelope);
+    if (!ticket) throw new Error("Penyimpanan klinis belum dipersiapkan.");
+    assertClinicalAccess(ticket);
 }

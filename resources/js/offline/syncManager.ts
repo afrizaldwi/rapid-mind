@@ -1,3 +1,4 @@
+import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import {
     requireOwner,
     type LocalAssessment,
@@ -167,6 +168,7 @@ class SyncManager {
                     this.notify();
 
                     for (const item of await outboxRepository.list(active)) {
+                        const access = captureClinicalAccess();
                         if (this.owner !== active || !navigator.onLine) break;
                         if (!item.id) continue;
                         if (item.type === "ASSESSMENT") {
@@ -225,12 +227,14 @@ class SyncManager {
                         attempted.add(snapshotKey);
 
                         try {
+                            assertClinicalAccess(access);
                             const response = await jsonRequest(
                                 item.type === "EMERGENCY"
                                     ? "/relawan/sync/emergencies"
                                     : "/relawan/sync/assessments",
                                 snapshot.payload,
                             );
+                            assertClinicalAccess(access);
                             if (!response.ok) {
                                 await outboxRepository.mark(
                                     active,
@@ -304,10 +308,7 @@ class SyncManager {
                                 else if (!completed) this.syncRequested = true;
                             }
                         } catch (error) {
-                            const message =
-                                error instanceof Error
-                                    ? error.message
-                                    : "Sync failed";
+                            const message = "Penerimaan server belum terkonfirmasi. Coba lagi setelah koneksi dan sesi tersedia.";
                             const latest = await outboxRepository.get(
                                 active,
                                 item.id,

@@ -42,18 +42,12 @@ export async function recordVerifiedRelawan(
             key: "active",
             owner_user_id: requireOwner(user.id),
             role: "RELAWAN",
-            display_name: user.name.trim(),
-            shelter_id:
-                Number.isInteger(user.shelter_id) && (user.shelter_id ?? 0) > 0
-                    ? user.shelter_id!
-                    : null,
-            shelter_name:
-                typeof user.shelter?.name === "string"
-                    ? user.shelter.name
-                    : null,
+            display_name: "Relawan",
+            shelter_id: null,
+            shelter_name: null,
             verified_at: new Date().toISOString(),
             logout_pending: false,
-            schema_version: 1,
+            schema_version: 2,
         };
         await db.relawanContinuity.put(context);
         return true;
@@ -76,12 +70,12 @@ export async function lockRelawanContinuity(
                 key: "active",
                 owner_user_id: user.id,
                 role: "RELAWAN",
-                display_name: user.name.trim(),
-                shelter_id: user.shelter_id ?? null,
-                shelter_name: user.shelter?.name ?? null,
+                display_name: "Relawan",
+                shelter_id: null,
+                shelter_name: null,
                 verified_at: new Date().toISOString(),
                 logout_pending: true,
-                schema_version: 1,
+                schema_version: 2,
             });
         }
     });
@@ -93,7 +87,7 @@ export async function resolveRelawanContinuity(): Promise<ContinuityResult> {
         if (!context) return { state: "NO_VERIFIED_RELAWAN" };
         if (context.logout_pending) return { state: "LOGGED_OUT_LOCALLY" };
         if (
-            context.schema_version !== 1 ||
+            ![1, 2].includes(context.schema_version) ||
             context.role !== "RELAWAN" ||
             !Number.isInteger(context.owner_user_id) ||
             context.owner_user_id <= 0 ||

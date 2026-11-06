@@ -1,3 +1,4 @@
+import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import { canonicalAssessmentResponse } from "./assessmentCanonical";
 import {
     db,
@@ -12,8 +13,10 @@ import {
 } from "./db";
 import {
     assertStorageMode,
+    assertPreparedClinicalRecord,
     ciphertextDigest,
     encryptedGet,
+    encryptedList,
     encryptedKey,
     prepareEncrypted,
 } from "./encryptedClinicalStorage";
@@ -77,6 +80,7 @@ async function commit(
         "rw",
         [
             db.ownerEncryptionModes,
+            db.relawanContinuity,
             db.offlineKeys,
             db.encryptedStaging,
             db.encryptedOutboxIndex,
@@ -93,13 +97,22 @@ async function commit(
                         "Data lokal berubah bersamaan. Ulangi tindakan.",
                     );
             }
+            for (const change of changes) if (change.after) assertPreparedClinicalRecord(change.after);
             await action();
             for (const change of changes) {
                 if (change.after) await db.encryptedStaging.put(change.after);
                 else await db.encryptedStaging.delete(change.key);
             }
+            for (const change of changes) if (change.after) assertPreparedClinicalRecord(change.after);
+            await assertStorageMode(owner, "ENCRYPTED");
         },
     );
+}
+
+// Reserve before Web Crypto, never inside an IndexedDB transaction held across
+// crypto. Failed operations may leave gaps, but IDs are never reused.
+async function reserveOutboxId(): Promise<number> {
+    return db.transaction("rw", db.outbox, db.encryptedOutboxIndex, db.outboxIdCounter, db.localSyncReceipts, nextOutboxId);
 }
 
 export async function encryptedOutboxGet(
@@ -107,6 +120,7 @@ export async function encryptedOutboxGet(
     id: number,
 ): Promise<OutboxItem | undefined> {
     requireOwner(owner);
+    if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Identitas antrean rusak.");
     await assertStorageMode(owner, "ENCRYPTED");
     const index = await db.encryptedOutboxIndex.get(id);
     if (!index || index.owner_user_id !== owner) return undefined;
@@ -114,9 +128,18 @@ export async function encryptedOutboxGet(
     if (
         !item ||
         item.owner_user_id !== owner ||
-        (item.id !== undefined && item.id !== id)
+        item.id !== id || !item.entity_id ||
+        !["EMERGENCY", "ASSESSMENT"].includes(item.type) ||
+        item.priority !== (item.type === "EMERGENCY" ? 1 : 2) ||
+        !Number.isSafeInteger(item.revision) || item.revision < 1 ||
+        !Number.isSafeInteger(item.retry_count) || item.retry_count < 0
     )
         throw new Error("Antrean terenkripsi rusak atau tidak sesuai pemilik.");
+    const entity = await encryptedGet<{ id: string; owner_user_id: number }>(
+        owner, item.type === "EMERGENCY" ? "emergencies" : "assessments", item.entity_id,
+    );
+    if (!entity || entity.id !== item.entity_id || entity.owner_user_id !== owner)
+        throw new Error("Referensi catatan antrean hilang atau tidak sesuai.");
     return { ...item, id };
 }
 
@@ -128,6 +151,10 @@ export async function encryptedOutboxList(
         .where("owner_user_id")
         .equals(requireOwner(owner))
         .toArray();
+    const copies = await encryptedList<OutboxItem>(owner, "outbox");
+    const refs = new Set(indexes.map(index => index.ref));
+    if (refs.size !== indexes.length || copies.length !== indexes.length)
+        throw new Error("Indeks antrean hilang atau duplikat. Data tetap tersimpan.");
     const items: OutboxItem[] = [];
     for (const index of indexes) {
         const item = await encryptedOutboxGet(owner, index.id);
@@ -152,6 +179,7 @@ export async function encryptedOutboxEnqueue(
     payload: Record<string, unknown>,
     expectedAssessmentRevision?: number,
 ): Promise<void> {
+    const access = captureClinicalAccess();
     const entityType = type === "ASSESSMENT" ? "assessments" : "emergencies";
     const entity = await encryptedGet<LocalAssessment | LocalEmergency>(
         owner,
@@ -180,6 +208,7 @@ export async function encryptedOutboxEnqueue(
         : undefined;
     const ref = index?.ref ?? localUuid();
     const now = new Date().toISOString();
+    const id = existing?.id ?? await reserveOutboxId();
     const item: OutboxItem = existing
         ? {
               ...existing,
@@ -191,6 +220,7 @@ export async function encryptedOutboxEnqueue(
               updated_at: now,
           }
         : {
+              id,
               owner_user_id: owner,
               type,
               entity_id: entityId,
@@ -219,6 +249,7 @@ export async function encryptedOutboxEnqueue(
             entity,
         ),
     ];
+    assertClinicalAccess(access);
     if (!existing && changes[0].before)
         throw new Error("Identitas antrean sudah tersedia.");
     await commit(owner, changes, async () => {
@@ -227,7 +258,6 @@ export async function encryptedOutboxEnqueue(
             if (JSON.stringify(latest) !== JSON.stringify(index))
                 throw new Error("Antrean berubah bersamaan.");
         } else {
-            const id = await nextOutboxId();
             await db.encryptedOutboxIndex.add({
                 id,
                 owner_user_id: owner,
@@ -242,9 +272,12 @@ export async function createEncryptedEmergencyWithOutbox(
     emergency: LocalEmergency,
     payload: Record<string, unknown>,
 ): Promise<void> {
+    const access = captureClinicalAccess();
     const ref = localUuid();
     const now = new Date().toISOString();
+    const id = await reserveOutboxId();
     const item: OutboxItem = {
+        id,
         owner_user_id: owner,
         type: "EMERGENCY",
         entity_id: emergency.id,
@@ -264,10 +297,10 @@ export async function createEncryptedEmergencyWithOutbox(
         }),
         await preparedChange(owner, "outbox", ref, item),
     ];
+    assertClinicalAccess(access);
     if (changes[0].before || changes[1].before)
         throw new Error("Identitas insiden atau antrean sudah tersedia.");
     await commit(owner, changes, async () => {
-        const id = await nextOutboxId();
         await db.encryptedOutboxIndex.add({ id, owner_user_id: owner, ref });
     });
 }
@@ -470,6 +503,7 @@ export async function encryptedOutboxComplete(
                 throw new Error("Revisi antrean berubah.");
             await db.encryptedOutboxIndex.delete(item.id!);
             await db.localSyncReceipts.put({
+                outbox_id: item.id!,
                 key: `${owner}:${item.type}:${item.entity_id}`,
                 owner_user_id: owner,
                 type: item.type,

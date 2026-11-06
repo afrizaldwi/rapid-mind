@@ -92,11 +92,11 @@ async function wrap(
     };
 }
 
-async function unwrap(
+async function unwrapRaw(
     record: WrappedOfflineKey,
     secret: string,
     purpose: "passphrase" | "recovery",
-): Promise<CryptoKey> {
+): Promise<Uint8Array<ArrayBuffer>> {
     if (record.version !== VERSION || record[purpose].iterations !== ITERATIONS)
         throw new Error("Unsupported offline key version");
     const envelope = record[purpose];
@@ -123,15 +123,32 @@ async function unwrap(
             ),
         );
         if (raw.length !== 32) throw new Error("Invalid offline key length");
-        return await crypto.subtle.importKey("raw", raw, "AES-GCM", false, [
-            "encrypt",
-            "decrypt",
-        ]);
+        return raw.slice();
     } catch {
         throw new Error("Offline unlock failed");
     } finally {
         raw?.fill(0);
     }
+}
+
+async function unwrap(record: WrappedOfflineKey, secret: string, purpose: "passphrase" | "recovery"): Promise<CryptoKey> {
+    const raw = await unwrapRaw(record, secret, purpose);
+    try {
+        return await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+    } finally { raw.fill(0); }
+}
+
+// Rewrap the same verified DEK. Interrupted enrollment never replaces identity.
+export async function replaceRecoveryWrapper(record: WrappedOfflineKey, passphrase: string) {
+    const raw = await unwrapRaw(record, passphrase, "passphrase");
+    const recoveryCode = encoded(randomBytes(32));
+    try {
+        const recovery = await wrap(raw, record.owner_user_id, recoveryCode, "recovery");
+        const updated = { ...record, recovery };
+        const session = await unlockOfflineKey(updated, passphrase, "passphrase");
+        await session.bindPersistedKey(updated);
+        return { record: updated, session, recoveryCode };
+    } finally { raw.fill(0); }
 }
 
 export function validateOfflinePassphrase(passphrase: string): void {

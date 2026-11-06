@@ -83,6 +83,7 @@ export const outboxRepository = {
                 db.outbox,
                 db.encryptedOutboxIndex,
                 db.outboxIdCounter,
+                db.localSyncReceipts,
                 db.assessments,
                 db.emergencies,
                 db.ownerEncryptionModes,
@@ -305,6 +306,7 @@ export const outboxRepository = {
                 }
                 await db.outbox.delete(item.id!);
                 await db.localSyncReceipts.put({
+                    outbox_id: item.id!,
                     key: `${owner}:${item.type}:${item.entity_id}`,
                     owner_user_id: owner,
                     type: item.type,

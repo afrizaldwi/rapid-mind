@@ -17,7 +17,11 @@ self.addEventListener("install", () => {
 });
 
 self.addEventListener("activate", (event) => {
-    event.waitUntil(self.clients.claim());
+    event.waitUntil((async () => {
+        await self.clients.claim();
+        for (const client of await self.clients.matchAll({ type: "window" }))
+            client.postMessage({ type: "RAPID_MIND_STORAGE_PROTOCOL", version: 2 });
+    })());
 });
 
 precacheAndRoute(self.__WB_MANIFEST);

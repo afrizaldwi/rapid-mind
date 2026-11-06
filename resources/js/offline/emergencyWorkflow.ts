@@ -1,3 +1,4 @@
+import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import { assessmentRepository } from "./assessmentRepository";
 import {
     db,
@@ -79,6 +80,7 @@ export async function createLocalEmergency(
     input: EmergencyInput,
 ) {
     requireOwner(owner);
+    const access = captureClinicalAccess();
     if (!redFlags.has(input.redFlagType))
         throw new Error("Pilih indikator Red Flag yang valid.");
     const notes = input.notes?.trim() || null;
@@ -125,6 +127,7 @@ export async function createLocalEmergency(
     };
     const payload = await buildEmergencySyncPayload(owner, emergency);
     if (await encryptedMode(owner)) {
+        assertClinicalAccess(access);
         try {
             await localPersistenceHealth.recordWrite(owner, () =>
                 createEncryptedEmergencyWithOutbox(owner, emergency, payload),
@@ -146,6 +149,7 @@ export async function createLocalEmergency(
                 db.outbox,
                 db.encryptedOutboxIndex,
                 db.outboxIdCounter,
+                db.localSyncReceipts,
                 db.assessments,
                 db.ownerEncryptionModes,
             ],

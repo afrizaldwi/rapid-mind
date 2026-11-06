@@ -18,8 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             \App\Http\Middleware\ValidateWebSessionVersion::class,
+            \App\Http\Middleware\ClinicalBrowserPrivacy::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
+
+        $middleware->api(append: [\App\Http\Middleware\ClinicalBrowserPrivacy::class]);
 
         $middleware->alias([
             'auth.jwt' => \App\Http\Middleware\AuthenticateJwt::class,

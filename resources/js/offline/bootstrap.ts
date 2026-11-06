@@ -12,6 +12,8 @@ import {
     clinicalKeyVersion,
     encryptedMode,
 } from "./encryptedClinicalStorage";
+import { syntheticLegacyFixture } from "./clinicalStorageInitialization";
+import { readUnlockedRelawan, type OfflineOwnerProfile } from "./offlineOwnerProfile";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
 
 const target = document.getElementById("offline-state");
@@ -39,8 +41,9 @@ async function start() {
     try {
         const owner = continuity.context.owner_user_id;
         let route: OfflineRouteResult;
+        let profile: OfflineOwnerProfile | undefined;
         for (;;) {
-            const encrypted = await encryptedMode(owner);
+            const encrypted = syntheticLegacyFixture() ? await encryptedMode(owner) : true;
             if (encrypted && !clinicalKeyReady(owner))
                 await waitForOfflineUnlock(owner);
             const version = clinicalKeyVersion();
@@ -58,6 +61,7 @@ async function start() {
                     continue;
                 throw error;
             }
+            if (!syntheticLegacyFixture()) profile = await readUnlockedRelawan(owner);
             const stillEligible = await resolveRelawanContinuity();
             if (
                 stillEligible.state !== "ELIGIBLE" ||
@@ -86,9 +90,9 @@ async function start() {
         const runtime: RelawanRuntime = {
             mode: "OFFLINE_FIELD_MODE",
             owner: continuity.context.owner_user_id,
-            name: continuity.context.display_name,
-            shelterId: continuity.context.shelter_id,
-            shelterName: continuity.context.shelter_name,
+            name: profile?.name ?? continuity.context.display_name,
+            shelterId: profile?.shelterId ?? continuity.context.shelter_id,
+            shelterName: profile?.shelterName ?? continuity.context.shelter_name,
             path: window.location.pathname,
             pageProps: route.props,
             navigate(path) {

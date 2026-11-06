@@ -4,10 +4,11 @@ import { assessmentRepository } from "@/offline/assessmentRepository";
 import { outboxRepository } from "@/offline/outboxRepository";
 import { localPersistenceHealth } from "@/offline/localPersistenceHealth";
 import { syncManager, type SyncExecutionState } from "@/offline/syncManager";
-import type { OutboxItem } from "@/offline/db";
 
 type LocalCounts = {
-    items: OutboxItem[];
+    pendingCount: number;
+    failedCount: number;
+    retryableCount: number;
     unfinishedCount: number;
     unqueuedCompletedCount: number;
 };
@@ -31,7 +32,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
     const localFailure = ref(false);
     const ready = ref(false);
     const counts = ref<LocalCounts>({
-        items: [],
+        pendingCount: 0, failedCount: 0, retryableCount: 0,
         unfinishedCount: 0,
         unqueuedCompletedCount: 0,
     });
@@ -63,7 +64,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
         ready.value = false;
         localFailure.value = false;
         counts.value = {
-            items: [],
+            pendingCount: 0, failedCount: 0, retryableCount: 0,
             unfinishedCount: 0,
             unqueuedCompletedCount: 0,
         };
@@ -85,7 +86,9 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
                     .map((item) => item.entity_id),
             );
             return {
-                items,
+                pendingCount: items.length,
+                failedCount: items.filter(item => item.status === "FAILED").length,
+                retryableCount: items.filter(item => item.status !== "FAILED" || item.last_http_status === undefined || [401, 408, 419, 429].includes(item.last_http_status) || item.last_http_status >= 500).length,
                 unfinishedCount: assessments.filter(
                     (item) => item.status === "IN_PROGRESS",
                 ).length,
@@ -110,22 +113,9 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
         if (online.value) void syncManager.sync(next).catch(() => {});
     }
 
-    const pendingCount = computed(() => counts.value.items.length);
-    const failedCount = computed(
-        () =>
-            counts.value.items.filter((item) => item.status === "FAILED")
-                .length,
-    );
-    const retryableCount = computed(
-        () =>
-            counts.value.items.filter(
-                (item) =>
-                    item.status !== "FAILED" ||
-                    item.last_http_status === undefined ||
-                    [401, 408, 419, 429].includes(item.last_http_status) ||
-                    item.last_http_status >= 500,
-            ).length,
-    );
+    const pendingCount = computed(() => counts.value.pendingCount);
+    const failedCount = computed(() => counts.value.failedCount);
+    const retryableCount = computed(() => counts.value.retryableCount);
     const isSyncing = computed(
         () =>
             execution.value.owner === owner.value && execution.value.isSyncing,

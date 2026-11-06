@@ -1,6 +1,8 @@
+import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import { db, localUuid, requireOwner, type LocalPatient } from "./db";
 import {
     assertStorageMode,
+    assertPreparedClinicalRecord,
     encryptedGet,
     encryptedList,
     encryptedMode,
@@ -14,6 +16,7 @@ async function reconcileEncryptedPatient(
     canonical: Partial<LocalPatient> & { id: string },
     requireExisting: boolean,
 ): Promise<void> {
+    const access = captureClinicalAccess();
     const localKey = encryptedKey("patients", owner, canonical.id);
     const snapshotKey = encryptedKey("patientSnapshots", owner, canonical.id);
     const [localBefore, snapshotBefore] = await Promise.all([
@@ -38,7 +41,7 @@ async function reconcileEncryptedPatient(
         sync_state: "SYNCED",
         last_error: undefined,
     } as LocalPatient);
-    await db.transaction("rw", db.ownerEncryptionModes, db.offlineKeys, db.encryptedStaging, async () => {
+    await db.transaction("rw", db.ownerEncryptionModes, db.relawanContinuity, db.offlineKeys, db.encryptedStaging, async () => {
         await assertStorageMode(owner, "ENCRYPTED");
         const [latestLocal, latestSnapshot] = await Promise.all([
             db.encryptedStaging.get(localKey),
@@ -47,8 +50,12 @@ async function reconcileEncryptedPatient(
         if (JSON.stringify(latestLocal) !== JSON.stringify(localBefore) ||
             JSON.stringify(latestSnapshot) !== JSON.stringify(snapshotBefore))
             throw new Error("Data lokal berubah bersamaan. Ulangi tindakan.");
+        assertClinicalAccess(access);
+        assertPreparedClinicalRecord(next);
         await db.encryptedStaging.put(next);
         if (local) await db.encryptedStaging.delete(snapshotKey);
+        assertClinicalAccess(access);
+        assertPreparedClinicalRecord(next);
     });
 }
 export const patientRepository = {

@@ -1,7 +1,7 @@
 # RAPID-MIND — Offline Clinical Data Security
 
 **Checkpoint:** DEMO-SEC-02C.5
-**Implementation state:** Encrypted repository reads and writes, fixture-only enrollment/unlock, and reactive clinical UI locking are implemented for isolated synthetic tests. Normal development and production activation, real-browser migration, and plaintext cleanup remain disabled pending further review.
+**Implementation state:** B4.2 encrypted-first initialization, enrollment and access fencing are implemented behind an isolated acceptance build boundary. See [B4.2 implementation and verification](checkpoints/checkpoint-b42-encrypted-first.md) and the [unexecuted development reset proposal](checkpoints/checkpoint-b42-development-reset.md). The fixture-only description below records the earlier DEMO-SEC-02C.5 baseline; its absent-marker-to-plaintext behavior is no longer allowed outside synthetic fixture mode. B4.3 browser acceptance and real-user activation remain pending.
 
 ## Current boundary
 

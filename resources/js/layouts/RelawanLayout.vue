@@ -36,17 +36,13 @@
         Memeriksa penyimpanan perangkat…
     </div>
     <OfflineEncryptionGate
-        v-else-if="
-            currentOwner &&
-            ownerStorageMode === 'ENCRYPTED' &&
-            !clinicalUnlocked
-        "
-        :key="currentOwner"
+        v-else-if="currentOwner && !clinicalViewAvailable"
+        :key="encryptionGateKey"
         :owner="currentOwner"
         @unlocked="onClinicalUnlocked"
     />
     <div
-        v-else
+        v-else-if="clinicalViewAvailable"
         ref="clinicalViewRoot"
         :key="clinicalViewKey"
         class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
@@ -267,6 +263,12 @@ import {
     encryptedMode,
     lockAllClinicalKeys,
 } from "@/offline/encryptedClinicalStorage";
+import {
+    inspectClinicalInitialization,
+    syntheticLegacyFixture,
+    type InitializationState,
+} from "@/offline/clinicalStorageInitialization";
+import { rememberUnlockedRelawan } from "@/offline/offlineOwnerProfile";
 import { isolatedEncryptionFixture } from "@/offline/offlineKeyWorkflow";
 import { syncManager } from "@/offline/syncManager";
 import { useRelawanOperationalStatus } from "@/composables/useRelawanOperationalStatus";
@@ -281,7 +283,11 @@ import {
     relawanSessionRecovery,
 } from "@/offline/sessionRecovery";
 
-const emit = defineEmits<{ 'clinical-lock': []; 'clinical-ready': []; 'emergency-interrupt': [] }>();
+const emit = defineEmits<{
+    "clinical-lock": [];
+    "clinical-ready": [];
+    "emergency-interrupt": [];
+}>();
 const runtime = useRelawanRuntime();
 const user = computed(() => ({
     id: runtime.owner,
@@ -298,7 +304,24 @@ const currentOwner = computed(() =>
         : null,
 );
 const clinicalViewRoot = ref<HTMLElement | null>(null);
-const ownerStorageMode = ref<"CHECKING" | "LEGACY" | "ENCRYPTED">("CHECKING");
+type OwnerStorageState =
+    | InitializationState
+    | "CHECKING"
+    | "LEGACY"
+    | "ENCRYPTED";
+const ownerStorageMode = ref<OwnerStorageState>("CHECKING");
+let storageModeSubscription: Subscription | undefined;
+// Recheck the gate when blocked storage recovers, without remounting a
+// legitimate FRESH → ENROLLMENT_PENDING → confirmed enrollment.
+const encryptionGateKey = computed(
+    () =>
+        `${currentOwner.value}:${[
+            "INCONSISTENT",
+            "INACCESSIBLE",
+            "LEGACY_BLOCKED",
+            "ACTIVATION_DISABLED",
+        ].includes(ownerStorageMode.value)}`,
+);
 const clinicalUnlocked = computed(() =>
     currentOwner.value ? clinicalKeyReady(currentOwner.value) : false,
 );
@@ -322,38 +345,70 @@ let continuityCheck = 0;
 let offlineContinuitySubscription: Subscription | undefined;
 function refreshOwnerStorageMode(owner: number | null) {
     const check = ++storageModeCheck;
+    storageModeSubscription?.unsubscribe();
+    storageModeSubscription = undefined;
     ownerStorageMode.value = "CHECKING";
     if (!owner) return;
-    void encryptedMode(owner)
-        .then((encrypted) => {
-            if (check === storageModeCheck && owner === currentOwner.value)
-                ownerStorageMode.value = encrypted ? "ENCRYPTED" : "LEGACY";
-        })
-        .catch(() => {
-            // Unknown mode must never expose a possibly encrypted clinical view.
-        });
+    const apply = (state: OwnerStorageState) => {
+        if (check !== storageModeCheck || owner !== currentOwner.value) return;
+        ownerStorageMode.value = state;
+        const trusted =
+            state === "ENCRYPTED_LOCKED" ||
+            (syntheticLegacyFixture() &&
+                (state === "ENCRYPTED" || state === "LEGACY"));
+        // Only installed clinical keys are revoked. Fresh/pending enrollment
+        // has no installed key, so repeated inspections cannot cancel it.
+        if (!trusted && clinicalKeyReady(owner)) lockAllClinicalKeys();
+    };
+    if (syntheticLegacyFixture()) {
+        void encryptedMode(owner)
+            .then((encrypted) => apply(encrypted ? "ENCRYPTED" : "LEGACY"))
+            .catch(() => apply("INACCESSIBLE"));
+        return;
+    }
+    storageModeSubscription = liveQuery(() =>
+        inspectClinicalInitialization(owner),
+    ).subscribe({
+        next: apply,
+        error: () => apply("INACCESSIBLE"),
+    });
 }
 watch(currentOwner, refreshOwnerStorageMode, {
     immediate: true,
     flush: "sync",
 });
+const clinicalViewAvailable = computed(
+    () =>
+        !!currentOwner.value &&
+        (ownerStorageMode.value === "LEGACY" ||
+            ((ownerStorageMode.value === "ENCRYPTED_LOCKED" ||
+                ownerStorageMode.value === "ENCRYPTED") &&
+                clinicalUnlocked.value)),
+);
 const status = useRelawanOperationalStatus(
-    currentOwner,
+    computed(() => (clinicalViewAvailable.value ? currentOwner.value : null)),
     computed(() => runtime.mode === "ONLINE_SERVER"),
 );
-const clinicalViewAvailable = computed(() => !!currentOwner.value &&
-    ownerStorageMode.value !== "CHECKING" &&
-    (ownerStorageMode.value === "LEGACY" || clinicalUnlocked.value));
-watch(clinicalViewAvailable, available => {
-    if (!available) maskClinicalView();
-}, { flush: "sync" });
-watch([clinicalViewAvailable, clinicalViewKey], ([available]) => {
-    if (available) {
-        clinicalViewRoot.value?.style.removeProperty("display");
-        clinicalViewRoot.value?.removeAttribute("aria-hidden");
-        emit("clinical-ready");
-    }
-}, { immediate: true, flush: "post" });
+watch(
+    clinicalViewAvailable,
+    (available) => {
+        if (!available) maskClinicalView();
+    },
+    { flush: "sync" },
+);
+watch(
+    [clinicalViewAvailable, clinicalViewKey],
+    ([available]) => {
+        if (available) {
+            clinicalViewRoot.value?.style.removeProperty("display");
+            clinicalViewRoot.value?.removeAttribute("aria-hidden");
+            emit("clinical-ready");
+            if (!syntheticLegacyFixture() && runtime.mode === "ONLINE_SERVER")
+                void rememberUnlockedRelawan(user.value).catch(() => {});
+        }
+    },
+    { immediate: true, flush: "post" },
+);
 
 function onClinicalUnlocked() {
     status.refresh();
@@ -717,6 +772,8 @@ onMounted(() => {
     window.addEventListener("rapid-mind:emergency-created", onEmergencyCreated);
 });
 onUnmounted(() => {
+    ++storageModeCheck;
+    storageModeSubscription?.unsubscribe();
     offlineContinuitySubscription?.unsubscribe();
     window.removeEventListener(
         "rapid-mind:emergency-created",

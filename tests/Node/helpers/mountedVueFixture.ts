@@ -58,7 +58,7 @@ export function mountFixture(component: any, props: Record<string, any> = {}) {
             tag,
             tagName: tag.toUpperCase(),
             children: [],
-            style: {},
+            style: { removeProperty(name: string) { delete this[name]; } } as Record<string, any>,
             text: "",
             listeners: {},
             addEventListener(name: string, fn: any) {
@@ -72,6 +72,7 @@ export function mountFixture(component: any, props: Record<string, any> = {}) {
             setAttribute(name: string, value: any) {
                 this[name] = value;
             },
+            removeAttribute(name: string) { delete this[name]; },
             querySelectorAll() {
                 return [];
             },

@@ -1,3 +1,5 @@
+import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
+import { beginClinicalEnrollment, unlockClinicalOwner } from "./clinicalKeyEnrollment";
 import { db, requireOwner } from "./db";
 import {
     installClinicalKey,
@@ -46,8 +48,7 @@ export async function enrollIsolatedOwner(
     passphrase: string,
     confirmation: string,
 ): Promise<string> {
-    if (!isolatedEncryptionFixture())
-        throw new Error("Pendaftaran enkripsi belum tersedia.");
+    if (!isolatedEncryptionFixture()) return beginClinicalEnrollment(owner, passphrase, confirmation);
     requireOwner(owner);
     if (passphrase !== confirmation)
         throw new Error("Konfirmasi frasa sandi tidak sama.");
@@ -67,8 +68,8 @@ export async function unlockIsolatedOwner(
     secret: string,
     purpose: "passphrase" | "recovery",
 ): Promise<void> {
-    if (!isolatedEncryptionFixture())
-        throw new Error("Pembukaan kunci enkripsi belum tersedia.");
+    if (!isolatedEncryptionFixture()) return unlockClinicalOwner(owner, secret, purpose);
+    const ticket = captureClinicalAccess();
     const continuity = await resolveRelawanContinuity();
     if (
         continuity.state !== "ELIGIBLE" ||
@@ -77,6 +78,7 @@ export async function unlockIsolatedOwner(
         throw new Error("Akses Relawan lokal belum tersedia untuk akun ini.");
     const session = await unlockOwnerKey(requireOwner(owner), secret, purpose);
     try {
+        assertClinicalAccess(ticket);
         await installClinicalKey(session);
     } catch (error) {
         session.lock();

@@ -1,3 +1,4 @@
+import { allocateOutboxIdentity } from "./outboxIdentity";
 import Dexie, { type Table } from "dexie";
 import type { SrqAnswers } from "../domain/srq/srqAnswer";
 import type { NonVerbalObservations } from "../domain/assessment/nonVerbalObservations";
@@ -82,7 +83,7 @@ export interface RelawanContinuity {
     shelter_name: string | null;
     verified_at: string;
     logout_pending: boolean;
-    schema_version: 1;
+    schema_version: 1 | 2;
 }
 export interface WrappedOfflineKey {
     owner_user_id: number;
@@ -107,7 +108,8 @@ export type ClinicalStore =
     | "patientSnapshots"
     | "assessments"
     | "emergencies"
-    | "outbox";
+    | "outbox"
+    | "ownerProfiles";
 export interface EncryptedStagingRecord {
     key: string;
     owner_user_id: number;
@@ -119,7 +121,10 @@ export interface EncryptedStagingRecord {
 }
 export interface OwnerEncryptionMode {
     owner_user_id: number;
-    mode: "ENCRYPTED";
+    mode: "ENCRYPTED" | "ENROLLMENT_PENDING";
+    key_identity?: string;
+    recovery_revision?: string;
+    confirmed_at?: string;
 }
 export interface EncryptedOutboxIndex {
     id: number;
@@ -127,6 +132,7 @@ export interface EncryptedOutboxIndex {
     ref: string;
 }
 export interface LocalSyncReceipt {
+    outbox_id?: number;
     key: string;
     owner_user_id: number;
     type: "ASSESSMENT" | "EMERGENCY";
@@ -171,6 +177,7 @@ export class RapidMindDB extends Dexie {
                 outbox: "++id, [owner_user_id+type+entity_id], owner_user_id, status, priority, created_at",
             })
             .upgrade(async (tx) => {
+                if (import.meta.env.MODE !== "staging-fixture") return;
                 const owners = new Map<string, Set<number>>();
                 for (const assessment of await tx
                     .table("assessments")
@@ -230,19 +237,32 @@ export class RapidMindDB extends Dexie {
                 "key, owner_user_id, [owner_user_id+type+entity_id]",
             outboxIdCounter: "key",
         });
+        // No data conversion or deletion. Old versioned clients must reopen.
+        this.version(8).stores({ ownerEncryptionModes: "owner_user_id" });
+        if (import.meta.env.MODE !== "staging-fixture") {
+            for (const name of ["patients", "patientSnapshots", "assessments", "emergencies", "outbox"]) {
+                const reject = () => { throw new Error("Penulisan klinis plaintext dinonaktifkan."); };
+                this.table(name).hook("creating", reject);
+                this.table(name).hook("updating", reject);
+                this.table(name).hook("deleting", reject);
+            }
+        }
     }
 }
 export const db = new RapidMindDB();
-// Call only inside a read-write transaction containing both ID tables and the counter.
+// Call only inside a read-write transaction containing both ID tables, the counter and sync receipts.
 export async function nextOutboxId(): Promise<number> {
-    const [plain, encrypted, counter] = await Promise.all([
+    const [plain, encrypted, counter, receipts] = await Promise.all([
         db.outbox.orderBy("id").last(),
         db.encryptedOutboxIndex.orderBy("id").last(),
         db.outboxIdCounter.get("global"),
+        db.localSyncReceipts.toArray(),
     ]);
-    const id =
-        Math.max(plain?.id ?? 0, encrypted?.id ?? 0, counter?.last_id ?? 0) + 1;
-    if (!Number.isSafeInteger(id)) throw new Error("Identitas antrean habis.");
+    const id = allocateOutboxIdentity(
+        plain?.id, encrypted?.id, counter?.last_id,
+        receipts.map(receipt => receipt.outbox_id),
+        import.meta.env.MODE === "staging-fixture",
+    );
     await db.outboxIdCounter.put({ key: "global", last_id: id });
     return id;
 }

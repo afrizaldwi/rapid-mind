@@ -1,3 +1,4 @@
+import { allocateOutboxIdentity } from "../../../resources/js/offline/outboxIdentity.ts";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +13,10 @@ import { createOfflineKey } from "../../../resources/js/offline/offlineCrypto.ts
 
 // Real repository / encryption modules; only IndexedDB transport is replaced.
 // This does not establish browser Dexie transaction or Service Worker behavior.
-export async function offlineRepositoryFixture(encrypted: boolean) {
+export async function offlineRepositoryFixture(
+    encrypted: boolean,
+    options: { mode?: string; initialize?: boolean } = {},
+) {
     const clone = <T>(value: T): T => structuredClone(value);
     class Table {
         rows = new Map<string, any>();
@@ -31,10 +35,27 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
                         "encryptedStaging",
                         "localSyncReceipts",
                         "outboxIdCounter",
+                        "relawanContinuity",
                     ].includes(this.name)
                   ? "key"
                   : "id";
             return String(value[field]);
+        }
+        async count() {
+            return this.rows.size;
+        }
+        async toArray() {
+            return [...this.rows.values()].map(clone);
+        }
+        orderBy(field: string) {
+            return {
+                last: async () =>
+                    clone(
+                        [...this.rows.values()]
+                            .sort((a, b) => a[field] - b[field])
+                            .at(-1),
+                    ),
+            };
         }
         async get(key: any) {
             return clone(this.rows.get(String(key)));
@@ -58,6 +79,10 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
         where(field: string) {
             return {
                 equals: (expected: unknown) => ({
+                    count: async () =>
+                        [...this.rows.values()].filter(
+                            (row) => row[field] === expected,
+                        ).length,
                     toArray: async () =>
                         [...this.rows.values()]
                             .filter((row) => {
@@ -90,10 +115,12 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
             "encryptedOutboxIndex",
             "outboxIdCounter",
             "localSyncReceipts",
+            "relawanContinuity",
         ].map((name) => [name, new Table(name)]),
     );
     const db = {
         ...tables,
+        table: (name: string) => tables[name],
         transaction: async (...args: any[]) => {
             const before = Object.fromEntries(
                 Object.entries(tables).map(([key, table]) => [
@@ -110,7 +137,6 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
             }
         },
     };
-    let outboxId = 0;
     const identity = crypto.randomUUID();
     const temp = mkdtempSync(join(tmpdir(), "rapid-mind-repository-unit-"));
     let moduleId = 0;
@@ -129,7 +155,19 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
             return owner;
         },
         localUuid: () => crypto.randomUUID(),
-        nextOutboxId: async () => ++outboxId,
+        nextOutboxId: async () => {
+            const id = allocateOutboxIdentity(
+                (await tables.outbox.orderBy("id").last())?.id,
+                (await tables.encryptedOutboxIndex.orderBy("id").last())?.id,
+                (await tables.outboxIdCounter.get("global"))?.last_id,
+                (await tables.localSyncReceipts.toArray()).map(
+                    (receipt) => receipt.outbox_id,
+                ),
+                (options.mode ?? "staging-fixture") === "staging-fixture",
+            );
+            await tables.outboxIdCounter.put({ key: "global", last_id: id });
+            return id;
+        },
     };
     registry.set(identity, context);
     function stub(exports: string[]) {
@@ -155,6 +193,18 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
                 module: ts.ModuleKind.ESNext,
             },
         }).outputText;
+        code = code.replaceAll(
+            "import.meta.env.MODE",
+            JSON.stringify(options.mode ?? "staging-fixture"),
+        );
+        if (
+            ["/clinicalAccessFence.ts", "/clinicalKeyEnrollment.ts"].some(
+                (name) => file.endsWith(name),
+            )
+        )
+            code =
+                `const window = globalThis.__rapidMindRepositoryFixtures.get(${JSON.stringify(identity)}).window; const document = window.document; const navigator = window.navigator;\n` +
+                code;
         code = code.replace(/from ["']([^"']+)["']/g, (_match, specifier) => {
             const target =
                 dependencies[specifier] ??
@@ -183,11 +233,33 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
         const url = moduleUrl(code);
         return { url, exports: await import(url) };
     }
+    const browser = Object.assign(new EventTarget(), {
+        localStorage: {
+            values: new Map<string, string>(),
+            getItem(key: string) {
+                return this.values.get(key) ?? null;
+            },
+            setItem(key: string, value: string) {
+                this.values.set(key, value);
+            },
+        },
+        document: Object.assign(new EventTarget(), {
+            visibilityState: "visible",
+        }),
+        navigator: { onLine: true },
+    });
+    context.window = browser;
+    const fence = await load("resources/js/offline/clinicalAccessFence.ts");
+    modules["./clinicalAccessFence"] = fence.url;
+    const initialization = await load(
+        "resources/js/offline/clinicalStorageInitialization.ts",
+    );
+    modules["./clinicalStorageInitialization"] = initialization.url;
     const storage = await load(
         "resources/js/offline/encryptedClinicalStorage.ts",
     );
     modules["./encryptedClinicalStorage"] = storage.url;
-    if (encrypted) {
+    if (encrypted && options.initialize !== false) {
         const { record, session } = await createOfflineKey(
             101,
             "frasa sandi panjang pengujian repository sintetis",
@@ -196,7 +268,24 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
         await tables.ownerEncryptionModes.put({
             owner_user_id: 101,
             mode: "ENCRYPTED",
+            ...(options.mode === "encrypted-acceptance"
+                ? {
+                      key_identity: initialization.exports.keyIdentity(record),
+                      recovery_revision: "synthetic",
+                      confirmed_at: new Date().toISOString(),
+                  }
+                : {}),
         });
+        if (options.mode === "encrypted-acceptance")
+            await tables.relawanContinuity.put({
+                key: "active",
+                owner_user_id: 101,
+                role: "RELAWAN",
+                schema_version: 2,
+                display_name: "Relawan",
+                verified_at: new Date().toISOString(),
+                logout_pending: false,
+            });
         await storage.exports.installClinicalKey(session);
     }
     const health = await load("resources/js/offline/localPersistenceHealth.ts");
@@ -244,12 +333,39 @@ export async function offlineRepositoryFixture(encrypted: boolean) {
         "./jsonRequest": stub(["jsonRequest", "MissingCsrfTokenError"]),
         "./relawanContinuity": stub(["resolveRelawanContinuity"]),
     });
-    await context.patientRepository.saveServerSnapshot(101, {
-        id: "patient-synthetic",
-        name: "Penyintas Sintetis",
-    });
+    if (options.initialize !== false)
+        await context.patientRepository.saveServerSnapshot(101, {
+            id: "patient-synthetic",
+            name: "Penyintas Sintetis",
+        });
+    const enrollment = await load(
+        "resources/js/offline/clinicalKeyEnrollment.ts",
+    );
+    modules["./clinicalKeyEnrollment"] = enrollment.url;
+    const continuityModule = await load(
+        "resources/js/offline/relawanContinuity.ts",
+    );
+    modules["./relawanContinuity"] = continuityModule.url;
+    const emergencies = await load(
+        "resources/js/offline/emergencyRepository.ts",
+    );
+    modules["./emergencyRepository"] = emergencies.url;
+    const emergencyWorkflow = await load(
+        "resources/js/offline/emergencyWorkflow.ts",
+        {
+            "./syncManager": stub(["syncManager"]),
+        },
+    );
     return {
         load,
+        browser,
+        fence: fence.exports,
+        storage: storage.exports,
+        initialization: initialization.exports,
+        enrollment: enrollment.exports,
+        continuity: continuityModule.exports,
+        emergencyWorkflow: emergencyWorkflow.exports,
+        encryptedOutbox: encryptedOutbox.exports,
         assessments: assessments.exports.assessmentRepository,
         patients: patients.exports.patientRepository,
         outbox: outbox.exports.outboxRepository,

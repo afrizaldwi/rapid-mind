@@ -1,10 +1,13 @@
 import "../css/app.css";
 
-import { createInertiaApp } from "@inertiajs/vue3";
+import { router, createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createApp, h, type DefineComponent } from "vue";
 import { configureEcho } from "@laravel/echo-vue";
 import { lockRelawanContinuity, type VerifiedRelawan } from "./offline/relawanContinuity";
+
+import { onClinicalInvalidation } from "./offline/clinicalAccessFence";
+onClinicalInvalidation(() => router.clearHistory());
 
 const realtimeUsesTls = window.location.protocol === "https:";
 const realtimePort = Number(window.location.port || (realtimeUsesTls ? 443 : 80));
@@ -18,14 +21,15 @@ configureEcho({
     enabledTransports: ["ws", "wss"],
 });
 
-// Safely clear any legacy/stale service workers registered with broad root scope ('/')
-// that can intercept /login or non-relawan routes, while preserving legitimate /relawan/ PWA
+// Retire only a known RAPID-MIND worker at the old root scope.
+// Other registrations on this origin may belong to unrelated applications.
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const reg of registrations) {
             try {
                 const scopePath = new URL(reg.scope).pathname;
-                if (scopePath !== "/relawan/") {
+                const script = reg.active?.scriptURL ?? reg.waiting?.scriptURL ?? reg.installing?.scriptURL;
+                if (scopePath === "/" && script && new URL(script).pathname === "/build/serviceWorker.js") {
                     void reg.unregister();
                 }
             } catch {
@@ -35,7 +39,14 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     }).catch(() => {});
 }
 
-createInertiaApp({
+// Inertia's installed history encryptor falls back to plaintext without
+// SubtleCrypto. Do not initialize clinical history in that environment.
+const clinicalPath = /^\/(relawan|healthcare)(\/|$)/.test(window.location.pathname);
+if (clinicalPath && !window.crypto?.subtle) {
+    const notice = document.createElement("p");
+    notice.textContent = "Akses klinis memerlukan browser dengan enkripsi aman (HTTPS atau localhost). Data tidak dibuka. Untuk kondisi darurat, tetap dampingi penyintas dan hubungi bantuan medis melalui sarana yang tersedia.";
+    document.body.replaceChildren(notice);
+} else createInertiaApp({
     title: (title) => (title ? `${title} — RAPID-MIND` : "RAPID-MIND"),
 
     resolve: (name) =>
