@@ -1,3 +1,4 @@
+import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
 import {
     db,
     requireOwner,
@@ -391,7 +392,7 @@ export async function inspectStagedOwner(
 // This transition is reachable only from the isolated synthetic browser test.
 // Production builds and the normal development server cannot activate an owner.
 export async function activateSyntheticOwner(session: OfflineKeySession): Promise<void> {
-    if (import.meta.env.MODE !== "staging-fixture")
+    if (!stagingEncryptionFixture())
         throw new Error("Aktivasi penyimpanan terenkripsi belum tersedia.");
     const owner = requireOwner(session.owner);
     const inspection = await inspectStagedOwner(session);

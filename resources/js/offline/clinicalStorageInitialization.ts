@@ -1,13 +1,10 @@
 import { db, requireOwner, type WrappedOfflineKey } from "./db";
 
-// Ordinary deployments cannot enroll until isolated Chromium acceptance and
-// an owner-reviewed activation change. This is compiled into both entrypoints.
-export function encryptedEnrollmentEnabled(): boolean {
-    return import.meta.env.MODE === "encrypted-acceptance";
-}
-export function syntheticLegacyFixture(): boolean {
-    return import.meta.env.MODE === "staging-fixture";
-}
+import { encryptedEnrollmentAllowed } from "./localEnrollmentAuthorization";
+import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
+export { encryptedEnrollmentAllowed as encryptedEnrollmentEnabled } from "./localEnrollmentAuthorization";
+
+export function syntheticLegacyFixture(): boolean { return stagingEncryptionFixture(); }
 export const legacyClinicalStores = [
     "patients",
     "patientSnapshots",
@@ -65,7 +62,7 @@ export async function inspectClinicalInitialization(
                     .count();
                 if (!key && !mode) {
                     if (copies || indexes) return "INCONSISTENT";
-                    return encryptedEnrollmentEnabled()
+                    return encryptedEnrollmentAllowed(owner)
                         ? "FRESH"
                         : "ACTIVATION_DISABLED";
                 }
@@ -84,14 +81,14 @@ export async function inspectClinicalInitialization(
                 if (mode.mode === "ENROLLMENT_PENDING")
                     return copies || indexes || mode.confirmed_at
                         ? "INCONSISTENT"
-                        : "ENROLLMENT_PENDING";
+                        : encryptedEnrollmentAllowed(owner, mode) ? "ENROLLMENT_PENDING" : "ACTIVATION_DISABLED";
                 if (
                     mode.mode !== "ENCRYPTED" ||
                     !Number.isFinite(Date.parse(mode.confirmed_at ?? "")) ||
                     !mode.recovery_revision
                 )
                     return "INCONSISTENT";
-                return encryptedEnrollmentEnabled()
+                return encryptedEnrollmentAllowed(owner, mode)
                     ? "ENCRYPTED_LOCKED"
                     : "ACTIVATION_DISABLED";
             },

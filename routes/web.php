@@ -60,6 +60,8 @@ Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'
 // ROLE 1: RELAWAN (Mobile PWA)
 // ──────────────────────────────────────────────
 Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawan.')->group(function () {
+    Route::get('/offline-enrollment-status', [\App\Http\Controllers\Relawan\OfflineEnrollmentController::class, 'status'])
+        ->name('offline-enrollment-status');
     Route::get('/home', [RelawanController::class, 'home'])->name('home');
     Route::get('/pfa', [RelawanController::class, 'pfa'])->name('pfa');
     Route::get('/patients/options', [RelawanController::class, 'patientOptions'])->name('patients.options');

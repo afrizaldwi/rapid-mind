@@ -13,6 +13,7 @@ use App\Enums\EmergencyStatus;
 use App\Enums\RedFlagType;
 use App\Enums\TriageCategory;
 use App\Http\Controllers\Controller;
+use App\Http\Responses\SrqResponseMap;
 use App\Models\Assessment;
 use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
@@ -181,7 +182,7 @@ final class RelawanController extends Controller
     {
         $assessment = $this->assessmentShell($assessmentId, ['patient', 'srqResponses']);
 
-        $existingResponses = $assessment?->srqResponses->mapWithKeys(fn (SrqResponse $response) => [$response->question_number => $response->responseValue()])->all() ?? [];
+        $existingResponses = SrqResponseMap::fromResponses($assessment?->srqResponses ?? []);
 
         return Inertia::render('Relawan/Assessment/Srq', [
             'assessment' => $assessment,
@@ -310,7 +311,7 @@ final class RelawanController extends Controller
         return Inertia::render('Relawan/Assessment/Review', [
             'assessment' => $assessment,
             'patient' => $assessment?->patient,
-            'srqResponses' => $assessment?->srqResponses->mapWithKeys(fn (SrqResponse $response) => [$response->question_number => $response->responseValue()]) ?? [],
+            'srqResponses' => SrqResponseMap::fromResponses($assessment?->srqResponses ?? []),
             'riskResponses' => $assessment?->riskAssessment->pluck('answer', 'indicator') ?? [],
             'functionResponses' => $assessment?->functionAssessment->pluck('level', 'domain') ?? [],
         ]);

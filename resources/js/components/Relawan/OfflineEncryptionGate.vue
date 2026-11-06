@@ -151,7 +151,7 @@ async function load() {
         hasKey.value = state !== "FRESH";
         pendingEnrollment.value = state === "ENROLLMENT_PENDING";
         blocked.value = ["FRESH", "ENROLLMENT_PENDING", "ENCRYPTED_LOCKED"].includes(state) ? "" :
-            state === "ACTIVATION_DISABLED" ? "Aktivasi enkripsi menunggu penerimaan Chromium terisolasi." :
+            state === "ACTIVATION_DISABLED" ? "Pendaftaran enkripsi perangkat belum diizinkan pada lingkungan ini. Hubungi pengelola aplikasi." :
             "Penyimpanan lama, rusak, atau metadata tidak sesuai. Data tetap tersimpan. Minta pemulihan atau reset pengembangan yang disetujui; aplikasi tidak akan menghapusnya otomatis.";
     } catch {
         error.value = "Kunci perangkat belum dapat diperiksa.";

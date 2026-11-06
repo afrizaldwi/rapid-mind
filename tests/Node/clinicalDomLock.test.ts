@@ -23,6 +23,7 @@ const placeholder = moduleStub(
     `import {defineComponent,h} from '${vue}'; export default defineComponent({setup:()=>()=>h('span')});`,
 );
 const overrides: Record<string, string> = {};
+overrides["@/offline/localEnrollmentAuthorization"] = moduleStub("export const prepareLocalEnrollment = async () => {};");
 for (const name of [
     "StatusIndicator",
     "T0Button",

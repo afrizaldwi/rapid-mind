@@ -1,3 +1,4 @@
+import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
 // This token carries no identity or secret. Reads are synchronous so a queued
 // IndexedDB write can reject a lock even before a storage event is delivered.
 const tokenKey = "rapid-mind:clinical-access-v2";
@@ -5,7 +6,7 @@ let generation = 0;
 let observed: string | null | undefined;
 let storageFailed = false;
 const listeners = new Set<() => void>();
-const fixture = () => import.meta.env.MODE === "staging-fixture";
+const fixture = stagingEncryptionFixture;
 
 function token(): string | null {
     if (fixture()) return null;

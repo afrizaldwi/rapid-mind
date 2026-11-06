@@ -58,7 +58,7 @@ export async function installClinicalKey(
     if (!syntheticLegacyFixture()) {
         const context = await db.relawanContinuity.get("active");
         const mode = await db.ownerEncryptionModes.get(session.owner);
-        if (!encryptedEnrollmentEnabled() || context?.owner_user_id !== session.owner || context.logout_pending ||
+        if (!encryptedEnrollmentEnabled(session.owner, mode) || context?.owner_user_id !== session.owner || context.logout_pending ||
             context.role !== "RELAWAN" || !mode?.confirmed_at || mode.mode !== "ENCRYPTED" ||
             mode.key_identity !== keyIdentity(latest)) throw new Error("Inisialisasi atau sesi klinis belum sesuai.");
         assertClinicalAccess(ticket);
@@ -91,7 +91,7 @@ export function clinicalKeyReady(owner: number): boolean {
 export async function encryptedMode(owner: number): Promise<boolean> {
     const mode = await db.ownerEncryptionModes.get(requireOwner(owner));
     if (syntheticLegacyFixture()) return mode?.mode === "ENCRYPTED";
-    if (!encryptedEnrollmentEnabled() || mode?.mode !== "ENCRYPTED" ||
+    if (!encryptedEnrollmentEnabled(owner, mode) || mode?.mode !== "ENCRYPTED" ||
         !Number.isFinite(Date.parse(mode.confirmed_at ?? "")) || !mode.key_identity || !mode.recovery_revision) {
         if (activeSessions.size) lockAllClinicalKeys();
         throw new Error("Penyimpanan klinis belum diinisialisasi atau diblokir. Data tetap tersimpan.");

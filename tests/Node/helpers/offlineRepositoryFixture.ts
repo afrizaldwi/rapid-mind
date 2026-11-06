@@ -15,7 +15,7 @@ import { createOfflineKey } from "../../../resources/js/offline/offlineCrypto.ts
 // This does not establish browser Dexie transaction or Service Worker behavior.
 export async function offlineRepositoryFixture(
     encrypted: boolean,
-    options: { mode?: string; initialize?: boolean } = {},
+    options: { mode?: string; initialize?: boolean; origin?: string } = {},
 ) {
     const clone = <T>(value: T): T => structuredClone(value);
     class Table {
@@ -198,7 +198,7 @@ export async function offlineRepositoryFixture(
             JSON.stringify(options.mode ?? "staging-fixture"),
         );
         if (
-            ["/clinicalAccessFence.ts", "/clinicalKeyEnrollment.ts"].some(
+            ["/clinicalAccessFence.ts", "/clinicalKeyEnrollment.ts", "/localEnrollmentAuthorization.ts", "/offlineActivationEnvironment.ts"].some(
                 (name) => file.endsWith(name),
             )
         )
@@ -247,10 +247,15 @@ export async function offlineRepositoryFixture(
             visibilityState: "visible",
         }),
         navigator: { onLine: true },
+        location: new URL(options.origin ?? "http://127.0.0.1:18443"),
     });
     context.window = browser;
+    const environment = await load("resources/js/offline/offlineActivationEnvironment.ts");
+    modules["./offlineActivationEnvironment"] = environment.url;
     const fence = await load("resources/js/offline/clinicalAccessFence.ts");
     modules["./clinicalAccessFence"] = fence.url;
+    const authorization = await load("resources/js/offline/localEnrollmentAuthorization.ts");
+    modules["./localEnrollmentAuthorization"] = authorization.url;
     const initialization = await load(
         "resources/js/offline/clinicalStorageInitialization.ts",
     );
@@ -360,6 +365,8 @@ export async function offlineRepositoryFixture(
         load,
         browser,
         fence: fence.exports,
+        environment: environment.exports,
+        authorization: authorization.exports,
         storage: storage.exports,
         initialization: initialization.exports,
         enrollment: enrollment.exports,

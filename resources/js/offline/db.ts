@@ -1,3 +1,4 @@
+import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
 import { allocateOutboxIdentity } from "./outboxIdentity";
 import Dexie, { type Table } from "dexie";
 import type { SrqAnswers } from "../domain/srq/srqAnswer";
@@ -122,6 +123,7 @@ export interface EncryptedStagingRecord {
 export interface OwnerEncryptionMode {
     owner_user_id: number;
     mode: "ENCRYPTED" | "ENROLLMENT_PENDING";
+    activation?: "LOCAL_DEVELOPMENT_V1";
     key_identity?: string;
     recovery_revision?: string;
     confirmed_at?: string;
@@ -177,7 +179,7 @@ export class RapidMindDB extends Dexie {
                 outbox: "++id, [owner_user_id+type+entity_id], owner_user_id, status, priority, created_at",
             })
             .upgrade(async (tx) => {
-                if (import.meta.env.MODE !== "staging-fixture") return;
+                if (!stagingEncryptionFixture()) return;
                 const owners = new Map<string, Set<number>>();
                 for (const assessment of await tx
                     .table("assessments")
@@ -239,7 +241,7 @@ export class RapidMindDB extends Dexie {
         });
         // No data conversion or deletion. Old versioned clients must reopen.
         this.version(8).stores({ ownerEncryptionModes: "owner_user_id" });
-        if (import.meta.env.MODE !== "staging-fixture") {
+        if (!stagingEncryptionFixture()) {
             for (const name of ["patients", "patientSnapshots", "assessments", "emergencies", "outbox"]) {
                 const reject = () => { throw new Error("Penulisan klinis plaintext dinonaktifkan."); };
                 this.table(name).hook("creating", reject);
@@ -261,7 +263,7 @@ export async function nextOutboxId(): Promise<number> {
     const id = allocateOutboxIdentity(
         plain?.id, encrypted?.id, counter?.last_id,
         receipts.map(receipt => receipt.outbox_id),
-        import.meta.env.MODE === "staging-fixture",
+        stagingEncryptionFixture(),
     );
     await db.outboxIdCounter.put({ key: "global", last_id: id });
     return id;

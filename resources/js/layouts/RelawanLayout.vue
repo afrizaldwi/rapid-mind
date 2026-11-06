@@ -268,6 +268,7 @@ import {
     syntheticLegacyFixture,
     type InitializationState,
 } from "@/offline/clinicalStorageInitialization";
+import { prepareLocalEnrollment } from "@/offline/localEnrollmentAuthorization";
 import { rememberUnlockedRelawan } from "@/offline/offlineOwnerProfile";
 import { isolatedEncryptionFixture } from "@/offline/offlineKeyWorkflow";
 import { syncManager } from "@/offline/syncManager";
@@ -366,12 +367,13 @@ function refreshOwnerStorageMode(owner: number | null) {
             .catch(() => apply("INACCESSIBLE"));
         return;
     }
-    storageModeSubscription = liveQuery(() =>
-        inspectClinicalInitialization(owner),
-    ).subscribe({
-        next: apply,
-        error: () => apply("INACCESSIBLE"),
-    });
+    void prepareLocalEnrollment(owner).then(() => {
+        if (check !== storageModeCheck || owner !== currentOwner.value) return;
+        storageModeSubscription = liveQuery(() => inspectClinicalInitialization(owner)).subscribe({
+            next: apply,
+            error: () => apply("INACCESSIBLE"),
+        });
+    }).catch(() => apply("INACCESSIBLE"));
 }
 watch(currentOwner, refreshOwnerStorageMode, {
     immediate: true,

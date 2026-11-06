@@ -1,3 +1,4 @@
+import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
 import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import { beginClinicalEnrollment, unlockClinicalOwner } from "./clinicalKeyEnrollment";
 import { db, requireOwner } from "./db";
@@ -9,7 +10,7 @@ import { prepareOwnerKey, unlockOwnerKey } from "./offlineEncryptionStaging";
 import { resolveRelawanContinuity } from "./relawanContinuity";
 
 export function isolatedEncryptionFixture(): boolean {
-    return import.meta.env.MODE === "staging-fixture";
+    return stagingEncryptionFixture();
 }
 
 export async function enrollmentState(

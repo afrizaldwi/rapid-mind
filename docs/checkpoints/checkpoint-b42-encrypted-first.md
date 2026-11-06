@@ -1,5 +1,7 @@
 # B4.2 encrypted-first implementation
 
+**Later status (B4.4):** B4.3 isolated acceptance and lifecycle hardening are complete. [B4.4](checkpoint-b44-controlled-development-activation.md) adds server-authorized localhost enrollment to ordinary assets, disabled by default. The B4.2 decisions and execution evidence below remain historical; No browser reset was performed during B4.2 or B4.3. During B4.4, the project owner manually reset the dummy browser IndexedDB and successfully completed local encryption enrollment. Production activation has not occurred.
+
 Decision: **GO for B4.3**, limited to separately authorized isolated Chromium acceptance. B4 is not complete. Ordinary development/production enrollment remains disabled. No browser acceptance, reset, database access, dependency installation, staging, commit or push was performed.
 
 ## Architecture and activation

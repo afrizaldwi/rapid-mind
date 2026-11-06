@@ -1,3 +1,5 @@
+import { acceptanceEncryptionFixture } from "./offlineActivationEnvironment";
+import { requestLocalEnrollmentAuthorization, localEnrollmentMetadata } from "./localEnrollmentAuthorization";
 import { db, requireOwner } from "./db";
 import {
     createOfflineKey,
@@ -34,6 +36,11 @@ onClinicalInvalidation(() => {
 });
 export async function verifyEnrollmentIdentity(owner: number): Promise<void> {
     requireOwner(owner);
+    if (!acceptanceEncryptionFixture()) {
+        if (!await requestLocalEnrollmentAuthorization(owner))
+            throw new Error("Pendaftaran enkripsi belum diizinkan untuk sesi dan lingkungan ini.");
+        return;
+    }
     if (!navigator.onLine)
         throw new Error("Pendaftaran kunci memerlukan koneksi server.");
     const response = await fetch("/relawan/session-status", {
@@ -65,10 +72,10 @@ async function continuity(owner: number): Promise<void> {
     )
         throw new Error("Akses Relawan lokal belum tersedia untuk akun ini.");
 }
-function enabled(): void {
-    if (!encryptedEnrollmentEnabled())
+function enabled(owner: number): void {
+    if (!encryptedEnrollmentEnabled(owner))
         throw new Error(
-            "Aktivasi enkripsi menunggu penerimaan Chromium terisolasi.",
+            "Pendaftaran enkripsi perangkat belum diizinkan pada lingkungan ini.",
         );
 }
 const enrollmentTables = () => [
@@ -84,12 +91,12 @@ export async function beginClinicalEnrollment(
     passphrase: string,
     confirmation: string,
 ): Promise<string> {
-    enabled();
     requireOwner(owner);
     const ticket = captureClinicalAccess();
     if (passphrase !== confirmation)
         throw new Error("Konfirmasi frasa sandi tidak sama.");
     await verifyEnrollmentIdentity(owner);
+    enabled(owner);
     await continuity(owner);
     assertClinicalAccess(ticket);
     if ((await inspectClinicalInitialization(owner)) !== "FRESH")
@@ -110,6 +117,7 @@ export async function beginClinicalEnrollment(
             await db.ownerEncryptionModes.add({
                 owner_user_id: owner,
                 mode: "ENROLLMENT_PENDING",
+                ...localEnrollmentMetadata(),
                 key_identity: keyIdentity(created.record),
                 recovery_revision: revision,
             });
@@ -130,10 +138,10 @@ export async function continueClinicalEnrollment(
     owner: number,
     passphrase: string,
 ): Promise<string> {
-    enabled();
     requireOwner(owner);
     const ticket = captureClinicalAccess();
     await verifyEnrollmentIdentity(owner);
+    enabled(owner);
     await continuity(owner);
     if ((await inspectClinicalInitialization(owner)) !== "ENROLLMENT_PENDING")
         throw new Error("Pendaftaran tertunda tidak tersedia.");
@@ -157,6 +165,7 @@ export async function continueClinicalEnrollment(
             await db.ownerEncryptionModes.put({
                 owner_user_id: owner,
                 mode: "ENROLLMENT_PENDING",
+                ...localEnrollmentMetadata(),
                 key_identity: keyIdentity(replacement.record),
                 recovery_revision: revision,
             });
@@ -172,7 +181,8 @@ export async function continueClinicalEnrollment(
     }
 }
 export async function confirmClinicalRecovery(owner: number): Promise<void> {
-    enabled();
+    if (!acceptanceEncryptionFixture()) await verifyEnrollmentIdentity(owner);
+    enabled(owner);
     const enrollment = pending.get(owner);
     if (!enrollment)
         throw new Error("Buka kembali pendaftaran dengan frasa sandi.");
@@ -212,7 +222,6 @@ export async function unlockClinicalOwner(
     secret: string,
     purpose: "passphrase" | "recovery",
 ): Promise<void> {
-    enabled();
     requireOwner(owner);
     const ticket = captureClinicalAccess();
     await continuity(owner);
