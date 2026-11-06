@@ -30,6 +30,7 @@ for (const name of [
     "T0Verification",
     "LocalEmergencyActive",
     "RelawanStatusDataSheet",
+    "OfflineReadinessNotice",
 ])
     overrides[
         `@/components/${name === "StatusIndicator" ? "ui" : "Relawan"}/${name}.vue`

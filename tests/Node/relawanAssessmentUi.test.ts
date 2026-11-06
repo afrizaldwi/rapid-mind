@@ -164,6 +164,36 @@ test("mounted SRQ gates manual Q17 persistence, retains old answer on cancellati
     }
 });
 
+test("patient name renders before delayed SRQ draft hydration; persisted false restores as Tidak", async () => {
+    let resolve!: (value: any) => void;
+    const previousContext = state.context;
+    const previousAnswers = state.assessment.srq_answers;
+    state.assessment.srq_answers = { 1: false } as any;
+    state.saved = [];
+    state.context = () => new Promise(done => { resolve = done; });
+    const patient = { id: "patient-synthetic", name: "Penyintas Sintetis" };
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient,
+    });
+    const no = () => f.nodes(node => node.tag === "button" && f.text(node) === "Tidak")[0];
+    try {
+        await f.flush();
+        assert.match(f.text(), /Penyintas Sintetis/);
+        assert.equal(no()["aria-pressed"], false, "Patient visibility does not prove draft hydration");
+        assert.equal(f.nodes(node => node.tag === "fieldset")[0].disabled, true);
+        resolve({ assessment: state.assessment, patient });
+        await f.flush();
+        assert.equal(no()["aria-pressed"], true, "Stored boolean false must select Tidak after hydration");
+        assert.equal(f.nodes(node => node.tag === "fieldset")[0].disabled, false);
+        assert.deepEqual(state.saved, [], "Hydration must not write or replace the answer");
+    } finally {
+        f.app.unmount();
+        state.context = previousContext;
+        state.assessment.srq_answers = previousAnswers;
+    }
+});
+
 test("delayed SRQ context cannot rehydrate after lock or owner switch", async () => {
     let resolve!: (value: any) => void;
     const previous = state.context;

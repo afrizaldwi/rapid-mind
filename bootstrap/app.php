@@ -16,13 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
 
-        $middleware->web(append: [
+        $middleware->web(prepend: [\App\Http\Middleware\ClinicalBrowserPrivacy::class], append: [
             \App\Http\Middleware\ValidateWebSessionVersion::class,
-            \App\Http\Middleware\ClinicalBrowserPrivacy::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
-        $middleware->api(append: [\App\Http\Middleware\ClinicalBrowserPrivacy::class]);
+        $middleware->api(prepend: [\App\Http\Middleware\ClinicalBrowserPrivacy::class]);
 
         $middleware->alias([
             'auth.jwt' => \App\Http\Middleware\AuthenticateJwt::class,

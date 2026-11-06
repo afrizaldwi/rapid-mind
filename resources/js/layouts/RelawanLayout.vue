@@ -1,4 +1,5 @@
 <template>
+    <OfflineReadinessNotice />
     <div
         v-if="loggedOutLocally || checkingContinuity"
         class="min-h-screen bg-slate-100 p-6 text-slate-900"
@@ -279,6 +280,7 @@ import {
     resolveRelawanContinuity,
 } from "@/offline/relawanContinuity";
 import { registerRelawanServiceWorker } from "@/pwa/register";
+import OfflineReadinessNotice from "@/components/Relawan/OfflineReadinessNotice.vue";
 import {
     openRelawanLogin,
     relawanSessionRecovery,

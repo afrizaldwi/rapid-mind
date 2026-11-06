@@ -56,6 +56,9 @@ if (clinicalPath && !window.crypto?.subtle) {
         ),
 
     setup({ el, App, props, plugin }) {
+        // Inertia has consumed this bootstrap JSON. Do not retain a second
+        // plaintext clinical payload in the DOM after the view is locked.
+        document.querySelector('script[data-page="app"][type="application/json"]')?.remove();
         const user = (props.initialPage.props.auth as { user?: VerifiedRelawan | null } | undefined)?.user;
         if (user && user.role !== "RELAWAN") {
             void lockRelawanContinuity().catch(() => {});

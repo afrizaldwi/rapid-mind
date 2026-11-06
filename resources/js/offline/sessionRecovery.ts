@@ -1,5 +1,6 @@
 import { reactive } from "vue";
 import { resolveRelawanContinuity } from "./relawanContinuity";
+import { probeRelawanSession } from "./sessionProbe";
 
 export type RelawanRecoveryState =
     | "IDLE"
@@ -11,25 +12,12 @@ export type RelawanRecoveryState =
     | "SERVER_REJECTED"
     | "RESTORING_ONLINE_RUNTIME";
 
-type SessionStatusPayload = {
-    state?: string;
-    user?: { id?: unknown; role?: unknown };
-};
-
 export const relawanSessionRecovery = reactive<{
     state: RelawanRecoveryState;
 }>({ state: "IDLE" });
 
 let activeOwner: number | null = null;
 let probe: Promise<void> | null = null;
-
-async function parsePayload(response: Response): Promise<SessionStatusPayload> {
-    try {
-        return (await response.json()) as SessionStatusPayload;
-    } catch {
-        return {};
-    }
-}
 
 async function checkServerSession(): Promise<void> {
     const owner = activeOwner;
@@ -46,25 +34,11 @@ async function checkServerSession(): Promise<void> {
         }
 
         relawanSessionRecovery.state = "CHECKING";
-        let response: Response;
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 7_000);
-        try {
-            response = await fetch("/relawan/session-status", {
-                method: "GET",
-                credentials: "same-origin",
-                cache: "no-store",
-                signal: controller.signal,
-                headers: {
-                    Accept: "application/json",
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-            });
-        } catch {
-            relawanSessionRecovery.state = "SERVER_UNAVAILABLE";
+        const { response, payload } = await probeRelawanSession();
+        const current = await resolveRelawanContinuity();
+        if (current.state !== "ELIGIBLE" || current.context.owner_user_id !== owner) {
+            relawanSessionRecovery.state = "IDLE";
             return;
-        } finally {
-            window.clearTimeout(timeout);
         }
 
         if (response.status >= 500) {
@@ -72,7 +46,6 @@ async function checkServerSession(): Promise<void> {
             return;
         }
 
-        const payload = await parsePayload(response);
         if (
             response.ok &&
             payload.state === "AUTHENTICATED" &&
