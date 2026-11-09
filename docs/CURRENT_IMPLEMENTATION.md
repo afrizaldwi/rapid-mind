@@ -1,8 +1,8 @@
 # RAPID-MIND — Current Implementation Reference
 
-**Reviewed:** 7 November 2026 (Asia/Jakarta), documentation D1
+**Reviewed:** 10 November 2026 (Asia/Jakarta), final documentation alignment
 
-**Application source baseline:** `demo` at `e85b981`
+**Application source baseline:** `demo` at `7076e1327e53db9671dbc6fcc575ffd03cded6d7`
 
 **Previous inventory baseline:** 24 October 2026, `7839420` (Checkpoint 2C)
 
@@ -13,9 +13,11 @@ then approved domain/UX specifications and the original `docs/workflow.md` visio
 
 **Evidence authority:** dated checkpoint reports and `docs/workflow-verification.md`
 
-D1 inspected source, test sources and existing reports only. No tests, runtime,
-browser, migration or enrollment was rerun. `IMPLEMENTED` is not `PASS` or
-`ACCEPTED`; dated test results apply only to their recorded scope.
+This alignment inspected current source, commit inventories, test sources and
+recorded reports. No tests, builds, runtime/browser checks, migrations or enrollment
+were rerun. The owner-reported manual Chrome check below is attributed evidence.
+`IMPLEMENTED` is not `PASS` or `ACCEPTED`; dated test results apply only to their
+recorded scope.
 
 Status labels in this document mean:
 
@@ -25,6 +27,54 @@ Status labels in this document mean:
 - **PLANNED:** specified but not implemented in the current source.
 - **UNVERIFIED:** source may exist, but the stated runtime behavior lacks direct evidence for this checkpoint.
 - **REQUIRES OWNER DECISION:** implementation and an authoritative requirement/design decision disagree.
+
+<a id="current-handoff"></a>
+
+## Current handoff — 10 November 2026
+
+This section supersedes older current-state summaries; dated checkpoint results
+remain historical evidence for their original scope. See [P0 handoff](../P0-HANDOFF.md)
+and the [current verification ledger](workflow-verification.md#november-10-handoff).
+
+| Classification | Status |
+| --- | --- |
+| P0 IMPLEMENTED | YES |
+| P0 CORE BROWSER VERIFIED | YES |
+| P0 LOCAL DEMO ACCEPTANCE | CONDITIONAL PASS |
+| Natural background/foreground privacy locking | NOT TESTED |
+| Production security acceptance | NOT ESTABLISHED |
+
+Seven historical core browser PASS results and six browser-runner safety PASS
+results are retained. Simulated visibility handling is not native background-lock
+acceptance. P1/P2 are substantially implemented with automated coverage; complete
+cross-role acceptance remains pending. **C2 remains NOT ACCEPTED; C3 has not started.**
+
+| Commit | Reviewed scope | File count |
+| --- | --- | ---: |
+| `e561c98` | Facility/case authorization, realtime and offline reconciliation, including final T0 correction | 81 |
+| `1e44ff8` | Guarded synthetic provisioning | 6 |
+| `be61204` | Browser-runner safety cleanup | 5 |
+| `9f8fd4b` | Competition data policy and team handoff | 7 |
+| `7076e13` | Same-document offline Relawan navigation | 8 |
+
+The first four commits contain exactly 99 distinct reviewed files. The navigation
+commit contains eight files; paths can overlap earlier commits. The eight
+superseded `scripts/c2/` files remain excluded. Git inspection confirms these local
+commit inventories; the owner supplies remote-baseline verification, not a fresh
+network/push check by this documentation task.
+
+Recorded operations: both November additive development migrations completed;
+the November 9 protected database backup and frontend publication were verified;
+synthetic scopes/accounts were provisioned. See the [C2 preparation record](checkpoints/c2-browser-preparation.md).
+These historical records do not authorize repetition or prove today's runtime.
+
+The SQL/history decision is **RESOLVED**: retain the existing repository/history
+and owner-approved historical synthetic SQL backup unchanged. Keep ignored
+credentials, recovery codes, profiles, debug captures and private evidence out of
+transfer. Local Inertia DevTools disablement was verified separately; each teammate
+must set `INERTIA_DEVTOOLS_ENABLED=false` in their own ignored `.env` and verify it.
+No production default is changed by that local setting.
+
 
 ## 1. Product and stack
 
@@ -41,20 +91,22 @@ user activity, token version and refresh-family validity are checked. A web
 session alone does not authenticate API requests. Authentication does not unlock
 clinical ciphertext; offline key access has its own passphrase/recovery lifecycle.
 
-## Final team decision update — 7 November 2026
+## Approved team decision — 7 November; source alignment — 10 November 2026
 
 The owner/team approved Healthcare T0 downgrade to T1/T2/T3, superseding the old
 T1/T2-only design. Controller classification accepts those results, maps them to
 DOWNGRADED, and writes verification/audit records in a locked transaction. This
 is explicit Healthcare-owned product behavior, not external protocol certification.
 
-Healthcare receives necessary details subject to case/facility authorization,
-not universal access granted by the role. Inspected list/detail reads use broad
-queries/ID lookup without case/facility filters; workflow access checks role and
-activity, and the emergency broadcast channel is role-wide. This is a scoped
-source finding requiring authorization review, not proof of approved unrestricted
-patient access. Internal Dispatch assignment does not establish external vehicle
-contact, pickup or physical response.
+Healthcare case/facility authorization is now implemented in `e561c98` through
+`HealthcareCaseAccess`, routing snapshots, explicit audited shares, scoped queries,
+clinical/operational write checks and current recipient resolution. The earlier D1
+broad-read/role-wide-channel finding is historical and superseded. Active Healthcare
+in an active responsible facility manages its cases; referral destinations receive
+case-specific read access, including only explicitly shared associated assessment
+information. One case never unlocks unrelated patient history. Admin has no
+patient-level clinical permission; Dispatch assignment grants no clinical access
+and does not establish external vehicle contact, pickup or physical response.
 
 P1 remains multi-select observational reasons with optional OTHER note and no
 scoring/diagnostic/T0 effect. P2 permits three explicit visible choices if
@@ -62,9 +114,11 @@ UNANSWERED remains distinct on untouched/reset input; current
 `resources/js/components/Relawan/Assessment/SrqResponseControl.vue` renders four
 controls. Q17 confirmation before persistence and scoring guards remain unchanged.
 No UI redesign is implemented or requested here. Relawan remains limited to its
-own report and delivery state. Official Admin reporting requirements/gaps are in
-[the Admin specification](RAPID_MIND_ADMIN_WORKSPACE.md). C1 acceptance and C2/C3
-remain pending; real-user migration/plaintext cleanup remain P0 objectives.
+own report and delivery state. The three-button SRQ revision belongs to the
+receiving team; four controls remain implemented. Official Admin reporting gaps
+remain in [the Admin specification](RAPID_MIND_ADMIN_WORKSPACE.md). The current P0
+classifications above apply; full C2 acceptance and C3 signoff are not established.
+General real-user migration/plaintext cleanup remain P0 objectives.
 
 ## 2. Role architecture
 
@@ -112,6 +166,36 @@ GET  /relawan/emergencies/{emergencyId}
 
 `GET /relawan/session-status` is the read-only recovery boundary outside the
 role-prefixed middleware group.
+
+### Three navigation contexts — `7076e13`
+
+- **Online:** the existing Inertia runtime uses server-authorized web navigation.
+- **Offline bootstrap:** a full document fallback checks remembered Relawan
+  continuity and requires explicit clinical unlock before resolving clinical data.
+- **Unlocked offline shell:** `OfflineRelawanShell` / `offlineNavigation.ts` reuse
+  `resolveOfflineRoute()` and owner-scoped repositories for same-document routes.
+  Reactive route props, URL-only history, Back/Forward, query strings and SRQ
+  anchors replace reloads. Ordinary offline links and `runtime.navigate()` share
+  this path; native external/download/modified-click behavior is preserved.
+
+An uninterrupted authorized visible session retains its in-memory key across
+supported routes. Actual reload/pagehide, visibility invalidation, logout, owner
+changes and worker protocol invalidation retain their safety boundaries. Stale
+async navigation cannot reinstall clinical content after invalidation; no decrypted
+props, passphrase or key is written into history or other browser persistence.
+
+**Recorded automated evidence:** 64 focused tests PASS; final navigation/link
+subset 13 PASS again, not 13 additional distinct tests; `vue-tsc --noEmit` and
+`git diff --check` PASS. Tests used real encryption/repository logic with browser,
+database transport and leaf-page doubles. None was rerun for this alignment.
+**Owner-reported manual evidence:** successful Chrome offline navigation after
+controlled service-worker activation. This narrow report does not establish a
+complete acceptance suite, native background locking, all Back/Forward/reload/
+owner-race cases, or a newly measured publication hash. Build/activation records
+from November 9 describe that release only; do not reuse its hashes for this fix.
+
+Login password and offline encryption passphrase remain separate. The online
+double-prompt UX improvement is **DEFERRED**, not implemented by the router.
 
 ### Healthcare
 
@@ -179,7 +263,10 @@ redirects to `/admin/facilities/organizations` for compatibility.
 three daily-function domains, review, system triage recommendation, and outbox
 synchronization. A verified T0-Suspect is persisted locally before transmission,
 uses priority 1 ahead of routine assessment synchronization, and supports
-unidentified emergencies. Manual answers remain authoritative over STT.
+unidentified emergencies. Bounded transient retry, stable identifiers and idempotent
+receipts are implemented. Recipient resolution and dispatch share a best-effort
+exception boundary: persisted T0 reports uncertain realtime delivery rather than
+false clinical failure. Manual answers remain authoritative over STT.
 
 **P1 — IMPLEMENTED:** non-verbal observations support `NOT_SPEAKING`,
 `SEVERE_DISTRESS`, `SPEECH_DIFFICULTY`, `HEARING_COMMUNICATION_BARRIER`,
@@ -198,7 +285,9 @@ is separate and available without a complete assessment.
 
 The additive schema is defined in
 `database/migrations/2026_11_03_000000_add_assessment_observations_and_srq_states.php`;
-its application to the current runtime database was not checked by D1.
+its approved application, together with the November 7 facility-routing migration,
+is recorded in the [C2 report](checkpoints/checkpoint-c2-local-clinical-integration.md).
+Neither migration nor database verification was repeated during this alignment.
 
 **PARTIAL:** browser/device support varies. Native SMS is a user-mediated `sms:`
 handoff, not confirmed automatic delivery. Fresh offline authentication,
@@ -223,8 +312,10 @@ are no-ops under the documented match rules; stale/changed requests conflict.
 assessments and completed validation history. Healthcare may save a T1/T2/T3
 result for an eligible non-T0 assessment and may explicitly create a referral.
 
-**IMPLEMENTED:** patient search and detail provide `Ringkasan`, `Asesmen`,
-`Darurat`, `Validasi`, and `Rujukan` longitudinal sections.
+**IMPLEMENTED:** patient search, summaries, detail and nested histories provide
+`Ringkasan`, `Asesmen`, `Darurat`, `Validasi`, and `Rujukan` only from authorized
+cases. Reciprocal A/B regression coverage includes latest patient clinical status.
+Unrouted historical cases remain UNRESOLVED; no automatic backfill is performed.
 
 ### Admin operations
 
@@ -317,10 +408,13 @@ external team contact, or facility-acceptance workflow.
 
 ## 7. Realtime, P0 privacy and offline/PWA
 
-- **IMPLEMENTED:** `HealthcareLayout.vue` owns the Healthcare-only private
-  `emergencies` subscription. Emergency events and ID-only `DispatchUpdated` /
-  `ReferralUpdated` reconcile route-appropriate canonical props. Operational
-  notifications emit only after transaction commit; rollback/replay do not emit
+- **IMPLEMENTED:** `HealthcareLayout.vue` subscribes to recipient-specific private
+  `healthcare.facility.{facilityId}.user.{userId}.version.{version}` channels.
+  `CaseAudience` rechecks current active case/facility grants at send time; the old
+  role-wide `emergencies` channel is denied. Emergency, Referral, Dispatch and
+  `AssessmentUpdated` ID-only events trigger authorized canonical reconciliation,
+  including assessment-worklist invalidation. Counts use the same case scope.
+  Operational notifications emit only after transaction commit; rollback/replay do not emit
   duplicate notifications, and transport failures do not undo persistence.
   Coalescing/draft deferral and separate HTTP/socket readiness remain in place.
 - **IMPLEMENTED P0:** enrolled-owner clinical records/outbox use AES-256-GCM,
@@ -336,12 +430,17 @@ external team contact, or facility-acceptance workflow.
 - **IMPLEMENTED:** clinical no-store/history protection, locked-DOM masking,
   owner-scoped repositories, stable UUIDs, priority outbox, session recovery,
   same-owner Web Locks where supported, and static-asset PWA readiness/update gates.
-  Browser cache/privacy success is limited to the recorded C1 fixture scope.
+  Browser/privacy and live receipt evidence now includes the seven historical core
+  P0 scenarios in [P0-HANDOFF.md](../P0-HANDOFF.md), within its explicit limits.
 - **NOT IMPLEMENTED:** Admin realtime aggregate subscriptions.
-- **UNVERIFIED BY D1:** live transport, current database/configuration, real-device
-  behavior, general real-user activation/migration/cleanup, and production readiness.
+- **NOT ESTABLISHED:** comprehensive real-device/background behavior, general
+  real-user activation/migration/cleanup and production readiness. Recorded local
+  database/HTTP/Reverb checks are scoped evidence, not a fresh runtime audit here.
 
-## 8. Checkpoint evidence and pending acceptance — 7 November 2026
+## 8. Historical evidence — 7 November 2026; later scope superseded above
+
+The following table preserves the D1 review and original report boundaries. Its
+C2-only-pending wording does not erase the later core P0 browser evidence above.
 
 October **STT C1/C2** mean speech foundation/interpretation. November **Safety
 C1/C2** mean browser/privacy/PWA and local integration. Historical STT passes do
@@ -400,7 +499,12 @@ remain backlog. P0–P2 and C1–C3 take priority; no next phase starts automati
 
 ## 10. References
 
-Focused source/test anchors (repository-relative; inspected, not executed by D1):
+Focused source/test anchors (repository-relative; inspected, not executed by this alignment):
+
+- `app/Domain/Healthcare/HealthcareCaseAccess.php`, `CaseRouting.php`, `CaseAudience.php`, `CaseSharing.php`
+- `app/Domain/Sync/EmergencySynchronizer.php`, `tests/Feature/HealthcareCaseScopeTest.php`
+- `resources/js/relawan/OfflineRelawanShell.vue`, `offlineNavigation.ts`, `offlineLink.ts`
+- `tests/Node/offlineNavigation.test.ts`, `tests/Node/offlineRelawanLink.test.ts`
 
 - `app/Domain/Assessment/SrqAnswer.php`, `app/Domain/Assessment/NonVerbalObservations.php`
 - `app/Domain/Sync/AssessmentSynchronizer.php`, `resources/js/offline/assessmentContract.ts`

@@ -1,5 +1,33 @@
 # RAPID-MIND — P0 team handoff
 
+## Current handoff update — 10 November 2026
+
+Committed source is now `demo` at `7076e13`: clinical integration `e561c98`,
+synthetic provisioning `1e44ff8`, runner cleanup `be61204`, handoff policy
+`9f8fd4b`, then offline navigation `7076e13`. The first four commits contain
+99 reviewed files; navigation contains eight files. Eight superseded `scripts/c2`
+files remain excluded. Owner commits are verified locally; this update did not
+fetch, push or revalidate the remote.
+
+The new offline shell keeps supported Relawan navigation in the same document
+while its authorized key remains in memory. Online Inertia and offline document
+bootstrap are distinct. Actual reload/pagehide, visibility invalidation, logout,
+owner changes and worker protocol invalidation retain their lock boundaries.
+Recorded evidence: 64 focused tests PASS, final 13-test navigation/link subset
+PASS again, type-check and diff-check PASS. None was rerun here.
+The owner reports successful manual Chrome offline navigation after controlled
+service-worker activation. This is a narrow manual check, not full browser/E2E
+acceptance or natural background-lock acceptance; no new release hashes are claimed.
+The November 9 publication evidence below remains historical for that release.
+
+Login password and offline encryption passphrase remain separate; online
+double-prompt UX is DEFERRED. Four SRQ controls remain; the three-button revision
+and complete P1/P2 acceptance belong to the receiving team. All five P0
+classifications below remain unchanged; **C2 NOT ACCEPTED; C3 not started**.
+Current source reference: [CURRENT_IMPLEMENTATION.md](docs/CURRENT_IMPLEMENTATION.md).
+
+## Historical P0 review before the navigation correction — 10 November 2026
+
 Reviewed 10 November 2026; followed by focused browser-runner security cleanup.
 Six runner-safety tests passed without clinical execution. The original clinical
 acceptance suite was not rerun; its report and existing profiles were preserved.
@@ -133,12 +161,15 @@ See [final review and complete commit groups](docs/checkpoints/p0-final-handoff-
       handling; six safety tests passed, original clinical evidence unchanged.
 - [x] Owner resolved SQL/history disposition: retain the existing repository,
       synthetic dump and history unchanged for the competition handoff.
-- [ ] Owner reviews the cleaned runner sources and protects private artifacts.
+- [x] Reviewed source groups committed by owner; superseded scripts excluded.
+- [ ] Receiving team protects private artifacts and reviews current handoff limits.
 - [x] Disable local DevTools capture/retrieval; verify effective false, HTTP404,
       normal role routes and preservation of historical captures.
 - [ ] Receiving team sets `INERTIA_DEVTOOLS_ENABLED=false` in its own ignored local
       runtime configuration and verifies it before shared demo use.
 - [ ] Preserve the seven core PASS results and the original headed NOT TESTED result.
+- [ ] Extend the owner-reported offline navigation check to Back/Forward, anchors,
+      reload, stale navigation and owner/session/storage/worker races with recorded evidence.
 - [ ] Complete natural desktop foreground/background locking and physical mobile
       background/freeze/resume checks with actual visibility/DOM/key evidence.
 - [ ] Finish P1 acceptance: multiple observations/OTHER notes across offline save,

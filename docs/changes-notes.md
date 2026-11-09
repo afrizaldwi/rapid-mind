@@ -1,5 +1,37 @@
 # RAPID-MIND — Development Change Notes
 
+## 10 November 2026 — committed P0/C2 and final documentation alignment
+
+Current source baseline `demo` / `7076e13`. Five owner commits: `e561c98` clinical
+scope/reconciliation (81 files), `1e44ff8` guarded synthetic provisioning (6),
+`be61204` runner safety (5), `9f8fd4b` final handoff/data policy (7), then
+`7076e13` offline navigation (8). First four: exactly 99 distinct reviewed files;
+eight superseded C2 scripts excluded. No Git mutation by this alignment task.
+
+Same-document offline navigation preserves the authorized visible in-memory key
+across supported routes while keeping online Inertia and document bootstrap
+separate. Reload/pagehide, visibility, logout, owner and worker invalidation remain.
+Recorded tests: 64 focused PASS and final 13-test subset PASS again, type-check and
+diff-check PASS. Owner reports successful manual Chrome offline navigation after
+controlled worker activation; narrow manual evidence, not full acceptance.
+No test/build/runtime operation was rerun for this documentation entry.
+
+Healthcare scope/audiences and operations are implemented/tested; older broad-read
+findings are historical. Admin validated-reporting gaps remain. Login password and
+offline passphrase stay separate; online double-prompt UX DEFERRED. Four SRQ
+controls remain; three-button revision and full P1/P2 acceptance belong to teammates.
+
+P0 IMPLEMENTED YES; CORE BROWSER VERIFIED YES; LOCAL DEMO ACCEPTANCE CONDITIONAL
+PASS. Natural background/foreground privacy locking NOT TESTED; production security
+acceptance NOT ESTABLISHED. Seven historical browser PASS and six runner-safety
+PASS results are preserved. C2 NOT ACCEPTED; C3 not started.
+SQL/history RESOLVED: keep existing competition repository/history and synthetic
+dump; do not transfer private runtime artifacts. Local DevTools disablement verified;
+teammates configure their own ignored .env flag. [Current inventory](CURRENT_IMPLEMENTATION.md)
+and [ledger](workflow-verification.md#november-10-handoff) supersede status language
+in the historical log below without altering its original dates/results.
+
+
 **Document:** Implementation Change Notes & Technical Log  
 **Date:** 2026-09-29  
 **Branch:** `demo`  
@@ -7,7 +39,7 @@
 
 ---
 
-## Final team decision supersession — 7 November 2026
+## Historical final team decision supersession — 7 November 2026
 
 The owner/team now approves explicit, auditable Healthcare downgrade to T1/T2/T3,
 superseding earlier T1/T2-only restrictions and unresolved-T3 wording in the dated

@@ -1,5 +1,23 @@
 # RAPID-MIND — Authentication & Account Provisioning UX
 
+## Current handoff note — 10 November 2026
+
+Current source is `demo` at `7076e13`; this is a design reference, not a claim
+that all account lifecycle features are complete. Login password and offline
+clinical encryption passphrase remain separate. Local server-authorized enrollment,
+offline unlock and same-document navigation are implemented; the online two-prompt
+UX improvement is DEFERRED. Guarded C2 synthetic accounts/scopes were provisioned
+through validated Admin workflows; strict production phone validation is retained.
+Healthcare case/facility authorization is implemented; Admin has no clinical access.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Universal login, role routing, authentication states, Relawan offline continuity, account provisioning, credential lifecycle, revocation, logout, and account lifecycle  
 **Product language:** Bahasa Indonesia  

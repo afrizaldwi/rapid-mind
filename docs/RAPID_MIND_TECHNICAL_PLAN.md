@@ -1,14 +1,61 @@
 # RAPID-MIND — Technical Architecture & Development Plan
 
+## Current architecture/handoff checkpoint — 10 November 2026
+
+Use [CURRENT_IMPLEMENTATION.md](CURRENT_IMPLEMENTATION.md) as the primary source
+inventory and [P0-HANDOFF.md](../P0-HANDOFF.md) for acceptance limits. The five
+commits are `e561c98` (81 files), `1e44ff8` (6), `be61204` (5), `9f8fd4b` (7),
+then `7076e13` (8). The first four cover exactly 99 distinct reviewed files;
+eight superseded `scripts/c2/` files remain excluded. Earlier current-state blocks
+below are dated historical snapshots, not current execution instructions.
+
+Facility/case authorization, routing snapshots, audited read sharing, scoped nested
+history/summary/mutations/counts and recipient/version-scoped events are implemented
+and tested. Assessment worklist invalidation/reconciliation, assessment version/
+replay/scoring guards and bounded emergency retry are implemented. Audience lookup
+and dispatch failures cannot turn persisted T0 into a false clinical-submission
+failure. Independent clinical/Referral/Dispatch state machines remain unchanged.
+The prior broad-access finding is superseded; Admin reporting/query gaps remain.
+Both November migrations, the protected November 9 backup/publication and synthetic
+provisioning have recorded completion evidence, not a fresh runtime check here.
+
+Online Inertia, offline document bootstrap and unlocked-shell same-document
+navigation are distinct. `7076e13` retains a key only for uninterrupted authorized
+navigation, rejects stale asynchronous route results and keeps URL-only history.
+Reload/pagehide, visibility, logout, owner and worker invalidation still lock.
+Recorded tests: 64 focused PASS, final 13-test subset PASS again, type-check and
+diff-check PASS; not rerun here. Owner reports successful manual Chrome offline
+navigation after controlled worker activation; this narrow check is not full
+acceptance or a new publication hash. Password/passphrase remain separate;
+online double-prompt UX is DEFERRED. SRQ still has four controls; the receiving
+team owns the requested three-button revision and full P1/P2 acceptance.
+
+P0 IMPLEMENTED YES; P0 CORE BROWSER VERIFIED YES; P0 LOCAL DEMO ACCEPTANCE
+CONDITIONAL PASS. Natural background/foreground privacy locking NOT TESTED;
+production security acceptance NOT ESTABLISHED. Preserve seven historical browser
+PASS and six runner-safety PASS results. **C2 NOT ACCEPTED; C3 not started.**
+Keep the four checkpoints C2.1 environment, C2.2 authorization/realtime,
+C2.3 assessment/clinical data and C2.4 emergency/final verification.
+
+SQL/history decision RESOLVED: retain existing competition repository/history and
+historical synthetic dump. Exclude private runtime artifacts. Local DevTools was
+verified disabled; teammates must set `INERTIA_DEVTOOLS_ENABLED=false` in their own
+ignored `.env`. Production defaults and clinical requirements are unchanged.
+
+
 **Project:** RAPID-MIND  
 **Document type:** Technical architecture + implementation plan  
 **Status:** Working baseline for development  
 **Requirements authority:** current owner instructions and later-approved safety decisions; approved domain specifications; original `docs/workflow.md` subject to those decisions
-**Last documentation alignment:** 2026-11-07 (D1; source baseline `demo` at `e85b981`)
+**Last documentation alignment:** 2026-11-10 (source baseline `demo` at `7076e13`)
 
 ---
 
-## Current safety and implementation baseline — 7 November 2026
+## Historical safety and implementation baseline — 7 November 2026
+
+This block preserves the D1 source review. Authorization gaps and unverified-C2
+statements here are superseded by the November 10 checkpoint above, without
+changing the original measured results or historical execution claims.
 
 D1 re-inspected source, test sources, applicable specifications and dated reports.
 No test, build, browser run, live database/configuration check, enrollment or

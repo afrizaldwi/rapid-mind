@@ -9,11 +9,12 @@
 
 ---
 
-# Current Implementation Alignment — 7 November 2026
+# Current Implementation Alignment — 10 November 2026
 
-This source/documentation review adopts the [D1 baseline](CURRENT_IMPLEMENTATION.md),
-not new runtime acceptance. Later-approved safety requirements govern conflicting
-historical workflow/UX examples.
+This source/documentation review adopts `demo` at `7076e13` and the
+[current inventory](CURRENT_IMPLEMENTATION.md), not a new runtime acceptance run.
+The November 7 broad-access finding is superseded by committed C2 implementation
+`e561c98`; original dated reports retain their historical scope.
 
 - Referral/Dispatch UI/backend integration, schema-aware read projections,
   histories and deterministic fixture seeder are implemented. Emergency actions
@@ -22,11 +23,15 @@ historical workflow/UX examples.
 - New controls require Dispatch/history/unit tables and the Referral verification
   column. Missing schema reports unavailable operations, not an empty successful
   dispatch. ACTIVE referrals use clinical completion when ready; intermediate
-  legacy movement rows/endpoint/cast remain compatibility paths. No runtime
-  schema deployment or final legacy retirement is established by this review.
-- Healthcare-only ID events (`DispatchUpdated`, `ReferralUpdated`) and layout
-  listeners reconcile canonical props after committed changes. Live transport
-  and browser acceptance are not established by source or isolated tests.
+  legacy movement rows/endpoint/cast remain compatibility paths. November schema
+  application is recorded in C2; this review did not repeat runtime checks or
+  establish final legacy retirement.
+- `CaseAudience` resolves active case-authorized recipients on private
+  `healthcare.facility.{facilityId}.user.{userId}.version.{version}` channels.
+  The old role-wide `emergencies` channel is denied. ID-only emergency,
+  assessment, Referral and Dispatch events reconcile authorized canonical props,
+  including validation-worklist freshness. Historical core P0 scoped Reverb
+  reception is recorded; full freshness/sharing/revocation acceptance is pending.
 - A confirmed case remains active while Dispatch is absent/unfinished or any
   Referral is unfinished. Clinical classification, Referral and Dispatch remain
   distinct. Completion of internal referral work is not facility acceptance or
@@ -39,9 +44,11 @@ historical workflow/UX examples.
 
 [Recorded 2D/2E evidence](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md)
 is isolated automated coverage, not current live-browser or cutover proof.
-November Safety C1 remains **IMPLEMENTED — ACCEPTANCE PENDING**; C2 integration
-and C3 final acceptance remain pending. See the
-[November ledger](workflow-verification.md#november-safety-evidence).
+[P0 handoff](../P0-HANDOFF.md) records IMPLEMENTED YES, CORE BROWSER VERIFIED YES
+and local demo CONDITIONAL PASS. Natural background locking is NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 and remaining C2 acceptance
+belong to the receiving team; **C2 NOT ACCEPTED; C3 not started**. See the
+[current ledger](workflow-verification.md#november-10-handoff).
 
 **APPROVED TEAM DECISION — 7 November 2026:** Healthcare may downgrade T0-Suspect
 to T1/T2/T3 through an explicit audited decision. This supersedes the earlier
@@ -50,10 +57,16 @@ controller/UI support exists; external clinical-protocol certification is not cl
 
 Necessary case information must remain subject to case/facility authorization;
 Healthcare role membership alone is not universal patient-record permission.
-`HealthcareController` list/detail reads and classification lookup are broad in
-the inspected source, `HealthcareWorkflowAccess` checks role/activity only, and
-`routes/channels.php` has a role-wide emergency channel. These are authorization
-implementation gaps requiring review, not approval of unrestricted access.
+`HealthcareCaseAccess` now scopes lists, direct IDs, nested case history, patient
+summaries, counts and mutations. Active responsible-facility users manage cases;
+explicit audited referral shares grant read access to necessary referred-case
+information, not unrelated history or clinical authority. Missing/inactive routing
+fails closed; historical cases are not automatically backfilled. Admin manages
+organizations/mappings without patient-level clinical access, and Dispatch
+assignment grants no extra clinical permission. Reciprocal A/B automated tests,
+including summary scoping and audience-failure persistence, are recorded in C2.
+Both approved November migrations and synthetic provisioning have recorded
+completion evidence; neither was rerun for this documentation update.
 Official anonymized Admin reports must use validated outcomes; current mixed
 queries and missing downgrade categories are documented in
 [the Admin gap matrix](RAPID_MIND_ADMIN_WORKSPACE.md). Internal Dispatch assignment

@@ -1,5 +1,19 @@
 # C2 synthetic provisioning — completed after owner authorization
 
+## Later current status — 10 November 2026
+
+Provisioning completion below is historical HTTP/DATABASE VERIFIED evidence, not
+an instruction to provision again. Its backend source is committed in `1e44ff8`;
+current application is `7076e13`. Earlier browser NOT TESTED statements refer to
+the November 9 provisioning-only checkpoint. Later P0 core browser evidence has
+seven historical PASS results, local demo CONDITIONAL PASS; native background
+locking remains NOT TESTED, production security NOT ESTABLISHED. The owner also
+reports a narrow successful manual Chrome offline-navigation check after controlled
+worker activation, not full acceptance. P1/P2 complete acceptance pending;
+C2 NOT ACCEPTED; C3 not started. See [P0 handoff](../../P0-HANDOFF.md).
+No tests, provisioning or runtime checks were repeated during this alignment.
+
+
 9 November 2026. **C2 NOT ACCEPTED; C3 not started.** Database backup COMPLETE;
 frontend publication COMPLETE / HTTP VERIFIED. Synthetic provisioning COMPLETE;
 clinical browser acceptance NOT TESTED. Earlier preflight/failed-attempt records are

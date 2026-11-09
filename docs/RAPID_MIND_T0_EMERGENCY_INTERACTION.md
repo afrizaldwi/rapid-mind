@@ -1,5 +1,23 @@
 # RAPID-MIND — T0 Emergency Interaction Design
 
+## Current handoff note — 10 November 2026
+
+Committed C2 delivery uses bounded transient retry, stable IDs, atomic encrypted
+emergency/priority-1 outbox and idempotent server receipts. Audience resolution and
+dispatch share a best-effort boundary: a persisted emergency returns uncertain
+notification status on failure, not a false clinical failure. This changes no
+confirmation, scoring or clinical policy. The navigation fix `7076e13` retains
+an authorized offline key across supported same-document routes, without relaxing
+reload/pagehide, visibility, logout, owner or worker invalidation.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Relawan T0 emergency interaction, verification, offline behavior, transmission, and active emergency state  
 **Product language:** Bahasa Indonesia  

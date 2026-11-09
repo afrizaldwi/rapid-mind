@@ -1,10 +1,62 @@
 # RAPID-MIND Workflow Verification Ledger
 
-**Latest documentation alignment:** 7 November 2026 — final owner/team decisions (safety acceptance unchanged)
+<a id="november-10-handoff"></a>
+
+## Current handoff and later evidence — 10 November 2026
+
+Source baseline: `demo` at `7076e1327e53db9671dbc6fcc575ffd03cded6d7`.
+This entry supersedes earlier current-state wording, preserving original dates,
+measured results and NOT TESTED outcomes below. Documentation alignment performed
+source/commit/reference/diff inspection only; no tests, runtime checks or browser
+scenarios were rerun. See [P0 handoff](../P0-HANDOFF.md) for historical artifact
+provenance and evidence limits; no private evidence was changed.
+
+| Classification | Status |
+| --- | --- |
+| P0 IMPLEMENTED | YES |
+| P0 CORE BROWSER VERIFIED | YES |
+| P0 LOCAL DEMO ACCEPTANCE | CONDITIONAL PASS |
+| Natural background/foreground privacy locking | NOT TESTED |
+| Production security acceptance | NOT ESTABLISHED |
+
+| Evidence / decision | Recorded result | Limit / remaining work |
+| --- | --- | --- |
+| Core localhost P0 browser evidence | Seven historical PASS results: enrollment, encrypted persistence, offline recovery, real sync, privacy handler, T0 and scoped realtime | Original headed/native lock remains NOT TESTED; simulated visibility is not native proof. T0 service replay is not browser lost-response replay; queue reload is not complete freshness proof. |
+| Browser-runner safety cleanup `be61204` | Six nonclinical safety tests PASS | Original clinical suite not rerun after cleanup; private profiles/results preserved. |
+| Clinical C2 integration `e561c98` | Facility/case scope, routing/sharing, audiences, canonical reconciliation, concurrency/replay guards and bounded T0 retry implemented with recorded automated/database evidence | Prior broad-access findings are historical. Full sharing/revocation, reconciliation and failure/session-race acceptance pending. Final audience-resolution correction included; focused regression recorded 12 tests / 348 assertions, rollback transactions without schema reset. |
+| Offline navigation `7076e13` — automated | 64 focused tests PASS; final navigation/link subset 13 PASS again; vue-tsc and diff-check PASS | 13 overlaps the 64. Real encryption/repository/fence logic with browser/history/storage transport and leaf-page doubles. No new run here. |
+| Offline navigation — owner manual report | Successful manual Chrome offline-navigation test after controlled service-worker activation | Narrow owner report only; no full suite rerun, native-lock pass, new screenshot, migration or release hash is inferred. Extend browser evidence for Back/Forward, anchors/reload, races and online recovery. |
+| November migrations / backup / publication / provisioning | Recorded completion in C2 reports | November 9 hashes describe that release only, not `7076e13`. No operations repeated here. |
+| Local Inertia DevTools correction | Effective false, zero capture routes, capture GETs404 and normal role routes operational; historical captures preserved | Each teammate sets and verifies INERTIA_DEVTOOLS_ENABLED=false in its own ignored .env. Not production certification. |
+| SQL/history decision | RESOLVED by owner for competition synthetic data; retain repository/history and historical dump | No removal, sanitization or history rewrite; exclude private runtime credentials/evidence and future real clinical data. |
+
+Local Git inspection confirms commit groups `e561c98` 81, `1e44ff8` 6,
+`be61204` 5, `9f8fd4b` 7 (99 distinct reviewed paths), followed by navigation
+`7076e13` 8. Eight superseded scripts/c2 paths are excluded. The owner supplied
+remote-baseline verification; no network fetch/push was performed here.
+
+Online Inertia, offline full-document bootstrap and authorized same-document
+shell navigation are distinct. Reload/pagehide, visibility, logout, owner and
+worker invalidation retain their safety boundaries. Password and passphrase stay
+separate; online double-prompt UX is DEFERRED. Four SRQ controls remain; the
+three-button revision is a receiving-team task without a scoring/data-policy change.
+Admin validated-reporting query gaps remain unresolved.
+
+P1/P2 are substantially implemented with automated coverage, but complete
+acceptance remains pending. Preserve four C2 checkpoints: environment;
+authorization/realtime; assessment/clinical data; emergency/final verification.
+**C2 remains NOT ACCEPTED; C3 has not started.** The receiving team owns remaining
+native-lock, P1/P2 and C2/C3 evidence and separate signoff.
+
+
+**Latest documentation alignment:** 10 November 2026 — committed P0/C2 handoff; acceptance limits preserved
 **Branch:** `demo`
 **Document type:** Evidence and status documentation
 
-## Final team decision supersession — 7 November 2026
+## Historical final team decision supersession — 7 November 2026
+
+Current source/acceptance statements in this dated section are superseded by the
+November 10 entry above; original decisions and evidence remain unchanged.
 
 The owner/team now approves explicit, auditable Healthcare downgrade to T1/T2/T3,
 superseding earlier T1/T2-only restrictions and unresolved-T3 wording in the dated
@@ -1567,7 +1619,11 @@ change. The owner/team subsequently approved T1/T2/T3 as product behavior on
 
 <a id="november-safety-evidence"></a>
 
-## November Safety evidence — 7 November 2026
+## Historical November Safety evidence — 7 November 2026
+
+This retains the original D1 evidence matrix. For later P0 browser evidence,
+committed authorization/navigation and owner manual report, use the
+[November 10 handoff entry](#november-10-handoff).
 
 **Source baseline:** `demo` at `e85b981`; D1 documentation changes retained.
 **Provenance:** the results below are previously recorded in linked reports,

@@ -1,15 +1,46 @@
 # RAPID-MIND — Relawan Mobile Shell, Navigation, and SRQ-20 Interaction Design
 
+# Current navigation checkpoint — 10 November 2026
+
+Source: `demo` at `7076e13`. [Current implementation](CURRENT_IMPLEMENTATION.md)
+supersedes earlier implementation-status paragraphs below; original design and
+clinical requirements are preserved. P0 local demo remains CONDITIONAL PASS,
+native background locking NOT TESTED, production security NOT ESTABLISHED.
+P1/P2 acceptance remains pending; C2 NOT ACCEPTED; C3 not started.
+
+Online routes still use Inertia. An offline PWA document bootstrap checks owner
+continuity and requires clinical unlock. Once unlocked, supported Relawan routes
+use `OfflineRelawanShell` / `offlineNavigation.ts` in the same document, through
+both `RelawanLink` and runtime.navigate(). Route props are reactive; history stores
+URLs/null state, not clinical data. Back/Forward, query strings and SRQ anchors
+are supported; external/download/modified clicks retain native behavior. Owner,
+storage and key-generation checks reject unauthorized or late results.
+
+Actual reload/pagehide, hidden-tab invalidation, logout, owner switch and worker
+protocol invalidation retain their safety boundaries. An uninterrupted visible,
+authorized session can change routes without entering the passphrase repeatedly.
+Login password and offline encryption passphrase remain distinct. The proposed
+online double-prompt UX change is DEFERRED, not part of this navigation fix.
+
+Recorded automation: 64 focused PASS; final 13-test navigation/link subset PASS
+again; type-check/diff-check PASS. Not rerun here. The owner reports successful
+manual Chrome offline navigation after controlled service-worker activation;
+this narrow result is not full browser acceptance or native-lock proof.
+The receiving team owns remaining browser/race checks, complete P1/P2 acceptance
+and the requested three-button SRQ revision. **Current SRQ UI has four controls**;
+YES/NO/UNCLEAR/UNANSWERED, Q17 confirmation and scoring/progression are unchanged.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Relawan mobile PWA shell, navigation, assessment interaction, and SRQ-20 verbal/non-verbal workflow  
 **Product language:** Bahasa Indonesia  
 **Discussion/design language:** English  
 **Design direction:** Operational Humanitarian UI  
-**Status:** Design baseline for the next UI/UX phase  
+**Status:** Historical design with current source/interaction alignment
 
 ---
 
-# Current interaction alignment — 7 November 2026
+# Historical interaction alignment — 7 November 2026
 
 Later-approved P0–P2 safety decisions govern conflicting examples below. The
 [reviewed D1 baseline](CURRENT_IMPLEMENTATION.md) defines the implemented contract;

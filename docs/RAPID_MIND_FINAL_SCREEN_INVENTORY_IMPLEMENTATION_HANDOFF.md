@@ -1,5 +1,23 @@
 # RAPID-MIND Final Screen Inventory & Implementation Handoff
 
+## Current handoff note — 10 November 2026
+
+The receiving team continues from `7076e13`. Current source/commit and evidence
+inventories are in CURRENT_IMPLEMENTATION.md; dated screen illustrations below
+remain design/history, not complete runtime acceptance. Healthcare case/facility
+scope and recipient-specific audiences are implemented/tested. Supported offline
+Relawan routes now navigate within the unlocked document; online Inertia remains
+separate. Four SRQ controls remain; the three-button revision belongs to the
+receiving team. Q17, four-state data and clinical scoring are unchanged.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Status:** Final pre-development UI/UX handoff  
 **Date:** 29 September 2026  
 **Scope:** Competition MVP / prototype implementation  

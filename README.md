@@ -4,14 +4,16 @@ RAPID-MIND adalah prototipe pendukung keputusan untuk respons kesehatan jiwa saa
 
 ## Implementasi saat ini
 
-**Baseline dokumentasi:** 7 November 2026, source `demo` pada `e85b981`.
-Lihat [implementasi D1](docs/CURRENT_IMPLEMENTATION.md) untuk kontrak terperinci.
+**Baseline dokumentasi:** 10 November 2026, source `demo` pada `7076e13`.
+Lihat [implementasi saat ini](docs/CURRENT_IMPLEMENTATION.md) dan
+[handoff P0](P0-HANDOFF.md) untuk kontrak serta batas bukti.
 
 Relawan memiliki alur PFA, asesmen dan T0-Suspect dengan penyimpanan lokal/outbox.
-Healthcare memiliki penanganan darurat, verifikasi klinis, serta integrasi
-UI/backend Referral dan Dispatch yang terpisah. Kontrol baru memerlukan skema
-pendukung; kompatibilitas lama, cutover akhir dan penerimaan runtime tetap memiliki
-batas bukti. Admin memiliki ringkasan agregat, peta marker, analitik, logistik dan
+Healthcare memiliki penanganan darurat, verifikasi klinis, serta Referral dan
+Dispatch yang terpisah, dengan otorisasi kasus/fasilitas pada query, mutasi,
+riwayat, counter dan audience realtime. Migrasi November dan provisioning sintetis
+tercatat selesai; kompatibilitas lama dan penerimaan menyeluruh tetap terbatas.
+Admin memiliki ringkasan agregat, peta marker, analitik, logistik dan
 provisioning; heatmap kepadatan dan langganan agregat realtime belum tersedia.
 
 Prioritas saat ini adalah **P0 privasi/enkripsi dan keselamatan T0**, **P1 observasi
@@ -21,15 +23,35 @@ definitif. Q17 Ya memerlukan konfirmasi manusia sebelum disimpan; pengiriman T0
 memerlukan tindakan eksplisit terpisah. Relawan melihat T0-Suspect dan status
 pengiriman saja, bukan keputusan klinis atau progres rujukan/Dispatch.
 
-| Checkpoint | Status dan batas bukti |
-|---|---|
-| B4.4 | Enrollment lokal terkontrol tercatat lulus pada profil dummy; bukan migrasi umum pengguna riil atau aktivasi produksi. Migrasi dan pembersihan plaintext tetap tujuan P0. Pemeriksaan retensi tidak menghapus data otomatis. |
-| November Safety C1 | **IMPLEMENTED — ACCEPTANCE PENDING**; Chromium tercatat **18 PASS / 1 NOT TESTED**. Autentikasi/server sintetis; lock background/foreground alami belum teruji. |
-| November Safety C2 / C3 | Integrasi lokal dan penerimaan keselamatan akhir **PENDING**; tidak disimpulkan selesai dari source atau hasil October STT C1/C2 yang berbeda. |
+| Klasifikasi | Status |
+| --- | --- |
+| P0 IMPLEMENTED | YES |
+| P0 CORE BROWSER VERIFIED | YES |
+| P0 LOCAL DEMO ACCEPTANCE | CONDITIONAL PASS |
+| Natural background/foreground privacy locking | NOT TESTED |
+| Production security acceptance | NOT ESTABLISHED |
+
+Tujuh hasil browser PASS historis dan enam uji keamanan runner dipertahankan.
+P1/P2 telah banyak diimplementasikan dengan cakupan otomatis, tetapi penerimaan
+lengkap masih pending. **C2 NOT ACCEPTED; C3 belum dimulai.** Uji native lock dan
+penerimaan P1/P2 serta sisa C2/C3 menjadi tanggung jawab tim penerima.
+
+Commit `7076e13` memisahkan navigasi Inertia online, bootstrap dokumen PWA offline,
+dan navigasi dalam dokumen pada shell offline yang sudah dibuka kuncinya. Route
+Relawan yang didukung tidak lagi reload setiap pindah halaman. Reload/pagehide,
+visibility, logout, pergantian pemilik dan invalidasi worker tetap mengunci akses.
+Pemilik melaporkan uji manual Chrome offline berhasil setelah aktivasi service
+worker terkontrol; ini verifikasi terbatas, bukan suite penerimaan lengkap.
+Bukti otomatis tercatat: 64 tes PASS, subset akhir 13 tes PASS lagi, type-check
+PASS dan diff-check PASS; tidak dijalankan ulang dalam penyelarasan ini.
+
+Password login dan passphrase enkripsi offline tetap terpisah. Perbaikan UX dua
+prompt online **DEFERRED**. Revisi SRQ tiga tombol menjadi tugas tim penerima;
+source masih memakai empat kontrol dan empat keadaan data tidak berubah.
 
 Hasil uji tercatat bukan pengujian ulang dalam penyelarasan dokumentasi ini. Aset
 production-built yang diuji di localhost tidak membuktikan kesiapan deployment
-produksi. Baca [ledger dan batas pengujian](docs/workflow-verification.md#november-safety-evidence)
+produksi. Baca [ledger dan batas pengujian](docs/workflow-verification.md#november-10-handoff)
 serta [desain keamanan offline](docs/RAPID_MIND_OFFLINE_SECURITY_DESIGN.md).
 
 **Keputusan tim — 7 November 2026:** Healthcare dapat menurunkan T0-Suspect
@@ -39,8 +61,8 @@ kasus/fasilitas. Penugasan Dispatch internal bukan bukti kendaraan dihubungi ata
 pasien dijemput. Laporan resmi Admin harus memakai hasil validasi Healthcare tanpa
 identitas pasien; [query dan gap implementasi](docs/RAPID_MIND_ADMIN_WORKSPACE.md)
 belum memenuhi seluruh kontrak tersebut. Tiga pilihan SRQ diperbolehkan dengan
-unanswered terpisah; UI sekarang menampilkan empat kontrol. Status C1/C2/C3 di
-atas tidak berubah.
+unanswered terpisah; UI sekarang menampilkan empat kontrol. Status penerimaan
+terkini mengikuti tabel klasifikasi di atas.
 
 ## Teknologi
 
@@ -51,8 +73,22 @@ atas tidak berubah.
 
 Navigasi web memakai sesi Laravel berbatas versi. Rute API memerlukan bearer JWT dengan pemeriksaan pengguna, versi token dan keluarga refresh; sesi web saja tidak mengautentikasi API. Membuka data terenkripsi offline memakai passphrase/recovery tersendiri, bukan sekadar login.
 
+## Kebijakan handoff lokal
+
+Keputusan SQL/history **RESOLVED**: repository `afrizaldwi/rapid-mind`, riwayat,
+dan SQL backup sintetis historis tetap dipertahankan sesuai persetujuan pemilik.
+Jangan sertakan kredensial lokal, recovery code, browser profile, capture debug
+atau bukti privat dalam transfer. Persetujuan dummy historis tidak mencakup data
+klinis riil atau kredensial pribadi yang dapat digunakan kembali.
+
+DevTools lokal telah diverifikasi nonaktif. Setiap rekan harus mengatur
+`INERTIA_DEVTOOLS_ENABLED=false` pada `.env` lokal yang Git-ignored dan memverifikasi
+sendiri sebelum demo bersama. Jangan menyalin `.env` privat milik pemilik.
+
 ## Menjalankan lingkungan pengembangan
 
+Perintah berikut untuk setup lingkungan baru oleh pemilik/tim, bukan instruksi
+untuk mengulang backup, migrasi, seed atau publikasi pada development yang ada.
 Prasyarat: Docker Compose dan Node/npm pada host. PHP, Composer, Laravel, dan PostgreSQL berjalan di container. Pemilik proyek memasang dependensi frontend dengan Node/npm. Tinjau `.env` dan tujuan database sebelum memulai; salin contoh hanya jika `.env` belum ada.
 
 ```bash

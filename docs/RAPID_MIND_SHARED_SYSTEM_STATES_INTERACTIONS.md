@@ -1,5 +1,22 @@
 # RAPID-MIND — Shared Cross-Role System States & Interaction Patterns
 
+## Current handoff note — 10 November 2026
+
+Online Inertia navigation, offline document bootstrap and unlocked-shell
+same-document navigation are separate in `7076e13`. Route changes within an
+uninterrupted authorized visible offline session retain the in-memory key;
+reload/pagehide, visibility, logout, owner and worker invalidation retain locks.
+This does not change persistence, server receipt, realtime or clinical-state
+semantics. Earlier design examples do not certify every implemented surface.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Shared operational states, persistence semantics, synchronization, loading, errors, confirmations, realtime behavior, conflicts, feedback, timestamps, accessibility, and responsive interaction patterns  
 **Product language:** Bahasa Indonesia  

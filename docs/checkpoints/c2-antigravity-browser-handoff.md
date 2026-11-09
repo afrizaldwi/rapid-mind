@@ -1,12 +1,43 @@
 # C2 Google Antigravity browser acceptance handoff
 
+## Current evidence and receiving-team scope — 10 November 2026
+
+Core P0 classifications remain: IMPLEMENTED YES; CORE BROWSER VERIFIED YES;
+LOCAL DEMO ACCEPTANCE CONDITIONAL PASS. Natural background/foreground privacy
+locking NOT TESTED; production security acceptance NOT ESTABLISHED. Seven original
+browser PASS results and six runner-safety PASS results remain historical evidence.
+The original headed NOT TESTED outcome is unchanged. [P0 handoff](../../P0-HANDOFF.md)
+records scenario limits; the matrix below is remaining/overlapping coverage, not
+proof every row is complete. P1/P2 complete acceptance pending; C2 NOT ACCEPTED;
+C3 not started. Receiving team owns native-lock and remaining C2/C3 signoff.
+
+`7076e13` adds authorized same-document offline routes through links and runtime,
+separate from online Inertia and full-document PWA bootstrap. Recorded automated
+checks: 64 PASS, final 13-test subset PASS again, type-check/diff-check PASS;
+no rerun here. Owner reports successful manual Chrome offline navigation after
+controlled worker activation. Narrow manual evidence does not certify all history,
+anchors/reload, owner/storage/session races or native background locking. Add
+these remaining navigation checks to Antigravity's recorded evidence.
+
+November 9 published hashes below refer only to that historical release. No new
+candidate/publication hashes are inferred from the owner report; record actually
+served assets and active worker before further scenarios. Do not rerun completed
+backup, migrations, provisioning or old publication commands. The earlier blanket
+'do not rebuild' instruction applied to that frozen publication stage, not future
+owner-approved source releases. SQL/history RESOLVED; private runtime artifacts
+stay excluded. Each teammate configures/verifies local DevTools false in its own
+ignored .env. Online double-prompt UX DEFERRED; current SRQ retains four controls,
+with three-button revision and complete P1/P2 acceptance assigned to teammates.
+
+
 Prepared 7 November; updated 9 November 2026 after provisioning.
 Browser status updated 10 November: **P0 CORE BROWSER VERIFIED; local demo CONDITIONAL PASS**.
 Natural background/foreground lock NOT TESTED; remaining P1/P2 and full C2/C3 evidence
 belongs to the receiving team. Production security acceptance NOT ESTABLISHED.
 The scenario plan below remains historical/remaining coverage, not all completed.
-Application: existing `http://localhost:8080`, baseline `demo` / `8d3ac3c`
-plus the reviewed uncommitted C2 source changes. Do not start C3 or mark C2 ACCEPTED
+Application: existing `http://localhost:8080`, committed source `demo` / `7076e13`.
+Earlier uncommitted-source references below retain their historical scope.
+Do not start C3 or mark C2 ACCEPTED
 from this handoff or from Node/PHP/build results.
 
 ## Current authorization and provisioned environment — 9 November
@@ -48,7 +79,8 @@ Already verified: all four real HTTP logins; each Healthcare's own private-chann
 auth 200 and foreign/role-wide auth 403; reciprocal own patient GET 200 / foreign
 GET 404; two real Relawan assessment syncs 201, correct routing snapshots and all
 four SRQ states in PostgreSQL. Auth used a synthetic socket_id, not a live WS
-subscription: actual event reception and browser encryption remain NOT TESTED.
+subscription: actual event reception and browser encryption were NOT TESTED at
+that November 9 HTTP-only stage; later scoped P0 browser evidence supersedes it.
 Focused tests: 13 phone/Admin tests (234 assertions), 9 case/realtime tests
 (186 assertions). Historical full 405-test/33-Node-file evidence remains historical;
 no new full regression or browser PASS is implied by these focused checks.
@@ -67,10 +99,13 @@ handoff is required. Keep stable IDs for retries; do not reset the database for
 convenience. Existing provisioning audit gap is accepted for this local demo:
 only mapping changes were audited (111/112), not account creation/activation.
 
-Published frontend remains the verified November 9 candidate with unchanged
-manifest/worker hashes; do not rebuild. The phone fix changes backend provisioning
-source only, so the old complete source-input snapshot is no longer a claim about
-this later backend revision. Frozen frontend artifacts themselves still match.
+At the November 9 provisioning checkpoint, the published frontend remained the
+verified candidate with unchanged manifest/worker hashes; no rebuild belonged to
+that backend-only task. This is historical release evidence, not the current
+navigation release inventory. The phone fix changes backend provisioning
+source only, so the old complete source-input snapshot was no longer a claim
+about that later backend revision. Frozen frontend artifacts matched at that
+checkpoint; no current filesystem/hash recheck was performed by this alignment.
 
 Use a **new disposable browser profile** with normal browser security and the
 exact localhost origin. Use distinct profile directories for different owners/
@@ -79,7 +114,10 @@ existing profile, change a system proxy, reuse `scripts/c2/`, purge existing
 storage or change the development Docker services. Record the disposable profile
 paths without credentials. Do not substitute a mock UI/backend for this run.
 
-## Smallest first browser wave — NOT TESTED
+## Original first browser wave — historical plan and remaining coverage
+
+Later core P0 PASS results and owner navigation report are scoped above. Do not
+rerun the entire clinical suite merely to refresh this document.
 
 This orders the first evidence; it does not replace the full acceptance matrix.
 Ready scopes: active organization pairs 6/6 and 7/7 and the four C2 users above.

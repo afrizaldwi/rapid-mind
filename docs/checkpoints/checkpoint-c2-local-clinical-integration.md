@@ -1,5 +1,39 @@
 # C2 local clinical integration — implementation and database verification
 
+## Current committed handoff — 10 November 2026
+
+Source: `demo` at `7076e13`. Owner commits `e561c98` (81), `1e44ff8` (6),
+`be61204` (5) and `9f8fd4b` (7) contain exactly 99 distinct reviewed paths;
+`7076e13` contains eight navigation files. Superseded scripts/c2 remain excluded.
+The final six-file correction is part of `e561c98`: recipient lookup and event
+send share the best-effort boundary after durable T0 persistence; focused tests
+cover audience exceptions and reciprocal A/B patient-summary scope. The guarded
+focused run recorded 12 tests / 348 assertions with rollback transactions and no
+schema reset. CaseRouting's stale approval comment was corrected behavior-free.
+
+The navigation fix separates Inertia online, offline bootstrap and authorized
+same-document routes. Lock boundaries remain. Recorded 64 focused PASS, final
+13-test subset PASS again, type-check/diff-check PASS were not rerun here.
+Owner reports successful manual Chrome offline navigation after controlled worker
+activation: narrow manual evidence, not full suite/native locking or a new hash.
+The old November 9 build/publication hashes describe that release only.
+
+P0 IMPLEMENTED YES; CORE BROWSER VERIFIED YES; LOCAL DEMO ACCEPTANCE CONDITIONAL
+PASS. Seven browser PASS and six runner-safety PASS results preserved. Natural
+background/foreground privacy locking NOT TESTED; production security acceptance
+NOT ESTABLISHED. P1/P2 substantially implemented; full acceptance pending. Receiving
+team owns native-lock, three-button SRQ revision (currently four controls), full
+P1/P2 and remaining C2/C3 acceptance. Online double-prompt UX DEFERRED.
+**C2 NOT ACCEPTED; C3 not started.** [Current inventory](../CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../../P0-HANDOFF.md) supersede outdated statuses in earlier stages.
+
+Database backup/publication/provisioning completion evidence is preserved. Local
+DevTools disablement verified separately; teammates set false in their own ignored
+.env. SQL/history RESOLVED: retain competition repository/history and synthetic
+dump, excluding private runtime artifacts. No test/build/database/browser operation
+or Git mutation was performed during this documentation alignment.
+
+
 Date: 7 November 2026 (Asia/Jakarta). Baseline: branch `demo`,
 `8d3ac3c5a4fd3d1f068ac181688c05362484bf95`.
 
@@ -41,7 +75,8 @@ Earlier blocked/provenance/approval entries remain historical records.
 | C2.4 — emergency delivery and final verification | G4, G7; retries, priority, atomic local persistence, UUID/replay/receipt integrity, lifecycle restrictions, regression/handoff | IMPLEMENTED and AUTOMATED TESTED; server emergency replay DATABASE VERIFIED. Core P0 confirmed offline T0 priority/initial receipt BROWSER VERIFIED; broader timeout/lost-response/session-race acceptance NOT TESTED. |
 
 IMPLEMENTED, AUTOMATED TESTED, DATABASE VERIFIED, BROWSER VERIFIED, NOT TESTED and
-ACCEPTED are distinct. No C2 path has been promoted to BROWSER VERIFIED or ACCEPTED.
+ACCEPTED are distinct. Only the explicitly scoped core P0 browser paths above
+are BROWSER VERIFIED; no complete C2 checkpoint or overall C2 is ACCEPTED.
 Independent workstreams proceeded together under the owner's direct-development
 instruction; the four-checkpoint plan is retained without adding a fifth phase.
 
@@ -602,7 +637,11 @@ browser wave remains real login/encryption/offline sync, actual scoped WS events
 P1/P2 persistence and confirmed offline T0 priority/retry. C2 NOT ACCEPTED until
 that browser evidence exists. C3 has not started.
 
-## 10 November final P0 handoff review — documentation only
+## Historical 10 November initial P0 handoff review — documentation only
+
+The following describes the initial review before runner cleanup, the resolved
+SQL/history decision and owner commits. Its harness/transfer blockers are
+superseded by the current committed handoff above; original evidence is retained.
 
 The owner confirms core P0 browser acceptance passed; saved p0_acceptance_results.json
 contains seven PASS results and natural_tab_switch_lock=false. Correct classification:

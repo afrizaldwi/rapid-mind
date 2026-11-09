@@ -1,8 +1,43 @@
 # RAPID-MIND — Offline Clinical Data Security
 
-**Current baseline reviewed:** 2026-11-07 (Asia/Jakarta), `demo` at `e85b981`.
-**D1 evidence:** source, test-source, specification and checkpoint-report inspection
-only. No tests, browser runs, database operations or activation were performed.
+## Current security handoff — 10 November 2026
+
+[P0-HANDOFF.md](../P0-HANDOFF.md) records P0 IMPLEMENTED YES, P0 CORE BROWSER
+VERIFIED YES and P0 LOCAL DEMO ACCEPTANCE CONDITIONAL PASS. Natural
+background/foreground privacy locking remains NOT TESTED; production security
+acceptance remains NOT ESTABLISHED. Seven core browser PASS and six runner-safety
+PASS results are historical evidence, not newly executed checks. Full P1/P2
+acceptance remains pending; C2 NOT ACCEPTED; C3 not started.
+
+`7076e13` separates online Inertia navigation, full-document offline bootstrap and
+same-document navigation inside the unlocked offline shell. The last reuses the
+existing route resolver/repositories, checks owner/storage/access generations,
+keeps decrypted props only in memory and puts URL-only/null state into history.
+It preserves an authorized uninterrupted visible key session across supported
+routes without persisting a key, passphrase or unlocked-session secret. Actual
+reload/pagehide, visibility, logout, owner change and worker protocol invalidation
+still revoke access; synchronous masking and stale-result rejection remain.
+
+Recorded navigation evidence: 64 focused tests PASS; final 13-test subset PASS
+again; type-check/diff-check PASS. Browser/history/storage transport and leaf-page
+doubles limit that automation. The owner reports a successful manual Chrome
+offline-navigation check after controlled service-worker activation. This is
+narrow manual evidence, not native background acceptance, a full suite rerun or a
+new asset/hash inventory. Login password and encryption passphrase stay separate;
+online double-prompt UX improvement is DEFERRED.
+
+Local Inertia DevTools disablement was verified separately without deleting
+historical captures. Each teammate must set `INERTIA_DEVTOOLS_ENABLED=false` in
+its own ignored `.env` and verify effective disablement. The owner-approved
+synthetic SQL/history decision is RESOLVED; preserve existing repository/history
+and dump. This does not authorize transferring private runtime credentials,
+recovery codes, profiles or debug captures, or future real clinical data.
+See [current source/evidence](CURRENT_IMPLEMENTATION.md#current-handoff).
+
+
+**Current source alignment:** 2026-11-10 (Asia/Jakarta), `demo` at `7076e13`.
+**Evidence boundary:** source/report inspection only during this alignment; no
+runtime/browser/database check or test rerun. Earlier D1 evidence is historical.
 
 ## Current scope and authority
 
@@ -85,7 +120,10 @@ Unresolved required answers cannot yield a definitive score. Apparent Q17 YES
 requires human confirmation before persistence, separately from final T0 sending.
 See [the implementation inventory](CURRENT_IMPLEMENTATION.md) for schema and UI details.
 
-## November Safety acceptance — planning and recorded evidence
+## Historical November 7 evidence — superseded in scope by the current handoff
+
+The original C1/C2 planning table and measured results below retain their original
+limits. Later P0 browser evidence above does not retroactively rewrite them.
 
 October **STT C1/C2** are historical speech checkpoints. November **Safety C1/C2**
 refer to browser/privacy/PWA and integration; their results are not interchangeable.

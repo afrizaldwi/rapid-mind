@@ -9,7 +9,7 @@
 
 ---
 
-# Final team reporting decision and source gaps — 7 November 2026
+# Current reporting alignment — 10 November 2026 (decision approved 7 November)
 
 **Approved requirement:** official counts and geographic distribution use only
 Healthcare-validated outcomes, without identifiable patient information. System
@@ -18,7 +18,7 @@ with explicit labels. Technical delivery is not validation; internal Dispatch
 assignment does not prove external contact or pickup. Admin has no clinical role.
 This is a requirement/source review, not an implementation fix or runtime pass.
 
-**Inspected source baseline:** `demo` at `e85b981`:
+**Rechecked source baseline:** `demo` at `7076e13`:
 `app/Http/Controllers/Admin/AdminController.php`,
 `resources/js/Pages/Admin/Summary.vue`, `resources/js/Pages/Admin/Analytics.vue`,
 `resources/js/Pages/Admin/Map.vue`, and
@@ -42,18 +42,19 @@ replace absent validation with system recommendations. Separate any permitted
 operational suspect workload from official validated reporting. The team has not
 specified a new deduplication algorithm or aggregation unit in this checkpoint.
 
-Healthcare authorization is also separate: role-gated routes and the inspected
-workflow role check do not establish per-case/facility permission for all records.
-Broad reads in `HealthcareController` and the role-wide `emergencies` channel
-require an authorization/minimization review; a facility-specific channel existing
-elsewhere does not scope those routes. See
+Healthcare authorization is separate from these unresolved Admin reporting gaps.
+The earlier broad-read/role-wide-channel finding is historical: `e561c98` now
+implements facility/case reads, writes, patient-history/summary scope, counts and
+recipient-specific event audiences. The old emergency channel is denied. This
+neither fixes Admin aggregation semantics nor grants Admin clinical access. See
 [Healthcare alignment](RAPID_MIND_HEALTHCARE_WORKSPACE.md).
 
 These findings do not invalidate historical tests within their old scope. They
 show why those tests do not prove the newly approved official reporting contract.
-P0–P2 and [November C1/C2/C3 status](workflow-verification.md#november-safety-evidence)
-remain unchanged; production readiness and general real-user migration/cleanup
-are not established.
+Current [P0 handoff classifications](../P0-HANDOFF.md) remain unchanged: local
+demo CONDITIONAL PASS, natural background locking NOT TESTED and production
+security NOT ESTABLISHED. P1/P2 complete acceptance is pending; C2 NOT ACCEPTED;
+C3 not started. No Admin reporting implementation was changed by this alignment.
 
 ---
 

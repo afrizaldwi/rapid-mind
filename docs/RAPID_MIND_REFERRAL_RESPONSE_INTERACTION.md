@@ -1,5 +1,23 @@
 # RAPID-MIND — Healthcare Referral & Response Interaction Design
 
+## Current handoff note — 10 November 2026
+
+`e561c98` implements Healthcare case/facility authorization for reads, writes,
+nested histories and event recipients. Explicit audited referral shares grant
+read access to necessary referred-case information, not unrelated patient history
+or destination clinical authority. Dispatch grants no clinical-record permission.
+Independent clinical, Referral and Dispatch lifecycles, audited T1/T2/T3 downgrade
+and existing compatibility paths remain. Earlier role-wide-access findings are
+historical; complete sharing/revocation and lifecycle browser acceptance is pending.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Healthcare referral, emergency response/dispatch, referral queue, patient referral history, realtime/concurrency behavior, and cross-role authority boundaries  
 **Product language:** Bahasa Indonesia  

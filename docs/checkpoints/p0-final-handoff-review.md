@@ -1,5 +1,26 @@
 # Final P0 handoff documentation and cumulative diff review
 
+## Later committed state — 10 November 2026
+
+Owner commits now include clinical integration/final T0 correction `e561c98`,
+synthetic provisioning `1e44ff8`, runner cleanup `be61204`, final policy/handoff
+`9f8fd4b` (99 reviewed files across those four), and offline navigation `7076e13`
+(eight files). The eight superseded C2 scripts are excluded. Commit inventories,
+old working-tree counts and proposed commit messages below are historical review
+evidence, not the current index or outstanding owner-commit instructions.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; narrow evidence only. Recorded 64 focused and final 13-test
+subset PASS, type-check/diff-check PASS were not rerun here. The original seven
+browser PASS, six runner-safety PASS, headed NOT TESTED, verified local DevTools
+correction and resolved competition SQL/history decision remain unchanged.
+Current P0 local demo CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Full P1/P2 acceptance pending; C2 NOT ACCEPTED;
+C3 not started. Teammates retain native-lock and remaining acceptance work.
+See [current implementation](../CURRENT_IMPLEMENTATION.md) and
+[P0 handoff](../../P0-HANDOFF.md). Private evidence is preserved, not transferred.
+
+
 ## 10 November 2026 — final owner SQL/history decision: RESOLVED
 
 The owner confirms all existing development data is synthetic/dummy and accepts

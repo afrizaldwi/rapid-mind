@@ -1,16 +1,48 @@
 # C2 browser acceptance preparation — approval review
 
+## Current receiving-team checkpoint — 10 November 2026
+
+Committed application: `demo` at `7076e13`. First four owner commits contain
+99 reviewed files; the navigation commit has eight files; superseded scripts/c2
+are excluded. [Current implementation](../CURRENT_IMPLEMENTATION.md) and
+[P0 handoff](../../P0-HANDOFF.md) govern current scope. Existing procedures below
+are dated execution evidence, not instructions to rerun completed operations.
+
+The owner reports successful manual Chrome offline navigation after controlled
+service-worker activation of the navigation correction. This narrow result does
+not supply a new build/manifest/worker hash or full browser acceptance. Preserve
+the November 9 backup and publication evidence; its frozen candidate/source hashes
+must not be reused as assertions for `7076e13`. The implementation checkpoint
+itself did not rebuild/publish; no operation was repeated during this alignment.
+
+Recorded navigation automation: 64 focused PASS, final 13-test subset PASS again,
+type-check/diff-check PASS. No rerun here. Reload/pagehide, visibility, logout,
+owner and worker invalidation remain; online Inertia and document bootstrap are
+separate from unlocked same-document navigation. Login/passphrase remain separate;
+online double-prompt UX DEFERRED. Four SRQ controls remain; the receiving team
+owns the three-button revision and complete P1/P2 acceptance.
+
+Core P0 browser evidence remains seven historical PASS, with six runner-safety
+PASS results. Local demo CONDITIONAL PASS; native background locking NOT TESTED;
+production security NOT ESTABLISHED. C2 NOT ACCEPTED; C3 not started. SQL/history
+RESOLVED; retain repository/history/synthetic dump and exclude private artifacts.
+Local DevTools was verified disabled; teammates set and verify their own ignored
+INERTIA_DEVTOOLS_ENABLED=false. CaseRouting's schema-approval comment was corrected
+without behavior changes in e561c98; old 'cleanup pending' entries below are historical.
+
+
 7 November 2026. **C2 NOT ACCEPTED.** Four C2 checkpoints remain in force;
 C3 has not started. The November 9 database backup is verified; it must not be
 recreated. Fresh candidate recovery is verified below. Asset publication completed and HTTP verification passed on November 9,
-as recorded below. Organization/account changes and browser writes remain unexecuted.
+as recorded below. Those stages were followed by synthetic provisioning and the
+scoped core P0 browser evidence; earlier unexecuted-stage wording is historical.
 
 ## Current C2 operations status — 10 November
 
 | Operation | Current status |
 | --- | --- |
 | November 9 development database backup | COMPLETE / verified; do not recreate |
-| Frontend publication | COMPLETE / HTTP VERIFIED; do not rebuild or republish |
+| November 9 frontend publication | COMPLETE / HTTP VERIFIED for that release; hashes below are historical, not hashes for navigation commit 7076e13 |
 | Synthetic organization/account provisioning | COMPLETE: scopes 6/7, Healthcare 30/31, Relawan 32/33; HTTP/DATABASE VERIFIED |
 | Browser acceptance | P0 CORE BROWSER VERIFIED; local demo CONDITIONAL PASS; native lock/P1/P2/full C2 pending |
 | Overall C2 / C3 | C2 NOT ACCEPTED; C3 not started |
@@ -40,7 +72,7 @@ they do not override this current summary or authorize repetition.
   local environment, exact http://localhost:8080 host/origin, current authenticated
   active Relawan session and matching owner/version. No configuration changed.
 
-## Organization inventory and proposed assignments
+## Historical organization inventory and proposed assignments — before provisioning
 
 | Posko ID | Name | Active | Primary facility |
 | --- | --- | --- | --- |
