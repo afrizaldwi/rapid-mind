@@ -53,6 +53,12 @@ final class DispatchDemoSeeder extends Seeder
         $actor = User::where('email', 'nakes@rapidmind.id')->where('role', UserRole::HEALTHCARE)->where('is_active', true)->firstOrFail();
         $volunteer = User::where('email', 'relawan@rapidmind.id')->where('role', UserRole::RELAWAN)->where('is_active', true)->firstOrFail();
         $facility = $actor->facility()->where('is_active', true)->firstOrFail();
+        if ($volunteer->shelter?->primary_facility_id !== $facility->id) {
+            // Existing ambiguous or reassigned organizations require an owner decision.
+            // Preserve their data and skip new clinical workflow scenarios.
+            $this->command?->warn('Skenario Dispatch sintetis dilewati: penugasan Faskes Posko perlu ditinjau pengelola.');
+            return;
+        }
         $unit = ResponseUnit::firstOrCreate(['code' => 'SYNTHETIC-2DE-01'], [
             'name' => 'Unit Respons Sintetis 2DE',
             'facility_id' => $facility->id,

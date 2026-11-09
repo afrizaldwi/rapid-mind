@@ -12,6 +12,7 @@ use App\Models\RefreshTokenFamily;
 use App\Models\Shelter;
 use App\Models\User;
 use App\Support\IndonesianPhone;
+use App\Support\C2SyntheticPhone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -139,15 +140,24 @@ final class ProvisioningController extends Controller
             $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
         }
         if ($role === UserRole::RELAWAN) {
-            $rules['phone_number'] = ['required', 'string', 'max:24', function (string $attribute, mixed $value, \Closure $fail): void {
-                if (IndonesianPhone::normalize((string) $value) === null) {
+            $rules['phone_number'] = ['required', 'string', 'max:24', function (string $attribute, mixed $value, \Closure $fail) use ($request, $user): void {
+                $synthetic = C2SyntheticPhone::allows(
+                    (string) $value,
+                    (string) $request->input('name'),
+                    (string) $request->input('email'),
+                    $user === null,
+                    app()->environment(),
+                    DB::connection()->getDatabaseName(),
+                    (string) config('app.url'),
+                );
+                if (IndonesianPhone::normalize((string) $value) === null && !$synthetic) {
                     $fail('Masukkan nomor telepon Relawan Indonesia yang valid.');
                 }
             }];
         }
         $data = $request->validate($rules);
         if ($role === UserRole::RELAWAN) {
-            $data['phone_number'] = IndonesianPhone::normalize($data['phone_number']);
+            $data['phone_number'] = IndonesianPhone::normalize($data['phone_number']) ?? $data['phone_number'];
         }
         return $data;
     }
