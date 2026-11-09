@@ -24,11 +24,13 @@ use Tests\TestCase;
 final class HealthcareWorkflowRealtimeTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     public function test_dispatch_events_wait_for_commit_and_replays_emit_nothing(): void
     {
         Event::fake([DispatchUpdated::class]);
         $actor = User::factory()->create(['role' => 'HEALTHCARE', 'is_active' => true]);
+        $this->configureWorkflowScope($actor);
         $emergency = EmergencyEvent::factory()->confirmed()->create();
         $input = ['response_unit_id' => ResponseUnit::factory()->create()->id];
         $workflow = app(DispatchWorkflow::class);
@@ -44,13 +46,14 @@ final class HealthcareWorkflowRealtimeTest extends TestCase
             ['dispatch' => ['id' => $dispatch->id], 'emergency' => ['id' => $emergency->id]],
             (new DispatchUpdated($dispatch->id, $emergency->id))->broadcastWith()
         );
-        $this->assertSame('private-emergencies', (new DispatchUpdated($dispatch->id, $emergency->id))->broadcastOn()->name);
+        $this->assertContains('private-'.\App\Domain\Healthcare\CaseAudience::channel($actor->fresh()), array_column((new DispatchUpdated($dispatch->id, $emergency->id))->broadcastOn(), 'name'));
     }
 
     public function test_rollback_discards_notification_and_database_changes(): void
     {
         Event::fake([DispatchUpdated::class]);
         $actor = User::factory()->create(['role' => 'HEALTHCARE', 'is_active' => true]);
+        $this->configureWorkflowScope($actor);
         $emergency = EmergencyEvent::factory()->confirmed()->create();
         try {
             DB::transaction(function () use ($actor, $emergency): void {
@@ -69,6 +72,7 @@ final class HealthcareWorkflowRealtimeTest extends TestCase
             throw new RuntimeException('Synthetic broadcast failure');
         });
         $actor = User::factory()->create(['role' => 'HEALTHCARE', 'is_active' => true]);
+        $this->configureWorkflowScope($actor);
         $emergency = EmergencyEvent::factory()->confirmed()->create();
         $this->actingAs($actor)->postJson("/healthcare/emergencies/{$emergency->id}/dispatches", ['response_unit_id' => ResponseUnit::factory()->create()->id])
             ->assertOk()->assertJsonPath('replayed', false);
@@ -80,6 +84,8 @@ final class HealthcareWorkflowRealtimeTest extends TestCase
         Event::fake([ReferralUpdated::class]);
         $referral = Referral::factory()->create();
         $actor = $referral->referrer;
+        $this->configureWorkflowScope($actor);
+        $referral->emergencyEvent->forceFill(['responsible_facility_id' => $actor->facility_id, 'routing_status' => 'ROUTED'])->save();
         $dispatch = app(DispatchWorkflow::class)->assign($actor, $referral->emergency_event_id, ['response_unit_id' => ResponseUnit::factory()->create()->id, 'referral_id' => $referral->id])->record;
         $workflow = app(ClinicalReferralWorkflow::class);
         $workflow->complete($actor, $referral->id, ['expected_status' => 'ACTIVE']);

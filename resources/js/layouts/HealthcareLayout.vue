@@ -229,10 +229,10 @@
                                     <span>Triase & Kedaruratan</span>
                                 </div>
                                 <span
-                                    v-if="pendingT0Count > 0"
+                                    v-if="pendingT0Count === null || pendingT0Count > 0"
                                     class="text-[11px] font-bold text-rose-600 font-mono"
                                 >
-                                    {{ pendingT0Count }}
+                                    {{ pendingT0Count ?? "—" }}
                                 </span>
                             </Link>
 
@@ -332,6 +332,9 @@
 
             <!-- Main Workspace Scrollable Body -->
             <main class="flex-1 p-4 lg:p-6 overflow-y-auto space-y-5">
+                <p v-if="page.props.clinicalScopeAvailable === false" role="status" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                    Akses kasus belum tersedia. Skema penugasan Faskes memerlukan persetujuan dan penerapan oleh pengelola.
+                </p>
                 <div
                     v-if="deferredUpdate"
                     role="status"
@@ -353,12 +356,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { Link, usePage, router } from "@inertiajs/vue3";
 import { echo } from "@laravel/echo-vue";
 import {
     createHealthcareReconciler,
     isEmergencyContextRoute,
+    isAssessmentContextRoute,
     healthcareDrafts,
 } from "@/lib/healthcareReconciliation";
 
@@ -372,9 +376,8 @@ const userRoleLabel = computed(() => {
 const userFacilityName = computed(
     () => user.value?.facility?.name || "Faskes Layanan",
 );
-const pendingT0Count = computed(() =>
-    Number((page.props as any).pendingT0Count ?? 0),
-);
+const pendingT0Count = computed(() => page.props.clinicalScopeAvailable === false
+    ? null : Number((page.props as any).pendingT0Count ?? 0));
 const flashRealtimeWarning = computed(
     () => (page.props.flash as { error?: string } | undefined)?.error ?? "",
 );
@@ -441,7 +444,7 @@ let removeStart: (() => void) | undefined;
 let removeFinish: (() => void) | undefined;
 const reconciliation = createHealthcareReconciler((done) => {
     router.reload({
-        only: reconciliationProps(),
+        only: [...reconciliationProps(), "auth", "healthcareChannel", "clinicalScopeAvailable"],
         onSuccess: () => {
             lastRefreshedAt.value = new Date();
             deferredUpdate.value = false;
@@ -536,6 +539,12 @@ function onEmergencyUpdated(event: { emergency?: { id?: string } }) {
 
 function reconciliationProps(): string[] {
     const path = page.url.split(/[?#]/, 1)[0];
+    if (/^\/healthcare\/validations\/[^/]+\/?$/.test(path)) {
+        return ["assessment", "previousAssessments", "facilities", "pendingT0Count"];
+    }
+    if (/^\/healthcare\/validations\/?$/.test(path)) {
+        return ["pendingAssessments", "completedAssessments", "pendingT0Count"];
+    }
     if (/^\/healthcare\/emergencies\/[^/]+\/?$/.test(path)) {
         return [
             "emergency",
@@ -595,7 +604,7 @@ async function probeServer() {
         serverReachable.value = response.ok;
         if (
             response.ok &&
-            (wasUnavailable || isEmergencyContextRoute(page.url))
+            (wasUnavailable || isEmergencyContextRoute(page.url) || isAssessmentContextRoute(page.url))
         )
             requestReconciliation();
     } catch {
@@ -626,6 +635,43 @@ function playAudioNotification() {
     } catch {}
 }
 
+let clinicalChannel: string | null = null;
+function leaveClinicalChannel() {
+    if (clinicalChannel) echo().leave(clinicalChannel);
+    clinicalChannel = null;
+    subscriptionReady.value = false;
+}
+function subscribeClinicalChannel() {
+    const next = typeof page.props.healthcareChannel === "string" ? page.props.healthcareChannel : null;
+    if (next === clinicalChannel) return;
+    leaveClinicalChannel();
+    if (!next) return;
+    clinicalChannel = next;
+    function current<T>(listener: (event: T) => void) {
+        return (event: T) => { if (clinicalChannel === next) listener(event); };
+    }
+    echo().private(next)
+        .listen("EmergencyCreated", current(onEmergencyCreated))
+        .listen("EmergencyUpdated", current(onEmergencyUpdated))
+        .listen("DispatchUpdated", current(onWorkflowUpdated))
+        .listen("ReferralUpdated", current(onWorkflowUpdated))
+        .listen("AssessmentUpdated", current(requestReconciliation))
+        .subscribed(() => {
+            if (clinicalChannel !== next) return;
+            subscriptionReady.value = true;
+            requestReconciliation();
+            void probeServer();
+        })
+        .error(() => {
+            if (clinicalChannel !== next) return;
+            subscriptionReady.value = false;
+            void probeServer();
+        });
+}
+watch(() => page.props.healthcareChannel, () => {
+    if (mounted) subscribeClinicalChannel();
+});
+
 onMounted(() => {
     mounted = true;
     stopDraftSubscription = healthcareDrafts.subscribe((dirty) => {
@@ -649,21 +695,7 @@ onMounted(() => {
         }
     ).pusher?.connection;
     socketConnection?.bind("state_change", onSocketState);
-    echo()
-        .private("emergencies")
-        .listen("EmergencyCreated", onEmergencyCreated)
-        .listen("EmergencyUpdated", onEmergencyUpdated)
-        .listen("DispatchUpdated", onWorkflowUpdated)
-        .listen("ReferralUpdated", onWorkflowUpdated)
-        .subscribed(() => {
-            subscriptionReady.value = true;
-            requestReconciliation();
-            void probeServer();
-        })
-        .error(() => {
-            subscriptionReady.value = false;
-            void probeServer();
-        });
+    subscribeClinicalChannel();
 
     void probeServer();
     healthTimer = setInterval(() => {
@@ -681,18 +713,6 @@ onUnmounted(() => {
     window.removeEventListener("online", handleOnline);
     window.removeEventListener("offline", handleOffline);
     if (healthTimer) clearInterval(healthTimer);
-    echo()
-        .private("emergencies")
-        .stopListening("EmergencyCreated", onEmergencyCreated);
-    echo()
-        .private("emergencies")
-        .stopListening("EmergencyUpdated", onEmergencyUpdated);
-    echo()
-        .private("emergencies")
-        .stopListening("DispatchUpdated", onWorkflowUpdated);
-    echo()
-        .private("emergencies")
-        .stopListening("ReferralUpdated", onWorkflowUpdated);
-    echo().leave("emergencies");
+    leaveClinicalChannel();
 });
 </script>

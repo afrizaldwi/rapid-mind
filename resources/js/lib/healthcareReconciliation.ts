@@ -96,3 +96,7 @@ export function isEmergencyContextRoute(url: string): boolean {
         url.split(/[?#]/, 1)[0],
     );
 }
+
+export function isAssessmentContextRoute(url: string): boolean {
+    return /^\/healthcare\/validations(?:\/[^/]+)?\/?$/.test(url.split(/[?#]/, 1)[0]);
+}

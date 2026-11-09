@@ -45,6 +45,7 @@ final class DispatchWorkflow
 
         return DB::transaction(function () use ($actor, $emergencyId, $request): WorkflowResult {
             $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            HealthcareCaseAccess::authorize($emergency, $actor);
             $existing = $emergency->dispatch()->lockForUpdate()->first();
             if ($existing) {
                 $initial = $existing->history()->where('event_type', EmergencyDispatchEventType::ASSIGNED)->first();
@@ -102,7 +103,8 @@ final class DispatchWorkflow
         $notes = $this->text($data['notes'] ?? null);
 
         return DB::transaction(function () use ($actor, $dispatchId, $expected, $next, $notes): WorkflowResult {
-            $this->lockEmergency($dispatchId);
+            $emergency = $this->lockEmergency($dispatchId);
+            HealthcareCaseAccess::authorize($emergency, $actor);
             $dispatch = EmergencyDispatch::whereKey($dispatchId)->lockForUpdate()->firstOrFail();
             $current = $dispatch->status;
             if ($current === $next) {
@@ -140,6 +142,7 @@ final class DispatchWorkflow
 
         return DB::transaction(function () use ($actor, $dispatchId, $data, $referralId, $expected): WorkflowResult {
             $emergency = $this->lockEmergency($dispatchId);
+            HealthcareCaseAccess::authorize($emergency, $actor);
             $existing = EmergencyDispatch::whereKey($dispatchId)->firstOrFail();
             if ($existing->referral_id !== null) {
                 // No referral row is mutated on replay/conflict; do not lock another source.

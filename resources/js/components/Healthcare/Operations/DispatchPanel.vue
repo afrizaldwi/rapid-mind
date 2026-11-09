@@ -1,9 +1,10 @@
 <template>
-    <section
+    <fieldset :disabled="operations?.can_manage === false"
         data-healthcare-draft
         class="rounded-lg border border-slate-200 bg-white p-3 space-y-3 text-xs"
         aria-label="Respons Lapangan"
     >
+        <p v-if="operations?.can_manage === false" class="text-slate-600" role="status">Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.</p>
         <h3 class="font-bold text-slate-900">Respons Lapangan</h3>
         <p v-if="!operations?.available" role="status" class="text-amber-800">
             Respons lapangan belum tersedia: skema Dispatch memerlukan cutover
@@ -222,7 +223,7 @@
                 Muat data terbaru
             </button>
         </template>
-    </section>
+    </fieldset>
 </template>
 <script setup lang="ts">
 import { computed, ref } from "vue";

@@ -48,6 +48,8 @@ final class HealthcareOperationsRead
 
     public function emergency(EmergencyEvent $emergency, bool $ready): void
     {
+        $emergency->setAttribute('can_manage', HealthcareCaseAccess::manages($emergency, auth()->user()));
+        HealthcareCaseAccess::hideUnauthorizedAssessment($emergency, auth()->user());
         if (! $ready) {
             $emergency->setAttribute('operations', ['available' => false]);
 
@@ -56,6 +58,7 @@ final class HealthcareOperationsRead
         $dispatch = $emergency->dispatch;
         $emergency->setAttribute('operations', [
             'available' => true,
+            'can_manage' => HealthcareCaseAccess::manages($emergency, auth()->user()),
             'dispatch' => $dispatch ? [
                 ...$dispatch->only([
                     'id',
@@ -97,6 +100,7 @@ final class HealthcareOperationsRead
     public function referral(Referral $referral): array
     {
         return [
+            'can_manage' => HealthcareCaseAccess::manages(HealthcareCaseAccess::referralCase($referral), auth()->user()),
             ...$referral->only(['id', 'status', 'emergency_event_id', 'clinical_validation_id', 'created_at', 'updated_at', 'notes']),
             'source' => $referral->emergency_event_id ? 'T0_CONFIRMED' : ($referral->clinical_validation_id ? 'VALIDATED_ASSESSMENT' : 'UNKNOWN'),
             'facility' => $referral->facility?->only(['id', 'name']),

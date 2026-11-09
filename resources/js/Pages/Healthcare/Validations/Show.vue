@@ -476,6 +476,8 @@
                     {{ formError || saveError }}
                 </div>
 
+                <p v-if="assessment.can_manage === false" role="status">Akses baca untuk kasus rujukan.</p>
+                <fieldset :disabled="assessment.can_manage === false">
                 <form class="space-y-4 text-xs" @submit.prevent="submit">
                     <div>
                         <label
@@ -620,6 +622,7 @@
                         </button>
                     </div>
                 </form>
+                </fieldset>
             </div>
         </div>
     </HealthcareLayout>

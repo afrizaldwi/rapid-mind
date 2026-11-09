@@ -1,6 +1,7 @@
 <template>
     <HealthcareLayout>
-        <div class="space-y-5 max-w-4xl">
+        <fieldset :disabled="emergency.can_manage === false" class="space-y-5 max-w-4xl">
+            <p v-if="emergency.can_manage === false" role="status" class="text-slate-600">Akses baca untuk kasus rujukan.</p>
             <!-- Back Link & Incident Header -->
             <div class="flex items-center justify-between">
                 <Link
@@ -658,7 +659,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </fieldset>
     </HealthcareLayout>
 </template>
 

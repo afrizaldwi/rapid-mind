@@ -17,6 +17,7 @@ use Tests\TestCase;
 final class AssessmentIntegrityTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SendsVersionedAssessmentRequests;
 
     private Assessment $assessment;
 
@@ -57,21 +58,21 @@ final class AssessmentIntegrityTest extends TestCase
 
     private function saveComplete(): void
     {
-        $this->postJson($this->url('srq'), ['responses' => $this->srq()])->assertOk();
-        $this->postJson($this->url('risk'), ['risks' => $this->risk()])->assertOk();
-        $this->postJson($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $this->srq()])->assertOk();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $this->risk()])->assertOk();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
     }
 
     public function test_complete_srq_saves_twenty_answers(): void
     {
-        $this->postJson($this->url('srq'), ['responses' => $this->srq()])->assertOk();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $this->srq()])->assertOk();
         $this->assertSame(20, $this->assessment->srqResponses()->count());
     }
 
     public function test_missing_srq_question_is_rejected_without_changing_saved_answers(): void
     {
-        $this->postJson($this->url('srq'), ['responses' => $this->srq()])->assertOk();
-        $this->postJson($this->url('srq'), ['responses' => array_slice($this->srq(), 0, 19)])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $this->srq()])->assertOk();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => array_slice($this->srq(), 0, 19)])->assertUnprocessable();
         $this->assertSame(20, $this->assessment->srqResponses()->count());
     }
 
@@ -79,7 +80,7 @@ final class AssessmentIntegrityTest extends TestCase
     {
         $responses = $this->srq();
         $responses[19]['question_number'] = 1;
-        $this->postJson($this->url('srq'), ['responses' => $responses])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $responses])->assertUnprocessable();
         $this->assertSame(0, $this->assessment->srqResponses()->count());
     }
 
@@ -87,28 +88,28 @@ final class AssessmentIntegrityTest extends TestCase
     {
         $responses = $this->srq();
         $responses[19]['question_number'] = 21;
-        $this->postJson($this->url('srq'), ['responses' => $responses])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $responses])->assertUnprocessable();
     }
 
     public function test_malformed_srq_answer_is_rejected(): void
     {
         $responses = $this->srq();
         $responses[0]['answer'] = 'false';
-        $this->postJson($this->url('srq'), ['responses' => $responses])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $responses])->assertUnprocessable();
     }
 
     public function test_complete_risk_set_saves_five_answers(): void
     {
-        $this->postJson($this->url('risk'), ['risks' => $this->risk()])->assertOk();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $this->risk()])->assertOk();
         $this->assertSame(5, $this->assessment->riskAssessment()->count());
     }
 
     public function test_missing_risk_indicator_is_rejected_without_changing_saved_answers(): void
     {
-        $this->postJson($this->url('risk'), ['risks' => $this->risk()])->assertOk();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $this->risk()])->assertOk();
         $risk = $this->risk();
         unset($risk['R5']);
-        $this->postJson($this->url('risk'), ['risks' => $risk])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $risk])->assertUnprocessable();
         $this->assertSame(5, $this->assessment->riskAssessment()->count());
     }
 
@@ -116,15 +117,15 @@ final class AssessmentIntegrityTest extends TestCase
     {
         $risk = $this->risk();
         $risk['R5'] = 'false';
-        $this->postJson($this->url('risk'), ['risks' => $risk])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $risk])->assertUnprocessable();
         $risk['R5'] = false;
         $risk['R6'] = true;
-        $this->postJson($this->url('risk'), ['risks' => $risk])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $risk])->assertUnprocessable();
     }
 
     public function test_complete_function_set_saves_allowed_levels(): void
     {
-        $this->postJson($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
         $this->assertSame(3, $this->assessment->functionAssessment()->count());
     }
 
@@ -132,44 +133,44 @@ final class AssessmentIntegrityTest extends TestCase
     {
         $functions = $this->functionResponses();
         $functions['F3'] = 2;
-        $this->postJson($this->url('function'), ['functions' => $functions])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $functions])->assertUnprocessable();
     }
 
     public function test_missing_function_domain_is_rejected_without_changing_saved_answers(): void
     {
-        $this->postJson($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
         $functions = $this->functionResponses();
         unset($functions['F3']);
-        $this->postJson($this->url('function'), ['functions' => $functions])->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $functions])->assertUnprocessable();
         $this->assertSame(3, $this->assessment->functionAssessment()->count());
     }
 
     public function test_completion_rejects_missing_srq(): void
     {
-        $this->postJson($this->url('risk'), ['risks' => $this->risk()])->assertOk();
-        $this->postJson($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $this->risk()])->assertOk();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
         $this->assertCompletionRejected();
     }
 
     public function test_completion_rejects_incomplete_risk(): void
     {
-        $this->postJson($this->url('srq'), ['responses' => $this->srq()])->assertOk();
-        $this->postJson($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $this->srq()])->assertOk();
+        $this->postVersionedAssessment($this->url('function'), ['functions' => $this->functionResponses()])->assertOk();
         $this->assessment->riskAssessment()->create(['indicator' => 'R1', 'answer' => false, 'weight' => 2]);
         $this->assertCompletionRejected();
     }
 
     public function test_completion_rejects_incomplete_function(): void
     {
-        $this->postJson($this->url('srq'), ['responses' => $this->srq()])->assertOk();
-        $this->postJson($this->url('risk'), ['risks' => $this->risk()])->assertOk();
+        $this->postVersionedAssessment($this->url('srq'), ['responses' => $this->srq()])->assertOk();
+        $this->postVersionedAssessment($this->url('risk'), ['risks' => $this->risk()])->assertOk();
         $this->assessment->functionAssessment()->create(['domain' => 'F1', 'level' => 0]);
         $this->assertCompletionRejected();
     }
 
     private function assertCompletionRejected(): void
     {
-        $this->postJson($this->url('complete'))->assertUnprocessable();
+        $this->postVersionedAssessment($this->url('complete'))->assertUnprocessable();
         $this->assertSame(0, $this->assessment->triageResult()->count());
         $this->assertSame(AssessmentStatus::IN_PROGRESS, $this->assessment->fresh()->status);
     }
@@ -177,7 +178,7 @@ final class AssessmentIntegrityTest extends TestCase
     public function test_complete_assessment_uses_server_calculation(): void
     {
         $this->saveComplete();
-        $this->postJson($this->url('complete'), ['total_score' => 99, 'recommendation' => 'T0_CONFIRMED'])->assertOk();
+        $this->postVersionedAssessment($this->url('complete'), ['total_score' => 99, 'recommendation' => 'T0_CONFIRMED'])->assertOk();
         $result = $this->assessment->triageResult()->firstOrFail();
         $this->assertSame(4, $result->total_score);
         $this->assertSame(TriageCategory::T3, $result->system_recommendation);

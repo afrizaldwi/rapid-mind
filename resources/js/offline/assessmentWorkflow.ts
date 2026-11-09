@@ -135,6 +135,7 @@ export async function loadAssessmentContext(
                 mode: server.mode === "NON_VERBAL" ? "NON_VERBAL" : "VERBAL",
                 started_at: server.started_at,
                 completed_at: server.completed_at,
+                server_version: server.server_version,
                 ...mergeObservations(serverObservations(server), {}),
                 srq_answers: mergeAssessmentDraft("srq_answers", srq, {}),
                 risk_indicators: mergeAssessmentDraft(

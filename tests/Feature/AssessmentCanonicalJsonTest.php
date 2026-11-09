@@ -69,6 +69,8 @@ final class AssessmentCanonicalJsonTest extends TestCase
                 'started_at',
                 'completed_at',
                 'updated_at',
+                'server_version',
+                'routing_status',
             ], array_keys(get_object_vars($canonical)));
             $this->assertEqualsCanonicalizing(['id', 'nik', 'name', 'age', 'gender', 'shelter_id'], array_keys(get_object_vars($canonical->patient)));
             $this->assertSame($data['patient']['id'], $canonical->patient->id);
@@ -83,7 +85,7 @@ final class AssessmentCanonicalJsonTest extends TestCase
             }
             $this->assertSame($data['non_verbal_reasons'] ?? [], $canonical->non_verbal_reasons);
             $this->assertSame($data['non_verbal_other_note'] ?? null, $canonical->non_verbal_other_note);
-            $this->assertSame($shape === 'completed' && $status === 200, $body->replayed);
+            $this->assertSame($status === 200, $body->replayed);
             if ($shape !== 'completed') {
                 $this->assertNull($canonical->triage_result);
             }

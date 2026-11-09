@@ -17,6 +17,8 @@ const canonicalAssessmentFields = [
     "non_verbal_other_note",
     "triage_result",
     "updated_at",
+    "server_version",
+    "routing_status",
 ] as const satisfies readonly (keyof LocalAssessment)[];
 
 /** Both storage modes must accept the same nested canonical contract. */
@@ -64,6 +66,9 @@ export function canonicalAssessmentResponse(
             .filter((key) => value[key] !== undefined)
             .map((key) => [key, value[key]]),
     );
+    if (value.server_version !== undefined &&
+        (typeof value.server_version !== "string" || !/^[a-f0-9]{64}$/.test(value.server_version)))
+        throw new Error("Versi asesmen server tidak valid.");
     return {
         patient: value.patient,
         assessment: {

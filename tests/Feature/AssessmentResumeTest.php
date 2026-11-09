@@ -18,6 +18,7 @@ use Tests\TestCase;
 final class AssessmentResumeTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SendsVersionedAssessmentRequests;
 
     private Assessment $assessment;
 
@@ -79,15 +80,15 @@ final class AssessmentResumeTest extends TestCase
         $this->assertResume('srq', 'Lanjutkan SRQ-20');
 
         $responses = array_map(fn ($number) => ['question_number' => $number, 'answer' => false], range(1, 20));
-        $this->postJson("/relawan/assessment/{$this->assessment->id}/srq", ['responses' => $responses])->assertOk();
+        $this->postVersionedAssessment("/relawan/assessment/{$this->assessment->id}/srq", ['responses' => $responses])->assertOk();
         $this->assertResume('risk', 'Lanjutkan Faktor Risiko');
 
         $risks = ['R1' => false, 'R2' => false, 'R3' => false, 'R4' => false, 'R5' => false];
-        $this->postJson("/relawan/assessment/{$this->assessment->id}/risk", ['risks' => $risks])->assertOk();
+        $this->postVersionedAssessment("/relawan/assessment/{$this->assessment->id}/risk", ['risks' => $risks])->assertOk();
         $this->assertResume('function', 'Lanjutkan Fungsi Harian');
 
         $functions = ['F1' => 0, 'F2' => 1, 'F3' => 3];
-        $this->postJson("/relawan/assessment/{$this->assessment->id}/function", ['functions' => $functions])->assertOk();
+        $this->postVersionedAssessment("/relawan/assessment/{$this->assessment->id}/function", ['functions' => $functions])->assertOk();
         $this->assertResume('review', 'Tinjau Asesmen');
 
         $this->assertSame(AssessmentStatus::IN_PROGRESS, $this->assessment->fresh()->status);
@@ -97,7 +98,7 @@ final class AssessmentResumeTest extends TestCase
     public function test_partial_risk_rows_do_not_advance_resume_stage(): void
     {
         $responses = array_map(fn ($number) => ['question_number' => $number, 'answer' => false], range(1, 20));
-        $this->postJson("/relawan/assessment/{$this->assessment->id}/srq", ['responses' => $responses])->assertOk();
+        $this->postVersionedAssessment("/relawan/assessment/{$this->assessment->id}/srq", ['responses' => $responses])->assertOk();
         $this->assessment->riskAssessment()->create(['indicator' => 'R1', 'answer' => false, 'weight' => 2]);
         $this->assessment->functionAssessment()->create(['domain' => 'F1', 'level' => 0]);
 
@@ -107,9 +108,9 @@ final class AssessmentResumeTest extends TestCase
     public function test_invalid_function_level_does_not_advance_to_review(): void
     {
         $responses = array_map(fn ($number) => ['question_number' => $number, 'answer' => false], range(1, 20));
-        $this->postJson("/relawan/assessment/{$this->assessment->id}/srq", ['responses' => $responses])->assertOk();
+        $this->postVersionedAssessment("/relawan/assessment/{$this->assessment->id}/srq", ['responses' => $responses])->assertOk();
         $risks = ['R1' => false, 'R2' => false, 'R3' => false, 'R4' => false, 'R5' => false];
-        $this->postJson("/relawan/assessment/{$this->assessment->id}/risk", ['risks' => $risks])->assertOk();
+        $this->postVersionedAssessment("/relawan/assessment/{$this->assessment->id}/risk", ['risks' => $risks])->assertOk();
 
         foreach (['F1' => 0, 'F2' => 1, 'F3' => 2] as $domain => $level) {
             $this->assessment->functionAssessment()->create(compact('domain', 'level'));

@@ -1,4 +1,5 @@
 import { canonicalAssessmentResponse } from "./assessmentCanonical";
+import { receiptVersionPatch } from "./assessmentReceiptVersion";
 import {
     db,
     nextOutboxId,
@@ -237,7 +238,7 @@ export const outboxRepository = {
                 await assertStorageMode(owner, "LEGACY");
                 const latest = await this.get(owner, item.id!);
                 if (!latest) throw new Error("Outbox owner changed");
-                if (!stillActive() || latest.revision !== item.revision)
+                if (!stillActive() || (item.type !== "ASSESSMENT" && latest.revision !== item.revision))
                     return false;
                 if (item.type === "ASSESSMENT") {
                     const local = await assessmentRepository.get(
@@ -250,12 +251,14 @@ export const outboxRepository = {
                         local,
                     );
                     if (
-                        !assessmentSnapshotCurrent(
+                        latest.revision !== item.revision || !assessmentSnapshotCurrent(
                             local,
                             item.assessment_local_revision,
                         )
-                    )
+                    ) {
+                        await db.assessments.put({ ...local, ...receiptVersionPatch(local, item, assessment) });
                         return false;
+                    }
                     if (patient && typeof patient.id === "string") {
                         if (await patientRepository.get(owner, patient.id)) {
                             await patientRepository.reconcile(

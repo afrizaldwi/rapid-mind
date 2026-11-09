@@ -42,7 +42,7 @@
         <!-- ONE Primary Action CTA on Top Right (Section 14: No duplicate buttons!) -->
         <div class="shrink-0">
             <button
-                v-if="item.isEmergency && item.status === 'PENDING'"
+                v-if="item.isEmergency && item.status === 'PENDING' && item.raw.can_manage !== false"
                 type="button"
                 @click="emit('acknowledge', item)"
                 :disabled="isSubmitting"

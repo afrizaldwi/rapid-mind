@@ -124,6 +124,10 @@ final class AuthController extends Controller
         }
 
         if ($request->hasSession()) {
+            if ($request->user()?->role === UserRole::HEALTHCARE) {
+                // Invalidate private clinical subscriptions held by an old browser session.
+                $request->user()->increment('token_version');
+            }
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

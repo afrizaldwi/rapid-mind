@@ -13,6 +13,7 @@ use App\Events\EmergencyCreated;
 use App\Models\Assessment;
 use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
+use App\Models\HealthcareFacility;
 use App\Models\Patient;
 use App\Models\Region;
 use App\Models\Shelter;
@@ -211,6 +212,7 @@ final class RelawanSyncContractTest extends TestCase
         $this->assertSame(AssessmentMode::VERBAL, $shell->mode);
 
         $assessment['mode'] = 'NON_VERBAL';
+        $assessment['base_version'] = app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($shell)['server_version'];
         $this->postJson('/relawan/sync/assessments', $assessment)->assertOk()
             ->assertJsonPath('assessment.status', 'COMPLETED')
             ->assertJsonPath('assessment.mode', 'NON_VERBAL');
@@ -307,6 +309,45 @@ final class RelawanSyncContractTest extends TestCase
         $this->assertSame(1, EmergencyEvent::count());
         $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $payload['id'])->count());
     }
+
+    public function test_audience_resolution_failure_preserves_sync_receipt_and_idempotent_replay(): void
+    {
+        $facility = HealthcareFacility::create(['name' => 'Faskes sintetis audience', 'type' => 'RS', 'is_active' => true]);
+        $shelter = Shelter::create([
+            'name' => 'Posko sintetis audience',
+            'region_id' => Region::create(['name' => 'Wilayah sintetis audience'])->id,
+            'is_active' => true,
+            'primary_facility_id' => $facility->id,
+        ]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true, 'facility_id' => $facility->id]);
+        $lookups = 0;
+        User::retrieved(function (User $user) use (&$lookups): void {
+            if ($user->role === UserRole::HEALTHCARE) {
+                $lookups++;
+                throw new RuntimeException('Simulated audience resolution failure');
+            }
+        });
+        Event::fake([EmergencyCreated::class]);
+        $payload = $this->emergency();
+
+        $response = $this->postJson('/relawan/sync/emergencies', $payload)
+            ->assertCreated()->assertJsonPath('created', true)->assertJsonPath('replayed', false)
+            ->assertJsonPath('emergency.id', $payload['id'])->assertJsonPath('emergency.routing_status', 'ROUTED')
+            ->assertJsonPath('realtime_delivered', false);
+        $this->assertStringContainsString('belum dapat dikonfirmasi', $response->json('warning'));
+        $this->postJson('/relawan/sync/emergencies', $payload)->assertOk()
+            ->assertJsonPath('emergency.id', $payload['id'])->assertJsonPath('emergency.routing_status', 'ROUTED')
+            ->assertJsonPath('created', false)->assertJsonPath('replayed', true)
+            ->assertJsonPath('realtime_delivered', null)->assertJsonMissingPath('warning');
+
+        $this->assertSame(1, $lookups);
+        $this->assertSame($payload['id'], EmergencyEvent::sole()->id);
+        $this->assertSame(EmergencyStatus::PENDING, EmergencyEvent::sole()->status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $payload['id'])->count());
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
     public function test_existing_same_shelter_patient_is_available_and_inaccessible_uuid_is_not_overwritten(): void
     {
         $region = Region::create(['name' => 'Wilayah Sintetis']);

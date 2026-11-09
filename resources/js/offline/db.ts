@@ -23,6 +23,7 @@ export interface LocalPatient {
     last_error?: string;
 }
 export interface LocalAssessment extends NonVerbalObservations {
+    routing_status?: "ROUTED" | "UNRESOLVED";
     id: string;
     owner_user_id: number;
     patient_id: string;
@@ -32,6 +33,7 @@ export interface LocalAssessment extends NonVerbalObservations {
     completed_at?: string;
     srq_answers?: SrqAnswers;
     local_revision?: number;
+    server_version?: string;
     risk_indicators?: Record<string, boolean>;
     function_domains?: Record<string, number>;
     triage_result?: unknown;
@@ -41,6 +43,7 @@ export interface LocalAssessment extends NonVerbalObservations {
     last_error?: string;
 }
 export interface LocalEmergency {
+    routing_status?: "ROUTED" | "UNRESOLVED";
     id: string;
     owner_user_id: number;
     patient_id?: string | null;

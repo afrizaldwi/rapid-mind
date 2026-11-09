@@ -110,6 +110,7 @@ export function assessmentSyncPayload(
         throw new Error("Asesmen belum lengkap.");
     return {
         id: local.id,
+        base_version: local.server_version ?? null,
         patient: {
             id: patient.id,
             name: patient.name,

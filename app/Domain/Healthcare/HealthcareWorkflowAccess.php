@@ -13,7 +13,7 @@ final class HealthcareWorkflowAccess
     public static function authorize(User $actor): void
     {
         $current = $actor->fresh();
-        if (! $current || ! $current->is_active || $current->role !== UserRole::HEALTHCARE) {
+        if (! $current || HealthcareCaseAccess::facility($current) === null) {
             throw new AuthorizationException('Anda tidak memiliki akses untuk menjalankan tindakan Healthcare.');
         }
     }

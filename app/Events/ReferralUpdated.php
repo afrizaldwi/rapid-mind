@@ -14,9 +14,11 @@ final class ReferralUpdated implements ShouldBroadcastNow
 
     public function __construct(public string $referralId, public ?string $emergencyId) {}
 
-    public function broadcastOn(): PrivateChannel
+    public function broadcastOn(): array
     {
-        return new PrivateChannel('emergencies');
+        $referral = \App\Models\Referral::find($this->referralId);
+        return \App\Domain\Healthcare\CaseAudience::forCase($referral
+            ? \App\Domain\Healthcare\HealthcareCaseAccess::referralCase($referral) : null);
     }
 
     public function broadcastWith(): array

@@ -60,7 +60,7 @@ final class BroadcastChannelAuthorizationTest extends TestCase
         $this->authorize('App.Models.User.' . $user->id)->assertForbidden();
     }
 
-    public function test_emergencies_channel_requires_an_active_healthcare_account(): void
+    public function test_retired_role_wide_emergencies_channel_is_always_denied(): void
     {
         $healthcare = User::factory()->create(
             ['role' => UserRole::HEALTHCARE, 'is_active' => true]
@@ -73,7 +73,7 @@ final class BroadcastChannelAuthorizationTest extends TestCase
         );
 
         $this->actingAs($healthcare);
-        $this->authorize('emergencies')->assertOk();
+        $this->authorize('emergencies')->assertForbidden();
 
         $healthcare->update(['is_active' => false]);
         $this->authorize('emergencies')->assertUnauthorized();

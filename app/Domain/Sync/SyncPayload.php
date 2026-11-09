@@ -33,6 +33,7 @@ final class SyncPayload
         $rules = [
             ...NonVerbalObservations::rules(),
             'id' => ['required', 'uuid'],
+            'base_version' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
             ...self::patientRules(true),
             'mode' => ['required', Rule::enum(AssessmentMode::class)],
             'status' => ['required', Rule::enum(AssessmentStatus::class)],

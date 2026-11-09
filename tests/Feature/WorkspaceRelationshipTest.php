@@ -25,6 +25,7 @@ use Tests\TestCase;
 final class WorkspaceRelationshipTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private function shelter(): Shelter
     {
@@ -68,6 +69,7 @@ final class WorkspaceRelationshipTest extends TestCase
             'role' => UserRole::HEALTHCARE,
             'is_active' => true,
         ]);
+        $this->configureWorkflowScope($validator);
         $patient = Patient::create([
             'name' => 'Pasien Validasi Demo',
             'created_by' => $relawan->id,
@@ -131,6 +133,7 @@ final class WorkspaceRelationshipTest extends TestCase
     {
         $relawan = User::factory()->create(['role' => UserRole::RELAWAN]);
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($healthcare);
 
         foreach ([EmergencyStatus::PENDING, EmergencyStatus::PENDING, EmergencyStatus::ACKNOWLEDGED,
             EmergencyStatus::REVIEWING, EmergencyStatus::CONFIRMED, EmergencyStatus::DOWNGRADED] as $status) {
@@ -165,6 +168,7 @@ final class WorkspaceRelationshipTest extends TestCase
         $shelter = $this->shelter();
         $relawan = User::factory()->create(['role' => UserRole::RELAWAN, 'shelter_id' => $shelter->id]);
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($healthcare);
         $patient = Patient::create(['name' => 'Pasien Darurat', 'created_by' => $relawan->id, 'shelter_id' => $shelter->id]);
         $assessment = Assessment::create([
             'patient_id' => $patient->id,
@@ -219,6 +223,7 @@ final class WorkspaceRelationshipTest extends TestCase
     {
         $relawan = User::factory()->create(['role' => UserRole::RELAWAN]);
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($healthcare);
         $emergency = EmergencyEvent::create([
             'user_id' => $relawan->id,
             'red_flag_type' => RedFlagType::MEDICAL_CRISIS,

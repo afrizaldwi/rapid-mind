@@ -1,7 +1,8 @@
 <template>
-    <div
+    <fieldset :disabled="item.raw?.can_manage === false"
         class="space-y-5"
     >
+        <p v-if="item.raw?.can_manage === false" class="text-slate-600" role="status">Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.</p>
         <!-- Section A: Tele-Verification Form -->
         <div
             v-if="
@@ -254,7 +255,7 @@
             </form>
         </div>
 
-    </div>
+    </fieldset>
 </template>
 
 <script setup lang="ts">

@@ -94,8 +94,8 @@ final class EmergencySynchronizer
         $delivered = null;
         $warning = null;
         if ($created) {
-            $delivered = true;
             try {
+                $delivered = count((new EmergencyCreated($emergency))->broadcastOn()) > 0;
                 event(new EmergencyCreated($emergency));
             } catch (\Throwable $exception) {
                 $delivered = false;
@@ -140,6 +140,7 @@ final class EmergencySynchronizer
             'patient' => $event->patient?->only(['id', 'nik', 'name', 'age', 'gender', 'shelter_id']),
             'patient_id' => $event->patient_id,
             'assessment_id' => $event->assessment_id,
+            'routing_status' => $event->routing_status ?? 'UNRESOLVED',
             'red_flag_type' => $event->red_flag_type->value,
             'latitude' => $event->latitude === null ? null : (float) $event->latitude,
             'longitude' => $event->longitude === null ? null : (float) $event->longitude,

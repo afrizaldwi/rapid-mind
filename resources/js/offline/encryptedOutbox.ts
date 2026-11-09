@@ -1,5 +1,6 @@
 import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import { canonicalAssessmentResponse } from "./assessmentCanonical";
+import { receiptVersionPatch } from "./assessmentReceiptVersion";
 import {
     db,
     localUuid,
@@ -402,7 +403,7 @@ export async function encryptedOutboxComplete(
     const current = item.id
         ? await encryptedOutboxGet(owner, item.id)
         : undefined;
-    if (!current || current.revision !== item.revision || !stillActive())
+    if (!current || !stillActive() || (item.type !== "ASSESSMENT" && current.revision !== item.revision))
         return false;
     const index = await db.encryptedOutboxIndex.get(item.id!);
     if (!index || index.owner_user_id !== owner)
@@ -424,12 +425,22 @@ export async function encryptedOutboxComplete(
         throw new Error("Respons server tidak sesuai catatan.");
     if (
         item.type === "ASSESSMENT" &&
-        !assessmentSnapshotCurrent(
+        (current.revision !== item.revision || !assessmentSnapshotCurrent(
             entity as LocalAssessment,
             item.assessment_local_revision,
-        )
-    )
+        ))
+    ) {
+        const change = await preparedChange(owner, "assessments", item.entity_id, {
+            ...entity,
+            ...receiptVersionPatch(entity as LocalAssessment, item, assessmentResponse!.assessment),
+        }, entity);
+        await commit(owner, [change], async () => {
+            if (!stillActive()) throw new Error("Sesi sinkronisasi berubah.");
+            const latest = await encryptedOutboxGet(owner, item.id!);
+            if (latest?.revision !== current.revision) throw new Error("Revisi antrean berubah.");
+        });
         return false;
+    }
     const patient = (
         assessmentResponse
             ? assessmentResponse.patient

@@ -29,6 +29,7 @@ use Tests\TestCase;
 final class HealthcareOperationalCompletionTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private User $healthcare;
 
@@ -41,6 +42,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         parent::setUp();
         $this->facility = HealthcareFacility::create(['name' => 'Faskes Utama', 'type' => 'RS', 'is_active' => true]);
         $this->healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'facility_id' => $this->facility->id, 'is_active' => true]);
+        $this->configureWorkflowScope($this->healthcare);
         $this->patient = Patient::create(['name' => 'Pasien Uji', 'created_by' => $this->healthcare->id]);
         $this->actingAs($this->healthcare);
     }
@@ -498,11 +500,8 @@ final class HealthcareOperationalCompletionTest extends TestCase
         $this->assertSame(1, Referral::count());
         $this->assertSame(1, ReferralStatusHistory::where('referral_id', $referral->id)->count());
         $this->facility->update(['is_active' => false]);
-        $this->get("/healthcare/patients/{$this->patient->id}")->assertOk()->assertInertia(fn (Assert $page) => $page
-            ->where('patient.referrals.0.facility.id', $this->facility->id)
-            ->where('patient.referrals.0.facility.is_active', false)
-            ->where('patient.referrals.0.clinical_validation.assessment.id', $assessment->id)
-            ->has('patient.referrals.0.status_history', 1)->etc());
+        $this->get("/healthcare/patients/{$this->patient->id}")->assertNotFound();
+        $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
     }
 
     public function test_failed_non_t0_referral_write_returns_form_error_and_retry_does_not_duplicate(): void
@@ -530,6 +529,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
     public function test_patient_referrals_are_newest_first_even_if_inserted_out_of_order(): void
     {
         $newer = Referral::create([
+            'clinical_validation_id' => $this->workflowValidation($this->healthcare, $this->patient)->id,
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,
@@ -537,6 +537,7 @@ final class HealthcareOperationalCompletionTest extends TestCase
         ]);
         $newer->forceFill(['created_at' => now()->subDay()])->save();
         $older = Referral::create([
+            'clinical_validation_id' => $this->workflowValidation($this->healthcare, $this->patient)->id,
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,

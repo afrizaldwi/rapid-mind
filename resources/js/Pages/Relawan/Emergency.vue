@@ -176,9 +176,8 @@ const broadcastWarning = computed(
 const delivery = computed(() =>
     emergencyDeliveryStatus(
         props.localEmergency ??
-            (broadcastWarning.value
-                ? { sync_state: "SYNCED", realtime_status: "UNAVAILABLE" }
-                : undefined),
+            { sync_state: "SYNCED", routing_status: props.emergency?.routing_status,
+                realtime_status: broadcastWarning.value ? "UNAVAILABLE" : "UNCONFIRMED" },
     ),
 );
 

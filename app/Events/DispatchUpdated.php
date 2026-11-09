@@ -14,9 +14,9 @@ final class DispatchUpdated implements ShouldBroadcastNow
 
     public function __construct(public string $dispatchId, public string $emergencyId) {}
 
-    public function broadcastOn(): PrivateChannel
+    public function broadcastOn(): array
     {
-        return new PrivateChannel('emergencies');
+        return \App\Domain\Healthcare\CaseAudience::forCase(\App\Models\EmergencyEvent::find($this->emergencyId));
     }
 
     public function broadcastWith(): array

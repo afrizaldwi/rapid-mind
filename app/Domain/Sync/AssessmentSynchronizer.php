@@ -39,6 +39,24 @@ final class AssessmentSynchronizer
                 }
                 return ['assessment' => $this->canonical($assessment), 'replayed' => true, 'created' => false];
             }
+            if ($assessment) {
+                if ($data['status'] === $assessment->status->value && $this->matches($assessment, $data, true)) {
+                    return ['assessment' => $this->canonical($assessment), 'replayed' => true, 'created' => false];
+                }
+                $current = $this->canonical($assessment);
+                // Emergency-first sync may have created a same-mode empty shell.
+                // Its first fill cannot overwrite evidence; later writes need CAS.
+                $emptyShell = $current['mode'] === $data['mode']
+                    && !$current['srq_answers'] && !$current['risk_indicators'] && !$current['function_domains']
+                    && !$current['non_verbal_reasons'] && $current['non_verbal_other_note'] === null;
+                if (isset($data['base_version'])
+                    ? !hash_equals($current['server_version'], $data['base_version'])
+                    : !$emptyShell) {
+                    throw new ConflictHttpException('Asesmen server telah berubah. Draf lokal tetap disimpan; tinjau konflik sebelum mengirim ulang.');
+                }
+            } elseif (isset($data['base_version'])) {
+                throw new ConflictHttpException('Versi asesmen server tidak ditemukan. Draf lokal tetap disimpan.');
+            }
 
             $patient = $this->patients->reconcile($data['patient'], $user);
             $created = !$assessment;
@@ -93,11 +111,12 @@ final class AssessmentSynchronizer
                 $assessment->completed_at = $data['completed_at'] ?? now();
                 $assessment->save();
             }
+            \App\Events\AssessmentUpdated::afterCommit($assessment->id);
             return ['assessment' => $this->canonical($assessment), 'replayed' => false, 'created' => $created];
         });
     }
 
-    private function matches(Assessment $assessment, array $data): bool
+    private function matches(Assessment $assessment, array $data, bool $partial = false): bool
     {
         if ($assessment->mode->value !== $data['mode']) return false;
         $actual = $this->canonical($assessment);
@@ -109,9 +128,16 @@ final class AssessmentSynchronizer
             return false;
         }
         foreach (['srq_answers', 'risk_indicators', 'function_domains'] as $field) {
+            if ($partial && !array_key_exists($field, $data)) continue;
             $expected = $data[$field] ?? [];
             if ($field === 'srq_answers') $expected = array_map(SrqAnswer::normalize(...), $expected);
             $stored = $actual[$field];
+            if ($partial) {
+                foreach ($expected as $key => $value) {
+                    if (!array_key_exists($key, $stored) || $stored[$key] !== $value) return false;
+                }
+                continue;
+            }
             ksort($expected);
             ksort($stored);
             if ($expected !== $stored) return false;
@@ -122,11 +148,12 @@ final class AssessmentSynchronizer
     public function canonical(Assessment $assessment): array
     {
         $assessment->load(['patient', 'srqResponses', 'riskAssessment', 'functionAssessment', 'triageResult']);
-        return [
+        $canonical = [
             'id' => $assessment->id,
             'patient' => $assessment->patient->only(['id', 'nik', 'name', 'age', 'gender', 'shelter_id']),
             'mode' => $assessment->mode->value,
             'status' => $assessment->status->value,
+            'routing_status' => $assessment->routing_status ?? 'UNRESOLVED',
             'non_verbal_reasons' => $assessment->non_verbal_reasons ?? [],
             'non_verbal_other_note' => $assessment->non_verbal_other_note,
             'srq_answers' => $assessment->srqResponses->mapWithKeys(fn (SrqResponse $response) => [$response->question_number => $response->responseValue()])->all(),
@@ -137,5 +164,7 @@ final class AssessmentSynchronizer
             'completed_at' => $assessment->completed_at?->toIso8601String(),
             'updated_at' => $assessment->updated_at?->toIso8601String(),
         ];
+        $canonical['server_version'] = AssessmentVersion::of($canonical);
+        return $canonical;
     }
 }

@@ -15,6 +15,7 @@ export type HistoryRow = {
     referral_id?: string | null;
 };
 export type ClinicalReferral = {
+    can_manage?: boolean;
     id: string;
     status: string;
     source?: string;
@@ -39,6 +40,7 @@ export type Dispatch = {
     history: HistoryRow[];
 };
 export type Operations = {
+    can_manage?: boolean;
     available: boolean;
     dispatch?: Dispatch | null;
     referrals?: ClinicalReferral[];

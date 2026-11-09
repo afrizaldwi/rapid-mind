@@ -13,6 +13,7 @@ use Tests\TestCase;
 
 final class AuthTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_login_page_renders_successfully(): void
     {
         $response = $this->get('/login');
@@ -152,6 +153,8 @@ final class AuthTest extends TestCase
 
     public function test_jwt_api_login_returns_token(): void
     {
+        User::factory()->create(['email' => 'relawan@rapidmind.id', 'password' => Hash::make('password'),
+            'role' => UserRole::RELAWAN, 'is_active' => true]);
         $response = $this->postJson('/api/auth/login', [
             'email' => 'relawan@rapidmind.id',
             'password' => 'password',

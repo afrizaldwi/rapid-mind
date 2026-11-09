@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Region;
+use App\Models\HealthcareFacility;
+use App\Models\AuditLog;
 use App\Models\Shelter;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +51,8 @@ final class ShelterManagementController extends Controller
             'kind' => 'posko',
             'item' => $shelter,
             'regions' => Region::orderBy('name')->get(['id', 'name']),
+            'facilities' => HealthcareFacility::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'routingAvailable' => \Illuminate\Support\Facades\Schema::hasColumn('shelters', 'primary_facility_id'),
         ]);
     }
 
@@ -63,6 +67,7 @@ final class ShelterManagementController extends Controller
                 'is_active' => $data['is_active'],
             ]);
             $this->saveLocation($shelter, $data);
+            $this->saveFacility($shelter, $data);
             return $shelter;
         });
 
@@ -87,6 +92,7 @@ final class ShelterManagementController extends Controller
                 'is_active' => $data['is_active'],
             ]);
             $this->saveLocation($shelter, $data);
+            $this->saveFacility($shelter, $data);
         });
 
         return back()->with('message', 'Posko berhasil diperbarui.');
@@ -101,6 +107,7 @@ final class ShelterManagementController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'is_active' => ['required', 'boolean'],
+            'primary_facility_id' => ['nullable', 'integer', Rule::exists('healthcare_facilities', 'id')->where('is_active', true)],
         ]);
     }
 
@@ -113,5 +120,23 @@ final class ShelterManagementController extends Controller
         } else {
             DB::update('UPDATE shelters SET location = NULL WHERE id = ?', [$shelter->id]);
         }
+    }
+
+    private function saveFacility(Shelter $shelter, array $data): void
+    {
+        if (!array_key_exists('primary_facility_id', $data)) return;
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('shelters', 'primary_facility_id')) {
+            if ($data['primary_facility_id'] !== null) throw ValidationException::withMessages(['primary_facility_id' => 'Skema penugasan Faskes belum tersedia.']);
+            return;
+        }
+        $old = $shelter->primary_facility_id;
+        $next = $data['primary_facility_id'] === null ? null : (int) $data['primary_facility_id'];
+        if ($old === $next) return;
+        $shelter->update(['primary_facility_id' => $next]);
+        AuditLog::create([
+            'actor_id' => auth()->id(), 'action' => 'SHELTER_PRIMARY_FACILITY_CHANGED',
+            'entity_type' => 'Shelter', 'entity_id' => (string) $shelter->id,
+            'old_values' => ['primary_facility_id' => $old], 'new_values' => ['primary_facility_id' => $next],
+        ]);
     }
 }

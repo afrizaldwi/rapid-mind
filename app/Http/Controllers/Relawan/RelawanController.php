@@ -357,6 +357,7 @@ final class RelawanController extends Controller
                 'status' => AssessmentStatus::COMPLETED,
                 'completed_at' => now(),
             ]);
+            \App\Events\AssessmentUpdated::afterCommit($assessment->id);
 
             return $result;
         });
@@ -404,6 +405,10 @@ final class RelawanController extends Controller
         $assessment = Assessment::whereKey($assessmentId)
             ->where('user_id', Auth::id())->lockForUpdate()->firstOrFail();
         abort_if($assessment->status === AssessmentStatus::COMPLETED, 409, 'Asesmen selesai tidak dapat diubah.');
+        $version = request()->input('base_version');
+        $current = app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
+        abort_unless(is_string($version) && hash_equals($current, $version), 409,
+            'Asesmen server telah berubah. Muat dan tinjau versi terbaru sebelum menyimpan.');
 
         return $assessment;
     }
@@ -421,6 +426,8 @@ final class RelawanController extends Controller
         $assessment = Assessment::with($relations)->find($assessmentId);
         if ($assessment) {
             abort_unless($assessment->user_id === Auth::id(), 404);
+            $canonical = app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment);
+            $assessment->setAttribute('server_version', $canonical['server_version']);
             return $assessment;
         }
 
@@ -449,6 +456,7 @@ final class RelawanController extends Controller
 
         $emergencies = EmergencyEvent::query()
             ->select(['id', 'user_id', 'patient_id', 'red_flag_type', 'notes', 'created_at'])
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('emergency_events', 'routing_status'), fn ($query) => $query->addSelect('routing_status'))
             ->with(['patient:id,name'])
             ->where('user_id', $user->id)
             ->latest('created_at')
@@ -475,6 +483,7 @@ final class RelawanController extends Controller
                 'notes',
                 'created_at',
             ])
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('emergency_events', 'routing_status'), fn ($query) => $query->addSelect('routing_status'))
             ->with(['patient:id,name', 'shelter:id,name'])
             ->where('user_id', Auth::id())
             ->findOrFail($emergencyId);
@@ -548,8 +557,9 @@ final class RelawanController extends Controller
             return $emergency;
         });
 
-        $realtimeDelivered = true;
+        $realtimeDelivered = false;
         try {
+            $realtimeDelivered = count((new \App\Events\EmergencyCreated($emergency))->broadcastOn()) > 0;
             event(new \App\Events\EmergencyCreated($emergency));
         } catch (\Throwable $exception) {
             $realtimeDelivered = false;
@@ -564,6 +574,7 @@ final class RelawanController extends Controller
                     ? 'Insiden T0 tersimpan di server dan notifikasi realtime berhasil dikirim.'
                     : 'Insiden T0 tersimpan di server.',
                 'emergency_id' => $emergency->id,
+                'routing_status' => $emergency->routing_status,
                 'realtime_delivered' => $realtimeDelivered,
                 ...($realtimeDelivered ? [] : ['warning' => $warning]),
             ], 201);

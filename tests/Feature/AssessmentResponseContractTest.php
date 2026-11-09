@@ -23,6 +23,7 @@ use Tests\TestCase;
 final class AssessmentResponseContractTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SendsVersionedAssessmentRequests;
 
     private User $owner;
 
@@ -109,7 +110,7 @@ final class AssessmentResponseContractTest extends TestCase
             ->assertJsonPath('assessment.srq_answers.20', 'UNANSWERED')
             ->assertJsonPath('assessment.triage_result', null)
             ->assertJsonPath('assessment.non_verbal_reasons', ['NOT_SPEAKING', 'OTHER', 'SPEECH_DIFFICULTY']);
-        $this->postJson('/relawan/sync/assessments', $data)->assertOk();
+        $data['base_version'] = $this->postJson('/relawan/sync/assessments', $data)->assertOk()->json('assessment.server_version');
         unset($data['srq_answers'], $data['non_verbal_reasons'], $data['non_verbal_other_note']);
         $data['mode'] = 'VERBAL';
         $this->postJson('/relawan/sync/assessments', $data)->assertOk()
@@ -170,7 +171,7 @@ final class AssessmentResponseContractTest extends TestCase
         $this->postJson('/relawan/sync/assessments', $data)->assertUnprocessable();
         $data['non_verbal_reasons'] = ['OTHER'];
         $data['non_verbal_other_note'] = str_repeat('a', 500);
-        $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
+        $data['base_version'] = $this->postJson('/relawan/sync/assessments', $data)->assertCreated()->json('assessment.server_version');
         $data['non_verbal_reasons'] = [];
         unset($data['non_verbal_other_note']);
         $this->postJson('/relawan/sync/assessments', $data)->assertOk()
@@ -191,7 +192,7 @@ final class AssessmentResponseContractTest extends TestCase
         $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
         $data['status'] = 'COMPLETED';
         $this->postJson('/relawan/sync/assessments', $data)->assertUnprocessable();
-        $this->postJson("/relawan/assessment/{$data['id']}/complete")->assertUnprocessable();
+        $this->postVersionedAssessment("/relawan/assessment/{$data['id']}/complete")->assertUnprocessable();
         $this->assertSame(AssessmentStatus::IN_PROGRESS, Assessment::sole()->status);
         $this->assertSame(0, TriageResult::count());
         $this->assertSame(0, EmergencyEvent::count());
@@ -201,12 +202,13 @@ final class AssessmentResponseContractTest extends TestCase
     {
         $data = $this->payload();
         $data['srq_answers'] = [1 => true, 17 => true];
-        $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
+        $data['base_version'] = $this->postJson('/relawan/sync/assessments', $data)->assertCreated()->json('assessment.server_version');
         $data['srq_answers'] = [17 => 'UNANSWERED'];
         foreach (range(1, 2) as $_) {
-            $this->postJson('/relawan/sync/assessments', $data)->assertOk()
+            $response = $this->postJson('/relawan/sync/assessments', $data)->assertOk()
                 ->assertJsonPath('assessment.srq_answers.1', true)
                 ->assertJsonPath('assessment.srq_answers.17', 'UNANSWERED');
+            $data['base_version'] = $response->json('assessment.server_version');
         }
         unset($data['srq_answers']);
         $this->postJson('/relawan/sync/assessments', $data)->assertOk()->assertJsonPath('assessment.srq_answers.17', 'UNANSWERED');
@@ -246,19 +248,19 @@ final class AssessmentResponseContractTest extends TestCase
         $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
         $responses = array_map(fn($n) => ['question_number' => $n, 'answer' => $n === 17 ? 'UNCLEAR' : false], range(1, 20));
         $url = "/relawan/assessment/{$data['id']}";
-        $this->postJson("$url/srq", ['responses' => $responses, 'non_verbal_reasons' => ['UNKNOWN']])->assertOk();
+        $this->postVersionedAssessment("$url/srq", ['responses' => $responses, 'non_verbal_reasons' => ['UNKNOWN']])->assertOk();
         $this->assertNull(SrqResponse::where('question_number', 17)->sole()->answer);
-        $this->postJson("$url/complete")->assertUnprocessable();
+        $this->postVersionedAssessment("$url/complete")->assertUnprocessable();
         $responses[16]['answer'] = false;
-        $this->postJson("$url/srq", ['responses' => $responses])->assertOk();
-        $this->postJson("$url/complete")->assertOk();
+        $this->postVersionedAssessment("$url/srq", ['responses' => $responses])->assertOk();
+        $this->postVersionedAssessment("$url/complete")->assertOk();
         $before = Assessment::sole()->toArray();
         $score = TriageResult::sole()->toArray();
         $responses[0]['answer'] = true;
-        $this->postJson("$url/srq", ['responses' => $responses, 'mode' => 'VERBAL', 'non_verbal_reasons' => []])->assertConflict();
-        $this->postJson("$url/risk", ['risks' => $data['risk_indicators']])->assertConflict();
-        $this->postJson("$url/function", ['functions' => $data['function_domains']])->assertConflict();
-        $this->postJson("$url/complete")->assertConflict();
+        $this->postVersionedAssessment("$url/srq", ['responses' => $responses, 'mode' => 'VERBAL', 'non_verbal_reasons' => []])->assertConflict();
+        $this->postVersionedAssessment("$url/risk", ['risks' => $data['risk_indicators']])->assertConflict();
+        $this->postVersionedAssessment("$url/function", ['functions' => $data['function_domains']])->assertConflict();
+        $this->postVersionedAssessment("$url/complete")->assertConflict();
         $this->assertSame($before, Assessment::sole()->toArray());
         $this->assertSame($score, TriageResult::sole()->toArray());
         $this->assertFalse(SrqResponse::where('question_number', 1)->sole()->answer);
@@ -273,7 +275,7 @@ final class AssessmentResponseContractTest extends TestCase
         $data['srq_answers'][17] = false;
         $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
         $responses = array_map(fn($n) => ['question_number' => $n, 'answer' => $n === 17 ? $value : false], range(1, 20));
-        $this->postJson("/relawan/assessment/{$data['id']}/srq", ['responses' => $responses])->assertUnprocessable();
+        $this->postVersionedAssessment("/relawan/assessment/{$data['id']}/srq", ['responses' => $responses])->assertUnprocessable();
         $this->assertFalse(SrqResponse::where('question_number', 17)->sole()->answer);
     }
 
@@ -288,11 +290,11 @@ final class AssessmentResponseContractTest extends TestCase
         $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
         $this->actingAs(User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]));
         $this->postJson('/relawan/sync/assessments', $data)->assertConflict();
-        $this->postJson("/relawan/assessment/{$data['id']}/srq", [])->assertNotFound();
+        $this->postVersionedAssessment("/relawan/assessment/{$data['id']}/srq", [])->assertNotFound();
         foreach ([UserRole::HEALTHCARE, UserRole::ADMIN] as $role) {
             $this->actingAs(User::factory()->create(['role' => $role, 'is_active' => true]));
             $this->postJson('/relawan/sync/assessments', $data)->assertForbidden();
-            $this->postJson("/relawan/assessment/{$data['id']}/srq", [])->assertForbidden();
+            $this->postVersionedAssessment("/relawan/assessment/{$data['id']}/srq", [])->assertForbidden();
         }
         $this->assertSame($this->owner->id, Assessment::sole()->user_id);
         $this->assertSame(1, Assessment::count());

@@ -20,11 +20,14 @@ use Tests\TestCase;
 final class HealthcareOperationsProjectionTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->actingAs(User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]));
+        $actor = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($actor);
+        $this->actingAs($actor);
     }
 
     public function test_queue_retains_unassigned_and_unfinished_work_independently(): void
@@ -67,7 +70,9 @@ final class HealthcareOperationsProjectionTest extends TestCase
     public function test_missing_additive_schema_is_explicit_and_keeps_existing_pages_available(): void
     {
         $referral = Referral::factory()->create(['status' => 'COMPLETED']);
-        Schema::shouldReceive('hasTable')->with('emergency_dispatches')->andReturn(false);
+        $schema = Schema::getFacadeRoot();
+        Schema::shouldReceive('hasTable')->andReturnUsing(fn ($table) => $table === 'emergency_dispatches' ? false : $schema->hasTable($table));
+        Schema::shouldReceive('hasColumn')->andReturnUsing(fn (...$args) => $schema->hasColumn(...$args));
         $this->get('/healthcare/emergencies')->assertOk()->assertInertia(fn(Assert $page) => $page
             ->where('operationsAvailable', false)->has('responseUnits', 0)
             ->where('emergencies.0.id', $referral->emergency_event_id)
@@ -88,6 +93,7 @@ final class HealthcareOperationsProjectionTest extends TestCase
     public function test_patient_projection_has_persisted_dispatch_history_and_referral_provenance(): void
     {
         $this->seed(DemoSeeder::class);
+        $this->actingAs(User::where('email', 'nakes@rapidmind.id')->firstOrFail());
         $emergency = EmergencyEvent::findOrFail(DispatchDemoSeeder::id(8));
         $this->get("/healthcare/patients/{$emergency->patient_id}")->assertOk()->assertInertia(fn(Assert $page) => $page
             ->where('patient.emergency_events.0.operations.dispatch.status', 'COMPLETED')

@@ -13,6 +13,7 @@ use App\Events\EmergencyCreated;
 use App\Models\Assessment;
 use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
+use App\Models\HealthcareFacility;
 use App\Models\Patient;
 use App\Models\Region;
 use App\Models\Shelter;
@@ -27,6 +28,7 @@ use Tests\TestCase;
 final class RelawanT0SubmissionTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private User $relawan;
 
@@ -228,14 +230,14 @@ final class RelawanT0SubmissionTest extends TestCase
         $this->assertSame(0, EmergencyEvent::count());
     }
 
-    public function test_valid_emergency_is_persisted_and_reports_successful_broadcast_dispatch(): void
+    public function test_unrouted_emergency_is_persisted_without_claiming_a_healthcare_audience(): void
     {
         Event::fake([EmergencyCreated::class]);
 
         $response = $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::PSYCHOSIS->value])
             ->assertCreated()
-            ->assertJsonPath('realtime_delivered', true)
-            ->assertJsonMissingPath('warning');
+            ->assertJsonPath('realtime_delivered', false)
+            ->assertJsonStructure(['warning']);
 
         $emergency = EmergencyEvent::sole();
         $this->assertSame($emergency->id, $response->json('emergency_id'));
@@ -299,6 +301,57 @@ final class RelawanT0SubmissionTest extends TestCase
                 ->where('flash.error', fn($warning) => str_contains($warning, 'belum dapat dikonfirmasi')));
     }
 
+    private function failHealthcareAudienceResolution(): void
+    {
+        $facility = HealthcareFacility::create(['name' => 'Faskes sintetis audience', 'type' => 'RS', 'is_active' => true]);
+        $shelter = Shelter::create([
+            'name' => 'Posko sintetis audience',
+            'region_id' => Region::create(['name' => 'Wilayah sintetis audience'])->id,
+            'is_active' => true,
+            'primary_facility_id' => $facility->id,
+        ]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true, 'facility_id' => $facility->id]);
+        User::retrieved(function (User $user): void {
+            if ($user->role === UserRole::HEALTHCARE) {
+                throw new RuntimeException('Simulated audience resolution failure');
+            }
+        });
+        Event::fake([EmergencyCreated::class]);
+    }
+
+    public function test_audience_resolution_failure_preserves_online_json_receipt_and_audit(): void
+    {
+        $this->failHealthcareAudienceResolution();
+
+        $response = $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::MEDICAL_CRISIS->value])
+            ->assertCreated()
+            ->assertJsonPath('routing_status', 'ROUTED')
+            ->assertJsonPath('realtime_delivered', false);
+
+        $this->assertStringContainsString('belum dapat dikonfirmasi', $response->json('warning'));
+        $emergency = EmergencyEvent::sole();
+        $this->assertSame($emergency->id, $response->json('emergency_id'));
+        $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $emergency->id)->count());
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
+    public function test_audience_resolution_failure_redirects_to_persisted_emergency_with_warning(): void
+    {
+        $this->failHealthcareAudienceResolution();
+
+        $response = $this->post('/relawan/emergencies', ['red_flag_type' => RedFlagType::SEVERE_AGITATION->value]);
+
+        $emergency = EmergencyEvent::sole();
+        $response->assertRedirect("/relawan/emergencies/{$emergency->id}")
+            ->assertSessionHas('error', fn($warning) => str_contains($warning, 'belum dapat dikonfirmasi'));
+        $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $this->assertSame('ROUTED', $emergency->routing_status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $emergency->id)->count());
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
     public function test_emergency_detail_is_scoped_to_reporting_relawan(): void
     {
         $otherRelawan = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
@@ -337,6 +390,7 @@ final class RelawanT0SubmissionTest extends TestCase
     public function test_healthcare_classification_stays_internal_to_relawan_detail_and_data(): void
     {
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($healthcare);
         $patient = Patient::create(['name' => 'Penyintas Batas Peran', 'created_by' => $this->relawan->id]);
         $emergency = EmergencyEvent::create([
             'patient_id' => $patient->id,
@@ -387,7 +441,7 @@ final class RelawanT0SubmissionTest extends TestCase
         $payload = (new EmergencyCreated($emergency))->broadcastWith();
         $this->assertSame(['emergency' => ['id' => $emergency->id]], $payload);
         $authorize = Broadcast::getChannels()->get('emergencies');
-        $this->assertTrue($authorize(User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true])));
+        $this->assertFalse($authorize(User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true])));
         $this->assertFalse($authorize(User::factory()->create(['role' => UserRole::ADMIN, 'is_active' => true])));
         $this->assertFalse($authorize($this->relawan));
     }

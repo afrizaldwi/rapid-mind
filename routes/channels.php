@@ -24,7 +24,13 @@ Broadcast::channel('healthcare.facility.{facilityId}', function (User $user, $fa
 });
 
 Broadcast::channel('emergencies', function (User $user) {
-    $current = $user->fresh();
+    return false;
+});
 
-    return $current?->is_active === true && $current->role === UserRole::HEALTHCARE;
+Broadcast::channel('healthcare.facility.{facilityId}.user.{userId}.version.{version}', function (User $user, $facilityId, $userId, $version) {
+    $current = $user->fresh();
+    return $current && \App\Domain\Healthcare\HealthcareCaseAccess::facility($current) !== null
+        && (string) $current->id === (string) $userId
+        && (string) $current->facility_id === (string) $facilityId
+        && (string) $current->token_version === (string) $version;
 });

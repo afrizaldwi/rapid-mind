@@ -224,7 +224,7 @@ export async function offlineRepositoryFixture(
         });
         if (file.endsWith("/syncManager.ts"))
             code =
-                'const navigator = { onLine: true }; const window = { addEventListener() {}, setTimeout, location: { assign() {} } }; const document = { addEventListener() {}, visibilityState: \"visible\" };\n' +
+                `const window = globalThis.__rapidMindRepositoryFixtures.get(${JSON.stringify(identity)}).window; const navigator = window.navigator; const document = window.document;\n` +
                 code;
         code = code.replace(
             'new BroadcastChannel("rapid-mind:offline-mode-v1")',
@@ -247,7 +247,8 @@ export async function offlineRepositoryFixture(
             visibilityState: "visible",
         }),
         navigator: { onLine: true },
-        location: new URL(options.origin ?? "http://127.0.0.1:18443"),
+        setTimeout,
+        location: Object.assign(new URL(options.origin ?? "http://127.0.0.1:18443"), { assign() {} }),
     });
     context.window = browser;
     const environment = await load("resources/js/offline/offlineActivationEnvironment.ts");
@@ -331,8 +332,9 @@ export async function offlineRepositoryFixture(
         state: "ELIGIBLE",
         context: { owner_user_id: 101 },
     });
-    context.jsonRequest = (url: string, payload: unknown) =>
+    context.transport = (url: string, payload: unknown) =>
         jsonRequest(url, payload, 15);
+    context.jsonRequest = (url: string, payload: unknown) => context.transport(url, payload);
     context.MissingCsrfTokenError = MissingCsrfTokenError;
     const manager = await load("resources/js/offline/syncManager.ts", {
         "./jsonRequest": stub(["jsonRequest", "MissingCsrfTokenError"]),
@@ -377,6 +379,7 @@ export async function offlineRepositoryFixture(
         patients: patients.exports.patientRepository,
         outbox: outbox.exports.outboxRepository,
         syncManager: manager.exports.syncManager,
+        setTransport: (request: typeof context.jsonRequest) => { context.transport = request; },
         workflow: workflow.exports,
         drafts: drafts.exports,
         queue: sync.exports.queueAssessmentSnapshot,

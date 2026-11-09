@@ -83,7 +83,7 @@
                   v-for="action in legacyActions(r)"
                   :key="action.status"
                   type="button"
-                  :disabled="busyId !== null || reconciling || needsRefresh"
+                  :disabled="r.can_manage === false || busyId !== null || reconciling || needsRefresh"
                   @click="chooseAction(r, action.status)"
                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 transition"
                 >
@@ -141,6 +141,7 @@ import HealthcareLayout from '@/layouts/HealthcareLayout.vue';
 import { formatReferralStatus, nextReferralActions, type ReferralStatus } from '@/lib/referralStatus';
 
 type ReferralRow = {
+  can_manage?: boolean;
   id: string;
   status: ReferralStatus;
   patient?: { name?: string };

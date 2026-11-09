@@ -23,11 +23,14 @@ final class HealthcareDispatchConcurrencyTest extends TestCase
     // Fixtures must be committed so independent worker connections can see them.
     // All migrations still run only after the existing TestCase database guard.
     use DatabaseMigrations;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     /** @return array{array, array} */
     private function contend(EmergencyEvent $emergency, string $operation, string $resourceId, array $payloads): array
     {
         $actor = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($actor);
+        $emergency->forceFill(['responsible_facility_id' => $actor->facility_id, 'routing_status' => 'ROUTED'])->save();
         $connection = config('database.connections.pgsql');
         self::assertTestingDatabase($connection['database']);
         self::assertTestingDatabase(DB::selectOne('select current_database() as name')->name);
@@ -122,6 +125,8 @@ final class HealthcareDispatchConcurrencyTest extends TestCase
     {
         $emergency = EmergencyEvent::factory()->confirmed()->create();
         $actor = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($actor);
+        $emergency->forceFill(['responsible_facility_id' => $actor->facility_id, 'routing_status' => 'ROUTED'])->save();
         $dispatch = app(DispatchWorkflow::class)->assign($actor, $emergency->id, ['response_unit_id' => ResponseUnit::factory()->create()->id])->record;
         $payload = ['expected_status' => 'ASSIGNED', 'status' => 'EN_ROUTE'];
         $outcomes = $this->contend($emergency, 'transition', $dispatch->id, [$payload, $payload]);

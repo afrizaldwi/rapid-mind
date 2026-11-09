@@ -22,6 +22,7 @@ final class ClinicalReferralWorkflow
     public function recordCreated(Referral $referral, User $actor, string $notes): void
     {
         HealthcareWorkflowAccess::authorize($actor);
+        CaseSharing::forReferral($referral, $actor);
         ReferralStatusHistory::create([
             'referral_id' => $referral->id, 'previous_status' => null,
             'status' => ReferralStatus::ACTIVE, 'changed_by' => $actor->id, 'notes' => $notes,
@@ -50,6 +51,8 @@ final class ClinicalReferralWorkflow
 
         return DB::transaction(function () use ($actor, $referralId, $data, $notes): WorkflowResult {
             $source = Referral::findOrFail($referralId);
+            $case = HealthcareCaseAccess::referralCase($source);
+            abort_unless($case, 404);
             if ($source->emergency_event_id) {
                 EmergencyEvent::whereKey($source->emergency_event_id)->lockForUpdate()->firstOrFail();
             } elseif ($source->clinical_validation_id) {
@@ -57,6 +60,7 @@ final class ClinicalReferralWorkflow
                 Assessment::whereKey($assessmentId)->lockForUpdate()->firstOrFail();
             }
             $referral = Referral::whereKey($referralId)->lockForUpdate()->firstOrFail();
+            HealthcareCaseAccess::authorize($case, $actor);
             $current = ClinicalReferralStatus::tryFrom($referral->status->value);
             if ($current === ClinicalReferralStatus::COMPLETED) {
                 $history = $referral->statusHistory()->where('previous_status', ReferralStatus::ACTIVE)

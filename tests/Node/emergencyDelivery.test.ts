@@ -53,3 +53,10 @@ test("manual SMS has no preselected recipient or clinical context", () => {
     assert.match(emergencySmsGuidance, /tidak mengirim otomatis/);
     assert.match(emergencySmsGuidance, /tidak terenkripsi/);
 });
+
+test("an unresolved responsible facility never claims Healthcare receipt", () => {
+    const status = emergencyDeliveryStatus({ sync_state: "SYNCED", routing_status: "UNRESOLVED" });
+    assert.equal(status.accepted, true);
+    assert.match(status.realtime, /Faskes belum ditetapkan/);
+    assert.match(status.realtime, /penerimaan Healthcare belum terkonfirmasi/);
+});

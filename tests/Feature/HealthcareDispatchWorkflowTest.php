@@ -38,6 +38,7 @@ use Tests\TestCase;
 final class HealthcareDispatchWorkflowTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private User $actor;
 
@@ -45,6 +46,7 @@ final class HealthcareDispatchWorkflowTest extends TestCase
     {
         parent::setUp();
         $this->actor = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($this->actor);
         $this->actingAs($this->actor);
     }
 

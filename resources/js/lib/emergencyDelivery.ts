@@ -2,7 +2,7 @@ import type { LocalEmergency } from "../offline/db";
 
 // These describe technical receipt only, never a Healthcare action.
 export function emergencyDeliveryStatus(
-    local?: Pick<LocalEmergency, "sync_state" | "realtime_status">,
+    local?: Pick<LocalEmergency, "sync_state" | "realtime_status" | "routing_status">,
 ) {
     const state = local?.sync_state ?? "SYNCED"; // No local record: server-rendered detail.
     const accepted = state === "SYNCED";
@@ -21,7 +21,9 @@ export function emergencyDeliveryStatus(
             ? "Penerimaan server terkonfirmasi. Ini belum membuktikan Healthcare telah menerima notifikasi, mengakui, atau menindaklanjuti laporan."
             : "Catatan tetap tersimpan di perangkat. Penerimaan server belum terkonfirmasi; kirim ulang menggunakan ID insiden yang sama.",
         realtime: accepted
-            ? local?.realtime_status === "UNAVAILABLE"
+            ? local?.routing_status === "UNRESOLVED"
+                ? "Penanggung jawab Faskes belum ditetapkan. Laporan tersimpan di server; penerimaan Healthcare belum terkonfirmasi."
+                : local?.realtime_status === "UNAVAILABLE"
                 ? "Notifikasi realtime belum tersedia saat pengiriman. Penerimaan oleh Healthcare belum terkonfirmasi."
                 : "Penerimaan notifikasi realtime oleh Healthcare belum terkonfirmasi."
             : "Status notifikasi realtime belum terkonfirmasi.",

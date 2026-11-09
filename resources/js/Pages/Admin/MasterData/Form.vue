@@ -16,6 +16,13 @@
           <p v-if="form.errors.region_id" class="text-sm text-red-800 mt-1">{{ form.errors.region_id }}</p>
         </div>
         <div v-else><label class="block text-sm font-bold mb-1">Jenis Faskes *</label><input v-model="form.type" required class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" placeholder="Contoh: Puskesmas" /><p v-if="form.errors.type" class="text-sm text-red-800 mt-1">{{ form.errors.type }}</p></div>
+        <div v-if="kind === 'posko'">
+          <label class="block text-sm font-bold mb-1">Faskes penanggung jawab utama</label>
+          <select v-model="form.primary_facility_id" :disabled="!routingAvailable" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm"><option :value="null">Belum ditetapkan</option><option v-for="facility in facilities" :key="facility.id" :value="facility.id">{{ facility.name }}</option></select>
+          <p class="text-sm text-slate-500 mt-1">Berlaku untuk kasus baru. Kasus lama tidak dipindahkan otomatis.</p>
+          <p v-if="!routingAvailable" class="text-sm text-amber-800">Skema penugasan Faskes belum tersedia.</p>
+          <p v-if="form.errors.primary_facility_id" class="text-sm text-red-800">{{ form.errors.primary_facility_id }}</p>
+        </div>
         <div><label class="block text-sm font-bold mb-1">Alamat{{ kind === 'faskes' ? ' *' : '' }}</label><input v-model="form.address" :required="kind === 'faskes'" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.address" class="text-sm text-red-800 mt-1">{{ form.errors.address }}</p></div>
         <div v-if="kind === 'posko'" class="grid grid-cols-2 gap-4">
           <div><label class="block text-sm font-bold mb-1">Lintang</label><input v-model="form.latitude" type="number" step="any" min="-90" max="90" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.latitude" class="text-sm text-red-800 mt-1">{{ form.errors.latitude }}</p></div>
@@ -32,7 +39,7 @@
 import { computed } from 'vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-const props = defineProps<{ kind: 'posko' | 'faskes'; item: any | null; regions?: {id:number;name:string}[] }>();
+const props = defineProps<{ kind: 'posko' | 'faskes'; item: any | null; regions?: {id:number;name:string}[]; facilities?: {id:number;name:string}[]; routingAvailable?: boolean }>();
 const base = computed(() => props.kind === 'posko' ? '/admin/operations/posko' : '/admin/facilities/organizations');
 const label = computed(() => props.kind === 'posko' ? 'Posko' : 'Faskes');
 const page = usePage();
@@ -40,6 +47,7 @@ const message = computed(() => (page.props.flash as any)?.message);
 const form = useForm({
   name: props.item?.name ?? '',
   region_id: props.item?.region_id ?? null as number | null,
+  primary_facility_id: props.item?.primary_facility_id ?? null as number | null,
   type: props.item?.type ?? '',
   address: props.item?.address ?? '',
   latitude: props.item?.latitude ?? '',
