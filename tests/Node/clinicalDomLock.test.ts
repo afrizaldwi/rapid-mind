@@ -37,7 +37,7 @@ for (const name of [
     ] = placeholder;
 overrides["@/relawan/RelawanLink.vue"] = placeholder;
 overrides["@/components/Relawan/OfflineEncryptionGate.vue"] = moduleStub(
-    `import {defineComponent,h} from '${vue}'; export default defineComponent({setup:()=>()=>h('p',{},'Kunci data klinis offline')});`,
+    `import {defineComponent,h} from '${vue}'; export default defineComponent({setup:(_props,{slots})=>()=>h('section',{},[h('p',{},'Kunci data klinis offline'),slots.actions?.()])});`,
 );
 overrides["@/offline/encryptedClinicalStorage"] =
     moduleStub(`export const clinicalKeyVersion = () => globalThis.__b42dom.key.value;
@@ -62,7 +62,7 @@ overrides["@/pwa/register"] = moduleStub(
 overrides["@/offline/sessionRecovery"] = moduleStub(
     "export const openRelawanLogin = () => {}; export const relawanSessionRecovery = {};",
 );
-overrides["@inertiajs/vue3"] = moduleStub("export const router = {post(){}};");
+overrides["@inertiajs/vue3"] = moduleStub("export const router = {post: (...args) => globalThis.__b42dom.posts.push(args)};");
 overrides["dexie"] =
     moduleStub(`export const liveQuery = read => ({subscribe: observer => {
     let active = true;
@@ -70,7 +70,7 @@ overrides["dexie"] =
     return {unsubscribe(){active = false;}};
 }});`);
 overrides["@/offline/relawanContinuity"] = moduleStub(
-    "export const recordVerifiedRelawan=async()=>true; export const lockRelawanContinuity=async()=>{}; export const resolveRelawanContinuity=async()=>({state:'ELIGIBLE',context:{owner_user_id:101}});",
+    "export const recordVerifiedRelawan=async()=>true; export const lockRelawanContinuity=async()=>{globalThis.__b42dom.unlocked.value=false; globalThis.__b42dom.key.value++; if(globalThis.__b42dom.logoutStorageFails) throw new Error('storage unavailable'); globalThis.__b42dom.logoutPending=true;}; export const resolveRelawanContinuity=async()=>({state:'ELIGIBLE',context:{owner_user_id:101}});",
 );
 for (const name of ["patient", "assessment", "emergency"])
     overrides[`@/offline/${name}Repository`] = moduleStub(
@@ -342,6 +342,66 @@ for (const initialization of ["FRESH", "ENROLLMENT_PENDING"]) {
         } finally {
             f.app.unmount();
             if (oldWindow) Object.defineProperty(globalThis, "window", oldWindow); else delete (globalThis as any).window;
+        }
+    });
+}
+
+
+for (const scenario of ["offline", "online", "storage-failure", "network-failure", "http-failure"]) {
+    test(`locked gate logout: ${scenario} preserves the clinical boundary`, async () => {
+        state.initialization = "ENCRYPTED_LOCKED";
+        state.unlocked.value = false;
+        state.posts = [];
+        state.logoutPending = false;
+        state.logoutStorageFails = scenario === "storage-failure";
+        state.runtime.mode = "ONLINE_SERVER";
+        const oldWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+        const oldNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+        Object.defineProperty(globalThis, "window", { configurable: true, value: new EventTarget() });
+        Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: scenario !== "offline" } });
+        const Layout = (await import(await vueModuleUrl("resources/js/layouts/RelawanLayout.vue", overrides))).default;
+        const f = mountFixture(defineComponent({ setup: () => () => h(Layout, {}, { default: () => h("p", {}, "Sensitive workspace") }) }));
+        try {
+            await f.flush();
+            assert.doesNotMatch(f.text(), /Sensitive workspace/);
+            const exit = f.nodes(node => node.tag === "button" && f.text(node).trim() === "Keluar")[0];
+            assert.ok(exit, "logout must be accessible without unlocking");
+            await exit.onClick();
+            await f.flush();
+            assert.equal(state.unlocked.value, false);
+            assert.doesNotMatch(f.text(), /Sensitive workspace/);
+            if (scenario === "storage-failure") {
+                assert.equal(state.logoutPending, false);
+                assert.equal(state.posts.length, 0);
+                assert.match(f.text(), /Perangkat belum dapat mencatat permintaan keluar/);
+                assert.ok(f.nodes(node => node.role === "alert").length);
+            } else {
+                assert.equal(state.logoutPending, true);
+                assert.match(f.text(), /Akses lokal dikunci/);
+                assert.equal(state.posts.length, scenario === "offline" ? 0 : 1);
+                if (scenario === "offline") assert.match(f.text(), /Logout server tertunda/);
+                else {
+                    const [path, payload, hooks] = state.posts[0];
+                    assert.equal(path, "/logout");
+                    assert.deepEqual(payload, {});
+                    if (scenario.endsWith("failure")) {
+                        const callback = scenario === "network-failure" ? hooks.onNetworkError : hooks.onHttpException;
+                        assert.equal(callback(), false);
+                        await f.flush();
+                        assert.match(f.text(), /Logout server belum berhasil/);
+                        assert.equal(state.logoutPending, true);
+                        assert.equal(state.unlocked.value, false);
+                    }
+                }
+            }
+        } finally {
+            f.app.unmount();
+            state.runtime.mode = "OFFLINE_FIELD_MODE";
+            state.logoutStorageFails = false;
+            for (const [name, descriptor] of [["window", oldWindow], ["navigator", oldNavigator]] as const) {
+                if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+                else delete (globalThis as any)[name];
+            }
         }
     });
 }

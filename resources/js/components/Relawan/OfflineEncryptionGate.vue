@@ -101,6 +101,7 @@
         <p v-if="recoveryCode && error" role="alert" class="mt-3 text-sm text-red-800">{{ error }}</p>
         <p class="mt-4 text-sm">Jika frasa sandi dan kode pemulihan hilang, masuk ke server tidak dapat memulihkan kunci data lokal.</p>
         <LockedEmergencyGuidance />
+        <slot name="actions" />
     </section>
 </template>
 

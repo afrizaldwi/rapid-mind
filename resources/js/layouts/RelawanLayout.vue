@@ -41,7 +41,20 @@
         :key="encryptionGateKey"
         :owner="currentOwner"
         @unlocked="onClinicalUnlocked"
-    />
+    >
+        <template #actions>
+            <p v-if="logoutError" role="alert" class="mt-4 text-sm text-amber-800">
+                {{ logoutError }}
+            </p>
+            <button
+                type="button"
+                class="mt-4 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
+                @click="logout"
+            >
+                Keluar
+            </button>
+        </template>
+    </OfflineEncryptionGate>
     <div
         v-else-if="clinicalViewAvailable"
         ref="clinicalViewRoot"
@@ -649,14 +662,18 @@ function retryServerLogout() {
             "Hubungkan perangkat untuk menyelesaikan logout server.";
         return;
     }
+    const failed = () => {
+        logoutError.value =
+            "Logout server belum berhasil. Akses lokal tetap dikunci.";
+        return false;
+    };
     router.post(
         "/logout",
         {},
         {
-            onError: () => {
-                logoutError.value =
-                    "Logout server belum berhasil. Akses lokal tetap dikunci.";
-            },
+            onError: failed,
+            onNetworkError: failed,
+            onHttpException: failed,
         },
     );
 }

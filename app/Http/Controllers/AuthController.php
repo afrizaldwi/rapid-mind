@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Demo\CompetitionLoginAccounts;
 use App\Enums\UserRole;
 use App\Http\Middleware\ValidateWebSessionVersion;
 use App\Models\User;
@@ -28,11 +29,17 @@ final class AuthController extends Controller
             return redirect($this->getRedirectPath($user));
         }
 
-        return Inertia::render('Auth/Login', $reauthentication ? [
+        $props = $reauthentication ? [
             // The existing server session remains intact until valid replacement
             // credentials are submitted, but it must not affect local continuity.
             'auth' => ['user' => null],
-        ] : []);
+        ] : [];
+        $demoAccounts = CompetitionLoginAccounts::forRequest($request);
+        if ($demoAccounts !== []) {
+            $props['demoAccounts'] = $demoAccounts;
+        }
+
+        return Inertia::render('Auth/Login', $props);
     }
 
     public function login(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse|RedirectResponse

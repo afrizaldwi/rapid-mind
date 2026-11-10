@@ -51,6 +51,7 @@
             <div class="mt-1 relative">
               <input
                 id="password"
+                ref="passwordInput"
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
@@ -82,43 +83,19 @@
         </div>
       </form>
 
-      <!-- Demo Accounts Helper Drawer -->
-      <div class="mt-6 pt-6 border-t border-slate-200">
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center mb-3">
-          Akun Demo Cepat
-        </p>
-        <div class="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            class="px-2 py-2 text-xs font-medium rounded-lg bg-slate-100 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 text-slate-700 transition"
-            @click="quickFill('relawan@rapidmind.id')"
-          >
-            Relawan
-          </button>
-          <button
-            type="button"
-            class="px-2 py-2 text-xs font-medium rounded-lg bg-slate-100 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 text-slate-700 transition"
-            @click="quickFill('nakes@rapidmind.id')"
-          >
-            Healthcare
-          </button>
-          <button
-            type="button"
-            class="px-2 py-2 text-xs font-medium rounded-lg bg-slate-100 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 text-slate-700 transition"
-            @click="quickFill('admin@rapidmind.id')"
-          >
-            Admin
-          </button>
-        </div>
-      </div>
+      <DemoLoginAccounts :accounts="demoAccounts" :disabled="loading" @select="quickFill" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
+import DemoLoginAccounts, { type DemoLoginAccount } from '@/components/DemoLoginAccounts.vue';
 import { router } from '@inertiajs/vue3';
 import { lockRelawanContinuity, recordVerifiedRelawan, type VerifiedRelawan } from '@/offline/relawanContinuity';
+
+withDefaults(defineProps<{ demoAccounts?: DemoLoginAccount[] }>(), { demoAccounts: () => [] });
+const passwordInput = ref<HTMLInputElement | null>(null);
 
 const form = ref({
   email: '',
@@ -131,7 +108,9 @@ const errorMessage = ref('');
 
 function quickFill(email: string) {
   form.value.email = email;
-  form.value.password = 'password';
+  form.value.password = '';
+  showPassword.value = false;
+  void nextTick(() => passwordInput.value?.focus());
   errorMessage.value = '';
 }
 
