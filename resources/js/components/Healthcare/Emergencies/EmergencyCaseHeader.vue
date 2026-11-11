@@ -48,7 +48,7 @@
                 :disabled="isSubmitting"
                 class="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-800"
             >
-                {{ isSubmitting ? "Mengakui kasus..." : "Akui Kasus" }}
+                {{ isSubmitting ? $t('healthcare.caseHeader.acknowledging', 'Mengakui kasus…') : $t('healthcare.caseHeader.acknowledgeAction', 'Akui Kasus') }}
             </button>
             <button
                 v-else-if="['ACKNOWLEDGED', 'REVIEWING'].includes(item.status)"
@@ -56,7 +56,7 @@
                 @click="emit('open-actions')"
                 class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
             >
-                Lanjutkan Verifikasi Medis
+                {{ $t('healthcare.caseHeader.continueVerification', 'Lanjutkan Verifikasi Medis') }}
             </button>
             <button
                 v-else-if="item.status === 'CONFIRMED' && !item.hasReferral"
@@ -64,7 +64,7 @@
                 @click="emit('open-actions')"
                 class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
             >
-                Terbitkan Rujukan Medis
+                {{ $t('healthcare.actions.referralTitle', 'Terbitkan Rujukan Medis') }}
             </button>
             <span
                 v-else-if="item.hasReferral"
@@ -83,7 +83,7 @@
                         d="M5 13l4 4L19 7"
                     />
                 </svg>
-                <span>Rujukan medis diterbitkan</span>
+                <span>{{ $t('healthcare.actions.referralIssued', 'Rujukan medis diterbitkan') }}</span>
             </span>
         </div>
     </div>
@@ -104,16 +104,16 @@
         <div class="px-4">
             <span
                 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                >Usia</span
+                >{{ $t('assessment.ageLabel', 'Usia') }}</span
             >
             <span class="text-slate-800 font-semibold">{{
-                item.age !== null ? `${item.age} tahun` : "-"
+                item.age !== null ? `${item.age} ${$t('common.years', 'tahun')}` : "-"
             }}</span>
         </div>
         <div class="px-4">
             <span
                 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                >Jenis Kelamin</span
+                >{{ $t('assessment.genderLabel', 'Jenis Kelamin') }}</span
             >
             <span class="text-slate-800 font-semibold">{{
                 item.gender
@@ -122,7 +122,7 @@
         <div class="pl-4">
             <span
                 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                >Lokasi Posko</span
+                >{{ $t('common.shelter', 'Lokasi Posko') }}</span
             >
             <span class="text-slate-800 font-semibold">{{
                 item.shelterName
@@ -132,6 +132,7 @@
 </template>
 
 <script setup lang="ts">
+import { t as $t } from "@/i18n";
 import type { HealthcareEmergencyQueueItem } from "@/lib/healthcareEmergency";
 
 defineProps<{

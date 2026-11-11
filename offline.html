@@ -49,17 +49,30 @@
       </div>
 
       <section id="offline-state">
-        <p>Memeriksa data perangkat…</p>
+        <p id="offline-checking-text">Memeriksa data perangkat…</p>
       </section>
 
       <p>
-        <a href="/relawan/home" style="color: #0f766e;">
+        <a id="offline-reconnect-link" href="/relawan/home" style="color: #0f766e;">
           Coba sambungkan kembali
         </a>
       </p>
     </main>
   </div>
 
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("rapid_mind_locale") === "en") {
+          document.documentElement.lang = "en";
+          var checking = document.getElementById("offline-checking-text");
+          if (checking) checking.textContent = "Checking device data…";
+          var reconnect = document.getElementById("offline-reconnect-link");
+          if (reconnect) reconnect.textContent = "Try reconnecting";
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script type="module" src="/resources/js/offline/bootstrap.ts"></script>
 </body>
 

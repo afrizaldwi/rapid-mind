@@ -7,10 +7,10 @@
                 <h2
                     class="text-xs font-bold uppercase tracking-wider text-slate-900"
                 >
-                    Antrean Darurat
+                    {{ $t('healthcare.queuePanel.title', 'Antrean Darurat') }}
                 </h2>
                 <span class="text-[11px] font-semibold text-slate-500">
-                    {{ items.length }} kasus
+                    {{ items.length }} {{ $t('healthcare.queuePanel.cases', 'kasus') }}
                 </span>
             </div>
 
@@ -36,15 +36,15 @@
                 <input
                     v-model="searchModel"
                     type="text"
-                    aria-label="Cari antrean darurat"
-                    placeholder="Cari nama, NIK, ID RM..."
+                    :aria-label="$t('healthcare.queuePanel.searchLabel', 'Cari antrean darurat')"
+                    :placeholder="$t('healthcare.queuePanel.searchPlaceholder', 'Cari nama, NIK, ID RM...')"
                     class="w-full pl-8 pr-7 py-1.5 bg-slate-50/70 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus:border-teal-600 focus:bg-white transition"
                 />
                 <button
                     v-if="searchQuery"
                     type="button"
                     @click="searchModel = ''"
-                    aria-label="Hapus pencarian"
+                    :aria-label="$t('healthcare.queuePanel.clearSearch', 'Hapus pencarian')"
                     class="absolute inset-y-0 right-0 px-2.5 flex items-center text-slate-400 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-700"
                 >
                     &times;
@@ -63,7 +63,7 @@
                     "
                     class="px-2.5 py-1 rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 >
-                    Semua
+                    {{ $t('healthcare.queuePanel.filterAll', 'Semua') }}
                 </button>
                 <button
                     type="button"
@@ -157,7 +157,7 @@
                     >
                         {{
                             item.status === "PENDING"
-                                ? "Perlu diakui"
+                                ? $t('healthcare.queue.unacknowledged', 'Perlu diakui')
                                 : item.statusLabel
                         }}
                     </span>
@@ -170,10 +170,10 @@
                 class="p-8 text-center text-xs text-slate-400 space-y-1"
             >
                 <p class="font-bold text-slate-600">
-                    {{ hasEmergencies ? "Tidak ada antrean yang cocok" : "Belum ada insiden darurat" }}
+                    {{ hasEmergencies ? $t('healthcare.queuePanel.emptyFilter', 'Tidak ada antrean yang cocok') : $t('healthcare.queuePanel.emptyQueue', 'Belum ada insiden darurat') }}
                 </p>
                 <p class="text-slate-400 text-[11px]">
-                    {{ hasEmergencies ? "Ubah filter prioritas atau kata kunci pencarian." : "Insiden baru akan muncul di antrean ini." }}
+                    {{ hasEmergencies ? $t('healthcare.queuePanel.changeFilterHint', 'Ubah filter prioritas atau kata kunci pencarian.') : $t('healthcare.queuePanel.newIncidentsHint', 'Insiden baru akan muncul di antrean ini.') }}
                 </p>
             </div>
         </div>
@@ -182,6 +182,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { t as $t } from "@/i18n";
 import type {
     HealthcareEmergencyFilter,
     HealthcareEmergencyQueueItem,

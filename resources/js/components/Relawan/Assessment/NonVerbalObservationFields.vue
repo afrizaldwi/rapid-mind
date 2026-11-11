@@ -4,12 +4,14 @@
         class="space-y-3 rounded-xl border border-slate-300 bg-white p-4"
     >
         <legend class="px-1 text-base font-bold text-slate-900">
-            Observasi komunikasi non-verbal
+            {{ isEn ? "Non-verbal communication observations" : "Observasi komunikasi non-verbal" }}
         </legend>
         <p class="text-base text-slate-700">
-            Catat yang diamati, tanpa menyimpulkan diagnosis. Gunakan isyarat
-            atau ketukan layar tanpa memaksa berbicara. Observasi tidak mengisi
-            jawaban SRQ secara otomatis.
+            {{
+                isEn
+                    ? "Record what is observed, without making a diagnosis. Use gestures or screen taps without forcing speech. Observations do not automatically fill SRQ answers."
+                    : "Catat yang diamati, tanpa menyimpulkan diagnosis. Gunakan isyarat atau ketukan layar tanpa memaksa berbicara. Observasi tidak mengisi jawaban SRQ secara otomatis."
+            }}
         </p>
         <label
             v-for="code in nonVerbalReasonCodes"
@@ -24,13 +26,17 @@
                 @change="$emit('toggle', code)"
                 class="h-5 w-5 accent-teal-700"
             />
-            {{ observationLabels[code] }}
+            {{ getObservationLabel(code, locale) }}
         </label>
         <label
             v-if="modelValue.non_verbal_reasons?.includes('OTHER')"
             class="block text-base font-semibold"
         >
-            Catatan lainnya (opsional, maksimal 500 karakter)
+            {{
+                isEn
+                    ? "Other notes (optional, max 500 characters)"
+                    : "Catatan lainnya (opsional, maksimal 500 karakter)"
+            }}
             <textarea
                 :value="modelValue.non_verbal_other_note ?? ''"
                 maxlength="500"
@@ -44,7 +50,7 @@
             @click="$emit('clear')"
             class="min-h-14 rounded-lg border border-slate-300 px-4 text-base font-semibold focus-visible:outline-2 focus-visible:outline-teal-700"
         >
-            Kosongkan Observasi
+            {{ isEn ? "Clear Observations" : "Kosongkan Observasi" }}
         </button>
     </fieldset>
 </template>
@@ -54,7 +60,10 @@ import {
     type NonVerbalObservations,
     type NonVerbalReason,
 } from "@/domain/assessment/nonVerbalObservations";
-import { observationLabels } from "@/domain/assessment/observationPresentation";
+import { getObservationLabel } from "@/domain/assessment/observationPresentation";
+import { useI18n } from "@/i18n";
+
+const { locale, isEn } = useI18n();
 defineProps<{ modelValue: NonVerbalObservations; disabled?: boolean }>();
 // Emit intent; the parent merges against its latest state, including same-tick edits.
 const emit = defineEmits<{

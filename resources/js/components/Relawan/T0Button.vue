@@ -7,10 +7,10 @@
       type="button"
       @click="$emit('trigger')"
       class="flex items-center space-x-2.5 bg-red-800 hover:bg-red-900 active:scale-95 text-white px-5 py-3.5 rounded-full shadow-2xl border-2 border-red-700/60 font-bold tracking-wide transition duration-150 min-h-[56px] focus:outline-none focus:ring-4 focus:ring-red-500/30"
-      aria-label="Picu T0 Darurat"
+      :aria-label="$t('relawan.emergencyButtonLabel')"
     >
       <Siren class="h-5 w-5" aria-hidden="true" />
-      <span class="text-sm font-extrabold tracking-wider">T0 DARURAT</span>
+      <span class="text-sm font-extrabold tracking-wider">{{ isEn ? 'T0 EMERGENCY' : 'T0 DARURAT' }}</span>
     </button>
   </div>
 </template>
@@ -18,6 +18,9 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { Siren } from 'lucide-vue-next';
+import { useI18n } from '@/i18n';
+
+const { isEn, t: $t } = useI18n();
 
 const props = withDefaults(defineProps<{ focused?: boolean }>(), { focused: false });
 defineEmits<{

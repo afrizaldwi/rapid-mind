@@ -13,9 +13,10 @@ export function useEmergencyQueue(
 ) {
     const searchQuery = ref("");
     const selectedFilter = ref<HealthcareEmergencyFilter>("ALL");
-    const queueList = computed(() =>
-        normalizeEmergencyQueue(emergencies() ?? []),
-    );
+    const queueList = computed(() => {
+        const activeLocale = (globalThis as any)?.__rapidMindLocale?.value || "id";
+        return normalizeEmergencyQueue(emergencies() ?? [], activeLocale);
+    });
     const counts = computed(() =>
         emergencyQueueCounts(queueList.value, emergencies() ?? []),
     );

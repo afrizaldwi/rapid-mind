@@ -10,7 +10,11 @@ import {
 } from "../domain/assessment/nonVerbalObservations.ts";
 
 // Read-only presentation of persisted evidence. Never calculate or infer clinical scores.
-export function healthcareAssessmentPresentation(assessment: any) {
+export function healthcareAssessmentPresentation(
+    assessment: any,
+    locale: string = "id",
+) {
+    const isEn = locale === "en";
     const rawRows = assessment?.srq_responses ?? assessment?.srqResponses ?? [];
     const sourceValid = Array.isArray(rawRows);
     const rows: any[] = sourceValid ? rawRows : [];
@@ -39,7 +43,11 @@ export function healthcareAssessmentPresentation(assessment: any) {
         return {
             number,
             answer,
-            label: error ? "Data jawaban tidak valid" : srqAnswerLabel(answer),
+            label: error
+                ? isEn
+                    ? "Invalid response data"
+                    : "Data jawaban tidak valid"
+                : srqAnswerLabel(answer, locale),
             invalid: error,
         };
     });
@@ -116,8 +124,9 @@ export function healthcareAssessmentPresentation(assessment: any) {
                 : {}),
         });
     } catch {
-        observationError =
-            "Data observasi tidak valid. Muat ulang konteks asesmen; tindakan darurat tetap tersedia.";
+        observationError = isEn
+            ? "Invalid observation data. Reload assessment context; emergency actions remain available."
+            : "Data observasi tidak valid. Muat ulang konteks asesmen; tindakan darurat tetap tersedia.";
     }
     return {
         hasAssessment: !!assessment,
@@ -140,14 +149,24 @@ export function healthcareAssessmentPresentation(assessment: any) {
                 ? "Non-Verbal"
                 : assessment?.mode === "VERBAL"
                   ? "Verbal"
-                  : "Mode tidak tercatat",
+                  : isEn
+                    ? "Mode not recorded"
+                    : "Mode tidak tercatat",
         statusLabel: !assessment
-            ? "Asesmen belum tersedia"
+            ? isEn
+                ? "Assessment not yet available"
+                : "Asesmen belum tersedia"
             : answersComplete && !scoringEvidenceValid
-              ? "Jawaban lengkap; bukti skor tersimpan belum dapat digunakan"
+              ? isEn
+                  ? "Answers complete; stored score evidence cannot be used yet"
+                  : "Jawaban lengkap; bukti skor tersimpan belum dapat digunakan"
               : finalized
-                ? "Asesmen selesai"
-                : "Asesmen belum lengkap / perlu klarifikasi",
+                ? isEn
+                    ? "Assessment completed"
+                    : "Asesmen selesai"
+                : isEn
+                  ? "Assessment incomplete / needs clarification"
+                  : "Asesmen belum lengkap / perlu klarifikasi",
         observations,
         observationError,
     };

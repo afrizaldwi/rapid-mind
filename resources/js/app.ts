@@ -5,6 +5,7 @@ import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createApp, h, type DefineComponent } from "vue";
 import { configureEcho } from "@laravel/echo-vue";
 import { lockRelawanContinuity, type VerifiedRelawan } from "./offline/relawanContinuity";
+import { i18nPlugin } from "./i18n";
 
 import { onClinicalInvalidation } from "./offline/clinicalAccessFence";
 onClinicalInvalidation(() => router.clearHistory());
@@ -43,8 +44,17 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
 // SubtleCrypto. Do not initialize clinical history in that environment.
 const clinicalPath = /^\/(relawan|healthcare)(\/|$)/.test(window.location.pathname);
 if (clinicalPath && !window.crypto?.subtle) {
+    const isEn = (() => {
+        try {
+            return window.localStorage?.getItem("rapid_mind_locale") === "en";
+        } catch {
+            return false;
+        }
+    })();
     const notice = document.createElement("p");
-    notice.textContent = "Akses klinis memerlukan browser dengan enkripsi aman (HTTPS atau localhost). Data tidak dibuka. Untuk kondisi darurat, tetap dampingi penyintas dan hubungi bantuan medis melalui sarana yang tersedia.";
+    notice.textContent = isEn
+        ? "Clinical access requires a browser with secure encryption (HTTPS or localhost). Data will not be opened. In an emergency, stay with the survivor and contact medical assistance through available channels."
+        : "Akses klinis memerlukan browser dengan enkripsi aman (HTTPS atau localhost). Data tidak dibuka. Untuk kondisi darurat, tetap dampingi penyintas dan hubungi bantuan medis melalui sarana yang tersedia.";
     document.body.replaceChildren(notice);
 } else createInertiaApp({
     title: (title) => (title ? `${title} — RAPID-MIND` : "RAPID-MIND"),
@@ -67,6 +77,7 @@ if (clinicalPath && !window.crypto?.subtle) {
             render: () => h(App, props),
         })
             .use(plugin)
+            .use(i18nPlugin)
             .mount(el);
     },
 });

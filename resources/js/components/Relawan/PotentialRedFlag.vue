@@ -6,21 +6,39 @@
       </div>
 
       <h3 class="text-xl font-bold text-slate-900">
-        {{ reviewOnly ? 'Ucapan Q17 Perlu Ditinjau' : 'Indikator Red Flag Terdeteksi' }}
+        {{
+          reviewOnly
+            ? (isEn ? 'Q17 Speech Requires Review' : 'Ucapan Q17 Perlu Ditinjau')
+            : (isEn ? 'Red Flag Indicator Detected' : 'Indikator Red Flag Terdeteksi')
+        }}
       </h3>
 
       <div class="bg-red-50 text-red-900 rounded-xl p-4 text-sm text-left space-y-2 border border-red-200">
         <p v-if="reviewOnly" class="font-bold">
-          Ucapan terkait Q17 memerlukan peninjauan manual. Jawaban tersimpan tidak diubah otomatis.
+          {{
+            isEn
+              ? 'Speech related to Q17 requires manual review. Saved answers were not changed automatically.'
+              : 'Ucapan terkait Q17 memerlukan peninjauan manual. Jawaban tersimpan tidak diubah otomatis.'
+          }}
         </p>
         <p v-else class="font-bold">
-          Penyintas mengindikasikan pikiran mengakhiri hidup (SRQ #17) atau kondisi krisis jiwa akut.
+          {{
+            isEn
+              ? 'Survivor indicates thoughts of ending life (SRQ #17) or acute psychiatric crisis.'
+              : 'Penyintas mengindikasikan pikiran mengakhiri hidup (SRQ #17) atau kondisi krisis jiwa akut.'
+          }}
         </p>
         <p class="text-xs text-red-800">
-          <strong>Protokol Etik & Keselamatan:</strong>
-          {{ reviewOnly
-            ? 'Periksa jawaban Q17 langsung dengan penyintas. STT tidak membuat atau mengirim T0.'
-            : 'JANGAN tinggalkan penyintas sendirian. Tetap dampingi secara fisik dan picu sinyal darurat T0 ke fasilitas kesehatan terdekat.' }}
+          <strong>{{ isEn ? 'Ethics & Safety Protocol:' : 'Protokol Etik & Keselamatan:' }}</strong>
+          {{
+            reviewOnly
+              ? (isEn
+                  ? 'Verify Q17 response directly with the survivor. STT never creates or submits a T0 report.'
+                  : 'Periksa jawaban Q17 langsung dengan penyintas. STT tidak membuat atau mengirim T0.')
+              : (isEn
+                  ? 'DO NOT leave the survivor alone. Stay with them physically and trigger a T0 emergency signal to the nearest health facility.'
+                  : 'JANGAN tinggalkan penyintas sendirian. Tetap dampingi secara fisik dan picu sinyal darurat T0 ke fasilitas kesehatan terdekat.')
+          }}
         </p>
       </div>
 
@@ -31,14 +49,18 @@
           @click="$emit('escalate')"
           class="w-full py-3.5 px-4 rounded-xl bg-red-800 hover:bg-red-900 text-white font-bold text-xs shadow-md transition"
         >
-          BUKA VERIFIKASI T0 DARURAT
+          {{ isEn ? 'OPEN T0 EMERGENCY VERIFICATION' : 'BUKA VERIFIKASI T0 DARURAT' }}
         </button>
         <button
           type="button"
           @click="$emit('dismiss')"
           class="w-full py-2.5 px-4 rounded-xl border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition"
         >
-          {{ reviewOnly ? 'Tutup dan Periksa Q17 Manual' : 'Lanjutkan Asesmen Manual' }}
+          {{
+            reviewOnly
+              ? (isEn ? 'Close and Check Q17 Manually' : 'Tutup dan Periksa Q17 Manual')
+              : (isEn ? 'Continue Manual Assessment' : 'Lanjutkan Asesmen Manual')
+          }}
         </button>
       </div>
     </div>
@@ -47,6 +69,9 @@
 
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next';
+import { useI18n } from '@/i18n';
+
+const { isEn } = useI18n();
 
 defineProps<{
   show: boolean;

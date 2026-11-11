@@ -53,6 +53,11 @@ final class LocalOfflineEnrollment
             return null;
         }
 
+        $clientOrigin = $request->header('X-Client-Origin');
+        if (is_string($clientOrigin) && $clientOrigin !== '' && ! str_ends_with(strtolower($clientOrigin), '.example')) {
+            return $clientOrigin;
+        }
+
         $originHeader = $request->header('Origin');
         if (is_string($originHeader) && $originHeader !== '' && ! str_ends_with(strtolower($originHeader), '.example')) {
             return $originHeader;
@@ -68,6 +73,6 @@ final class LocalOfflineEnrollment
             return $scheme . '://' . $forwardedHost;
         }
 
-        return null;
+        return self::ORIGIN;
     }
 }

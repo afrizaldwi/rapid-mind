@@ -8,7 +8,7 @@
             <h3
                 class="text-xs font-bold text-slate-900 uppercase tracking-wider"
             >
-                Rekam Jejak Operasional Kasus
+                {{ $t('healthcare.historyTab.operationalTrail', 'Rekam Jejak Operasional Kasus') }}
             </h3>
             <span
                 class="text-[11px] font-mono text-slate-400"
@@ -28,8 +28,7 @@
                     ></span>
                     <span
                         class="text-[10px] font-bold text-teal-800 block"
-                        >Laporan Kedaruratan
-                        Lapangan</span
+                        >{{ $t('healthcare.historyTab.emergencyReport', 'Laporan Kedaruratan Lapangan') }}</span
                     >
                     <p class="font-bold text-slate-800">
                         {{ item.shelterName }}
@@ -37,14 +36,12 @@
                     <p
                         class="text-[11px] text-slate-500"
                     >
-                        Dilaporkan oleh
-                        {{
-                            item.volunteerName
-                        }}
+                        {{ $t('healthcare.historyTab.reportedBy', { name: item.volunteerName }, `Dilaporkan oleh ${item.volunteerName}`) }}
                         •
                         {{
                             formatDateTime(
                                 item.createdAt,
+                                locale,
                             )
                         }}
                     </p>
@@ -60,10 +57,10 @@
                     ></span>
                     <span
                         class="text-[10px] font-bold text-slate-500 block"
-                        >Skrining Awal</span
+                        >{{ $t('healthcare.historyTab.initialScreening', 'Skrining Awal') }}</span
                     >
                     <p class="font-bold text-slate-800">
-                        Instrumen Psikologis
+                        {{ $t('healthcare.historyTab.psychologicalInstrument', 'Instrumen Psikologis') }}
                         {{ item.rmCode }}
                     </p>
                     <p
@@ -72,8 +69,8 @@
                         {{
                             item.srqScore !==
                             null
-                                ? `Skor SRQ-20: ${item.srqScore}/20`
-                                : "Skor tidak tersedia"
+                                ? `${$t('healthcare.assessmentTab.srqScore', 'Skor SRQ-20:')} ${item.srqScore}/20`
+                                : $t('healthcare.assessmentTab.notAvailable', 'Skor tidak tersedia')
                         }}
                     </p>
                 </div>
@@ -91,13 +88,13 @@
                     ></span>
                     <span
                         class="text-[10px] font-bold text-amber-800 block"
-                        >Verifikasi Sekunder Nakes</span
+                        >{{ $t('healthcare.historyTab.secondaryVerification', 'Verifikasi Sekunder Nakes') }}</span
                     >
                     <p class="font-bold text-slate-800">
-                        Metode: {{ v.method }} • Hasil:
+                        {{ $t('healthcare.historyTab.method', 'Metode') }}: {{ verificationMethodLabel(v.method) }} • {{ $t('healthcare.historyTab.result', 'Hasil') }}:
                         {{
                             v.clinical_result ||
-                            "Dalam Peninjauan"
+                            $t('healthcare.historyTab.inReview', 'Dalam Peninjauan')
                         }}
                     </p>
                     <p
@@ -121,22 +118,23 @@
                     ></span>
                     <span
                         class="text-[10px] font-bold text-teal-800 block"
-                        >Rujukan Medis</span
+                        >{{ $t('healthcare.actions.referralTitle', 'Rujukan Medis') }}</span
                     >
                     <p class="font-bold text-slate-800">
-                        Tujuan:
+                        {{ $t('common.destination', 'Tujuan') }}:
                         {{
                             r.facility?.name ||
-                            "Fasilitas Rujukan"
+                            $t('healthcare.referrals.targetFacility', 'Fasilitas Rujukan')
                         }}
                     </p>
                     <p
                         class="text-[11px] text-slate-500"
                     >
-                        Status:
+                        {{ $t('common.status', 'Status') }}:
                         {{
                             formatReferralStatus(
                                 r.status,
+                                locale,
                             )
                         }}
                     </p>
@@ -147,8 +145,17 @@
 </template>
 
 <script setup lang="ts">
+import { t as $t, useI18n } from "@/i18n";
 import { formatDateTime, type HealthcareEmergencyQueueItem } from "@/lib/healthcareEmergency";
 import { formatReferralStatus } from "@/lib/referralStatus";
 
 defineProps<{ item: HealthcareEmergencyQueueItem }>();
+const { locale } = useI18n();
+
+function verificationMethodLabel(method?: string): string {
+    if (method === "PHONE") return $t("healthcare.verificationMethods.PHONE", "Telepon");
+    if (method === "VIDEO") return $t("healthcare.verificationMethods.VIDEO", "Video Call");
+    if (method === "FIELD_TEAM") return $t("healthcare.verificationMethods.FIELD_TEAM", "Tim Lapangan");
+    return method || "-";
+}
 </script>

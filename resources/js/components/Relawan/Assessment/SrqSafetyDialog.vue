@@ -14,69 +14,77 @@
             class="max-h-[90dvh] w-full max-w-md space-y-4 overflow-y-auto rounded-xl bg-white p-5 text-base text-slate-900 shadow-xl"
         >
             <h2 id="srq-safety-title" class="text-xl font-bold">
-                {{
-                    state === "CONFIRM"
-                        ? "Konfirmasi Jawaban Pertanyaan 17"
-                        : "Jawaban Keselamatan Perlu Ditinjau"
-                }}
+                {{ dialogTitle }}
             </h2>
             <p id="srq-safety-description">
-                Tetap dampingi penyintas. Periksa langsung apakah respons
-                menunjukkan pikiran untuk mengakhiri hidup. Konfirmasi jawaban
-                tidak mengirim T0.
+                {{ isEn ? "Continue accompanying the survivor. Directly verify whether responses indicate thoughts of ending life. Confirming an answer does not send a T0 report." : "Tetap dampingi penyintas. Periksa langsung apakah respons menunjukkan pikiran untuk mengakhiri hidup. Konfirmasi jawaban tidak mengirim T0." }}
             </p>
             <blockquote
                 v-if="evidence"
                 class="whitespace-pre-wrap break-words rounded-lg bg-slate-100 p-3"
             >
-                Hasil suara: {{ evidence }}
+                {{ isEn ? "Voice transcript: " : "Hasil suara: " }}{{ evidence }}
             </blockquote>
             <p v-if="state === 'REVIEW'">
-                Jawaban manual atau tersimpan tetap dipertahankan. Periksa
-                kembali Q17 secara manual.
+                {{ isEn ? "Manual or stored answers remain preserved. Please review Q17 manually." : "Jawaban manual atau tersimpan tetap dipertahankan. Periksa kembali Q17 secara manual." }}
             </p>
             <p v-if="state === 'CONFIRMED'">
-                Jawaban Ya telah dipilih. Periksa status penyimpanan draf. Bila
-                perlu bantuan darurat, buka verifikasi T0.
+                {{ isEn ? "Answer 'Yes' has been selected. Check draft storage status. If emergency assistance is required, open T0 verification." : "Jawaban Ya telah dipilih. Periksa status penyimpanan draf. Bila perlu bantuan darurat, buka verifikasi T0." }}
             </p>
             <button
                 v-if="state === 'CONFIRM'"
                 type="button"
                 @click="$emit('confirm')"
-                class="min-h-14 w-full rounded-lg bg-teal-700 p-3 font-bold text-white"
+                class="min-h-14 w-full rounded-lg bg-teal-700 p-3 font-bold text-white cursor-pointer"
             >
-                Konfirmasi Jawaban Ya
+                {{ isEn ? "Confirm Answer: Yes" : "Konfirmasi Jawaban Ya" }}
             </button>
             <button
                 type="button"
                 @click="$emit('escalate')"
-                class="min-h-14 w-full rounded-lg bg-red-800 p-3 font-bold text-white"
+                class="min-h-14 w-full rounded-lg bg-red-800 p-3 font-bold text-white cursor-pointer"
             >
-                Buka Verifikasi T0 Darurat
+                {{ isEn ? "Open T0 Emergency Verification" : "Buka Verifikasi T0 Darurat" }}
             </button>
             <button
                 type="button"
                 @click="$emit('dismiss')"
-                class="min-h-14 w-full rounded-lg border border-slate-300 p-3 font-semibold"
+                class="min-h-14 w-full rounded-lg border border-slate-300 p-3 font-semibold cursor-pointer"
             >
-                {{
-                    state === "CONFIRM"
-                        ? "Batal — Pertahankan Jawaban Sebelumnya"
-                        : "Kembali ke Asesmen"
-                }}
+                {{ dismissButtonLabel }}
             </button>
         </section>
     </div>
 </template>
 <script setup lang="ts">
-import { ref, nextTick, watch } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
 import { useDialogFocus } from "@/composables/useDialogFocus";
+import { useI18n } from "@/i18n";
+
+const { locale } = useI18n();
+const isEn = computed(() => locale.value === "en");
+
 const props = defineProps<{
     state: "CONFIRM" | "REVIEW" | "CONFIRMED" | null;
     evidence?: string;
 }>();
 const emit = defineEmits<{ confirm: []; dismiss: []; escalate: [] }>();
 const panel = ref<HTMLElement | null>(null);
+
+const dialogTitle = computed(() => {
+    if (props.state === "CONFIRM") {
+        return isEn.value ? "Confirm Question 17 Answer" : "Konfirmasi Jawaban Pertanyaan 17";
+    }
+    return isEn.value ? "Safety Answer Requires Review" : "Jawaban Keselamatan Perlu Ditinjau";
+});
+
+const dismissButtonLabel = computed(() => {
+    if (props.state === "CONFIRM") {
+        return isEn.value ? "Cancel — Keep Previous Answer" : "Batal — Pertahankan Jawaban Sebelumnya";
+    }
+    return isEn.value ? "Return to Assessment" : "Kembali ke Asesmen";
+});
+
 watch(
     () => props.state,
     async (state) => {

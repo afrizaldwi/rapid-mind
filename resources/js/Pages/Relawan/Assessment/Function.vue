@@ -3,19 +3,18 @@
     <div class="space-y-6 pb-64">
       <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
-          Bagian C: Keberfungsian Harian
+          {{ isEn ? 'Part C: Daily Functioning' : 'Bagian C: Keberfungsian Harian' }}
         </span>
         <h2 class="text-lg font-extrabold text-slate-900 mt-1">
-          Evaluasi Keberfungsian di Posko
+          {{ isEn ? 'Shelter Functioning Evaluation' : 'Evaluasi Keberfungsian di Posko' }}
         </h2>
         <p class="text-xs text-slate-500 mt-1">
-          {{ patient?.name }} • Adaptasi WHODAS: Pilih kondisi yang paling menggambarkan aktivitas penyintas 3 hari
-          terakhir.
+          {{ patient?.name }} • {{ isEn ? 'WHODAS Adaptation: Select the condition that best describes survivor activities over the last 3 days.' : 'Adaptasi WHODAS: Pilih kondisi yang paling menggambarkan aktivitas penyintas 3 hari terakhir.' }}
         </p>
       </div>
 
       <div class="space-y-5">
-        <div v-for="d in domains" :key="d.code"
+        <div v-for="d in localizedDomains" :key="d.code"
           class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-start justify-between gap-3">
             <h3 class="font-semibold text-slate-900 text-base leading-snug">
@@ -23,14 +22,14 @@
             </h3>
             <span class="shrink-0 text-xs font-bold px-2 py-1 rounded-md"
               :class="[0, 1, 3].includes(functions[d.code]) ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-600'">
-              {{ [0, 1, 3].includes(functions[d.code]) ? '✓ Terpilih' : 'Belum dipilih' }}
+              {{ [0, 1, 3].includes(functions[d.code]) ? (isEn ? '✓ Selected' : '✓ Terpilih') : (isEn ? 'Not selected' : 'Belum dipilih') }}
             </span>
           </div>
 
           <div class="space-y-2">
             <button v-for="opt in d.options" :key="opt.level" type="button" :disabled="!draftReady" @click="setFunctionLevel(d.code, opt.level)"
               :aria-pressed="functions[d.code] === opt.level"
-              class="w-full min-h-[64px] text-left p-4 rounded-xl border-2 transition flex items-start gap-3" :class="functions[d.code] === opt.level
+              class="w-full min-h-[64px] text-left p-4 rounded-xl border-2 transition flex items-start gap-3 cursor-pointer" :class="functions[d.code] === opt.level
                 ? 'border-teal-700 bg-teal-50 text-teal-950 ring-1 ring-teal-500/20'
                 : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
               <span class="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center"
@@ -39,7 +38,7 @@
               </span>
               <span class="flex-1">
                 <span class="block text-sm font-medium leading-relaxed">{{ opt.label }}</span>
-                <span class="block mt-1 text-xs font-semibold">{{ opt.level }} poin</span>
+                <span class="block mt-1 text-xs font-semibold">{{ opt.level }} {{ isEn ? 'points' : 'poin' }}</span>
               </span>
             </button>
           </div>
@@ -50,8 +49,11 @@
       <div v-if="functionScore !== null && functionScore >= 6"
         class="bg-orange-50 border-2 border-orange-400 p-4 rounded-xl text-orange-950 text-xs font-semibold space-y-1">
         <div class="flex items-center gap-2">
-          <TriangleAlert class="h-4 w-4" aria-hidden="true" />
-          <p class="m-0">
+          <TriangleAlert class="h-4 w-4 shrink-0" aria-hidden="true" />
+          <p class="m-0 leading-relaxed" v-if="isEn">
+            Survivor daily functional disability score reached {{ functionScore }} points (≥ 6). System will recommend category <strong>T1 (Doctor / Medical Staff Priority Examination)</strong>.
+          </p>
+          <p class="m-0 leading-relaxed" v-else>
             Skor disabilitas fungsi harian penyintas mencapai {{ functionScore }} poin (≥ 6). Sistem akan merekomendasikan
             kategori <strong>T1 (Prioritas Pemeriksaan Dokter / Tenaga Medis)</strong>.
           </p>
@@ -64,15 +66,16 @@
         <div class="flex items-center justify-between space-x-3">
           <RelawanLink :href="`/relawan/assessment/${assessment.id}/risk`"
             class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">
-            ← Kembali
+            ← {{ isEn ? 'Back' : 'Kembali' }}
           </RelawanLink>
           <button type="button" @click="saveAndNext" :disabled="isSaving || !draftReady || answeredCount !== 3"
-            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60">
-            Tinjau & Ringkasan Asesmen →
+            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60 cursor-pointer">
+            {{ isEn ? 'Review & Assessment Summary →' : 'Tinjau & Ringkasan Asesmen →' }}
           </button>
         </div>
-        <p v-if="answeredCount !== 3" class="mt-2 text-xs text-slate-600">Lengkapi semua jawaban sebelum melanjutkan ({{
-          answeredCount }}/3).</p>
+        <p v-if="answeredCount !== 3" class="mt-2 text-xs text-slate-600">
+          {{ isEn ? `Complete all answers before proceeding (${answeredCount}/3).` : `Lengkapi semua jawaban sebelum melanjutkan (${answeredCount}/3).` }}
+        </p>
         <p v-if="draftWarning" role="alert" class="mt-2 text-xs font-semibold text-amber-900">{{ draftWarning }}</p>
         <p v-if="saveError" role="alert" class="mt-2 text-xs font-semibold text-red-800">{{ saveError }}</p>
       </div>
@@ -89,6 +92,11 @@ import { useRelawanRuntime } from '@/relawan/runtime';
 import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '@/offline/assessmentDraft';
 import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
+import { useI18n } from '@/i18n';
+import { localizeMessage } from '@/i18n/localizeMessage';
+
+const { locale } = useI18n();
+const isEn = computed(() => locale.value === 'en');
 
 const props = defineProps<{
   assessment: any;
@@ -102,47 +110,93 @@ const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(props.patient);
 const isSaving = ref(false);
-const saveError = ref('');
-const draftWarning = ref('');
+const rawSaveError = ref('');
+const rawDraftWarning = ref('');
+const saveError = computed(() => localizeMessage(rawSaveError.value, locale.value));
+const draftWarning = computed(() => localizeMessage(rawDraftWarning.value, locale.value));
 const draftReady = ref(false);
 const editedKeys = new Set<string>();
 const answeredCount = computed(() => ['F1', 'F2', 'F3'].filter(code => [0, 1, 3].includes(functions.value[code])).length);
 
-const domains = [
+const localizedDomains = computed(() => [
   {
     code: 'F1',
-    title: 'Perawatan Diri (Self-Care)',
+    title: isEn.value ? 'Self-Care' : 'Perawatan Diri (Self-Care)',
     options: [
-      { level: 0, label: 'Mandiri merawat diri, makan, minum, dan ganti pakaian tanpa dorongan.' },
-      { level: 1, label: 'Butuh diingatkan / diarahkan berulang kali oleh keluarga/relawan.' },
-      { level: 3, label: 'Menolak total / tidak mampu merawat diri sama sekali.' },
+      {
+        level: 0,
+        label: isEn.value
+          ? 'Independently cares for self, eats, drinks, and changes clothes without prompting.'
+          : 'Mandiri merawat diri, makan, minum, dan ganti pakaian tanpa dorongan.',
+      },
+      {
+        level: 1,
+        label: isEn.value
+          ? 'Needs repeated reminders / direction from family or volunteers.'
+          : 'Butuh diingatkan / diarahkan berulang kali oleh keluarga/relawan.',
+      },
+      {
+        level: 3,
+        label: isEn.value
+          ? 'Completely refuses / totally unable to care for self.'
+          : 'Menolak total / tidak mampu merawat diri sama sekali.',
+      },
     ],
   },
   {
     code: 'F2',
-    title: 'Fungsi Peran & Sosial',
+    title: isEn.value ? 'Role & Social Functioning' : 'Fungsi Peran & Sosial',
     options: [
-      { level: 0, label: 'Mampu berinteraksi wajar dan membantu keluarga/sesama pengungsi.' },
-      { level: 1, label: 'Menarik diri, mengurung diri di tenda, enggan diajak bicara.' },
-      { level: 3, label: 'Memusuhi, agresif, atau mutisme total (tidak merespons orang).' },
+      {
+        level: 0,
+        label: isEn.value
+          ? 'Able to interact normally and assist family or fellow shelter residents.'
+          : 'Mampu berinteraksi wajar dan membantu keluarga/sesama pengungsi.',
+      },
+      {
+        level: 1,
+        label: isEn.value
+          ? 'Withdraws, stays inside tent, reluctant to speak.'
+          : 'Menarik diri, mengurung diri di tenda, enggan diajak bicara.',
+      },
+      {
+        level: 3,
+        label: isEn.value
+          ? 'Hostile, aggressive, or complete mutism (does not respond to people).'
+          : 'Memusuhi, agresif, atau mutisme total (tidak merespons orang).',
+      },
     ],
   },
   {
     code: 'F3',
-    title: 'Akses Kebutuhan & Bantuan',
+    title: isEn.value ? 'Access to Needs & Relief' : 'Akses Kebutuhan & Bantuan',
     options: [
-      { level: 0, label: 'Aktif dan mampu mengurus kebutuhan posko / antre logistik.' },
-      { level: 1, label: 'Pasif, hanya menunggu orang lain membawakan logistik.' },
-      { level: 3, label: 'Bingung total / linglung parah, tersesat di sekitar posko.' },
+      {
+        level: 0,
+        label: isEn.value
+          ? 'Active and able to manage shelter needs / queue for logistics.'
+          : 'Aktif dan mampu mengurus kebutuhan posko / antre logistik.',
+      },
+      {
+        level: 1,
+        label: isEn.value
+          ? 'Passive, only waits for others to bring logistics.'
+          : 'Pasif, hanya menunggu orang lain membawakan logistik.',
+      },
+      {
+        level: 3,
+        label: isEn.value
+          ? 'Completely confused / severe disorientation, wandering around shelter.'
+          : 'Bingung total / linglung parah, tersesat di sekitar posko.',
+      },
     ],
   },
-];
+]);
 
 const functionScore = computed(() => {
   if (answeredCount.value !== 3) return null;
   return functions.value.F1 + functions.value.F2 + functions.value.F3;
 });
-
 
 function setFunctionLevel(code: string, level: number) {
   functions.value[code] = level;
@@ -150,53 +204,49 @@ function setFunctionLevel(code: string, level: number) {
   void persistDraft();
 }
 
-
 async function persistDraft() {
   try {
     if (!localAssessment.value) throw new Error('Asesmen lokal belum siap.');
     await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value);
-    draftWarning.value = '';
+    rawDraftWarning.value = '';
   } catch {
-    draftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
+    rawDraftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
   }
 }
 
 async function loadFunctionContext() {
-  draftWarning.value = '';
+  rawSaveError.value = '';
   try {
     const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
     localAssessment.value = context.assessment;
     patient.value = context.patient;
-    const local = await readAssessmentDraft(owner, props.assessment.id, 'function_domains');
-    const merged = mergeAssessmentDraft('function_domains', props.functions, local);
-    for (const [key, value] of Object.entries(merged)) {
-      if (!editedKeys.has(key)) (functions.value as Record<string, typeof value>)[key] = value;
+    const restoredDraft = await readAssessmentDraft(owner, context.assessment.id, 'function_domains');
+    if (restoredDraft && typeof restoredDraft === 'object') {
+      const merged: Record<string, number> = { ...functions.value };
+      for (const [key, value] of Object.entries(restoredDraft as Record<string, number>)) {
+        if (!editedKeys.has(key)) merged[key] = value;
+      }
+      functions.value = merged;
     }
     draftReady.value = true;
   } catch (error) {
-    draftWarning.value = error instanceof Error ? error.message : 'Asesmen lokal tidak dapat dibaca.';
+    rawSaveError.value = error instanceof Error ? error.message : 'Asesmen lokal tidak tersedia.';
   }
 }
 
-onMounted(() => { void loadFunctionContext(); });
-
 async function saveAndNext() {
-  if (isSaving.value || !draftReady.value) return;
-  if (answeredCount.value !== 3) {
-    saveError.value = 'Lengkapi semua jawaban sebelum melanjutkan.';
-    return;
-  }
+  if (answeredCount.value !== 3 || !localAssessment.value) return;
   isSaving.value = true;
-  saveError.value = '';
+  rawSaveError.value = '';
   try {
-    await persistDraft();
-    if (draftWarning.value) throw new Error(draftWarning.value);
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value);
     runtime.navigate(`/relawan/assessment/${props.assessment.id}/review`);
-  } catch {
-    saveError.value = 'Jawaban belum tersimpan di perangkat ini. Coba lagi.';
+  } catch (error) {
+    rawSaveError.value = error instanceof Error ? error.message : 'Gagal menyimpan fungsi harian.';
   } finally {
     isSaving.value = false;
   }
 }
 
+onMounted(() => { void loadFunctionContext(); });
 </script>

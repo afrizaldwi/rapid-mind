@@ -4,6 +4,7 @@ import { assessmentRepository } from "@/offline/assessmentRepository";
 import { outboxRepository } from "@/offline/outboxRepository";
 import { localPersistenceHealth } from "@/offline/localPersistenceHealth";
 import { syncManager, type SyncExecutionState } from "@/offline/syncManager";
+import { useI18n } from "@/i18n";
 
 type LocalCounts = {
     pendingCount: number;
@@ -26,6 +27,7 @@ export type OperationalKind =
     | "synced";
 
 export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync: Ref<boolean> = ref(true)) {
+    const { isEn } = useI18n();
     const online = ref(
         allowSync.value && (typeof navigator === "undefined" ? true : navigator.onLine),
     );
@@ -41,7 +43,14 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
         isSyncing: false,
         sessionState: "READY",
     });
-    const actionError = ref("");
+    const retryFailed = ref(false);
+    const actionError = computed(() =>
+        retryFailed.value
+            ? isEn.value
+                ? "Synchronization could not be run yet. Local data remains available."
+                : "Sinkronisasi belum dapat dijalankan. Data lokal tetap tersedia."
+            : "",
+    );
     let localSubscription: Subscription | undefined;
     let stopFailure: (() => void) | undefined;
     let lease: number | undefined;
@@ -68,7 +77,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
             unfinishedCount: 0,
             unqueuedCompletedCount: 0,
         };
-        actionError.value = "";
+        retryFailed.value = false;
         if (!next) return;
         const currentGeneration = generation;
         if (allowSync.value) lease = syncManager.setOwner(next);
@@ -138,33 +147,35 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
     const label = computed(() => {
         switch (kind.value) {
             case "local-failure":
-                return "Data belum tersimpan di perangkat";
+                return isEn.value ? "Data not saved on device yet" : "Data belum tersimpan di perangkat";
             case "unavailable":
-                return "Status data belum tersedia";
+                return isEn.value ? "Data status unavailable" : "Status data belum tersedia";
             case "recovering-session":
-                return "Memulihkan sesi…";
+                return isEn.value ? "Recovering session…" : "Memulihkan sesi…";
             case "reauthentication-required":
-                return "Perlu masuk kembali untuk sinkronisasi";
+                return isEn.value ? "Sign in required to sync" : "Perlu masuk kembali untuk sinkronisasi";
             case "syncing":
                 return pendingCount.value > 0
-                    ? `Menyinkronkan ${pendingCount.value} data…`
-                    : "Menyinkronkan…";
+                    ? (isEn.value ? `Syncing ${pendingCount.value} records…` : `Menyinkronkan ${pendingCount.value} data…`)
+                    : (isEn.value ? "Syncing…" : "Menyinkronkan…");
             case "offline":
                 return pendingCount.value > 0
-                    ? `Offline • ${pendingCount.value} data tersimpan`
+                    ? (isEn.value ? `Offline • ${pendingCount.value} saved` : `Offline • ${pendingCount.value} data tersimpan`)
                     : counts.value.unfinishedCount > 0
-                      ? "Offline • pekerjaan tersimpan"
+                      ? (isEn.value ? "Offline • drafts saved" : "Offline • pekerjaan tersimpan")
                       : "Offline";
             case "failed":
-                return "Sinkronisasi belum berhasil";
+                return isEn.value ? "Synchronization unsuccessful" : "Sinkronisasi belum berhasil";
             case "pending":
-                return `${pendingCount.value} data menunggu sinkronisasi`;
+                return isEn.value
+                    ? `${pendingCount.value} records waiting to sync`
+                    : `${pendingCount.value} data menunggu sinkronisasi`;
             case "unqueued":
-                return "Data belum siap disinkronkan";
+                return isEn.value ? "Data not ready to sync" : "Data belum siap disinkronkan";
             case "local-only":
-                return "Pekerjaan tersimpan di perangkat";
+                return isEn.value ? "Draft saved on device" : "Pekerjaan tersimpan di perangkat";
             default:
-                return "Tersinkron";
+                return isEn.value ? "Synchronized" : "Tersinkron";
         }
     });
     const canRetry = computed(
@@ -177,13 +188,12 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
             retryableCount.value > 0,
     );
     async function retry() {
-        actionError.value = "";
+        retryFailed.value = false;
         if (!owner.value || !canRetry.value) return;
         try {
             await syncManager.sync(owner.value);
         } catch {
-            actionError.value =
-                "Sinkronisasi belum dapat dijalankan. Data lokal tetap tersedia.";
+            retryFailed.value = true;
         }
     }
 

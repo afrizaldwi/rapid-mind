@@ -10,31 +10,31 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span>Kembali ke Daftar Pasien</span>
+                    <span>{{ $t('healthcare.patientShow.backToPatients', 'Kembali ke Daftar Pasien') }}</span>
                 </Link>
             </div>
 
             <!-- Patient Header Surface (Single Unified Surface) -->
             <div class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-3">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rekam Pasien</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ $t('healthcare.patientShow.recordHeader', 'Rekam Pasien') }}</span>
                 </div>
                 <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
                     {{ patient.name }}
                 </h1>
                 <div class="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-                    <span>NIK: <strong class="font-mono text-slate-700">{{ patient.nik || "Tidak terdata" }}</strong></span>
+                    <span>NIK: <strong class="font-mono text-slate-700">{{ patient.nik || $t('healthcare.patientShow.nikUnrecorded', 'Tidak terdata') }}</strong></span>
                     <span>•</span>
-                    <span>Usia: {{ patient.age !== null && patient.age !== undefined ? `${patient.age} tahun` : "-" }}</span>
+                    <span>{{ $t('assessment.ageLabel', 'Usia') }}: {{ patient.age !== null && patient.age !== undefined ? `${patient.age} ${$t('common.years', 'tahun')}` : "-" }}</span>
                     <span>•</span>
-                    <span>{{ patient.gender || "-" }}</span>
+                    <span>{{ formatGender(patient.gender) }}</span>
                     <span>•</span>
-                    <span>Posko: <strong class="text-slate-700">{{ patient.shelter?.name || "Posko tidak diketahui" }}</strong></span>
+                    <span>{{ $t('common.shelter', 'Posko') }}: <strong class="text-slate-700">{{ patient.shelter?.name || $t('healthcare.patients.unrecordedShelter', 'Posko tidak diketahui') }}</strong></span>
                 </div>
             </div>
 
             <!-- Navigation Tabs (Clean text with bottom border indicator) -->
-            <nav class="flex items-center space-x-6 border-b border-slate-200 px-1 text-xs" aria-label="Bagian rekam pasien">
+            <nav class="flex items-center space-x-6 border-b border-slate-200 px-1 text-xs" :aria-label="$t('healthcare.patientShow.sectionsAria', 'Bagian rekam pasien')">
                 <button
                     v-for="tab in tabs"
                     :key="tab.key"
@@ -56,9 +56,9 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 text-xs">
                     <!-- Col 1: Status Aktif T0 -->
                     <div class="space-y-1">
-                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Status Darurat T0</span>
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">{{ $t('healthcare.patientShow.summary.t0Status', 'Status Darurat T0') }}</span>
                         <p class="font-bold text-sm text-slate-900">
-                            {{ activeEmergency ? emergencyStatus(activeEmergency.status) : "Tidak ada T0 aktif" }}
+                            {{ activeEmergency ? emergencyStatus(activeEmergency.status) : $t('healthcare.patientShow.summary.noActiveT0', 'Tidak ada T0 aktif') }}
                         </p>
                         <p v-if="activeEmergency" class="text-[11px] text-rose-600 font-semibold">
                             {{ redFlagLabel(activeEmergency.red_flag_type) }}
@@ -67,12 +67,12 @@
 
                     <!-- Col 2: Asesmen Terakhir -->
                     <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
-                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Asesmen Terakhir</span>
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">{{ $t('healthcare.patientShow.summary.latestAssessment', 'Asesmen Terakhir') }}</span>
                         <div class="flex items-center gap-1.5 text-xs font-bold" v-if="latestAssessment?.triage_result?.system_recommendation" :class="triageTextColor(latestAssessment.triage_result.system_recommendation)">
                             <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="triageDotColor(latestAssessment.triage_result.system_recommendation)"></span>
                             <span>{{ latestAssessment.triage_result.system_recommendation }}</span>
                         </div>
-                        <span v-else class="font-bold text-sm text-slate-900">Belum ada asesmen</span>
+                        <span v-else class="font-bold text-sm text-slate-900">{{ $t('healthcare.patientShow.summary.noAssessmentYet', 'Belum ada asesmen') }}</span>
                         <p v-if="latestAssessment" class="text-[11px] text-slate-400">
                             {{ formatDate(assessmentDate(latestAssessment)) }}
                         </p>
@@ -80,9 +80,9 @@
 
                     <!-- Col 3: Validasi Terakhir -->
                     <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
-                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Validasi Terakhir</span>
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">{{ $t('healthcare.patientShow.summary.latestValidation', 'Validasi Terakhir') }}</span>
                         <p class="font-bold text-sm text-slate-900">
-                            {{ validationItems[0]?.result || "Belum divalidasi" }}
+                            {{ validationItems[0]?.result || $t('healthcare.patientShow.summary.notValidatedYet', 'Belum divalidasi') }}
                         </p>
                         <p v-if="validationItems[0]" class="text-[11px] text-slate-400">
                             {{ validationItems[0].validator }} • {{ formatDate(validationItems[0].createdAt) }}
@@ -91,12 +91,12 @@
 
                     <!-- Col 4: Rujukan Aktif -->
                     <div class="pt-3 sm:pt-0 sm:pl-4 space-y-1">
-                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Rujukan Aktif</span>
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">{{ $t('healthcare.patientShow.summary.activeReferral', 'Rujukan Aktif') }}</span>
                         <p class="font-bold text-sm text-slate-900 truncate">
-                            {{ activeReferral?.facility?.name || "Tidak ada rujukan" }}
+                            {{ activeReferral?.facility?.name || $t('healthcare.patientShow.summary.noReferral', 'Tidak ada rujukan') }}
                         </p>
                         <p v-if="activeReferral" class="text-[11px] text-teal-800 font-semibold">
-                            Status: {{ formatReferralStatus(activeReferral.status) }}
+                            {{ $t('common.status', 'Status') }}: {{ formatReferralStatus(activeReferral.status, locale) }}
                         </p>
                     </div>
                 </div>
@@ -106,10 +106,10 @@
             <div v-else-if="activeTab === 'assessments'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Riwayat Asesmen
+                        {{ $t('healthcare.patientShow.assessmentsTitle', 'Riwayat Asesmen') }}
                     </h2>
                     <span class="text-xs text-slate-400">
-                        {{ patient.assessments?.length || 0 }} sesi
+                        {{ $t('healthcare.patientShow.sessionsCount', { count: patient.assessments?.length || 0 }, `${patient.assessments?.length || 0} sesi`) }}
                     </span>
                 </div>
 
@@ -129,13 +129,13 @@
                                         class="w-1.5 h-1.5 rounded-full shrink-0"
                                         :class="triageDotColor(assessment.triage_result?.system_recommendation)"
                                     ></span>
-                                    {{ assessment.triage_result?.system_recommendation || "Tanpa Hasil" }}
+                                    {{ assessment.triage_result?.system_recommendation || $t('healthcare.patientShow.noResult', 'Tanpa Hasil') }}
                                 </span>
                                 <span class="text-slate-500 text-[11px]">
                                     {{ formatDate(assessmentDate(assessment)) }}
                                 </span>
                                 <span v-if="assessment.user?.name" class="text-slate-400 text-[11px]">
-                                    • Relawan: {{ assessment.user.name }}
+                                    • {{ $t('common.volunteer', 'Relawan') }}: {{ assessment.user.name }}
                                 </span>
                             </div>
 
@@ -144,7 +144,7 @@
                                 :href="`/healthcare/validations/${assessment.id}`"
                                 class="text-teal-800 font-semibold hover:underline text-[11px]"
                             >
-                                Lihat Validasi ({{ assessment.clinical_validation.clinical_result }}) →
+                                {{ $t('healthcare.patientShow.viewValidationResult', { result: assessment.clinical_validation.clinical_result }, `Lihat Validasi (${assessment.clinical_validation.clinical_result})`) }} →
                             </Link>
                         </div>
 
@@ -154,20 +154,20 @@
                                 SRQ-20: <strong class="text-slate-900">{{ score(assessment.triage_result?.srq_score, 20) }}</strong>
                             </div>
                             <div class="text-slate-600">
-                                Faktor Risiko: <strong class="text-slate-900">{{ score(assessment.triage_result?.risk_score, 8) }}</strong>
+                                {{ $t('assessment.riskStep', 'Faktor Risiko') }}: <strong class="text-slate-900">{{ score(assessment.triage_result?.risk_score, 8) }}</strong>
                             </div>
                             <div class="text-slate-600">
-                                Fungsi: <strong class="text-slate-900">{{ score(assessment.triage_result?.function_score, 9) }}</strong>
+                                {{ $t('assessment.functionStep', 'Fungsi') }}: <strong class="text-slate-900">{{ score(assessment.triage_result?.function_score, 9) }}</strong>
                             </div>
                             <div class="text-slate-600">
-                                Total: <strong class="text-slate-900">{{ score(assessment.triage_result?.total_score, 37) }}</strong>
+                                {{ $t('healthcare.overview.totalScore', 'Total') }}: <strong class="text-slate-900">{{ score(assessment.triage_result?.total_score, 37) }}</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div v-else class="p-8 text-center text-xs text-slate-400">
-                    Belum ada riwayat asesmen tercatat untuk pasien ini.
+                    {{ $t('healthcare.patientShow.noAssessments', 'Belum ada riwayat asesmen tercatat untuk pasien ini.') }}
                 </div>
             </div>
 
@@ -175,10 +175,10 @@
             <div v-else-if="activeTab === 'emergencies'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Riwayat Kedaruratan T0
+                        {{ $t('healthcare.patientShow.emergenciesTitle', 'Riwayat Kedaruratan T0') }}
                     </h2>
                     <span class="text-xs text-slate-400">
-                        {{ patient.emergency_events?.length || 0 }} insiden
+                        {{ $t('healthcare.patientShow.incidentsCount', { count: patient.emergency_events?.length || 0 }, `${patient.emergency_events?.length || 0} insiden`) }}
                     </span>
                 </div>
 
@@ -209,7 +209,7 @@
                         </p>
 
                         <div v-if="emergencyDecision(emergency)" class="text-[11px] text-slate-500 pt-1">
-                            Keputusan: <strong class="text-slate-800">{{ emergencyDecision(emergency).clinical_result }}</strong>
+                            {{ $t('healthcare.patientShow.decisionPrefix', 'Keputusan:') }} <strong class="text-slate-800">{{ emergencyDecision(emergency).clinical_result }}</strong>
                             <span v-if="emergencyDecision(emergency).notes"> — {{ emergencyDecision(emergency).notes }}</span>
                         </div>
 
@@ -218,7 +218,7 @@
                                 :href="`/healthcare/emergencies/${emergency.id}`"
                                 class="text-xs font-semibold text-teal-800 hover:text-teal-900 inline-flex items-center gap-1"
                             >
-                                <span>Buka detail insiden</span>
+                                <span>{{ $t('healthcare.patientShow.openIncidentDetail', 'Buka detail insiden') }}</span>
                                 <span>→</span>
                             </Link>
                         </div>
@@ -226,7 +226,7 @@
                 </div>
 
                 <div v-else class="p-8 text-center text-xs text-slate-400">
-                    Belum ada catatan insiden darurat T0 untuk pasien ini.
+                    {{ $t('healthcare.patientShow.noEmergencies', 'Belum ada catatan insiden darurat T0 untuk pasien ini.') }}
                 </div>
             </div>
 
@@ -234,10 +234,10 @@
             <div v-else-if="activeTab === 'validations'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Riwayat Validasi Klinis
+                        {{ $t('healthcare.patientShow.validationsTitle', 'Riwayat Validasi Klinis') }}
                     </h2>
                     <span class="text-xs text-slate-400">
-                        {{ validationItems.length }} validasi
+                        {{ $t('healthcare.patientShow.validationsCount', { count: validationItems.length }, `${validationItems.length} validasi`) }}
                     </span>
                 </div>
 
@@ -257,11 +257,11 @@
                                         class="w-1.5 h-1.5 rounded-full shrink-0"
                                         :class="triageDotColor(item.result)"
                                     ></span>
-                                    Hasil: {{ item.result }}
+                                    {{ $t('healthcare.historyTab.result', 'Hasil') }}: {{ item.result }}
                                 </span>
                                 <span class="text-slate-300">·</span>
                                 <span class="text-slate-600 font-medium text-[11px]">
-                                    Sumber: {{ item.source }}
+                                    {{ $t('common.source', 'Sumber') }}: {{ item.source }}
                                 </span>
                             </div>
                             <span class="text-slate-400 text-[11px]">
@@ -270,17 +270,17 @@
                         </div>
 
                         <p class="text-slate-500 text-[11px]">
-                            Oleh: <strong class="text-slate-700">{{ item.validator }}</strong>
+                            {{ $t('healthcare.patientShow.byLabel', 'Oleh:') }} <strong class="text-slate-700">{{ item.validator }}</strong>
                         </p>
 
                         <p v-if="item.notes" class="text-slate-700 text-[11px]">
-                            Catatan: {{ item.notes }}
+                            {{ $t('common.notes', 'Catatan') }}: {{ item.notes }}
                         </p>
                     </div>
                 </div>
 
                 <div v-else class="p-8 text-center text-xs text-slate-400">
-                    Belum ada riwayat validasi klinis untuk pasien ini.
+                    {{ $t('healthcare.patientShow.noValidations', 'Belum ada riwayat validasi klinis untuk pasien ini.') }}
                 </div>
             </div>
 
@@ -288,10 +288,10 @@
             <div v-else-if="activeTab === 'referrals'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Riwayat Rujukan Medis
+                        {{ $t('healthcare.patientShow.referralsTitle', 'Riwayat Rujukan Medis') }}
                     </h2>
                     <span class="text-xs text-slate-400">
-                        {{ patient.referrals?.length || 0 }} rujukan
+                        {{ $t('healthcare.patientShow.referralsCount', { count: patient.referrals?.length || 0 }, `${patient.referrals?.length || 0} rujukan`) }}
                     </span>
                 </div>
 
@@ -311,11 +311,11 @@
                                         class="w-1.5 h-1.5 rounded-full shrink-0"
                                         :class="referral.status === 'COMPLETED' ? 'bg-teal-600' : 'bg-amber-500'"
                                     ></span>
-                                    {{ formatReferralStatus(referral.status) }}
+                                    {{ formatReferralStatus(referral.status, locale) }}
                                 </span>
                                 <span class="text-slate-300">·</span>
                                 <span class="font-bold text-slate-800">
-                                    {{ referral.facility?.name || "Faskes tidak tersedia" }}
+                                    {{ referral.facility?.name || $t('healthcare.operations.facilityUnavailable', 'Faskes tidak tersedia') }}
                                 </span>
                             </div>
                             <span class="text-slate-400 text-[11px]">
@@ -324,7 +324,7 @@
                         </div>
 
                         <p class="text-slate-500 text-[11px]">
-                            Asal: {{ referralSource(referral) }} • Perujuk: {{ referral.referrer?.name || "Tidak tercatat" }}
+                            {{ $t('healthcare.patientShow.originPrefix', 'Asal:') }} {{ referralSource(referral) }} • {{ $t('healthcare.referrals.referrer', 'Perujuk') }}: {{ referral.referrer?.name || $t('healthcare.operations.notRecorded', 'Tidak tercatat') }}
                         </p>
 
                         <p v-if="referral.notes" class="text-slate-600 text-[11px] italic">
@@ -332,12 +332,12 @@
                         </p>
 
                         <div v-if="referral.status_history?.length" class="pt-1 space-y-0.5 border-t border-slate-50 text-[11px] text-slate-400">
-                            <span class="font-semibold text-slate-500 block">Jejak Status:</span>
+                            <span class="font-semibold text-slate-500 block">{{ $t('healthcare.patientShow.statusTrail', 'Jejak Status:') }}</span>
                             <div
                                 v-for="history in referral.status_history"
                                 :key="history.id"
                             >
-                                {{ formatDate(history.created_at) }} — {{ formatReferralStatus(history.status) }} ({{ history.changer?.name || "Tidak tercatat" }})
+                                {{ formatDate(history.created_at) }} — {{ formatReferralStatus(history.status, locale) }} ({{ history.changer?.name || $t('healthcare.operations.notRecorded', 'Tidak tercatat') }})
                                 <span v-if="history.notes"> • {{ history.notes }}</span>
                             </div>
                         </div>
@@ -345,12 +345,12 @@
                 </div>
 
                 <div v-else class="p-8 text-center text-xs text-slate-400">
-                    Belum ada riwayat rujukan medis untuk pasien ini.
+                    {{ $t('healthcare.patientShow.noReferrals', 'Belum ada riwayat rujukan medis untuk pasien ini.') }}
                 </div>
             </div>
             <div v-if="activeTab === 'emergencies'" class="space-y-4">
                 <div v-for="emergency in patient.emergency_events || []" :key="emergency.id" class="rounded-xl border border-slate-200 bg-white p-4">
-                    <p class="text-xs text-slate-500 mb-3">Insiden {{ emergency.id }}</p>
+                    <p class="text-xs text-slate-500 mb-3">{{ $t('healthcare.patientShow.incidentPrefix', 'Insiden') }} {{ emergency.id }}</p>
                     <OperationsTimeline :operations="emergency.operations" />
                 </div>
             </div>
@@ -363,10 +363,12 @@ import OperationsTimeline from "@/components/Healthcare/Operations/OperationsTim
 import { computed, ref } from "vue";
 import { Link } from "@inertiajs/vue3";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
+import { t as $t, useI18n } from "@/i18n";
 import { formatReferralStatus } from "@/lib/referralStatus";
 
 const props = defineProps<{ patient: any }>();
 const patient = computed(() => props.patient);
+const { locale } = useI18n();
 
 type TabKey =
     | "summary"
@@ -377,13 +379,13 @@ type TabKey =
 
 const activeTab = ref<TabKey>("summary");
 
-const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: "summary", label: "Ringkasan" },
-    { key: "assessments", label: "Asesmen" },
-    { key: "emergencies", label: "Darurat" },
-    { key: "validations", label: "Validasi" },
-    { key: "referrals", label: "Rujukan" },
-];
+const tabs = computed<Array<{ key: TabKey; label: string }>>(() => [
+    { key: "summary", label: $t("healthcare.patientShow.tabs.summary", "Ringkasan") },
+    { key: "assessments", label: $t("healthcare.patientShow.tabs.assessments", "Asesmen") },
+    { key: "emergencies", label: $t("healthcare.patientShow.tabs.emergencies", "Darurat") },
+    { key: "validations", label: $t("healthcare.patientShow.tabs.validations", "Validasi") },
+    { key: "referrals", label: $t("healthcare.patientShow.tabs.referrals", "Rujukan") },
+]);
 
 const latestAssessment = computed(() => patient.value.assessments?.[0] ?? null);
 
@@ -406,12 +408,13 @@ const validationItems = computed(() => {
     for (const assessment of patient.value.assessments ?? []) {
         const validation = assessment.clinical_validation;
         if (validation?.clinical_result) {
+            const rec = assessment.triage_result?.system_recommendation || $t("healthcare.patientShow.noResultLower", "tanpa hasil");
             items.push({
                 key: `assessment-${validation.id}`,
                 result: validation.clinical_result,
-                source: `Asesmen ${assessment.triage_result?.system_recommendation || "tanpa hasil"}`,
+                source: $t("healthcare.patientShow.assessmentSource", { rec }, `Asesmen ${rec}`),
                 createdAt: validation.created_at,
-                validator: validation.validator?.name || "Tidak tercatat",
+                validator: validation.validator?.name || $t("healthcare.operations.notRecorded", "Tidak tercatat"),
                 notes: validation.diagnosis_notes,
             });
         }
@@ -424,7 +427,7 @@ const validationItems = computed(() => {
                     result: verification.clinical_result,
                     source: "T0-Suspect",
                     createdAt: verification.created_at,
-                    validator: verification.verifier?.name || "Tidak tercatat",
+                    validator: verification.verifier?.name || $t("healthcare.operations.notRecorded", "Tidak tercatat"),
                     notes: verification.notes,
                 });
             }
@@ -442,9 +445,16 @@ function assessmentDate(assessment: any): string {
     return assessment.completed_at || assessment.created_at;
 }
 
+function formatGender(gender?: string): string {
+    if (!gender) return "-";
+    if (gender === "Laki-laki") return $t("assessment.male", "Laki-laki");
+    if (gender === "Perempuan") return $t("assessment.female", "Perempuan");
+    return gender;
+}
+
 function formatDate(value?: string): string {
-    if (!value) return "Waktu tidak tersedia";
-    return new Intl.DateTimeFormat("id-ID", {
+    if (!value) return $t("relawan.dataWorkspace.timeUnavailable", "Waktu tidak tersedia");
+    return new Intl.DateTimeFormat(locale.value === "en" ? "en-US" : "id-ID", {
         dateStyle: "medium",
         timeStyle: "short",
         timeZone: "Asia/Jakarta",
@@ -487,18 +497,17 @@ function isEmergencyActive(emergency: any): boolean {
 }
 
 function emergencyStatus(status: string): string {
-    return (
-        (
-            {
-                PENDING: "Perlu respons",
-                ACKNOWLEDGED: "Sudah diakui",
-                REVIEWING: "Sedang ditinjau",
-                CONFIRMED: "T0 terkonfirmasi",
-                DOWNGRADED: "Diturunkan",
-                RESOLVED: "Selesai",
-            } as Record<string, string>
-        )[status] || status
-    );
+    const fallbacks: Record<string, string> = {
+        PENDING: "Perlu respons",
+        ACKNOWLEDGED: "Sudah diakui",
+        REVIEWING: "Sedang ditinjau",
+        CONFIRMED: "T0 terkonfirmasi",
+        DOWNGRADED: "Diturunkan",
+        RESOLVED: "Selesai",
+    };
+    return fallbacks[status]
+        ? $t(`healthcare.patientShow.emergencyStatuses.${status}`, fallbacks[status])
+        : status;
 }
 
 function emergencyDecision(emergency: any): any {
@@ -510,28 +519,29 @@ function emergencyDecision(emergency: any): any {
 }
 
 function redFlagLabel(type?: string): string {
-    return (
-        (
-            {
-                SUICIDAL_IDEATION: "Ideasi / Risiko Bunuh Diri",
-                PSYCHOSIS: "Gejala Psikosis Akut",
-                SEVERE_AGITATION: "Agitasi / Perilaku Berbahaya",
-                MEDICAL_CRISIS: "Krisis Medis Akut",
-            } as Record<string, string>
-        )[type || ""] || "Tanda bahaya lapangan"
-    );
+    const fallbacks: Record<string, string> = {
+        SUICIDAL_IDEATION: "Ideasi / Risiko Bunuh Diri",
+        PSYCHOSIS: "Gejala Psikosis Akut",
+        SEVERE_AGITATION: "Agitasi / Perilaku Berbahaya",
+        MEDICAL_CRISIS: "Krisis Medis Akut",
+    };
+    return type && fallbacks[type]
+        ? $t(`healthcare.patientShow.redFlags.${type}`, fallbacks[type])
+        : $t("healthcare.patientShow.redFlags.default", "Tanda bahaya lapangan");
 }
 
 function referralSource(referral: any): string {
-    if (referral.emergency_event_id) return "Darurat T0";
+    if (referral.emergency_event_id) {
+        return $t("healthcare.patientShow.referralSources.t0Emergency", "Darurat T0");
+    }
     if (referral.clinical_validation_id) {
         const recommendation =
             referral.clinical_validation?.assessment?.triage_result
                 ?.system_recommendation;
         return recommendation
-            ? `Validasi Asesmen (${recommendation})`
-            : "Validasi Asesmen";
+            ? $t("healthcare.patientShow.referralSources.validatedWithRec", { rec: recommendation }, `Validasi Asesmen (${recommendation})`)
+            : $t("healthcare.patientShow.referralSources.validated", "Validasi Asesmen");
     }
-    return "Sumber tidak tercatat";
+    return $t("healthcare.operations.sourceUnrecorded", "Sumber tidak tercatat");
 }
 </script>

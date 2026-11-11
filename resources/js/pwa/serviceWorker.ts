@@ -100,7 +100,7 @@ registerRoute(
                 return cachedOffline;
             }
             return new Response(
-                '<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Offline - RAPID-MIND</title></head><body style="font-family: sans-serif; padding: 2rem; text-align: center;"><h2>Koneksi Terputus</h2><p>Perangkat Anda sedang offline. Silakan periksa koneksi internet Anda.</p><p><a href="/relawan/home" style="color: #0F766E;">Coba Lagi</a></p></body></html>',
+                '<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Offline - RAPID-MIND</title></head><body style="font-family: sans-serif; padding: 2rem; text-align: center;"><h2 id="sw-h">Koneksi Terputus</h2><p id="sw-p">Perangkat Anda sedang offline. Silakan periksa koneksi internet Anda.</p><p><a id="sw-a" href="/relawan/home" style="color: #0F766E;">Coba Lagi</a></p><script>try{if(localStorage.getItem("rapid_mind_locale")==="en"){document.documentElement.lang="en";document.getElementById("sw-h").textContent="Connection Disconnected";document.getElementById("sw-p").textContent="Your device is currently offline. Please check your internet connection.";document.getElementById("sw-a").textContent="Try Again";}}catch(e){}</script></body></html>',
                 {
                     status: 200,
                     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },

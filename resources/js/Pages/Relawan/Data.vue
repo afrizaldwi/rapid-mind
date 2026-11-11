@@ -5,20 +5,19 @@
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h2 class="text-xl font-bold text-slate-900">
-                            Data Lapangan
+                            {{ $t('relawan.dataWorkspace.title') }}
                         </h2>
                         <p class="mt-1 text-xs text-slate-600">
-                            Pekerjaan di perangkat dan data yang telah diterima
-                            server.
+                            {{ $t('relawan.dataWorkspace.subtitle') }}
                         </p>
                     </div>
                     <button
                         type="button"
                         :disabled="busy || !online"
                         @click="triggerSync"
-                        class="rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-800 disabled:opacity-50"
+                        class="rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-800 disabled:opacity-50 cursor-pointer"
                     >
-                        {{ busy ? "Menyinkronkan…" : "Coba Sinkronkan" }}
+                        {{ busy ? $t('relawan.dataWorkspace.syncing') : $t('relawan.dataWorkspace.trySync') }}
                     </button>
                 </div>
             </header>
@@ -40,33 +39,31 @@
 
             <section class="rounded-xl border border-slate-200 bg-white p-4">
                 <h3 class="text-sm font-bold text-slate-800">
-                    Asesmen Belum Selesai
+                    {{ $t('relawan.dataWorkspace.unfinishedTitle') }}
                 </h3>
                 <p class="mt-1 text-xs text-slate-600">
                     {{
                         workspace.groups.value.inProgress.length
-                            ? `${workspace.groups.value.inProgress.length} asesmen belum selesai.`
-                            : "Belum ada asesmen yang sedang dikerjakan."
+                            ? $t('relawan.dataWorkspace.unfinishedCount', { count: workspace.groups.value.inProgress.length })
+                            : $t('relawan.dataWorkspace.noUnfinished')
                     }}
                 </p>
                 <RelawanLink
                     href="/relawan/assessment/drafts"
                     class="mt-3 inline-block rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900"
-                    >Lihat Asesmen Belum Selesai →</RelawanLink
+                    >{{ $t('relawan.dataWorkspace.viewUnfinished') }}</RelawanLink
                 >
             </section>
 
             <section class="space-y-3">
                 <h3 class="text-sm font-bold text-slate-800">
-                    Menunggu Sinkronisasi ({{
-                        workspace.groups.value.pending.length
-                    }})
+                    {{ $t('relawan.dataWorkspace.pendingTitle', { count: workspace.groups.value.pending.length }) }}
                 </h3>
                 <div
                     v-if="workspace.groups.value.pending.length === 0"
                     class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600"
                 >
-                    Belum ada data menunggu sinkronisasi.
+                    {{ $t('relawan.dataWorkspace.noPending') }}
                 </div>
                 <article
                     v-for="item in workspace.groups.value.pending"
@@ -94,13 +91,12 @@
                                 {{
                                     item.type === "EMERGENCY"
                                         ? "T0-Suspect"
-                                        : "Asesmen selesai"
+                                        : $t('relawan.dataWorkspace.completedAssessment')
                                 }}
                                 • {{ item.label }}
                             </p>
                             <p class="mt-1 text-xs text-slate-600">
-                                {{ formatDate(item.date) }} • Tersimpan di
-                                perangkat
+                                {{ formatDate(item.date) }} • {{ $t('relawan.dataWorkspace.savedOnDevice') }}
                             </p>
                         </div>
                         <span
@@ -109,7 +105,7 @@
                             ><span
                                 class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"
                             ></span
-                            >Prioritas T0</span
+                            >{{ $t('relawan.dataWorkspace.t0Priority') }}</span
                         >
                     </div>
                     <details
@@ -117,18 +113,16 @@
                         class="mt-3 text-xs text-slate-700"
                     >
                         <summary class="cursor-pointer font-bold">
-                            Lihat rincian T0
+                            {{ $t('relawan.dataWorkspace.viewT0Details') }}
                         </summary>
                         <p class="mt-2">
-                            Indikator: {{ redFlagLabel(item.redFlagType) }}
+                            {{ $t('relawan.dataWorkspace.indicator') }} {{ redFlagLabel(item.redFlagType) }}
                         </p>
                         <p v-if="item.notes" class="mt-1">
-                            Catatan: {{ item.notes }}
+                            {{ $t('relawan.dataWorkspace.notes') }} {{ item.notes }}
                         </p>
                         <p class="mt-2 font-semibold">
-                            Belum ada konfirmasi penerimaan server pada
-                            perangkat ini. Tetap dampingi penyintas dan gunakan
-                            jalur bantuan darurat yang tersedia.
+                            {{ $t('relawan.dataWorkspace.unconfirmedNotice') }}
                         </p>
                     </details>
                     <div class="mt-3 flex flex-wrap gap-2">
@@ -136,28 +130,28 @@
                             v-if="item.resultUrl || item.emergencyUrl"
                             :href="(item.resultUrl || item.emergencyUrl)!"
                             class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"
-                            >Lihat hasil</RelawanLink
+                            >{{ $t('relawan.dataWorkspace.viewResult') }}</RelawanLink
                         >
                         <button
                             v-if="item.unqueued"
                             type="button"
                             :disabled="busy"
                             @click="prepareAssessment(item.id)"
-                            class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                            class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 cursor-pointer"
                         >
-                            Siapkan sinkronisasi
+                            {{ $t('relawan.dataWorkspace.prepareSync') }}
                         </button>
                         <button
                             v-else-if="item.retryable"
                             type="button"
                             :disabled="busy || !online"
                             @click="triggerSync"
-                            class="rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                            class="rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 cursor-pointer"
                         >
-                            Coba sinkronkan kembali
+                            {{ $t('relawan.dataWorkspace.retrySync') }}
                         </button>
                         <p v-else class="text-xs text-amber-900">
-                            Data perlu diperiksa sebelum percobaan berikutnya.
+                            {{ $t('relawan.dataWorkspace.checkDataNotice') }}
                         </p>
                     </div>
                 </article>
@@ -165,15 +159,13 @@
 
             <section class="space-y-3">
                 <h3 class="text-sm font-bold text-slate-800">
-                    Tersinkron ({{
-                        workspace.groups.value.synchronized.length
-                    }})
+                    {{ $t('relawan.dataWorkspace.syncedTitle', { count: workspace.groups.value.synchronized.length }) }}
                 </h3>
                 <div
                     v-if="workspace.groups.value.synchronized.length === 0"
                     class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600"
                 >
-                    Belum ada riwayat yang tersinkron.
+                    {{ $t('relawan.dataWorkspace.noSynced') }}
                 </div>
                 <article
                     v-for="item in workspace.groups.value.synchronized"
@@ -189,7 +181,7 @@
                                 {{
                                     item.type === "EMERGENCY"
                                         ? "T0-Suspect"
-                                        : "Asesmen"
+                                        : $t('relawan.dataWorkspace.assessment')
                                 }}
                                 • {{ item.label }} • {{ formatDate(item.date) }}
                             </p>
@@ -218,23 +210,23 @@
                         v-if="item.type === 'ASSESSMENT'"
                         class="mt-2 text-xs text-slate-600"
                     >
-                        Rekomendasi Sistem:
+                        {{ $t('relawan.dataWorkspace.systemRecommendation') }}
                         {{
                             item.triage?.system_recommendation ||
-                            "Belum tersedia"
+                            $t('relawan.dataWorkspace.notAvailable')
                         }}
-                        • Total Skor:
+                        • {{ $t('relawan.dataWorkspace.totalScore') }}
                         {{
                             item.triage
                                 ? item.triage.total_score + "/37"
-                                : "Belum tersedia"
+                                : $t('relawan.dataWorkspace.notAvailable')
                         }}
                     </p>
                     <RelawanLink
                         v-if="item.resultUrl || item.emergencyUrl"
                         :href="(item.resultUrl || item.emergencyUrl)!"
                         class="mt-3 inline-block rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"
-                        >Lihat detail →</RelawanLink
+                        >{{ $t('relawan.dataWorkspace.viewDetail') }}</RelawanLink
                     >
                 </article>
             </section>
@@ -254,6 +246,9 @@ import {
 } from "@/composables/useRelawanDataWorkspace";
 import { completeLocalAssessment } from "@/offline/assessmentWorkflow";
 import { syncManager } from "@/offline/syncManager";
+import { t as $t, useI18n } from "@/i18n";
+
+const { locale } = useI18n();
 
 const props = defineProps<{
     inProgress?: ServerDataAssessment[];
@@ -269,7 +264,10 @@ const workspace = useRelawanDataWorkspace(
     computed(() => props.emergencies ?? []),
 );
 const busy = ref(false);
-const actionError = ref("");
+const actionErrorCode = ref<"" | "syncFailed" | "prepareFailed">("");
+const actionError = computed(() =>
+    actionErrorCode.value ? $t(`relawan.dataWorkspace.${actionErrorCode.value}`) : "",
+);
 const online = ref(
     runtime.mode === "ONLINE_SERVER" &&
         (typeof navigator === "undefined" ? true : navigator.onLine),
@@ -292,15 +290,14 @@ onUnmounted(() => {
 async function triggerSync() {
     if (!owner.value || busy.value || !online.value) return;
     busy.value = true;
-    actionError.value = "";
+    actionErrorCode.value = "";
     const active = owner.value;
     try {
         await syncManager.sync(active);
         if (owner.value === active)
             runtime.reload(["inProgress", "completed", "emergencies"]);
     } catch {
-        actionError.value =
-            "Sinkronisasi belum berhasil. Data yang tersimpan di perangkat tetap tersedia.";
+        actionErrorCode.value = "syncFailed";
     } finally {
         busy.value = false;
     }
@@ -308,12 +305,11 @@ async function triggerSync() {
 async function prepareAssessment(id: string) {
     if (!owner.value || busy.value) return;
     busy.value = true;
-    actionError.value = "";
+    actionErrorCode.value = "";
     try {
         await completeLocalAssessment(owner.value, id);
     } catch {
-        actionError.value =
-            "Asesmen belum dapat disiapkan untuk sinkronisasi. Periksa data pada perangkat ini.";
+        actionErrorCode.value = "prepareFailed";
     } finally {
         busy.value = false;
     }
@@ -334,16 +330,29 @@ function triageDotColor(value?: string): string {
     return "bg-slate-400";
 }
 function formatDate(value?: string) {
-    if (!value) return "Waktu tidak tersedia";
+    if (!value) return $t('relawan.dataWorkspace.timeUnavailable');
     const date = new Date(value);
+    const dateLocale = locale.value === "en" ? "en-US" : "id-ID";
     return Number.isNaN(date.getTime())
-        ? "Waktu tidak tersedia"
-        : date.toLocaleString("id-ID", {
+        ? $t('relawan.dataWorkspace.timeUnavailable')
+        : date.toLocaleString(dateLocale, {
               dateStyle: "medium",
               timeStyle: "short",
           });
 }
 function redFlagLabel(value?: string) {
+    if (locale.value === "en") {
+        return (
+            (
+                {
+                    SUICIDAL_IDEATION: "Suicidal ideation / behavior",
+                    PSYCHOSIS: "Acute psychosis / severe dissociation",
+                    SEVERE_AGITATION: "Dangerous acute agitation",
+                    MEDICAL_CRISIS: "Medical emergency",
+                } as Record<string, string>
+            )[value ?? ""] ?? "Red Flag Indicator"
+        );
+    }
     return (
         (
             {

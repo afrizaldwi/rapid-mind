@@ -4,10 +4,10 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-xl font-black text-slate-900 tracking-tight">
-            Organisasi Fasilitas Pelayanan Kesehatan (Faskes)
+            {{ $t('admin.facilities.title', 'Organisasi Fasilitas Pelayanan Kesehatan (Faskes)') }}
           </h2>
           <p class="text-xs text-slate-500 mt-1">
-            Daftar Rumah Sakit Rujukan, Puskesmas Penyangga, dan PSC 119 siaga bencana.
+            {{ $t('admin.facilities.subtitle', 'Daftar Rumah Sakit Rujukan, Puskesmas Penyangga, dan PSC 119 siaga bencana.') }}
           </p>
         </div>
       </div>
@@ -22,7 +22,7 @@
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               {{ f.type }}
             </span>
-            <span class="text-xs font-bold text-emerald-700">● Aktif</span>
+            <span class="text-xs font-bold text-emerald-700">{{ $t('admin.facilities.activeBadge', '● Aktif') }}</span>
           </div>
 
           <div>
@@ -35,8 +35,8 @@
           </div>
 
           <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 font-semibold">
-            <span>Tenaga Medis Terdaftar:</span>
-            <span class="font-bold text-slate-900">{{ f.users_count || 1 }} Personel</span>
+            <span>{{ $t('admin.facilities.registeredStaff', 'Tenaga Medis Terdaftar:') }}</span>
+            <span class="font-bold text-slate-900">{{ $t('admin.facilities.personnelCount', { count: f.users_count || 1 }, '{count} Personel') }}</span>
           </div>
         </div>
       </div>
@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { t as $t } from '@/i18n';
 
 defineProps<{
   facilities: any[];

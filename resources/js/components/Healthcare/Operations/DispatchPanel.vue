@@ -2,30 +2,38 @@
     <fieldset :disabled="operations?.can_manage === false"
         data-healthcare-draft
         class="rounded-lg border border-slate-200 bg-white p-3 space-y-3 text-xs"
-        aria-label="Respons Lapangan"
+        :aria-label="$t('healthcare.operations.fieldResponseTitle', 'Respons Lapangan')"
     >
-        <p v-if="operations?.can_manage === false" class="text-slate-600" role="status">Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.</p>
-        <h3 class="font-bold text-slate-900">Respons Lapangan</h3>
+        <p v-if="operations?.can_manage === false" class="text-slate-600" role="status">
+            {{ $t('healthcare.actions.readOnlyNotice', 'Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.') }}
+        </p>
+        <h3 class="font-bold text-slate-900">{{ $t('healthcare.operations.fieldResponseTitle', 'Respons Lapangan') }}</h3>
         <p v-if="!operations?.available" role="status" class="text-amber-800">
-            Respons lapangan belum tersedia: skema Dispatch memerlukan cutover
-            terpisah yang disetujui pemilik proyek.
+            {{ $t('healthcare.operations.dispatchUnavailable', 'Respons lapangan belum tersedia: skema Dispatch memerlukan cutover terpisah yang disetujui pemilik proyek.') }}
         </p>
         <template v-else>
             <p class="text-slate-500">
-                Penugasan internal tidak berarti unit telah dihubungi dan tidak
-                mencadangkan kapasitas.
+                {{ $t('healthcare.operations.internalAssignmentNotice', 'Penugasan internal tidak berarti unit telah dihubungi dan tidak mencadangkan kapasitas.') }}
             </p>
             <div v-if="dispatch" class="space-y-2">
                 <p>
-                    <strong>{{ dispatchLabel(dispatch.status) }}</strong> •
-                    {{ dispatch.response_unit?.name || "Unit tidak tersedia" }}
+                    <strong>{{ dispatchLabel(dispatch.status, activeLocale) }}</strong> •
+                    {{ dispatch.response_unit?.name || $t('healthcare.operations.unitUnavailable', 'Unit tidak tersedia') }}
                 </p>
                 <p>
-                    Ditugaskan {{ formatDateTime(dispatch.assigned_at) }} oleh
-                    {{ dispatch.assigner?.name || "Tidak tercatat" }}
+                    {{
+                        $t(
+                            'healthcare.operations.assignedAtBy',
+                            'Ditugaskan {time} oleh {name}',
+                            {
+                                time: formatDateTime(dispatch.assigned_at, activeLocale),
+                                name: dispatch.assigner?.name || $t('healthcare.operations.notRecorded', 'Tidak tercatat'),
+                            },
+                        )
+                    }}
                 </p>
                 <p>
-                    Tujuan tersimpan ({{ dispatch.target_source }}):
+                    {{ $t('healthcare.operations.savedTarget', 'Tujuan tersimpan') }} ({{ targetSourceLabel(dispatch.target_source, dispatch.target_source) }}):
                     {{ dispatch.target_description }}
                     <span v-if="dispatch.target_latitude !== null"
                         >{{ dispatch.target_latitude }},
@@ -33,14 +41,14 @@
                     >
                 </p>
                 <p v-if="dispatch.referral_id">
-                    Rujukan terkait:
+                    {{ $t('healthcare.operations.linkedReferral', 'Rujukan terkait:') }}
                     {{
                         linkedReferral?.facility?.name || dispatch.referral_id
-                    }}. Hubungan ini tidak dapat diganti.
+                    }}. {{ $t('healthcare.operations.linkImmutableNotice', 'Hubungan ini tidak dapat diganti.') }}
                 </p>
-                <p v-else>Belum terhubung ke rujukan.</p>
+                <p v-else>{{ $t('healthcare.operations.notLinkedToReferral', 'Belum terhubung ke rujukan.') }}</p>
                 <label v-if="dispatch.next_statuses.length" class="block"
-                    >Catatan respons (opsional)<textarea
+                    >{{ $t('healthcare.operations.responseNotesLabel', 'Catatan respons (opsional)') }}<textarea
                         v-model="notes"
                         maxlength="1000"
                         class="block w-full rounded border border-slate-300 p-2"
@@ -55,7 +63,7 @@
                         class="rounded-lg bg-slate-900 px-3 py-2 text-white disabled:opacity-50"
                         @click="progress(status)"
                     >
-                        {{ dispatchLabel(status) }}
+                        {{ dispatchLabel(status, activeLocale) }}
                     </button>
                 </div>
                 <form
@@ -70,18 +78,18 @@
                     "
                 >
                     <label class="block"
-                        >Hubungkan rujukan<select
+                        >{{ $t('healthcare.operations.linkReferralLabel', 'Hubungkan rujukan') }}<select
                             v-model="referralId"
                             class="block w-full rounded border border-slate-300 p-2"
                         >
-                            <option value="">Pilih rujukan</option>
+                            <option value="">{{ $t('healthcare.operations.selectReferralOption', 'Pilih rujukan') }}</option>
                             <option
                                 v-for="referral in operations.referrals"
                                 :key="referral.id"
                                 :value="referral.id"
                             >
                                 {{ referral.facility?.name }} —
-                                {{ clinicalLabel(referral.status) }}
+                                {{ clinicalLabel(referral.status, activeLocale) }}
                             </option>
                         </select></label
                     >
@@ -90,22 +98,21 @@
                         :disabled="busy || stale || !referralId"
                         class="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50"
                     >
-                        Hubungkan secara permanen
+                        {{ $t('healthcare.operations.linkPermanentlyBtn', 'Hubungkan secara permanen') }}
                     </button>
                 </form>
             </div>
             <form v-else class="space-y-3" @submit.prevent="assign">
                 <p>
-                    Belum ada respons ditugaskan. Rujukan dan identitas pasien
-                    tidak wajib untuk penugasan.
+                    {{ $t('healthcare.operations.noResponseAssigned', 'Belum ada respons ditugaskan. Rujukan dan identitas pasien tidak wajib untuk penugasan.') }}
                 </p>
                 <label class="block"
-                    >Unit respons aktif<select
+                    >{{ $t('healthcare.operations.activeUnitLabel', 'Unit respons aktif') }}<select
                         v-model="unitId"
                         required
                         class="block w-full rounded border border-slate-300 p-2"
                     >
-                        <option :value="null">Pilih unit respons</option>
+                        <option :value="null">{{ $t('healthcare.operations.selectUnitOption', 'Pilih unit respons') }}</option>
                         <option
                             v-for="unit in units"
                             :key="unit.id"
@@ -116,26 +123,26 @@
                     </select></label
                 >
                 <p v-if="!units.length" class="text-amber-800">
-                    Belum ada unit respons aktif yang dapat dipilih.
+                    {{ $t('healthcare.operations.noActiveUnitsAvailable', 'Belum ada unit respons aktif yang dapat dipilih.') }}
                 </p>
                 <label class="block"
-                    >Sumber tujuan<select
+                    >{{ $t('healthcare.operations.targetSourceLabel', 'Sumber tujuan') }}<select
                         v-model="targetSource"
                         required
                         class="block w-full rounded border border-slate-300 p-2"
                     >
-                        <option value="">Pilih sumber tujuan</option>
+                        <option value="">{{ $t('healthcare.operations.selectTargetSourceOption', 'Pilih sumber tujuan') }}</option>
                         <option
                             v-for="target in operations.targets"
                             :key="target.source"
                             :value="target.source"
                         >
-                            {{ target.label }}
+                            {{ targetSourceLabel(target.source, target.label) }}
                         </option>
                     </select></label
                 >
                 <label v-if="targetSource === 'MANUAL'" class="block"
-                    >Deskripsi lokasi tujuan<textarea
+                    >{{ $t('healthcare.operations.manualTargetDescLabel', 'Deskripsi lokasi tujuan') }}<textarea
                         v-model="description"
                         required
                         maxlength="1000"
@@ -143,31 +150,33 @@
                     />
                 </label>
                 <p role="status" class="rounded bg-slate-50 p-2">
-                    Tujuan dipilih:
+                    {{ $t('healthcare.operations.selectedTargetPrefix', 'Tujuan dipilih:') }}
                     {{
                         targetSource === "MANUAL"
-                            ? description || "Isi deskripsi lokasi"
-                            : selectedTarget?.label || "Belum dipilih"
+                            ? description || $t('healthcare.operations.fillLocationDesc', 'Isi deskripsi lokasi')
+                            : selectedTarget
+                              ? targetSourceLabel(selectedTarget.source, selectedTarget.label)
+                              : $t('healthcare.operations.notSelectedYet', 'Belum dipilih')
                     }}
                 </p>
                 <label class="block"
-                    >Rujukan terkait (opsional)<select
+                    >{{ $t('healthcare.operations.optionalReferralLabel', 'Rujukan terkait (opsional)') }}<select
                         v-model="referralId"
                         class="block w-full rounded border border-slate-300 p-2"
                     >
-                        <option value="">Tanpa rujukan</option>
+                        <option value="">{{ $t('healthcare.operations.withoutReferralOption', 'Tanpa rujukan') }}</option>
                         <option
                             v-for="referral in operations.referrals"
                             :key="referral.id"
                             :value="referral.id"
                         >
                             {{ referral.facility?.name }} —
-                            {{ clinicalLabel(referral.status) }}
+                            {{ clinicalLabel(referral.status, activeLocale) }}
                         </option>
                     </select></label
                 >
                 <label class="block"
-                    >Catatan penugasan (opsional)<textarea
+                    >{{ $t('healthcare.operations.assignmentNotesLabel', 'Catatan penugasan (opsional)') }}<textarea
                         v-model="notes"
                         maxlength="1000"
                         class="block w-full rounded border border-slate-300 p-2"
@@ -184,23 +193,23 @@
                     "
                     class="rounded-lg bg-teal-700 px-3 py-2 text-white disabled:opacity-50"
                 >
-                    Simpan penugasan respons
+                    {{ $t('healthcare.operations.saveAssignmentBtn', 'Simpan penugasan respons') }}
                 </button>
             </form>
             <OperationConfirmation
                 v-if="confirming"
                 :title-id="`dispatch-completion-${emergencyId}`"
-                title="Selesaikan respons lapangan?"
+                :title="$t('healthcare.operations.completeDispatchConfirmTitle', 'Selesaikan respons lapangan?')"
                 :busy="busy"
                 @cancel="confirming = false"
-                ><p>Rujukan dan klasifikasi klinis tidak berubah.</p>
+                ><p>{{ $t('healthcare.operations.completeDispatchConfirmBody', 'Rujukan dan klasifikasi klinis tidak berubah.') }}</p>
                 <button
                     type="button"
                     :disabled="busy || stale"
                     class="rounded-lg bg-teal-700 px-3 py-2 text-white"
                     @click="finish"
                 >
-                    Ya, selesaikan respons
+                    {{ $t('healthcare.operations.confirmFinishResponseBtn', 'Ya, selesaikan respons') }}
                 </button>
             </OperationConfirmation>
             <p
@@ -209,10 +218,10 @@
                 role="alert"
                 class="text-rose-800"
             >
-                {{ error }}
+                {{ $loc(error) }}
             </p>
             <p v-if="message" role="status" class="text-teal-800">
-                {{ message }}
+                {{ $loc(message) }}
             </p>
             <button
                 v-if="stale"
@@ -220,7 +229,7 @@
                 :disabled="busy"
                 @click="refresh"
             >
-                Muat data terbaru
+                {{ $t('healthcare.operations.loadLatestData', 'Muat data terbaru') }}
             </button>
         </template>
     </fieldset>
@@ -241,6 +250,36 @@ import {
 import { formatDateTime } from "@/lib/healthcareEmergency";
 import { useHealthcareDraft } from "@/composables/useHealthcareDraft";
 import { useHealthcareOperation } from "@/composables/useHealthcareOperation";
+
+const activeLocale = computed(
+    () =>
+        (globalThis as any)?.__rapidMindLocale?.value ||
+        (typeof window !== "undefined" ? (window as any)?.__rapidMindLocale?.value : null) ||
+        "id",
+);
+function $t(key: string, fallback: string, params?: Record<string, string | number>): string {
+    const fn =
+        (globalThis as any)?.__rapidMindT ||
+        (typeof window !== "undefined" ? (window as any)?.__rapidMindT : null);
+    if (typeof fn === "function") {
+        return fn(key, fallback, params);
+    }
+    if (!params) return fallback;
+    return fallback.replace(/\{(\w+)\}/g, (match, k) => (k in params ? String(params[k]) : match));
+}
+function $loc(message: string): string {
+    const fn =
+        (globalThis as any)?.__rapidMindLocalize ||
+        (typeof window !== "undefined" ? (window as any)?.__rapidMindLocalize : null);
+    return typeof fn === "function" ? fn(message) : message;
+}
+function targetSourceLabel(source: string, fallbackLabel: string): string {
+    if (fallbackLabel && fallbackLabel !== source) {
+        return $loc(fallbackLabel);
+    }
+    return $t(`healthcare.operations.targetSource.${source}`, fallbackLabel);
+}
+
 const props = defineProps<{
     emergencyId: string;
     operations?: Operations;

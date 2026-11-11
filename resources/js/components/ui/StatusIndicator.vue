@@ -1,7 +1,7 @@
 <template>
   <button type="button"
     class="inline-flex max-w-[13rem] items-center text-left text-xs font-medium transition gap-1.5 hover:opacity-80 py-1"
-    :class="statusTextColor" aria-label="Buka Status Data" @click="$emit('open')">
+    :class="statusTextColor" :aria-label="$t('relawan.statusSheet.openStatusAria', 'Buka Status Data')" @click="$emit('open')">
     <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="dotStyle"></span>
     <span class="truncate">{{ label }}</span>
   </button>
@@ -9,6 +9,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { t as $t } from '@/i18n';
 import type { OperationalKind } from '@/composables/useRelawanOperationalStatus';
 
 const props = defineProps<{ kind: OperationalKind; label: string }>();

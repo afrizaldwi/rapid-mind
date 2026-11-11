@@ -73,7 +73,21 @@ export function srqAnswerFromRow(row: {
     return normalizeSrqAnswer(row.answer);
 }
 
-export function srqAnswerLabel(answer: SrqAnswer | undefined): string {
+export function srqAnswerLabel(
+    answer: SrqAnswer | undefined,
+    locale: string = "id",
+): string {
+    if (locale === "en") {
+        return answer === true
+            ? "Yes"
+            : answer === false
+              ? "No"
+              : answer === "UNCLEAR"
+                ? "Unclear Response"
+                : answer === "UNANSWERED"
+                  ? "Unanswered"
+                  : "Not recorded";
+    }
     return answer === true
         ? "Ya"
         : answer === false

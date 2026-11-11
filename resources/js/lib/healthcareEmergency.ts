@@ -54,6 +54,39 @@ export const riskItems = [
     },
 ] as const;
 
+export function getRiskItems(locale: string = "id") {
+    if (locale === "en") {
+        return [
+            {
+                code: "R1",
+                title: "Severe Loss",
+                description: "Loss of immediate family or home completely destroyed.",
+            },
+            {
+                code: "R2",
+                title: "Direct Traumatic Experience",
+                description: "Was buried, swept away, trapped, or witnessed death directly.",
+            },
+            {
+                code: "R3",
+                title: "Vulnerable Group",
+                description: "Elderly, pregnant/lactating, living with disability, or unaccompanied minor.",
+            },
+            {
+                code: "R4",
+                title: "History of Mental Disorders",
+                description: "History of psychiatric treatment or medication.",
+            },
+            {
+                code: "R5",
+                title: "Interrupted Chronic Medication",
+                description: "Chronic physical illness with interrupted access to medication.",
+            },
+        ] as const;
+    }
+    return riskItems;
+}
+
 export function getSeverityBorderClass(priority: string): string {
     switch (priority) {
         case "T0_CONFIRMED":
@@ -92,35 +125,45 @@ export function priorityBadgeClasses(priority: string): string {
     }
 }
 
-export function formatRmCode(record: any): string {
+export function formatRmCode(record: any, locale: string = "id"): string {
     if (record?.rm_code) return record.rm_code;
     const raw =
         record?.assessment_id || record?.assessment?.id || record?.id || "";
-    if (!raw) return "ID tidak tersedia";
+    if (!raw) return locale === "en" ? "ID not available" : "ID tidak tersedia";
     const hex = String(raw).replace(/-/g, "").slice(-6).toUpperCase();
     return `ID-${hex.padStart(6, "0")}`;
 }
 
-export function maskNik(nik?: string): string {
-    if (!nik || nik.length < 8) return "NIK tidak tersedia";
+export function maskNik(nik?: string, locale: string = "id"): string {
+    if (!nik || nik.length < 8) {
+        return locale === "en" ? "NIK not available" : "NIK tidak tersedia";
+    }
     return `${nik.slice(0, 4)}••••${nik.slice(-4)}`;
 }
 
-export function timeAgo(dateStr?: string): string {
-    if (!dateStr) return "Waktu tidak tersedia";
+export function timeAgo(dateStr?: string, locale: string = "id"): string {
+    const isEn = locale === "en";
+    if (!dateStr) return isEn ? "Time unavailable" : "Waktu tidak tersedia";
     const diffMinutes = Math.round(
         (Date.now() - new Date(dateStr).getTime()) / 60000,
     );
-    if (diffMinutes < 1) return "Baru saja";
-    if (diffMinutes < 60) return `${diffMinutes} mnt lalu`;
+    if (diffMinutes < 1) return isEn ? "Just now" : "Baru saja";
+    if (diffMinutes < 60) {
+        return isEn ? `${diffMinutes} min ago` : `${diffMinutes} mnt lalu`;
+    }
     const diffHours = Math.round(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours} jam lalu`;
-    return `${Math.round(diffHours / 24)} hari lalu`;
+    if (diffHours < 24) {
+        return isEn ? `${diffHours} hr ago` : `${diffHours} jam lalu`;
+    }
+    const diffDays = Math.round(diffHours / 24);
+    return isEn ? `${diffDays} days ago` : `${diffDays} hari lalu`;
 }
 
-export function formatDateTime(dateStr?: string): string {
-    if (!dateStr) return "Waktu tidak tersedia";
-    return new Intl.DateTimeFormat("id-ID", {
+export function formatDateTime(dateStr?: string, locale: string = "id"): string {
+    if (!dateStr) {
+        return locale === "en" ? "Time unavailable" : "Waktu tidak tersedia";
+    }
+    return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "id-ID", {
         dateStyle: "medium",
         timeStyle: "short",
         timeZone: "Asia/Jakarta",
@@ -141,102 +184,151 @@ function normalizeAssessment(raw: any) {
     };
 }
 
-export function normalizeQueueItem(raw: any, isEmergency: boolean) {
+export function normalizeQueueItem(
+    raw: any,
+    isEmergency: boolean,
+    locale: string = "id",
+) {
+    const isEn = locale === "en";
     const patient = raw.patient;
     const assessment = normalizeAssessment(isEmergency ? raw.assessment : raw);
-    const assessmentContext = healthcareAssessmentPresentation(assessment);
+    const assessmentContext = healthcareAssessmentPresentation(assessment, locale);
     const triage = assessmentContext.finalized
         ? (assessment?.triageResult ?? raw.triage_result ?? null)
         : null;
     let priority: "T0" | "T1" | "T2" | "T3" = "T2";
-    let priorityLabel = "T2 Terjadwal";
+    let priorityLabel = isEn ? "T2 Scheduled" : "T2 Terjadwal";
 
     if (isEmergency) {
         priority = "T0";
-        priorityLabel = "T0 Darurat";
+        priorityLabel = isEn ? "T0 Emergency" : "T0 Darurat";
     } else if (triage?.system_recommendation) {
         const recommendation = triage.system_recommendation;
         if (recommendation.startsWith("T0"))
-            [priority, priorityLabel] = ["T0", "T0 Darurat"];
+            [priority, priorityLabel] = ["T0", isEn ? "T0 Emergency" : "T0 Darurat"];
         else if (recommendation === "T1")
-            [priority, priorityLabel] = ["T1", "T1 Mendesak"];
+            [priority, priorityLabel] = ["T1", isEn ? "T1 Urgent" : "T1 Mendesak"];
         else if (recommendation === "T2")
-            [priority, priorityLabel] = ["T2", "T2 Terjadwal"];
+            [priority, priorityLabel] = ["T2", isEn ? "T2 Scheduled" : "T2 Terjadwal"];
         else if (recommendation === "T3")
-            [priority, priorityLabel] = ["T3", "T3 Stabil"];
+            [priority, priorityLabel] = ["T3", isEn ? "T3 Stable" : "T3 Stabil"];
     }
 
     const redFlag =
         raw.red_flag_type ||
         (triage?.is_red_flag_override ? triage.red_flag_source || null : null);
     const q17Answer = assessmentContext.responses[16].answer;
-    let redFlagLabel = "Tanda Bahaya Lapangan";
+    let redFlagLabel = isEn ? "Field Danger Sign" : "Tanda Bahaya Lapangan";
     if (redFlag === "SUICIDAL_IDEATION")
         redFlagLabel =
             q17Answer === true
-                ? "Ideasi / Risiko Bunuh Diri (SRQ #17: YA)"
-                : "Ideasi / Risiko Bunuh Diri";
-    else if (redFlag === "PSYCHOSIS") redFlagLabel = "Gejala Psikosis Akut";
+                ? isEn
+                    ? "Suicidal Ideation / Risk (SRQ #17: YES)"
+                    : "Ideasi / Risiko Bunuh Diri (SRQ #17: YA)"
+                : isEn
+                  ? "Suicidal Ideation / Risk"
+                  : "Ideasi / Risiko Bunuh Diri";
+    else if (redFlag === "PSYCHOSIS")
+        redFlagLabel = isEn ? "Acute Psychosis Symptoms" : "Gejala Psikosis Akut";
     else if (redFlag === "SEVERE_AGITATION")
-        redFlagLabel = "Agitasi / Perilaku Berbahaya";
-    else if (redFlag === "MEDICAL_CRISIS") redFlagLabel = "Krisis Medis Akut";
-    else if (redFlag) redFlagLabel = `Kedaruratan: ${redFlag}`;
+        redFlagLabel = isEn
+            ? "Severe Agitation / Dangerous Behavior"
+            : "Agitasi / Perilaku Berbahaya";
+    else if (redFlag === "MEDICAL_CRISIS")
+        redFlagLabel = isEn ? "Acute Medical Crisis" : "Krisis Medis Akut";
+    else if (redFlag)
+        redFlagLabel = isEn
+            ? `Emergency: ${redFlag}`
+            : `Kedaruratan: ${redFlag}`;
 
     const status = isEmergency
         ? raw.status
         : assessment?.clinicalValidation
           ? "COMPLETED"
           : "PENDING";
-    let statusLabel = "Menunggu";
+    let statusLabel = isEn ? "Waiting" : "Menunggu";
     if (status === "PENDING")
-        statusLabel = isEmergency ? "Perlu Diakui" : "Menunggu Validasi";
-    else if (status === "ACKNOWLEDGED") statusLabel = "Sudah Diakui";
-    else if (status === "REVIEWING") statusLabel = "Sedang Ditinjau";
-    else if (status === "CONFIRMED") statusLabel = "T0 Terkonfirmasi";
-    else if (status === "DOWNGRADED") statusLabel = "Diturunkan";
-    else if (status === "COMPLETED") statusLabel = "Selesai Tervalidasi";
+        statusLabel = isEmergency
+            ? isEn
+                ? "Needs Acknowledgement"
+                : "Perlu Diakui"
+            : isEn
+              ? "Awaiting Validation"
+              : "Menunggu Validasi";
+    else if (status === "ACKNOWLEDGED")
+        statusLabel = isEn ? "Acknowledged" : "Sudah Diakui";
+    else if (status === "REVIEWING")
+        statusLabel = isEn ? "In Review" : "Sedang Ditinjau";
+    else if (status === "CONFIRMED")
+        statusLabel = isEn ? "T0 Confirmed" : "T0 Terkonfirmasi";
+    else if (status === "DOWNGRADED")
+        statusLabel = isEn ? "Downgraded" : "Diturunkan";
+    else if (status === "COMPLETED")
+        statusLabel = isEn ? "Validated" : "Selesai Tervalidasi";
 
     if (!isEmergency && !assessmentContext.finalized)
-        statusLabel = "Asesmen belum lengkap";
+        statusLabel = isEn ? "Assessment incomplete" : "Asesmen belum lengkap";
 
     let semanticPriority = priority as string;
     let semanticPriorityLabel = priorityLabel;
-    let semanticStatusDescription = "Menunggu validasi medis";
+    let semanticStatusDescription = isEn
+        ? "Awaiting medical validation"
+        : "Menunggu validasi medis";
     if (!isEmergency && !assessmentContext.finalized) {
-        priorityLabel = semanticPriorityLabel =
-            "Belum ada rekomendasi definitif";
+        priorityLabel = semanticPriorityLabel = isEn
+            ? "No definitive recommendation yet"
+            : "Belum ada rekomendasi definitif";
         semanticPriority = "UNCLASSIFIED";
-        semanticStatusDescription = "Asesmen belum lengkap / perlu klarifikasi";
+        semanticStatusDescription = isEn
+            ? "Assessment incomplete / needs clarification"
+            : "Asesmen belum lengkap / perlu klarifikasi";
     } else if (priority === "T0" && !isEmergency) {
-        priorityLabel = semanticPriorityLabel = "Rekomendasi T0-Suspect";
+        priorityLabel = semanticPriorityLabel = isEn
+            ? "T0-Suspect Recommendation"
+            : "Rekomendasi T0-Suspect";
         semanticPriority = "T0_SUSPECT";
-        semanticStatusDescription =
-            "Rekomendasi sistem; pengiriman darurat belum tercatat pada data ini.";
+        semanticStatusDescription = isEn
+            ? "System recommendation; emergency dispatch is not yet recorded in this data."
+            : "Rekomendasi sistem; pengiriman darurat belum tercatat pada data ini.";
     } else if (priority === "T0") {
         if (status === "CONFIRMED") {
             semanticPriority = semanticPriorityLabel = "T0-CONFIRMED";
-            semanticStatusDescription = "Terkonfirmasi medis";
+            semanticStatusDescription = isEn
+                ? "Medically confirmed"
+                : "Terkonfirmasi medis";
         } else if (status === "DOWNGRADED") {
             const decision = (raw.verifications || []).find(
                 (verification: any) => verification.clinical_result,
             );
             semanticPriority = decision?.clinical_result || "T0-SUSPECT";
             semanticPriorityLabel = decision?.clinical_result
-                ? `Diturunkan ke ${decision.clinical_result}`
-                : "Diturunkan";
-            semanticStatusDescription = "Keputusan klinis tersimpan";
+                ? isEn
+                    ? `Downgraded to ${decision.clinical_result}`
+                    : `Diturunkan ke ${decision.clinical_result}`
+                : isEn
+                  ? "Downgraded"
+                  : "Diturunkan";
+            semanticStatusDescription = isEn
+                ? "Clinical decision saved"
+                : "Keputusan klinis tersimpan";
         } else {
             semanticPriority = semanticPriorityLabel = "T0-SUSPECT";
         }
     } else if (priority === "T1") {
-        semanticPriorityLabel = "T1-MENDESAK";
-        semanticStatusDescription = "Rawat jalan pos medis";
+        semanticPriorityLabel = isEn ? "T1-URGENT" : "T1-MENDESAK";
+        semanticStatusDescription = isEn
+            ? "Medical post outpatient care"
+            : "Rawat jalan pos medis";
     } else if (priority === "T2") {
-        semanticPriorityLabel = "T2-TERJADWAL";
-        semanticStatusDescription = "Pendampingan psikososial";
+        semanticPriorityLabel = isEn ? "T2-SCHEDULED" : "T2-TERJADWAL";
+        semanticStatusDescription = isEn
+            ? "Psychosocial support"
+            : "Pendampingan psikososial";
     } else {
-        semanticPriorityLabel = "T3-STABIL";
-        semanticStatusDescription = "Dukungan komunitas";
+        semanticPriorityLabel = isEn ? "T3-STABLE" : "T3-STABIL";
+        semanticStatusDescription = isEn
+            ? "Community support"
+            : "Dukungan komunitas";
     }
 
     const { srqScore, riskScore, functionScore } = assessmentContext;
@@ -245,17 +337,41 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
     )?.answer;
     const vulnerabilityStatus =
         r3Answer === true
-            ? "Teridentifikasi"
+            ? isEn
+                ? "Identified"
+                : "Teridentifikasi"
             : r3Answer === false
-              ? "Tidak ditandai pada asesmen"
-              : "Data tidak tersedia";
+              ? isEn
+                  ? "Not flagged in assessment"
+                  : "Tidak ditandai pada asesmen"
+              : isEn
+                ? "Data unavailable"
+                : "Data tidak tersedia";
     const clinicalSummary = !assessment
-        ? "Asesmen terstruktur belum tersedia"
+        ? isEn
+            ? "Structured assessment not yet available"
+            : "Asesmen terstruktur belum tersedia"
         : !assessmentContext.finalized
           ? assessmentContext.statusLabel
           : !triage
-            ? "Skor triase belum tersedia"
-            : `SRQ ${srqScore ?? "-"}/20 • Risiko ${riskScore ?? "-"}/8 • Fungsi ${functionScore ?? "-"}/9`;
+            ? isEn
+                ? "Triage score not yet available"
+                : "Skor triase belum tersedia"
+            : isEn
+              ? `SRQ ${srqScore ?? "-"}/20 • Risk ${riskScore ?? "-"}/8 • Function ${functionScore ?? "-"}/9`
+              : `SRQ ${srqScore ?? "-"}/20 • Risiko ${riskScore ?? "-"}/8 • Fungsi ${functionScore ?? "-"}/9`;
+
+    const normalizedGender = !patient?.gender
+        ? isEn
+            ? "Gender unavailable"
+            : "Jenis kelamin tidak tersedia"
+        : isEn
+          ? patient.gender === "Laki-laki"
+              ? "Male"
+              : patient.gender === "Perempuan"
+                ? "Female"
+                : patient.gender
+          : patient.gender;
 
     return {
         assessmentContext,
@@ -264,20 +380,22 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
         isEmergency,
         emergencyId: isEmergency ? raw.id : null,
         assessmentId: assessment?.id || null,
-        rmCode: formatRmCode(isEmergency ? raw : assessment),
-        survivorName: patient?.name || "Penyintas tanpa identitas tercatat",
-        maskedNik: maskNik(patient?.nik),
+        rmCode: formatRmCode(isEmergency ? raw : assessment, locale),
+        survivorName:
+            patient?.name ||
+            (isEn ? "Unidentified survivor" : "Penyintas tanpa identitas tercatat"),
+        maskedNik: maskNik(patient?.nik, locale),
         searchNik: String(patient?.nik ?? "").replace(/\D/g, ""),
         age:
             patient?.age !== undefined && patient?.age !== null
                 ? patient.age
                 : null,
-        gender: patient?.gender || "Jenis kelamin tidak tersedia",
+        gender: normalizedGender,
         vulnerabilityStatus,
         shelterName:
             raw.shelter?.name ||
             patient?.shelter?.name ||
-            "Posko tidak diketahui",
+            (isEn ? "Shelter unknown" : "Posko tidak diketahui"),
         priority,
         priorityLabel,
         semanticPriority,
@@ -295,14 +413,14 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
         redFlagType: redFlag,
         redFlagLabel,
         clinicalSummary,
-        timeAgo: timeAgo(raw.created_at || assessment?.completed_at),
+        timeAgo: timeAgo(raw.created_at || assessment?.completed_at, locale),
         createdAt: raw.created_at || assessment?.completed_at,
         notes:
             raw.notes || assessment?.clinicalValidation?.diagnosis_notes || "",
         volunteerName:
             raw.user?.name ||
             assessment?.user?.name ||
-            "Relawan tidak tersedia",
+            (isEn ? "Volunteer unavailable" : "Relawan tidak tersedia"),
         srqScore,
         riskScore,
         functionScore,
@@ -319,7 +437,15 @@ export function normalizeQueueItem(raw: any, isEmergency: boolean) {
     };
 }
 
-export function formatRiskAnswer(answer: boolean | null): string {
+export function formatRiskAnswer(
+    answer: boolean | null,
+    locale: string = "id",
+): string {
+    if (locale === "en") {
+        if (answer === true) return "YES";
+        if (answer === false) return "NO";
+        return "Unavailable";
+    }
     if (answer === true) return "YA";
     if (answer === false) return "TIDAK";
     return "Tidak tersedia";
@@ -332,9 +458,10 @@ export type HealthcareEmergencyFilter = "ALL" | "PENDING" | "CONFIRMED";
 
 export function normalizeEmergencyQueue(
     emergencies: any[],
+    locale: string = "id",
 ): HealthcareEmergencyQueueItem[] {
     return emergencies
-        .map((emergency) => normalizeQueueItem(emergency, true))
+        .map((emergency) => normalizeQueueItem(emergency, true, locale))
         .sort((a, b) => {
             if (a.status === "PENDING" && b.status !== "PENDING") return -1;
             if (a.status !== "PENDING" && b.status === "PENDING") return 1;
@@ -431,19 +558,35 @@ export function getRiskAnswer(
 export function getFunctionLabel(
     item: HealthcareEmergencyQueueItem | null,
     domain: string,
+    locale: string = "id",
 ): string {
-    if (!item?.functionResponses?.length) return "Data fungsi tidak tersedia";
+    const isEn = locale === "en";
+    if (!item?.functionResponses?.length) {
+        return isEn
+            ? "Function data unavailable"
+            : "Data fungsi tidak tersedia";
+    }
     const resp = item.functionResponses.find(
         (response: any) => response.domain === domain,
     );
-    if (resp?.level === 3) return "Gangguan berat";
-    if (resp?.level === 1) return "Gangguan ringan-sedang / perlu dukungan";
-    if (resp?.level === 0) return "Tidak terganggu / mandiri";
-    return "Data fungsi tidak tersedia";
+    if (resp?.level === 3) return isEn ? "Severe impairment" : "Gangguan berat";
+    if (resp?.level === 1) {
+        return isEn
+            ? "Mild-moderate impairment / needs support"
+            : "Gangguan ringan-sedang / perlu dukungan";
+    }
+    if (resp?.level === 0) {
+        return isEn ? "Unimpaired / independent" : "Tidak terganggu / mandiri";
+    }
+    return isEn ? "Function data unavailable" : "Data fungsi tidak tersedia";
 }
 
-export function getDetectedRedFlags(item: HealthcareEmergencyQueueItem | null) {
+export function getDetectedRedFlags(
+    item: HealthcareEmergencyQueueItem | null,
+    locale: string = "id",
+) {
     if (!item) return [];
+    const isEn = locale === "en";
     const list: Array<{ key: string; title: string; evidence: string }> = [];
 
     if (
@@ -452,52 +595,71 @@ export function getDetectedRedFlags(item: HealthcareEmergencyQueueItem | null) {
     ) {
         let evidence =
             item.redFlagType === "SUICIDAL_IDEATION"
-                ? "Jenis Red Flag tercatat: Ideasi / Risiko Bunuh Diri."
+                ? isEn
+                    ? "Recorded Red Flag type: Suicidal Ideation / Risk."
+                    : "Jenis Red Flag tercatat: Ideasi / Risiko Bunuh Diri."
                 : "";
         if (getSrqAnswer(item, 17) === true) {
             evidence =
                 (evidence ? evidence + " • " : "") +
-                "Jawaban YA pada SRQ #17 (Pikiran mengakhiri hidup)";
+                (isEn
+                    ? "YES response on SRQ #17 (Thoughts of ending life)"
+                    : "Jawaban YA pada SRQ #17 (Pikiran mengakhiri hidup)");
         }
         list.push({
             key: "SUICIDAL_IDEATION",
-            title: "Risiko keamanan jiwa spesifik",
-            evidence: evidence || "Jawaban YA pada SRQ #17",
+            title: isEn
+                ? "Specific self-harm / life safety risk"
+                : "Risiko keamanan jiwa spesifik",
+            evidence:
+                evidence ||
+                (isEn
+                    ? "YES response on SRQ #17"
+                    : "Jawaban YA pada SRQ #17"),
         });
     }
 
     if (item.redFlagType === "PSYCHOSIS") {
         list.push({
             key: "PSYCHOSIS",
-            title: "Gejala psikotik akut",
-            evidence:
-                "Jenis Red Flag tercatat: PSYCHOSIS. Gangguan persepsi / waham.",
+            title: isEn ? "Acute psychotic symptoms" : "Gejala psikotik akut",
+            evidence: isEn
+                ? "Recorded Red Flag type: PSYCHOSIS. Perceptual disturbance / delusions."
+                : "Jenis Red Flag tercatat: PSYCHOSIS. Gangguan persepsi / waham.",
         });
     }
 
     if (item.redFlagType === "SEVERE_AGITATION") {
         list.push({
             key: "SEVERE_AGITATION",
-            title: "Perilaku agresif & gangguan kontrol impuls",
-            evidence:
-                "Jenis Red Flag tercatat: SEVERE_AGITATION. Risiko melukai orang lain atau merusak lingkungan.",
+            title: isEn
+                ? "Aggressive behavior & impulse control impairment"
+                : "Perilaku agresif & gangguan kontrol impuls",
+            evidence: isEn
+                ? "Recorded Red Flag type: SEVERE_AGITATION. Risk of harming others or damaging surroundings."
+                : "Jenis Red Flag tercatat: SEVERE_AGITATION. Risiko melukai orang lain atau merusak lingkungan.",
         });
     }
 
     if (item.redFlagType === "MEDICAL_CRISIS") {
         list.push({
             key: "MEDICAL_CRISIS",
-            title: "Krisis medis akut",
-            evidence:
-                "Jenis Red Flag tercatat: MEDICAL_CRISIS. Penurunan kesadaran atau cedera fisik.",
+            title: isEn ? "Acute medical crisis" : "Krisis medis akut",
+            evidence: isEn
+                ? "Recorded Red Flag type: MEDICAL_CRISIS. Decreased consciousness or physical injury."
+                : "Jenis Red Flag tercatat: MEDICAL_CRISIS. Penurunan kesadaran atau cedera fisik.",
         });
     }
 
     if (list.length === 0 && item.hasRedFlag) {
         list.push({
             key: "GENERAL_EMERGENCY",
-            title: item.redFlagLabel || "Kedaruratan Medis Terlapor",
-            evidence: "Tanda bahaya lapangan dilaporkan oleh relawan.",
+            title:
+                item.redFlagLabel ||
+                (isEn ? "Reported Medical Emergency" : "Kedaruratan Medis Terlapor"),
+            evidence: isEn
+                ? "Field danger signs reported by volunteer."
+                : "Tanda bahaya lapangan dilaporkan oleh relawan.",
         });
     }
 

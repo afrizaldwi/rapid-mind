@@ -8,16 +8,16 @@
                 <h3
                     class="text-xs font-bold uppercase tracking-wider text-slate-900"
                 >
-                    Indikator Bahaya
+                    {{ $t('healthcare.overview.dangerIndicators', 'Indikator Bahaya') }}
                 </h3>
                 <span
                     v-if="detectedRedFlags.length > 0"
                     class="text-xs font-semibold text-rose-700"
                 >
-                    {{ detectedRedFlags.length }} terdeteksi
+                    {{ $t('healthcare.overview.detectedCount', { count: detectedRedFlags.length }, `${detectedRedFlags.length} terdeteksi`) }}
                 </span>
                 <span v-else class="text-xs text-slate-400 font-normal"
-                    >Tidak ada indikator terdeteksi</span
+                    >{{ $t('healthcare.overview.noIndicators', 'Tidak ada indikator terdeteksi') }}</span
                 >
             </div>
 
@@ -41,7 +41,7 @@
                     <span
                         class="text-xs font-semibold text-rose-700 shrink-0 flex items-center gap-1"
                     >
-                        ✓ Terdeteksi
+                        {{ $t('healthcare.overview.detectedBadge', '✓ Terdeteksi') }}
                     </span>
                 </div>
             </div>
@@ -53,7 +53,7 @@
                 <h3
                     class="text-xs font-bold uppercase tracking-wider text-slate-900"
                 >
-                    Ringkasan Hasil Skrining
+                    {{ $t('healthcare.overview.screeningSummary', 'Ringkasan Hasil Skrining') }}
                 </h3>
             </div>
             <div
@@ -77,9 +77,9 @@
                         {{
                             item.srqScore !== null
                                 ? item.srqScore >= 6
-                                    ? "Skor Positif (≥6)"
-                                    : "Skor Negatif (<6)"
-                                : "Data tidak tersedia"
+                                    ? $t('triage.positiveScore', 'Skor Positif (≥6)')
+                                    : $t('triage.negativeScore', 'Skor Negatif (<6)')
+                                : $t('common.notAvailable', 'Data tidak tersedia')
                         }}
                     </span>
                 </div>
@@ -88,7 +88,7 @@
                 <div class="pt-3 sm:pt-0 sm:px-4">
                     <span
                         class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                        >Faktor Risiko</span
+                        >{{ $t('assessment.riskStep', 'Faktor Risiko') }}</span
                     >
                     <div class="mt-1 flex items-baseline gap-1">
                         <span class="text-xl font-bold text-slate-900">
@@ -102,9 +102,9 @@
                         {{
                             item.riskScore !== null
                                 ? item.riskScore >= 3
-                                    ? "Risiko Tinggi"
-                                    : "Risiko Rendah"
-                                : "Data tidak tersedia"
+                                    ? $t('triage.highRisk', 'Risiko Tinggi')
+                                    : $t('triage.lowRisk', 'Risiko Rendah')
+                                : $t('common.notAvailable', 'Data tidak tersedia')
                         }}
                     </span>
                 </div>
@@ -113,7 +113,7 @@
                 <div class="pt-3 sm:pt-0 sm:pl-4">
                     <span
                         class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                        >Fungsi / ADL</span
+                        >{{ $t('assessment.functionStep', 'Fungsi / ADL') }}</span
                     >
                     <div class="mt-1 flex items-baseline gap-1">
                         <span class="text-xl font-bold text-slate-900">
@@ -131,9 +131,9 @@
                         {{
                             item.functionScore !== null
                                 ? item.functionScore >= 3
-                                    ? "Terganggu Berat"
-                                    : "Terganggu Ringan"
-                                : "Data tidak tersedia"
+                                    ? $t('triage.severeImpairment', 'Terganggu Berat')
+                                    : $t('triage.mildImpairment', 'Terganggu Ringan')
+                                : $t('common.notAvailable', 'Data tidak tersedia')
                         }}
                     </span>
                 </div>
@@ -146,7 +146,7 @@
                 <h3
                     class="text-xs font-bold uppercase tracking-wider text-slate-900"
                 >
-                    Alur Penanganan
+                    {{ $t('healthcare.overview.workflowTimeline', 'Alur Penanganan') }}
                 </h3>
             </div>
             <div class="flex items-center justify-between text-xs pt-3 py-1">
@@ -161,11 +161,11 @@
                         <p
                             class="font-semibold text-slate-800 leading-tight text-xs"
                         >
-                            Laporan
+                            {{ $t('healthcare.overview.stepReport', 'Laporan') }}
                         </p>
                         <span
                             class="text-[10px] text-slate-400 block font-normal"
-                            >Terdata</span
+                            >{{ $t('healthcare.overview.statusRecorded', 'Terdata') }}</span
                         >
                     </div>
                 </div>
@@ -188,14 +188,14 @@
                         <p
                             class="font-semibold text-slate-800 leading-tight text-xs"
                         >
-                            Verifikasi
+                            {{ $t('healthcare.overview.stepVerification', 'Verifikasi') }}
                         </p>
                         <span
                             class="text-[10px] text-slate-400 block font-normal"
                             >{{
                                 item.status === "PENDING"
-                                    ? "Menunggu"
-                                    : "Selesai"
+                                    ? $t('healthcare.overview.statusPending', 'Menunggu')
+                                    : $t('healthcare.overview.statusDone', 'Selesai')
                             }}</span
                         >
                     </div>
@@ -223,7 +223,7 @@
                         <p
                             class="font-semibold text-slate-800 leading-tight text-xs"
                         >
-                            Klasifikasi
+                            {{ $t('healthcare.overview.stepClassification', 'Klasifikasi') }}
                         </p>
                         <span
                             class="text-[10px] text-slate-400 block font-normal"
@@ -231,8 +231,8 @@
                                 ["CONFIRMED", "DOWNGRADED"].includes(
                                     item.status,
                                 )
-                                    ? "Ditetapkan"
-                                    : "Menunggu"
+                                    ? $t('healthcare.overview.statusEstablished', 'Ditetapkan')
+                                    : $t('healthcare.overview.statusPending', 'Menunggu')
                             }}</span
                         >
                     </div>
@@ -256,12 +256,12 @@
                         <p
                             class="font-semibold text-slate-800 leading-tight text-xs"
                         >
-                            Rujukan
+                            {{ $t('healthcare.overview.stepReferral', 'Rujukan') }}
                         </p>
                         <span
                             class="text-[10px] text-slate-400 block font-normal"
                             >{{
-                                item.hasReferral ? "Diterbitkan" : "Menunggu"
+                                item.hasReferral ? $t('healthcare.overview.statusIssued', 'Diterbitkan') : $t('healthcare.overview.statusPending', 'Menunggu')
                             }}</span
                         >
                     </div>
@@ -272,6 +272,7 @@
 </template>
 
 <script setup lang="ts">
+import { t as $t } from "@/i18n";
 import type {
     HealthcareEmergencyQueueItem,
     getDetectedRedFlags,

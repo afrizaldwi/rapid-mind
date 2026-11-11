@@ -3,11 +3,11 @@
         <p
             class="mb-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500"
         >
-            Akun Demo Cepat
+            {{ $t('auth.demoAccountsShortTitle', 'Akun Demo Cepat') }}
         </p>
         <div v-for="group in groups" :key="group.role" class="mb-3 last:mb-0">
             <p class="mb-1.5 text-xs font-semibold text-slate-500">
-                {{ group.role }}
+                {{ $t(`auth.roleGroup.${group.role}`, group.role) }}
             </p>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
@@ -46,6 +46,16 @@ const props = defineProps<{
     disabled?: boolean;
 }>();
 const emit = defineEmits<{ select: [email: string] }>();
+
+function $t(key: string, fallback?: string): string {
+    try {
+        const fn = typeof window !== "undefined" ? (window as any)?.__rapidMindT : undefined;
+        return typeof fn === "function" ? fn(key, fallback) : (fallback ?? key);
+    } catch {
+        return fallback ?? key;
+    }
+}
+
 const groups = computed(() =>
     (["ADMIN", "RELAWAN", "HEALTHCARE"] as const)
         .map((role) => ({

@@ -1,7 +1,7 @@
 <template>
     <HealthcareLayout>
         <fieldset :disabled="emergency.can_manage === false" class="space-y-5 max-w-4xl">
-            <p v-if="emergency.can_manage === false" role="status" class="text-slate-600">Akses baca untuk kasus rujukan.</p>
+            <p v-if="emergency.can_manage === false" role="status" class="text-slate-600">{{ $t('healthcare.actions.readOnlyNotice', 'Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.') }}</p>
             <!-- Back Link & Incident Header -->
             <div class="flex items-center justify-between">
                 <Link
@@ -21,7 +21,7 @@
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"
                         />
                     </svg>
-                    <span>Kembali ke Antrean Kasus</span>
+                    <span>{{ $t('healthcare.backToQueue', 'Kembali ke Antrean Kasus') }}</span>
                 </Link>
                 <div
                     class="flex items-center gap-1.5 text-xs font-semibold"
@@ -39,11 +39,7 @@
                                 : 'bg-amber-600'
                         "
                     ></span>
-                    <span>{{
-                        emergency.status === "PENDING"
-                            ? "Menunggu Validasi"
-                            : emergency.status
-                    }}</span>
+                    <span>{{ emergencyStatusLabel(emergency.status) }}</span>
                 </div>
             </div>
 
@@ -52,7 +48,7 @@
                 role="alert"
                 class="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-900"
             >
-                <p class="font-bold">Tindakan belum dapat diproses:</p>
+                <p class="font-bold">{{ $t('healthcare.actionsCannotProcess', 'Tindakan belum dapat diproses:') }}</p>
                 <ul class="mt-1 list-disc space-y-0.5 pl-4">
                     <li v-for="error in actionErrors" :key="error.key">
                         {{ error.message }}
@@ -83,29 +79,29 @@
                         >
                             {{
                                 emergency.patient?.name ||
-                                "Penyintas Tanpa Nama"
+                                $t('common.unidentified', 'Penyintas Tanpa Nama')
                             }}
                         </h2>
                         <p class="text-xs text-slate-500">
                             NIK:
                             <span class="font-mono text-slate-700">{{
-                                emergency.patient?.nik || "Tidak tercatat"
+                                emergency.patient?.nik || $t('assessment.notRecorded', 'Tidak tercatat')
                             }}</span>
-                            • Usia: {{ emergency.patient?.age ?? "-" }} th •
-                            {{ emergency.patient?.gender || "-" }}
+                            • {{ $t('assessment.ageLabel', 'Usia') }}: {{ emergency.patient?.age ?? "-" }} {{ $t('common.years', 'th') }} •
+                            {{ formatGender(emergency.patient?.gender) }}
                         </p>
                     </div>
 
                     <div class="text-left sm:text-right text-xs">
                         <span
                             class="text-slate-400 block text-[10px] uppercase font-semibold"
-                            >Waktu Sinyal SOS</span
+                            >{{ $t('healthcare.sosSignalTime', 'Waktu Sinyal SOS') }}</span
                         >
                         <span class="font-bold text-slate-800">
                             {{
                                 new Date(
                                     emergency.created_at,
-                                ).toLocaleTimeString("id-ID")
+                                ).toLocaleTimeString(locale === "en" ? "en-US" : "id-ID")
                             }}
                             WIB
                         </span>
@@ -119,25 +115,25 @@
                     <div>
                         <span
                             class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
-                            >Posko Lapangan</span
+                            >{{ $t('common.shelter', 'Posko Lapangan') }}</span
                         >
                         <span class="font-semibold text-slate-800">{{
-                            emergency.shelter?.name || "Posko tidak diketahui"
+                            emergency.shelter?.name || $t('healthcare.patients.unrecordedShelter', 'Posko tidak diketahui')
                         }}</span>
                     </div>
                     <div>
                         <span
                             class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
-                            >Relawan Pelapor</span
+                            >{{ $t('healthcare.reportingVolunteer', 'Relawan Pelapor') }}</span
                         >
                         <span class="font-semibold text-slate-800">{{
-                            emergency.user?.name || "Relawan"
+                            emergency.user?.name || $t('common.volunteer', 'Relawan')
                         }}</span>
                     </div>
                     <div>
                         <span
                             class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
-                            >Koordinat GPS</span
+                            >{{ $t('relawan.emergencyPage.gpsCoordinates', 'Koordinat GPS') }}</span
                         >
                         <span class="font-mono font-semibold text-slate-800">
                             {{
@@ -151,7 +147,7 @@
                     <div>
                         <span
                             class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider"
-                            >Status Triase Awal</span
+                            >{{ $t('healthcare.initialTriageStatus', 'Status Triase Awal') }}</span
                         >
                         <span class="font-semibold text-rose-700"
                             >T0-Suspect</span
@@ -166,10 +162,10 @@
                     <div>
                         <span
                             class="text-slate-400 text-[10px] font-semibold uppercase block"
-                            >Kontak Relawan</span
+                            >{{ $t('healthcare.volunteerContact', 'Kontak Relawan') }}</span
                         >
                         <span class="font-semibold text-slate-800">{{
-                            emergency.user?.name || "Relawan"
+                            emergency.user?.name || $t('common.volunteer', 'Relawan')
                         }}</span>
                         <span
                             v-if="emergency.user?.phone_number"
@@ -178,7 +174,7 @@
                             ({{ emergency.user.phone_number }})
                         </span>
                         <span v-else class="text-slate-400 text-[11px] ml-2"
-                            >Nomor telepon belum tersedia</span
+                            >{{ $t('healthcare.phoneNotAvailable', 'Nomor telepon belum tersedia') }}</span
                         >
                     </div>
                     <a
@@ -186,7 +182,7 @@
                         :href="`tel:${emergency.user.phone_number}`"
                         class="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs rounded-lg transition"
                     >
-                        Hubungi Relawan
+                        {{ $t('healthcare.callVolunteer', 'Hubungi Relawan') }}
                     </a>
                 </div>
 
@@ -197,7 +193,7 @@
                 >
                     <span
                         class="text-slate-400 text-[10px] font-semibold uppercase block"
-                        >Catatan Observasi Lapangan</span
+                        >{{ $t('healthcare.observationNotes', 'Catatan Observasi Lapangan') }}</span
                     >
                     <p class="text-slate-700 italic mt-0.5">
                         "{{ emergency.notes }}"
@@ -216,12 +212,11 @@
                             class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"
                         ></span>
                         <h3 class="font-bold text-slate-900 text-sm">
-                            Langkah 1: Akui Kasus Darurat (Acknowledge)
+                            {{ $t('healthcare.emergencyShow.step1Title', 'Langkah 1: Akui Kasus Darurat (Acknowledge)') }}
                         </h3>
                     </div>
                     <p class="text-xs text-slate-500 max-w-xl leading-relaxed">
-                        Tekan tombol akui untuk memberitahu relawan di posko
-                        bahwa tim medis sedang meninjau kasus ini.
+                        {{ $t('healthcare.emergencyShow.step1Desc', 'Tekan tombol akui untuk memberitahu relawan di posko bahwa tim medis sedang meninjau kasus ini.') }}
                     </p>
                 </div>
 
@@ -231,7 +226,7 @@
                     @click="acknowledgeCase"
                     class="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition shrink-0"
                 >
-                    Akui Kasus
+                    {{ $t('healthcare.caseHeader.acknowledgeAction', 'Akui Kasus') }}
                 </button>
             </div>
 
@@ -242,11 +237,10 @@
             >
                 <div class="border-b border-slate-100 pb-3">
                     <h3 class="font-bold text-slate-900 text-sm">
-                        Langkah 2: Verifikasi Sekunder Tenaga Medis
+                        {{ $t('healthcare.emergencyShow.step2Title', 'Langkah 2: Verifikasi Sekunder Tenaga Medis') }}
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Lakukan tele-konsultasi dengan relawan di tempat atau
-                        dokter jaga posko.
+                        {{ $t('healthcare.emergencyShow.step2Desc', 'Lakukan tele-konsultasi dengan relawan di tempat atau dokter jaga posko.') }}
                     </p>
                 </div>
 
@@ -258,7 +252,7 @@
                         <label
                             class="block text-xs font-semibold text-slate-700 mb-1.5"
                         >
-                            Metode Verifikasi
+                            {{ $t('healthcare.actions.verificationMethod', 'Metode Verifikasi') }}
                         </label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             <button
@@ -284,7 +278,7 @@
                                         d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                                     />
                                 </svg>
-                                <span>Panggilan Telepon</span>
+                                <span>{{ $t('healthcare.verificationMethods.phoneCall', 'Panggilan Telepon') }}</span>
                             </button>
                             <button
                                 type="button"
@@ -309,7 +303,7 @@
                                         d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                                     />
                                 </svg>
-                                <span>Video Call</span>
+                                <span>{{ $t('healthcare.verificationMethods.VIDEO', 'Video Call') }}</span>
                             </button>
                             <button
                                 type="button"
@@ -334,7 +328,7 @@
                                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                                     />
                                 </svg>
-                                <span>Tim Lapangan</span>
+                                <span>{{ $t('healthcare.verificationMethods.FIELD_TEAM', 'Tim Lapangan') }}</span>
                             </button>
                         </div>
                     </div>
@@ -343,12 +337,12 @@
                         <label
                             class="block text-xs font-semibold text-slate-700 mb-1"
                         >
-                            Catatan Hasil Verifikasi Klinis
+                            {{ $t('healthcare.emergencyShow.verificationNotesLabel', 'Catatan Hasil Verifikasi Klinis') }}
                         </label>
                         <textarea
                             v-model="verificationForm.notes"
                             rows="2"
-                            placeholder="Catatan observasi atau konfirmasi kondisi penyintas..."
+                            :placeholder="$t('healthcare.emergencyShow.verificationNotesPlaceholder', 'Catatan observasi atau konfirmasi kondisi penyintas...')"
                             class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                     </div>
@@ -358,7 +352,7 @@
                         :disabled="isSubmitting"
                         class="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition"
                     >
-                        Simpan Verifikasi Sekunder
+                        {{ $t('healthcare.emergencyShow.saveSecondaryVerification', 'Simpan Verifikasi Sekunder') }}
                     </button>
                 </form>
             </div>
@@ -370,11 +364,10 @@
             >
                 <div class="border-b border-slate-100 pb-3">
                     <h3 class="font-bold text-slate-900 text-sm">
-                        Langkah 3: Keputusan Klasifikasi Klinis Dokter
+                        {{ $t('healthcare.emergencyShow.step3Title', 'Langkah 3: Keputusan Klasifikasi Klinis Dokter') }}
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Konfirmasi T0 atau turunkan (downgrade) ke T1 / T2 / T3
-                        sesuai kondisi klinis riil.
+                        {{ $t('healthcare.emergencyShow.step3Desc', 'Konfirmasi T0 atau turunkan (downgrade) ke T1 / T2 / T3 sesuai kondisi klinis riil.') }}
                     </p>
                 </div>
 
@@ -400,7 +393,7 @@
                             <div class="flex items-center justify-between">
                                 <span
                                     class="text-xs font-bold text-rose-700 uppercase"
-                                    >T0 Terkonfirmasi</span
+                                    >{{ $t('healthcare.emergencyShow.confirmT0Title', 'T0 Terkonfirmasi') }}</span
                                 >
                                 <span
                                     v-if="
@@ -411,7 +404,7 @@
                                 >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
-                                Krisis akut. Butuh rujukan segera.
+                                {{ $t('healthcare.emergencyShow.confirmT0Desc', 'Krisis akut. Butuh rujukan segera.') }}
                             </p>
                         </button>
 
@@ -428,7 +421,7 @@
                             <div class="flex items-center justify-between">
                                 <span
                                     class="text-xs font-bold text-orange-700 uppercase"
-                                    >Diturunkan ke T1</span
+                                    >{{ $t('healthcare.emergencyShow.downgradeT1Title', 'Diturunkan ke T1') }}</span
                                 >
                                 <span
                                     v-if="decisionForm.clinical_result === 'T1'"
@@ -436,7 +429,7 @@
                                 >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
-                                Bukan ancaman nyawa, rawat jalan posko.
+                                {{ $t('healthcare.emergencyShow.downgradeT1Desc', 'Bukan ancaman nyawa, rawat jalan posko.') }}
                             </p>
                         </button>
 
@@ -453,7 +446,7 @@
                             <div class="flex items-center justify-between">
                                 <span
                                     class="text-xs font-bold text-amber-700 uppercase"
-                                    >Diturunkan ke T2</span
+                                    >{{ $t('healthcare.emergencyShow.downgradeT2Title', 'Diturunkan ke T2') }}</span
                                 >
                                 <span
                                     v-if="decisionForm.clinical_result === 'T2'"
@@ -461,7 +454,7 @@
                                 >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
-                                Distres sedang, konseling posko.
+                                {{ $t('healthcare.emergencyShow.downgradeT2Desc', 'Distres sedang, konseling posko.') }}
                             </p>
                         </button>
 
@@ -478,7 +471,7 @@
                             <div class="flex items-center justify-between">
                                 <span
                                     class="text-xs font-bold text-emerald-700 uppercase"
-                                    >Diturunkan ke T3</span
+                                    >{{ $t('healthcare.emergencyShow.downgradeT3Title', 'Diturunkan ke T3') }}</span
                                 >
                                 <span
                                     v-if="decisionForm.clinical_result === 'T3'"
@@ -486,7 +479,7 @@
                                 >
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1">
-                                Kondisi stabil, dukungan dasar.
+                                {{ $t('healthcare.emergencyShow.downgradeT3Desc', 'Kondisi stabil, dukungan dasar.') }}
                             </p>
                         </button>
                     </div>
@@ -495,12 +488,12 @@
                         <label
                             class="block text-xs font-semibold text-slate-700 mb-1"
                         >
-                            Catatan Justifikasi Klinis
+                            {{ $t('healthcare.emergencyShow.justificationLabel', 'Catatan Justifikasi Klinis') }}
                         </label>
                         <textarea
                             v-model="decisionForm.notes"
                             rows="2"
-                            placeholder="Alasan klinis penegakan diagnosis atau dasar penurunan kategori..."
+                            :placeholder="$t('healthcare.emergencyShow.justificationPlaceholder', 'Alasan klinis penegakan diagnosis atau dasar penurunan kategori...')"
                             class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                     </div>
@@ -510,7 +503,7 @@
                         :disabled="isSubmitting"
                         class="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition"
                     >
-                        Simpan Keputusan Klinis
+                        {{ $t('healthcare.actions.submitDecision', 'Simpan Keputusan Klinis') }}
                     </button>
                 </form>
             </div>
@@ -522,11 +515,10 @@
             >
                 <div class="border-b border-slate-100 pb-3">
                     <h3 class="font-bold text-slate-900 text-sm">
-                        Langkah 4: Rujukan Medis
+                        {{ $t('healthcare.emergencyShow.step4Title', 'Langkah 4: Rujukan Medis') }}
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        T0 telah dikonfirmasi. Buat tiket rujukan ke fasilitas
-                        kesehatan lanjutan jika diperlukan.
+                        {{ $t('healthcare.emergencyShow.step4Desc', 'T0 telah dikonfirmasi. Buat tiket rujukan ke fasilitas kesehatan lanjutan jika diperlukan.') }}
                     </p>
                 </div>
 
@@ -539,8 +531,7 @@
                         :available="!!emergency.operations?.available"
                     />
                     <p v-if="!emergency.operations?.available">
-                        Rujukan tercatat. Lihat daftar Rujukan untuk alur
-                        kompatibilitas.
+                        {{ $t('healthcare.emergencyShow.referralCompatNote', 'Rujukan tercatat. Lihat daftar Rujukan untuk alur kompatibilitas.') }}
                     </p>
                 </template>
 
@@ -553,7 +544,7 @@
                         <label
                             class="mb-1 block text-xs font-semibold text-slate-700"
                         >
-                            Fasilitas Kesehatan Tujuan Rujukan
+                            {{ $t('healthcare.actions.targetFacility', 'Fasilitas Kesehatan Tujuan Rujukan') }}
                         </label>
                         <select
                             v-model="referralForm.facility_id"
@@ -561,7 +552,7 @@
                             class="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         >
                             <option :value="null" disabled>
-                                Pilih Fasilitas Kesehatan Aktif
+                                {{ $t('healthcare.emergencyShow.selectActiveFacility', 'Pilih Fasilitas Kesehatan Aktif') }}
                             </option>
                             <option
                                 v-for="f in facilities"
@@ -576,12 +567,12 @@
                         <label
                             class="mb-1 block text-xs font-semibold text-slate-700"
                         >
-                            Catatan Rujukan (Opsional)
+                            {{ $t('healthcare.emergencyShow.referralNotesLabel', 'Catatan Rujukan (Opsional)') }}
                         </label>
                         <textarea
                             v-model="referralForm.notes"
                             rows="2"
-                            placeholder="Catatan alasan rujukan atau instruksi khusus..."
+                            :placeholder="$t('healthcare.emergencyShow.referralNotesPlaceholder', 'Catatan alasan rujukan atau instruksi khusus...')"
                             class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                     </div>
@@ -594,7 +585,7 @@
                         "
                         class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition"
                     >
-                        Terbitkan Rujukan Medis
+                        {{ $t('healthcare.actions.submitReferralButton', 'Terbitkan Rujukan Medis') }}
                     </button>
                 </form>
             </div>
@@ -610,7 +601,7 @@
                 <summary
                     class="min-h-11 cursor-pointer rounded-lg py-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-teal-700"
                 >
-                    Konteks Asesmen Lapangan
+                    {{ $t('healthcare.assessmentContext.title', 'Konteks Asesmen Lapangan') }}
                 </summary>
                 <EmergencyAssessmentTab :item="assessmentItem" />
             </details>
@@ -626,7 +617,7 @@
                 <h3
                     class="font-bold text-slate-900 text-xs uppercase tracking-wider"
                 >
-                    Riwayat Verifikasi & Audit Tim Medis
+                    {{ $t('healthcare.emergencyShow.auditTrailTitle', 'Riwayat Verifikasi & Audit Tim Medis') }}
                 </h3>
                 <div class="divide-y divide-slate-100 text-xs">
                     <div
@@ -636,10 +627,10 @@
                     >
                         <div class="space-y-0.5">
                             <span class="font-semibold text-slate-800">
-                                {{ v.verifier?.name || "Dokter Jaga" }}
+                                {{ v.verifier?.name || $t('healthcare.emergencyShow.dutyPhysician', 'Dokter Jaga') }}
                             </span>
                             <span class="text-slate-400 text-[11px] ml-1.5">
-                                ({{ v.method || "Verifikasi" }})
+                                ({{ v.method ? $t(`healthcare.verificationMethods.${v.method}`, v.method) : $t('healthcare.overview.stepVerification', 'Verifikasi') }})
                             </span>
                             <p
                                 v-if="v.notes"
@@ -651,7 +642,7 @@
                         <span class="text-slate-400 text-[11px] shrink-0">
                             {{
                                 new Date(v.created_at).toLocaleTimeString(
-                                    "id-ID",
+                                    locale === "en" ? "en-US" : "id-ID",
                                 )
                             }}
                             WIB
@@ -664,6 +655,8 @@
 </template>
 
 <script setup lang="ts">
+import { t as $t, useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
 import EmergencyAssessmentTab from "@/components/Healthcare/Emergencies/EmergencyAssessmentTab.vue";
 import { normalizeQueueItem } from "@/lib/healthcareEmergency";
 import { useHealthcareDraft } from "@/composables/useHealthcareDraft";
@@ -674,7 +667,6 @@ import type { ResponseUnit } from "@/lib/healthcareOperations";
 import { computed, ref } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
-import { formatReferralStatus } from "@/lib/referralStatus";
 
 const props = defineProps<{
     emergency: any;
@@ -682,15 +674,16 @@ const props = defineProps<{
     responseUnits?: ResponseUnit[];
 }>();
 
+const { locale } = useI18n();
 const isSubmitting = ref(false);
 const page = usePage();
 const assessmentItem = computed(() =>
-    normalizeQueueItem(props.emergency, true),
+    normalizeQueueItem(props.emergency, true, locale.value),
 );
 const actionErrors = computed(() =>
     Object.entries(page.props.errors ?? {}).map(([key, message]) => ({
         key,
-        message: String(message),
+        message: localizeMessage(String(message), locale.value),
     })),
 );
 
@@ -774,16 +767,28 @@ function submitReferral() {
     );
 }
 
+function emergencyStatusLabel(status?: string): string {
+    if (!status) return "-";
+    return $t(`healthcare.emergencyStatus.${status}`, status);
+}
+
+function formatGender(gender?: string): string {
+    if (!gender) return "-";
+    if (gender === "Laki-laki") return $t("assessment.male", "Laki-laki");
+    if (gender === "Perempuan") return $t("assessment.female", "Perempuan");
+    return gender;
+}
+
 function formatRedFlag(rf?: string) {
     switch (rf) {
         case "SUICIDAL_IDEATION":
-            return "Ideasi / Risiko Bunuh Diri";
+            return $t("relawan.emergencyPage.suicide", "Ideasi / Risiko Bunuh Diri");
         case "PSYCHOSIS":
-            return "Psikosis Akut / Disosiasi Berat";
+            return $t("relawan.emergencyPage.psychosis", "Psikosis Akut / Disosiasi Berat");
         case "SEVERE_AGITATION":
-            return "Agitasi / Perilaku Berbahaya";
+            return $t("relawan.emergencyPage.agitation", "Agitasi / Perilaku Berbahaya");
         default:
-            return "Kegawatdaruratan Medis & Somatik";
+            return $t("relawan.emergencyPage.medical", "Kegawatdaruratan Medis & Somatik");
     }
 }
 
@@ -792,7 +797,7 @@ function formatCoordinates(latitude: unknown, longitude: unknown): string {
     const longitudeNumber = parseCoordinate(longitude);
 
     if (latitudeNumber === null || longitudeNumber === null) {
-        return "Sesuai Posko";
+        return $t("healthcare.emergencyShow.perShelterLocation", "Sesuai Posko");
     }
 
     return `${latitudeNumber.toFixed(4)}, ${longitudeNumber.toFixed(4)}`;

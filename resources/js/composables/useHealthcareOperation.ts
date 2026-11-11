@@ -2,6 +2,10 @@ import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
 
 type OperationCommand = { url: string; data: Record<string, string | number | null> };
+function __t(key: string, fallback: string): string {
+    const fn = (globalThis as any)?.__rapidMindT;
+    return typeof fn === "function" ? fn(key, fallback) : fallback;
+}
 export function useHealthcareOperation(onSubmitted: (command: OperationCommand) => (() => void) = () => () => {}) {
     const busy = ref(false);
     const stale = ref(false);
@@ -35,7 +39,10 @@ export function useHealthcareOperation(onSubmitted: (command: OperationCommand) 
             preserveScroll: true,
             onSuccess: () => {
                 saved();
-                message.value = "Perubahan tersimpan di sistem.";
+                message.value = __t(
+                    "healthcare.operations.savedSuccess",
+                    "Perubahan tersimpan di sistem.",
+                );
             },
             onError: (result) => {
                 errors.value = result;
@@ -45,7 +52,10 @@ export function useHealthcareOperation(onSubmitted: (command: OperationCommand) 
             onNetworkError: () => {
                 stale.value = true;
                 errors.value = {
-                    form: "Hasil penyimpanan belum dapat dipastikan karena jaringan terputus. Muat status terbaru sebelum mencoba lagi.",
+                    form: __t(
+                        "healthcare.operations.networkError",
+                        "Hasil penyimpanan belum dapat dipastikan karena jaringan terputus. Muat status terbaru sebelum mencoba lagi.",
+                    ),
                 };
                 return false;
             },

@@ -6,10 +6,10 @@
                 <h1
                     class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight"
                 >
-                    Pusat Triase & Kedaruratan Medis
+                    {{ $t('healthcare.workspaceTitle', 'Pusat Triase & Kedaruratan Medis') }}
                 </h1>
                 <p class="text-xs text-slate-500 mt-1 font-normal">
-                    Antrean insiden T0 untuk verifikasi dan respons medis.
+                    {{ $t('healthcare.workspaceSubtitle', 'Antrean insiden T0 untuk verifikasi dan respons medis.') }}
                 </p>
             </div>
 
@@ -37,7 +37,7 @@
                 role="alert"
                 class="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs font-medium text-rose-900 space-y-1"
             >
-                <p class="font-bold">Perhatian pada tindakan medis:</p>
+                <p class="font-bold">{{ $t('healthcare.emergencies.actionErrorHeader', 'Perhatian pada tindakan medis:') }}</p>
                 <ul class="list-disc pl-4 space-y-0.5">
                     <li v-for="err in actionErrors" :key="err.key">
                         {{ err.message }}
@@ -84,7 +84,7 @@
                                 "
                                 class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
-                                Ringkasan
+                                {{ $t('healthcare.tabs.overview', 'Ringkasan') }}
                             </button>
                             <button
                                 type="button"
@@ -96,7 +96,7 @@
                                 "
                                 class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
-                                Asesmen
+                                {{ $t('healthcare.tabs.assessment', 'Asesmen') }}
                             </button>
                             <button
                                 type="button"
@@ -108,7 +108,7 @@
                                 "
                                 class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
-                                Tindakan
+                                {{ $t('healthcare.tabs.actions', 'Tindakan') }}
                             </button>
                             <button
                                 type="button"
@@ -120,7 +120,7 @@
                                 "
                                 class="shrink-0 whitespace-nowrap transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                             >
-                                Riwayat
+                                {{ $t('healthcare.tabs.history', 'Riwayat') }}
                             </button>
                         </nav>
 
@@ -141,7 +141,7 @@
                                         ? "✓"
                                         : "⚠"
                                 }}</span>
-                                <span>{{ actionFeedback.message }}</span>
+                                <span>{{ localizeMessage(actionFeedback.message, locale) }}</span>
                             </div>
                             <button
                                 type="button"
@@ -185,7 +185,9 @@
                             />
 
                             <template v-if="activeTab === 'actions' && selectedItem.status === 'CONFIRMED'">
-                                <p v-if="!selectedItem.raw.operations?.available && selectedItem.hasReferral" class="text-xs text-slate-600">Rujukan tercatat ke {{ selectedItem.referrals[0]?.facility?.name || 'Faskes' }}. Lihat daftar Rujukan untuk alur kompatibilitas.</p>
+                                <p v-if="!selectedItem.raw.operations?.available && selectedItem.hasReferral" class="text-xs text-slate-600">
+                                    {{ $t('healthcare.emergencies.referralCompatNotice', { facility: selectedItem.referrals[0]?.facility?.name || $t('common.facility', 'Faskes') }, `Rujukan tercatat ke ${selectedItem.referrals[0]?.facility?.name || 'Faskes'}. Lihat daftar Rujukan untuk alur kompatibilitas.`) }}
+                                </p>
                                 <ClinicalReferralCard v-for="referral in selectedItem.raw.operations?.referrals || []" :key="referral.id" :referral="referral" :available="!!selectedItem.raw.operations?.available" />
                                 <DispatchPanel :key="selectedItem.emergencyId!" :emergency-id="selectedItem.emergencyId!" :operations="selectedItem.raw.operations" :units="responseUnits || []" />
                             </template>
@@ -218,12 +220,10 @@
                             />
                         </svg>
                         <h3 class="text-sm font-bold text-slate-700">
-                            Pilih Insiden dari Antrean
+                            {{ $t('healthcare.emptySelection.title', 'Pilih Insiden dari Antrean') }}
                         </h3>
                         <p class="text-xs text-slate-400 max-w-xs">
-                            Pilih salah satu kasus di panel antrean untuk
-                            memeriksa identitas, bukti asesmen, dan tindakan
-                            klinis.
+                            {{ $t('healthcare.emptySelection.description', 'Pilih salah satu kasus di panel antrean untuk memeriksa identitas, bukti asesmen, dan tindakan klinis.') }}
                         </p>
                     </div>
                 </main>
@@ -233,6 +233,7 @@
 </template>
 
 <script setup lang="ts">
+import { t as $t, useI18n } from "@/i18n";
 import ClinicalReferralCard from "@/components/Healthcare/Operations/ClinicalReferralCard.vue";
 import DispatchPanel from "@/components/Healthcare/Operations/DispatchPanel.vue";
 import OperationsTimeline from "@/components/Healthcare/Operations/OperationsTimeline.vue";
@@ -250,6 +251,9 @@ import { useEmergencyQueue } from "@/composables/useEmergencyQueue";
 import { useEmergencyActions } from "@/composables/useEmergencyActions";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
 import { getDetectedRedFlags } from "@/lib/healthcareEmergency";
+import { localizeMessage } from "@/i18n/localizeMessage";
+
+const { locale } = useI18n();
 
 const props = defineProps<{
     emergencies?: any[];
@@ -260,8 +264,11 @@ const props = defineProps<{
 
 const page = usePage();
 const flashMessage = computed(() =>
-    String(
-        (page.props.flash as { message?: string } | undefined)?.message ?? "",
+    localizeMessage(
+        String(
+            (page.props.flash as { message?: string } | undefined)?.message ?? "",
+        ),
+        locale.value,
     ),
 );
 const activeTab = ref<"overview" | "assessment" | "actions" | "history">(
@@ -271,7 +278,7 @@ const activeTab = ref<"overview" | "assessment" | "actions" | "history">(
 const actionErrors = computed(() => {
     return Object.entries(page.props.errors ?? {}).map(([key, message]) => ({
         key,
-        message: String(message),
+        message: localizeMessage(String(message), locale.value),
     }));
 });
 
@@ -315,5 +322,5 @@ watch(selectedItem, item => {
     };
 }, { immediate: true, flush: 'sync' });
 
-const detectedRedFlags = computed(() => getDetectedRedFlags(selectedItem.value));
+const detectedRedFlags = computed(() => getDetectedRedFlags(selectedItem.value, locale.value));
 </script>

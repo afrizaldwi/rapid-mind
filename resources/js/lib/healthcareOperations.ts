@@ -47,20 +47,36 @@ export type Operations = {
     targets?: { source: string; label: string }[];
 };
 export type ResponseUnit = { id: number; name: string; code: string };
-export const dispatchLabel = (status: string) =>
-    ({
-        ASSIGNED: "Ditugaskan di sistem",
-        EN_ROUTE: "Menuju lokasi",
-        ON_SITE: "Di lokasi",
-        TRANSPORT: "Transport pasien",
-        COMPLETED: "Respons selesai",
-    })[status] ?? status;
-export const clinicalLabel = (status: string) =>
-    status === "ACTIVE"
-        ? "Rujukan aktif"
+export const dispatchLabel = (status: string, locale: string = "id") =>
+    (locale === "en"
+        ? {
+              ASSIGNED: "Assigned in system",
+              EN_ROUTE: "En route",
+              ON_SITE: "On site",
+              TRANSPORT: "Patient transport",
+              COMPLETED: "Response completed",
+          }
+        : {
+              ASSIGNED: "Ditugaskan di sistem",
+              EN_ROUTE: "Menuju lokasi",
+              ON_SITE: "Di lokasi",
+              TRANSPORT: "Transport pasien",
+              COMPLETED: "Respons selesai",
+          })[status] ?? status;
+export const clinicalLabel = (status: string, locale: string = "id") => {
+    const isEn = locale === "en";
+    return status === "ACTIVE"
+        ? isEn
+            ? "Active referral"
+            : "Rujukan aktif"
         : status === "COMPLETED"
-          ? "Pekerjaan rujukan selesai"
-          : `Alur lama: ${dispatchLabel(status)}`;
+          ? isEn
+              ? "Referral task completed"
+              : "Pekerjaan rujukan selesai"
+          : isEn
+            ? `Legacy flow: ${dispatchLabel(status, locale)}`
+            : `Alur lama: ${dispatchLabel(status, locale)}`;
+};
 export function clinicalCompletion(
     referral: Pick<ClinicalReferral, "id" | "status">,
 ) {
@@ -101,27 +117,32 @@ export function referralLink(
           }
         : null;
 }
-export function timeline(operations?: Operations) {
+export function timeline(operations?: Operations, locale: string = "id") {
+    const isEn = locale === "en";
     const rows = (operations?.referrals ?? []).flatMap((referral) =>
         referral.history.map((row) => ({
             ...row,
             key: `ref-${referral.id}-${row.id}`,
-            domain: "Rujukan",
+            domain: isEn ? "Referral" : "Rujukan",
             label:
                 row.previous_status === null
-                    ? "Rujukan diterbitkan"
-                    : clinicalLabel(row.status),
+                    ? isEn
+                        ? "Referral issued"
+                        : "Rujukan diterbitkan"
+                    : clinicalLabel(row.status, locale),
         })),
     );
     rows.push(
         ...(operations?.dispatch?.history ?? []).map((row) => ({
             ...row,
             key: `dispatch-${row.id}`,
-            domain: "Respons Lapangan",
+            domain: isEn ? "Field Response" : "Respons Lapangan",
             label:
                 row.event_type === "REFERRAL_LINKED"
-                    ? "Rujukan dihubungkan"
-                    : dispatchLabel(row.status),
+                    ? isEn
+                        ? "Referral linked"
+                        : "Rujukan dihubungkan"
+                    : dispatchLabel(row.status, locale),
         })),
     );
     return rows.sort(

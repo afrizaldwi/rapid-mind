@@ -11,6 +11,18 @@ export const observationLabels: Record<NonVerbalReason, string> = {
     UNKNOWN: "Alasan belum diketahui",
     OTHER: "Lainnya",
 };
+export const observationLabelsEn: Record<NonVerbalReason, string> = {
+    NOT_SPEAKING: "Not speaking during interaction",
+    SEVERE_DISTRESS: "Appears to experience severe distress",
+    SPEECH_DIFFICULTY: "Speech difficulty",
+    HEARING_COMMUNICATION_BARRIER: "Hearing or communication barrier",
+    CHOOSES_NOT_TO_SPEAK: "Chooses not to speak",
+    UNKNOWN: "Reason not yet known",
+    OTHER: "Other",
+};
+export function getObservationLabel(code: NonVerbalReason, locale: string): string {
+    return locale === "en" ? observationLabelsEn[code] : observationLabels[code];
+}
 export function toggleObservation(
     current: NonVerbalObservations,
     code: NonVerbalReason,

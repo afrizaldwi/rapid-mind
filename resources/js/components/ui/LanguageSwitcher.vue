@@ -1,0 +1,55 @@
+<template>
+    <div
+        class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 text-xs font-semibold shadow-2xs transition select-none"
+        :class="compact ? 'text-[11px]' : 'text-xs'"
+        role="group"
+        :aria-label="$t('common.languageSwitcherAria', 'Pilih Bahasa / Switch Language')"
+    >
+        <button
+            type="button"
+            class="flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
+            :class="
+                locale === 'id'
+                    ? 'bg-teal-700 text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
+            "
+            :aria-pressed="locale === 'id'"
+            @click="setLocale('id')"
+            title="Bahasa Indonesia"
+        >
+            <span aria-hidden="true" class="text-xs">🇮🇩</span>
+            <span :class="compact ? 'inline' : 'inline'">ID</span>
+        </button>
+        <span class="text-slate-300 mx-0.5" aria-hidden="true">|</span>
+        <button
+            type="button"
+            class="flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
+            :class="
+                locale === 'en'
+                    ? 'bg-teal-700 text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
+            "
+            :aria-pressed="locale === 'en'"
+            @click="setLocale('en')"
+            title="English"
+        >
+            <span aria-hidden="true" class="text-xs">🇬🇧</span>
+            <span :class="compact ? 'inline' : 'inline'">EN</span>
+        </button>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { useI18n, t as $t } from "@/i18n";
+
+withDefaults(
+    defineProps<{
+        compact?: boolean;
+    }>(),
+    {
+        compact: false,
+    },
+);
+
+const { locale, setLocale } = useI18n();
+</script>

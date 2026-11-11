@@ -6,15 +6,15 @@
         <div class="flex items-center justify-between">
           <div>
             <span class="text-xs font-bold text-teal-800 uppercase tracking-wider block">
-              Hari 1–3 Pascabencana
+              {{ $t('relawan.pfa.badge') }}
             </span>
             <h2 class="text-xl font-bold text-slate-900 mt-1">
-              Buku Saku Digital PFA
+              {{ $t('relawan.pfa.title') }}
             </h2>
           </div>
         </div>
         <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-          <em>Psychological First Aid</em>: Hadir utuh, dengarkan tanpa menghakimi, dan berikan rasa aman tanpa membebani penyintas dengan administrasi.
+          {{ $t('relawan.pfa.subtitle') }}
         </p>
       </div>
 
@@ -25,7 +25,7 @@
           v-for="tab in tabs"
           :key="tab.id"
           @click="activeTab = tab.id"
-          class="flex-1 py-2 text-xs font-bold rounded-lg transition duration-150 flex items-center justify-center space-x-1.5"
+          class="flex-1 py-2 text-xs font-bold rounded-lg transition duration-150 flex items-center justify-center space-x-1.5 cursor-pointer"
           :class="activeTab === tab.id ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
         >
           <span>{{ tab.label }}</span>
@@ -36,31 +36,31 @@
       <div v-if="activeTab === 'LOOK'" class="space-y-4">
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4> Amati Keamanan Fisik</h4>
+            <h4>{{ $t('relawan.pfa.lookSafetyTitle') }}</h4>
           </div>
           <ul class="text-xs text-slate-600 space-y-2 list-disc list-inside">
-            <li>Pastikan area sekitar aman dari reruntuhan atau cuaca ekstrem.</li>
-            <li>Perhatikan apakah ada luka fisik berdarah atau cedera berat. <em>(Jika ada: prioritaskan evakuasi ke Pos Medis terdekat)</em>.</li>
+            <li>{{ $t('relawan.pfa.lookSafety1') }}</li>
+            <li>{{ $t('relawan.pfa.lookSafety2') }}</li>
           </ul>
         </div>
 
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>Amati Reaksi Distres Parah</h4>
+            <h4>{{ $t('relawan.pfa.lookDistressTitle') }}</h4>
           </div>
           <div class="grid grid-cols-1 gap-2 text-xs">
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="font-bold text-slate-800">Shock / Mutisme:</span> Tatapan mata kosong, mematung, tidak merespons panggilan.
+              <span class="font-bold text-slate-800">{{ $t('relawan.pfa.shockTitle') }}:</span> {{ $t('relawan.pfa.shockDesc') }}
             </div>
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="font-bold text-slate-800">Histeria:</span> Menangis tanpa henti, gemetar hebat, hiperventilasi (napas cepat/dangkal).
+              <span class="font-bold text-slate-800">{{ $t('relawan.pfa.hysteriaTitle') }}:</span> {{ $t('relawan.pfa.hysteriaDesc') }}
             </div>
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="font-bold text-slate-800">Agitasi:</span> Ngamuk, melempar barang, atau berteriak histeris membahayakan diri.
+              <span class="font-bold text-slate-800">{{ $t('relawan.pfa.agitationTitle') }}:</span> {{ $t('relawan.pfa.agitationDesc') }}
             </div>
           </div>
           <p class="text-[11px] text-slate-500 italic mt-1">
-            Dekati secara perlahan dengan suara lembut, jaga jarak aman fisik.
+            {{ $t('relawan.pfa.approachTip') }}
           </p>
         </div>
       </div>
@@ -70,39 +70,39 @@
         <!-- Sapaan Awal -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>Skrip Sapaan Hangat</h4>
+            <h4>{{ $t('relawan.pfa.greetingTitle') }}</h4>
           </div>
           <blockquote class="bg-teal-50/60 p-4 rounded-xl border-l-4 border-teal-600 text-xs text-teal-950 italic leading-relaxed">
-            "Halo Ibu/Bapak, kenalkan saya Relawan di posko ini. Saya hadir di sini untuk menemani Ibu/Bapak. Ada yang bisa saya bantu atau temani saat ini?"
+            {{ $t('relawan.pfa.greetingScript') }}
           </blockquote>
         </div>
 
         <!-- Do's and Don'ts -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <h4 class="font-bold text-sm text-slate-900">
-            Panduan Sikap (Do's & Don'ts)
+            {{ $t('relawan.pfa.dosAndDonts') }}
           </h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5 text-emerald-950">
               <div class="flex items-center gap-2 font-bold text-emerald-800">
                 <CircleCheck class="h-4 w-4" aria-hidden="true" />
-                <span>LAKUKAN (DO):</span>
+                <span>{{ $t('relawan.pfa.dos') }}</span>
               </div>
               <ul class="space-y-1 list-disc list-inside text-emerald-900">
-                <li>Duduk sejajar pandangan mata.</li>
-                <li>Sediakan air minum hangat atau tisu.</li>
-                <li>Validasi perasaan sedih penyintas.</li>
+                <li>{{ $t('relawan.pfa.dos1') }}</li>
+                <li>{{ $t('relawan.pfa.dos2') }}</li>
+                <li>{{ $t('relawan.pfa.dos3') }}</li>
               </ul>
             </div>
             <div class="p-3 rounded-xl bg-red-50 border border-red-200 space-y-1.5 text-red-950">
               <div class="flex items-center gap-2 font-bold text-red-800">
                 <CircleX class="h-4 w-4" aria-hidden="true" />
-                <span>JANGAN (DON'T):</span>
+                <span>{{ $t('relawan.pfa.donts') }}</span>
               </div>
               <ul class="space-y-1 list-disc list-inside text-red-900">
-                <li>JANGAN memaksa cerita kronologi.</li>
-                <li>JANGAN beri janji palsu ("pasti diganti").</li>
-                <li>JANGAN membandingkan musibah orang.</li>
+                <li>{{ $t('relawan.pfa.donts1') }}</li>
+                <li>{{ $t('relawan.pfa.donts2') }}</li>
+                <li>{{ $t('relawan.pfa.donts3') }}</li>
               </ul>
             </div>
           </div>
@@ -110,13 +110,13 @@
 
         <!-- Grounding 5-4-3-2-1 -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <h4 class="text-sm font-bold text-teal-800">Latihan Grounding</h4>
+          <h4 class="text-sm font-bold text-teal-800">{{ $t('relawan.pfa.groundingTitle') }}</h4>
           <p class="text-xs text-slate-600 leading-relaxed">
-            Gunakan teknik ini jika penyintas tampak panik, napas tersengal, atau mengalami disorientasi:
+            {{ $t('relawan.pfa.groundingDesc') }}
           </p>
 
           <div class="space-y-2 text-xs">
-            <div v-for="step in groundingSteps" :key="step.title" class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+            <div v-for="step in localizedGroundingSteps" :key="step.number" class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
               <div class="flex items-start gap-2">
                 <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-100 text-[11px] font-bold text-teal-800">
                   {{ step.number }}
@@ -133,42 +133,42 @@
       <div v-if="activeTab === 'LINK'" class="space-y-4">
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>Kebutuhan Dasar Logistik</h4>
+            <h4>{{ $t('relawan.pfa.logisticsTitle') }}</h4>
           </div>
           <p class="text-xs text-slate-600">
-            Tanyakan kebutuhan paling mendesak detik ini:
+            {{ $t('relawan.pfa.logisticsDesc') }}
           </p>
           <div class="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-800">
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>Air Minum Bersih</span>
+              <span>{{ $t('relawan.pfa.water') }}</span>
             </div>
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>Selimut & Pakaian</span>
+              <span>{{ $t('relawan.pfa.blanket') }}</span>
             </div>
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>Obat Rutin Pribadi</span>
+              <span>{{ $t('relawan.pfa.medicine') }}</span>
             </div>
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-              <span>Perlengkapan Bayi/Lansia</span>
+              <span>{{ $t('relawan.pfa.babyElder') }}</span>
             </div>
           </div>
         </div>
 
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>Menghubungkan Keluarga</h4>
+            <h4>{{ $t('relawan.pfa.familyTitle') }}</h4>
           </div>
           <blockquote class="bg-slate-50 p-4 rounded-xl border-l-4 border-slate-400 text-xs text-slate-800 italic leading-relaxed">
-            "Apakah ada keluarga inti atau kerabat dekat yang ingin Ibu/Bapak hubungi atau cari saat ini? Saya bantu sampaikan ke Tenda Informasi Posko."
+            {{ $t('relawan.pfa.familyScript') }}
           </blockquote>
         </div>
 
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>Penutup Sesi Humanis</h4>
+            <h4>{{ $t('relawan.pfa.closingTitle') }}</h4>
           </div>
           <blockquote class="bg-teal-50 p-4 rounded-xl border border-teal-200 text-xs text-teal-950 italic leading-relaxed">
-            "Merasa sedih, bingung, atau takut setelah kejadian ini adalah hal yang sangat wajar. Ibu/Bapak tidak sendiri. Saya dan tim posko ada di sekitar tenda ini ya."
+            {{ $t('relawan.pfa.closingScript') }}
           </blockquote>
         </div>
       </div>
@@ -177,33 +177,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { CircleCheck, CircleX} from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import { CircleCheck, CircleX } from 'lucide-vue-next';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
+import { t as $t } from '@/i18n';
 
 const activeTab = ref<'LOOK' | 'LISTEN' | 'LINK'>('LOOK');
 
 const tabs = [
-  { id: 'LOOK' as const, label: 'LOOK'},
-  { id: 'LISTEN' as const, label: 'LISTEN'},
-  { id: 'LINK' as const, label: 'LINK'},
+  { id: 'LOOK' as const, label: 'LOOK' },
+  { id: 'LISTEN' as const, label: 'LISTEN' },
+  { id: 'LINK' as const, label: 'LINK' },
 ];
 
-const groundingSteps = [
+const localizedGroundingSteps = computed(() => [
   {
     number: 1,
-    title: 'Atur Napas Perlahan',
-    script: '"Ayo tarik napas pelan-pelan bersama saya... Tahan... Hembuskan..."',
+    title: $t('relawan.pfa.step1Title'),
+    script: $t('relawan.pfa.step1Script'),
   },
   {
     number: 2,
-    title: 'Arahkan Perhatian ke Sekitar',
-    script: '"Sebutkan 3 benda yang ada di sekitar Ibu/Bapak saat ini."',
+    title: $t('relawan.pfa.step2Title'),
+    script: $t('relawan.pfa.step2Script'),
   },
   {
     number: 3,
-    title: 'Kembalikan Fokus ke Tubuh',
-    script: '"Rasakan pijakan kedua kaki Ibu/Bapak di tanah dan pegang gelas air ini."',
+    title: $t('relawan.pfa.step3Title'),
+    script: $t('relawan.pfa.step3Script'),
   },
-];
+]);
 </script>

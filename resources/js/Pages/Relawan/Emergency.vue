@@ -19,7 +19,7 @@
                         <span
                             class="text-xs font-bold uppercase tracking-wider bg-red-900/80 px-2.5 py-1 rounded-md"
                         >
-                            Laporan Darurat Lapangan
+                            {{ $t('relawan.emergencyPage.title') }}
                         </span>
                     </div>
                     <Badge variant="t0">T0-Suspect</Badge>
@@ -27,10 +27,10 @@
 
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight">
-                        {{ emergency.patient?.name || "Penyintas Tanpa Nama" }}
+                        {{ emergency.patient?.name || $t('relawan.emergencyPage.unidentified') }}
                     </h2>
                     <p class="text-xs text-red-200 mt-1">
-                        Indikator:
+                        {{ $t('relawan.emergencyPage.indicator') }}
                         <strong class="text-white">{{
                             formatRedFlag(emergency.red_flag_type)
                         }}</strong>
@@ -45,14 +45,14 @@
                 <h3
                     class="text-xs font-bold text-slate-500 uppercase tracking-wider"
                 >
-                    Status Laporan
+                    {{ $t('relawan.emergencyPage.reportStatusHeader') }}
                 </h3>
 
                 <div
                     class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
                 >
                     <span class="text-slate-600 font-semibold"
-                        >Status laporan:</span
+                        >{{ $t('relawan.emergencyPage.reportStatusLabel') }}</span
                     >
                     <span class="font-semibold text-rose-700 text-xs">
                         T0-Suspect
@@ -62,7 +62,7 @@
                 <div
                     class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
                 >
-                    <span class="text-slate-600 font-semibold">Transmisi:</span>
+                    <span class="text-slate-600 font-semibold">{{ $t('relawan.emergencyPage.transmissionLabel') }}</span>
                     <span class="font-semibold text-teal-800 text-xs">
                         {{ delivery.label }}
                     </span>
@@ -79,21 +79,12 @@
                     class="flex items-center space-x-2 font-bold text-amber-900 text-sm"
                 >
                     <ShieldAlert class="h-4 w-4" aria-hidden="true" />
-                    <h4>Protokol Keselamatan Relawan</h4>
+                    <h4>{{ $t('relawan.emergencyPage.safetyTitle') }}</h4>
                 </div>
                 <ul class="space-y-1.5 list-disc list-inside text-amber-900">
-                    <li>
-                        <strong>Jangan tinggalkan penyintas sendirian.</strong>
-                        Minta relawan lain membantu menjaga.
-                    </li>
-                    <li>
-                        Jauhkan benda berbahaya atau tajam dari jangkauan
-                        penyintas.
-                    </li>
-                    <li>
-                        Gunakan nada suara tenang, jangan membantah atau
-                        mendebat keyakinan delusi penyintas.
-                    </li>
+                    <li>{{ $t('relawan.emergencyPage.safety1') }}</li>
+                    <li>{{ $t('relawan.emergencyPage.safety2') }}</li>
+                    <li>{{ $t('relawan.emergencyPage.safety3') }}</li>
                 </ul>
             </div>
 
@@ -104,15 +95,15 @@
                 <h3
                     class="font-bold text-slate-500 uppercase tracking-wider text-[11px]"
                 >
-                    Detail Lokasi & Kejadian
+                    {{ $t('relawan.emergencyPage.locationTitle') }}
                 </h3>
                 <p class="text-slate-800">
-                    <strong>Posko:</strong>
-                    {{ emergency.shelter?.name || "Tidak tercatat" }}
+                    <strong>{{ $t('relawan.emergencyPage.shelterLabel') }}</strong>
+                    {{ emergency.shelter?.name || $t('relawan.emergencyPage.notRecorded') }}
                 </p>
                 <p class="text-slate-800">
-                    <strong>Waktu Kejadian:</strong>
-                    {{ new Date(emergency.created_at).toLocaleString("id-ID") }}
+                    <strong>{{ $t('relawan.emergencyPage.incidentTimeLabel') }}</strong>
+                    {{ formatTimestamp(emergency.created_at) }}
                 </p>
                 <p
                     v-if="emergency.notes"
@@ -125,14 +116,14 @@
             <!-- Native SMS Fallback Handoff Button -->
             <div class="space-y-2">
                 <a
-                    :href="emergencySmsHref"
+                    :href="smsHref"
                     class="w-full flex items-center justify-center space-x-2 py-3.5 px-4 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-md transition"
                 >
                     <Smartphone class="h-4 w-4" aria-hidden="true" />
-                    <span>Buka SMS Cadangan (Jika Sinyal Data Terputus)</span>
+                    <span>{{ $t('relawan.emergencyPage.openSms') }}</span>
                 </a>
                 <p class="text-[11px] text-slate-500 text-center">
-                    {{ emergencySmsGuidance }}
+                    {{ smsGuidance }}
                 </p>
             </div>
         </div>
@@ -142,14 +133,19 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ShieldAlert, Siren, Smartphone } from "lucide-vue-next";
+import Badge from "@/components/ui/Badge.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import type { LocalEmergency } from "@/offline/db";
 import {
     emergencyDeliveryStatus,
-    emergencySmsHref,
-    emergencySmsGuidance,
+    getEmergencySmsHref,
+    getEmergencySmsGuidance,
 } from "@/lib/emergencyDelivery";
+import { t as $t, useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
+
+const { locale } = useI18n();
 
 const props = defineProps<{
     emergency?: any;
@@ -170,27 +166,42 @@ const emergency = computed(() =>
           }
         : props.emergency,
 );
-const broadcastWarning = computed(
-    () => (runtime.pageProps.flash as { error?: string } | undefined)?.error,
+const broadcastWarning = computed(() =>
+    localizeMessage(
+        (runtime.pageProps.flash as { error?: string } | undefined)?.error,
+        locale.value,
+    ),
 );
 const delivery = computed(() =>
     emergencyDeliveryStatus(
         props.localEmergency ??
             { sync_state: "SYNCED", routing_status: props.emergency?.routing_status,
                 realtime_status: broadcastWarning.value ? "UNAVAILABLE" : "UNCONFIRMED" },
+        locale.value,
     ),
 );
+const smsHref = computed(() => getEmergencySmsHref(locale.value));
+const smsGuidance = computed(() => getEmergencySmsGuidance(locale.value));
+
+function formatTimestamp(value?: string) {
+    if (!value) return $t('relawan.emergencyPage.notRecorded');
+    const date = new Date(value);
+    const dateLocale = locale.value === 'en' ? 'en-US' : 'id-ID';
+    return Number.isNaN(date.getTime())
+        ? $t('relawan.emergencyPage.notRecorded')
+        : date.toLocaleString(dateLocale);
+}
 
 function formatRedFlag(rf?: string) {
     switch (rf) {
         case "SUICIDAL_IDEATION":
-            return "Ideasi / Perilaku Bunuh Diri (SRQ Q17)";
+            return $t('relawan.emergencyPage.suicide');
         case "PSYCHOSIS":
-            return "Gejala Psikosis Akut / Disosiasi Berat";
+            return $t('relawan.emergencyPage.psychosis');
         case "SEVERE_AGITATION":
-            return "Agitasi Parah / Perilaku Amuk";
+            return $t('relawan.emergencyPage.agitation');
         default:
-            return "Kegawatdaruratan Medis & Somatik";
+            return $t('relawan.emergencyPage.medical');
     }
 }
 </script>

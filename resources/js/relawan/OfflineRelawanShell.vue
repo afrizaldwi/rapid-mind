@@ -15,29 +15,39 @@
         <h1 class="text-lg font-bold">
             {{
                 view.status === "LOADING"
-                    ? "Memeriksa akses perangkat…"
-                    : "Halaman belum tersedia"
+                    ? isEn
+                        ? "Checking device access…"
+                        : "Memeriksa akses perangkat…"
+                    : isEn
+                      ? "Page unavailable"
+                      : "Halaman belum tersedia"
             }}
         </h1>
         <p v-if="view.status !== 'LOADING'" class="mt-3">
-            Akses atau penyimpanan halaman ini belum tersedia. Data lokal tetap
-            dipertahankan.
+            {{
+                isEn
+                    ? "Access or storage for this page is unavailable. Local data remains preserved."
+                    : "Akses atau penyimpanan halaman ini belum tersedia. Data lokal tetap dipertahankan."
+            }}
         </p>
         <button
             v-if="view.status === 'UNAVAILABLE'"
             class="mt-4 underline"
             @click="runtime.navigate('/relawan/home')"
         >
-            Kembali ke Beranda
+            {{ isEn ? "Back to Home" : "Kembali ke Beranda" }}
         </button>
     </div>
 </template>
 <script setup lang="ts">
 import { onMounted, onUnmounted, provide, ref, watch } from "vue";
+import { useI18n } from "@/i18n";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
 import { relawanRuntimeKey } from "./runtime";
 import { createOfflineNavigation } from "./offlineNavigation";
 import { startRelawanSessionRecovery } from "@/offline/sessionRecovery";
+
+const { isEn } = useI18n();
 
 const props = defineProps<{ owner: number }>();
 const clinicalRoot = ref<HTMLElement | null>(null);

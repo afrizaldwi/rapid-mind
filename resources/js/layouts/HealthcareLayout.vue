@@ -13,7 +13,7 @@
                     type="button"
                     @click="sidebarOpen = !sidebarOpen"
                     class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-                    aria-label="Buka navigasi"
+                    :aria-label="$t('common.openNavigation', 'Buka navigasi')"
                 >
                     <svg
                         class="w-5 h-5"
@@ -55,7 +55,7 @@
                         <span
                             class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5"
                         >
-                            Clinical Triage & Response
+                            {{ $t('healthcare.layout.subtitle', 'Triase & Respons Klinis') }}
                         </span>
                     </div>
                 </Link>
@@ -63,6 +63,7 @@
 
             <!-- Right: Connection Status & Identity -->
             <div class="flex items-center space-x-3">
+                <LanguageSwitcher compact />
                 <!-- Canonical Connection Status (plain dot + text, no container pill) -->
                 <div
                     class="hidden sm:flex items-center gap-1.5 text-xs font-medium"
@@ -137,14 +138,14 @@
                             href="/healthcare/emergencies"
                             class="block px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-800 font-medium"
                         >
-                            Triase & Kedaruratan
+                            {{ $t('healthcare.layout.emergencyQueueLink', 'Triase & Kedaruratan') }}
                         </Link>
                         <button
                             type="button"
                             @click="logout"
                             class="w-full text-left px-3.5 py-2 text-rose-600 hover:bg-rose-50 font-semibold"
                         >
-                            Keluar Akun
+                            {{ $t('common.logoutAccount', 'Keluar Akun') }}
                         </button>
                     </div>
                 </div>
@@ -157,10 +158,9 @@
             role="status"
             class="border-b border-slate-200 bg-slate-100 px-4 py-2 text-center text-xs font-medium text-slate-700"
         >
-            Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin
-            tidak terbaru.
+            {{ $t('healthcare.layout.staleWarning', 'Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin tidak terbaru.') }}
             <span v-if="lastRefreshedLabel">
-                Terakhir diperbarui {{ lastRefreshedLabel }}.</span
+                {{ $t('healthcare.layout.lastUpdated', { time: lastRefreshedLabel }, `Terakhir diperbarui ${lastRefreshedLabel}.`) }}</span
             >
         </div>
 
@@ -170,7 +170,7 @@
             role="alert"
             class="border-b border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-2 text-xs text-amber-900"
         >
-            <span class="font-bold shrink-0">⚠ Peringatan sinkronisasi:</span>
+            <span class="font-bold shrink-0">{{ $t('healthcare.layout.syncWarningPrefix', '⚠ Peringatan sinkronisasi:') }}</span>
             <span>{{ flashRealtimeWarning }}</span>
         </div>
 
@@ -195,7 +195,7 @@
                         <div
                             class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                         >
-                            CLINICAL WORKSPACE
+                            {{ $t('healthcare.layout.sidebarSection', 'Ruang Kerja Klinis') }}
                         </div>
                         <div class="space-y-0.5">
                             <Link
@@ -226,7 +226,7 @@
                                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                                         />
                                     </svg>
-                                    <span>Triase & Kedaruratan</span>
+                                    <span>{{ $t('nav.emergencies') }}</span>
                                 </div>
                                 <span
                                     v-if="pendingT0Count === null || pendingT0Count > 0"
@@ -263,7 +263,7 @@
                                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
                                     />
                                 </svg>
-                                <span>Validasi Klinis</span>
+                                <span>{{ $t('nav.validations') }}</span>
                             </Link>
 
                             <Link
@@ -293,7 +293,7 @@
                                         d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                                     />
                                 </svg>
-                                <span>Rujukan</span>
+                                <span>{{ $t('nav.referrals') }}</span>
                             </Link>
 
                             <Link
@@ -323,7 +323,7 @@
                                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                                     />
                                 </svg>
-                                <span>Data Pasien & Riwayat</span>
+                                <span>{{ $t('nav.patients') }}</span>
                             </Link>
                         </div>
                     </div>
@@ -333,20 +333,20 @@
             <!-- Main Workspace Scrollable Body -->
             <main class="flex-1 p-4 lg:p-6 overflow-y-auto space-y-5">
                 <p v-if="page.props.clinicalScopeAvailable === false" role="status" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-                    Akses kasus belum tersedia. Skema penugasan Faskes memerlukan persetujuan dan penerapan oleh pengelola.
+                    {{ $t('healthcare.layout.clinicalScopeUnavailable', 'Akses kasus belum tersedia. Skema penugasan Faskes memerlukan persetujuan dan penerapan oleh pengelola.') }}
                 </p>
                 <div
                     v-if="deferredUpdate"
                     role="status"
                     class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
                 >
-                    Ada pembaruan server. Draf Anda tetap tersimpan di layar.
+                    {{ $t('healthcare.layout.deferredUpdate', 'Ada pembaruan server. Draf Anda tetap tersimpan di layar.') }}
                     <button
                         type="button"
                         class="ml-2 font-bold underline"
                         @click="refreshDeferred"
                     >
-                        Muat status terbaru
+                        {{ $t('healthcare.layout.loadLatestStatus', 'Muat status terbaru') }}
                     </button>
                 </div>
                 <slot />
@@ -359,6 +359,9 @@
 import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { Link, usePage, router } from "@inertiajs/vue3";
 import { echo } from "@laravel/echo-vue";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher.vue";
+import { t as $t, useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
 import {
     createHealthcareReconciler,
     isEmergencyContextRoute,
@@ -368,18 +371,22 @@ import {
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const userDisplayName = computed(() => user.value?.name || "Tenaga Medis");
+const userDisplayName = computed(() => user.value?.name || $t("healthcare.layout.defaultStaffName", "Tenaga Medis"));
 const userRoleLabel = computed(() => {
-    if (user.value?.role === "HEALTHCARE") return "Tenaga Medis";
-    return user.value?.role || "Layanan Medis";
+    if (user.value?.role === "HEALTHCARE") return $t("healthcare.layout.defaultStaffName", "Tenaga Medis");
+    return user.value?.role || $t("healthcare.layout.defaultRoleLabel", "Layanan Medis");
 });
 const userFacilityName = computed(
-    () => user.value?.facility?.name || "Faskes Layanan",
+    () => user.value?.facility?.name || $t("healthcare.layout.defaultFacilityName", "Faskes Layanan"),
 );
 const pendingT0Count = computed(() => page.props.clinicalScopeAvailable === false
     ? null : Number((page.props as any).pendingT0Count ?? 0));
-const flashRealtimeWarning = computed(
-    () => (page.props.flash as { error?: string } | undefined)?.error ?? "",
+const { locale } = useI18n();
+const flashRealtimeWarning = computed(() =>
+    localizeMessage(
+        (page.props.flash as { error?: string } | undefined)?.error ?? "",
+        locale.value,
+    ),
 );
 
 const sidebarOpen = ref(false);
@@ -463,7 +470,7 @@ const seenIdLimit = 100;
 const connectionStatus = computed(() => {
     if (!isOnline.value) {
         return {
-            label: "Offline",
+            label: $t("common.offline", "Offline"),
             textClass: "text-slate-500",
             dotClass: "bg-slate-400",
             stale: true,
@@ -471,7 +478,7 @@ const connectionStatus = computed(() => {
     }
     if (serverReachable.value === false) {
         return {
-            label: "Jaringan Terputus",
+            label: $t("relawan.networkDisconnected", "Jaringan Terputus"),
             textClass: "text-rose-700",
             dotClass: "bg-rose-500",
             stale: true,
@@ -479,7 +486,7 @@ const connectionStatus = computed(() => {
     }
     if (serverReachable.value === null) {
         return {
-            label: "Memeriksa Server",
+            label: $t("relawan.checkingServer", "Memeriksa Server"),
             textClass: "text-slate-500",
             dotClass: "bg-slate-400",
             stale: true,
@@ -487,14 +494,14 @@ const connectionStatus = computed(() => {
     }
     if (!subscriptionReady.value) {
         return {
-            label: "Menghubungkan Ulang",
+            label: $t("relawan.reconnecting", "Menghubungkan Ulang"),
             textClass: "text-amber-800",
             dotClass: "bg-amber-500 animate-pulse",
             stale: true,
         };
     }
     return {
-        label: "Online",
+        label: $t("common.online", "Online"),
         textClass: "text-slate-600",
         dotClass: "bg-emerald-500",
         stale: false,

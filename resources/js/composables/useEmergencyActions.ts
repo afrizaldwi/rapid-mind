@@ -7,6 +7,11 @@ export type DecisionForm = { clinical_result: string; notes: string };
 export type ReferralForm = { facility_id: number | null; notes: string };
 type ActionFeedback = { type: "success" | "error"; message: string };
 
+function __t(key: string, fallback: string): string {
+    const fn = (globalThis as any)?.__rapidMindT;
+    return typeof fn === "function" ? fn(key, fallback) : fallback;
+}
+
 export function useEmergencyActions(active: (kind: "verification" | "decision" | "referral") => boolean = () => true) {
     const isSubmitting = ref(false);
 
@@ -55,7 +60,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                 onSuccess: () => {
                     actionFeedback.value = {
                         type: "success",
-                        message: "Kasus darurat berhasil diakui.",
+                        message: __t(
+                            "healthcare.actions.acknowledgeSuccess",
+                            "Kasus darurat berhasil diakui.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -63,7 +71,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal mengakui kasus.",
+                            __t(
+                                "healthcare.actions.acknowledgeError",
+                                "Gagal mengakui kasus.",
+                            ),
                     };
                 },
                 onFinish: () => {
@@ -86,7 +97,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                     saved();
                     actionFeedback.value = {
                         type: "success",
-                        message: "Verifikasi medis berhasil disimpan.",
+                        message: __t(
+                            "healthcare.actions.verifySuccess",
+                            "Verifikasi medis berhasil disimpan.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -94,7 +108,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal menyimpan verifikasi.",
+                            __t(
+                                "healthcare.actions.verifyError",
+                                "Gagal menyimpan verifikasi.",
+                            ),
                     };
                 },
                 onFinish: () => {
@@ -117,7 +134,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                     saved();
                     actionFeedback.value = {
                         type: "success",
-                        message: "Klasifikasi triase berhasil ditetapkan.",
+                        message: __t(
+                            "healthcare.actions.classifySuccess",
+                            "Klasifikasi triase berhasil ditetapkan.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -125,7 +145,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal menetapkan klasifikasi.",
+                            __t(
+                                "healthcare.actions.classifyError",
+                                "Gagal menetapkan klasifikasi.",
+                            ),
                     };
                 },
                 onFinish: () => {
@@ -148,7 +171,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                     saved();
                     actionFeedback.value = {
                         type: "success",
-                        message: "Rujukan medis berhasil diterbitkan.",
+                        message: __t(
+                            "healthcare.actions.referralSuccess",
+                            "Rujukan medis berhasil diterbitkan.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -156,7 +182,10 @@ export function useEmergencyActions(active: (kind: "verification" | "decision" |
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal menerbitkan rujukan.",
+                            __t(
+                                "healthcare.actions.referralError",
+                                "Gagal menerbitkan rujukan.",
+                            ),
                     };
                 },
                 onFinish: () => {

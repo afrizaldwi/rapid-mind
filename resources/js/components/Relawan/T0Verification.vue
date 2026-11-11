@@ -16,11 +16,10 @@
                         <h2 id="t0-verification-title"
                             class="text-lg font-extrabold tracking-wide uppercase"
                         >
-                            Verifikasi T0 Darurat
+                            {{ isEn ? "Verify T0 Emergency" : "Verifikasi T0 Darurat" }}
                         </h2>
                         <p class="text-xs text-red-200">
-                            Sinyal Prioritas Tinggi ke PSC 119 & Tim Medis
-                            Faskes
+                            {{ isEn ? "High-Priority Signal to PSC 119 & Medical Team" : "Sinyal Prioritas Tinggi ke PSC 119 & Tim Medis Faskes" }}
                         </p>
                     </div>
                 </div>
@@ -28,8 +27,8 @@
                     type="button"
                     :disabled="isSubmitting"
                     @click="$emit('close')"
-                    class="text-red-200 hover:text-white p-1 rounded-lg"
-                    aria-label="Tutup"
+                    class="text-red-200 hover:text-white p-1 rounded-lg cursor-pointer"
+                    :aria-label="isEn ? 'Close' : 'Tutup'"
                 >
                     <X class="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -42,7 +41,7 @@
                     <label
                         class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
                     >
-                        1. Identitas Penyintas
+                        {{ isEn ? "1. Survivor Identity" : "1. Identitas Penyintas" }}
                     </label>
                     <div
                         class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
@@ -53,7 +52,7 @@
                         >
                             {{ selectedPatientName }}
                             <p class="text-xs font-normal text-slate-500">
-                                Penyintas dari asesmen aktif
+                                {{ isEn ? "Survivor from active assessment" : "Penyintas dari asesmen aktif" }}
                             </p>
                         </div>
                         <template v-else>
@@ -63,7 +62,7 @@
                             >
                                 <div class="min-w-0">
                                     <p class="text-xs text-slate-500">
-                                        Penyintas terpilih
+                                        {{ isEn ? "Selected survivor" : "Penyintas terpilih" }}
                                     </p>
                                     <p
                                         class="font-bold text-slate-800 break-words"
@@ -74,29 +73,28 @@
                                 <button
                                     type="button"
                                     @click="clearPatientSelection"
-                                    class="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+                                    class="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 cursor-pointer"
                                 >
-                                    Ganti
+                                    {{ isEn ? "Change" : "Ganti" }}
                                 </button>
                             </div>
                             <div v-else class="space-y-2">
                                 <p class="text-sm font-semibold text-slate-700">
-                                    Penyintas belum teridentifikasi
+                                    {{ isEn ? "Survivor not yet identified" : "Penyintas belum teridentifikasi" }}
                                 </p>
                                 <p class="text-xs text-slate-500">
-                                    Identitas dapat dilengkapi setelah kondisi
-                                    darurat tertangani.
+                                    {{ isEn ? "Identity details can be completed after the emergency is addressed." : "Identitas dapat dilengkapi setelah kondisi darurat tertangani." }}
                                 </p>
                                 <label
                                     for="t0-patient-search"
                                     class="block text-sm font-semibold text-slate-700"
-                                    >Cari penyintas (opsional)</label
+                                    >{{ isEn ? "Search survivor (optional)" : "Cari penyintas (opsional)" }}</label
                                 >
                                 <input
                                     id="t0-patient-search"
                                     v-model="patientSearch"
                                     type="search"
-                                    placeholder="Cari nama penyintas..."
+                                    :placeholder="isEn ? 'Search survivor name...' : 'Cari nama penyintas...'"
                                     class="w-full min-w-0 rounded-lg border border-slate-300 bg-white p-3 text-sm"
                                 />
                                 <div class="space-y-2">
@@ -106,8 +104,8 @@
                                     >
                                         {{
                                             patientSearch.trim()
-                                                ? "Hasil"
-                                                : "Penyintas tersedia"
+                                                ? (isEn ? "Results" : "Hasil")
+                                                : (isEn ? "Available survivors" : "Penyintas tersedia")
                                         }}
                                     </p>
 
@@ -120,7 +118,7 @@
                                             :key="patient.id"
                                             type="button"
                                             @click="choosePatient(patient.id)"
-                                            class="block w-full rounded-lg border border-slate-200 bg-white p-3 text-left text-sm font-medium text-slate-800 break-words"
+                                            class="block w-full rounded-lg border border-slate-200 bg-white p-3 text-left text-sm font-medium text-slate-800 break-words cursor-pointer"
                                         >
                                             {{ patient.name }}
                                         </button>
@@ -130,16 +128,13 @@
                                         v-else-if="patientSearch.trim()"
                                         class="text-sm text-slate-600"
                                     >
-                                        Tidak ada penyintas yang cocok. T0 tetap
-                                        dapat dikirim sebagai penyintas belum
-                                        teridentifikasi.
+                                        {{ isEn ? "No matching survivors found. T0 can still be submitted as unidentified." : "Tidak ada penyintas yang cocok. T0 tetap dapat dikirim sebagai penyintas belum teridentifikasi." }}
                                     </p>
                                 </div>
                             </div>
                         </template>
                         <p class="text-xs text-slate-500">
-                            Jangan tinggalkan penyintas sendirian untuk mencari
-                            identitas. Bantuan darurat tetap dapat dikirimkan.
+                            {{ isEn ? "Do not leave survivor alone to search for identity. Emergency assistance can still be sent." : "Jangan tinggalkan penyintas sendirian untuk mencari identitas. Bantuan darurat tetap dapat dikirimkan." }}
                         </p>
                     </div>
                 </div>
@@ -149,7 +144,7 @@
                     <label
                         class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
                     >
-                        2. Indikator Red Flag Utama *
+                        {{ isEn ? "2. Primary Red Flag Indicator *" : "2. Indikator Red Flag Utama *" }}
                     </label>
                     <div class="grid grid-cols-1 gap-2.5">
                         <button
@@ -157,7 +152,7 @@
                             :key="rf.type"
                             type="button"
                             @click="selectRedFlag(rf.type)"
-                            class="text-left p-3.5 rounded-xl border text-sm font-medium transition"
+                            class="text-left p-3.5 rounded-xl border text-sm font-medium transition cursor-pointer"
                             :class="
                                 selectedRedFlag === rf.type
                                     ? 'border-red-600 bg-red-50 text-red-950 font-bold ring-2 ring-red-500/20'
@@ -184,12 +179,12 @@
                     <label
                         class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
                     >
-                        3. Catatan Lapangan & Lokasi Penjemputan
+                        {{ isEn ? "3. Field Notes & Pickup Location" : "3. Catatan Lapangan & Lokasi Penjemputan" }}
                     </label>
                     <textarea
                         v-model="notes"
                         rows="2"
-                        placeholder="Contoh: nama penyintas jika diketahui, tanda bahaya fisik, lokasi tenda spesifik, atau kondisi penyintas saat ini..."
+                        :placeholder="isEn ? 'Example: survivor name if known, physical danger signs, specific tent location, or current condition...' : 'Contoh: nama penyintas jika diketahui, tanda bahaya fisik, lokasi tenda spesifik, atau kondisi penyintas saat ini...'"
                         class="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20"
                     ></textarea>
 
@@ -199,19 +194,18 @@
                         <div class="flex items-center space-x-2">
                             <MapPin class="h-4 w-4" aria-hidden="true" />
                             <span v-if="coordinates"
-                                >Koordinat GPS tersedia</span
+                                >{{ isEn ? "GPS coordinates available" : "Koordinat GPS tersedia" }}</span
                             >
                             <span v-else
-                                >GPS belum tersedia; T0 tetap dapat
-                                disimpan</span
+                                >{{ isEn ? "GPS not available yet; T0 can still be saved" : "GPS belum tersedia; T0 tetap dapat disimpan" }}</span
                             >
                         </div>
                         <button
                             type="button"
                             @click="acquireGps"
-                            class="font-semibold text-teal-700 hover:text-teal-900"
+                            class="font-semibold text-teal-700 hover:text-teal-900 cursor-pointer"
                         >
-                            {{ coordinates ? "Perbarui GPS" : "Cari GPS" }}
+                            {{ coordinates ? (isEn ? "Update GPS" : "Perbarui GPS") : (isEn ? "Find GPS" : "Cari GPS") }}
                         </button>
                     </div>
                 </div>
@@ -233,18 +227,18 @@
                     type="button"
                     :disabled="isSubmitting"
                     @click="$emit('close')"
-                    class="sm:flex-1 py-3 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-100 transition"
+                    class="sm:flex-1 py-3 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-100 transition cursor-pointer"
                 >
-                    Batalkan
+                    {{ isEn ? "Cancel" : "Batalkan" }}
                 </button>
                 <button
                     type="button"
                     :disabled="!selectedRedFlag || isSubmitting"
                     @click="submitEmergency"
-                    class="sm:flex-2 py-3.5 px-6 rounded-xl bg-red-800 hover:bg-red-900 text-white font-extrabold text-sm tracking-wide shadow-md transition disabled:opacity-50"
+                    class="sm:flex-2 py-3.5 px-6 rounded-xl bg-red-800 hover:bg-red-900 text-white font-extrabold text-sm tracking-wide shadow-md transition disabled:opacity-50 cursor-pointer"
                 >
-                    <span v-if="isSubmitting">Menyimpan T0-Suspect…</span>
-                    <span v-else>KIRIM T0-SUSPECT</span>
+                    <span v-if="isSubmitting">{{ isEn ? "Saving T0-Suspect…" : "Menyimpan T0-Suspect…" }}</span>
+                    <span v-else>{{ isEn ? "SEND T0-SUSPECT REPORT" : "KIRIM T0-SUSPECT" }}</span>
                 </button>
             </div>
         </div>
@@ -262,6 +256,11 @@ import { createLocalEmergency } from "@/offline/emergencyWorkflow";
 import { syncManager } from "@/offline/syncManager";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
 import { useDialogFocus } from "@/composables/useDialogFocus";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
+
+const { locale } = useI18n();
+const isEn = computed(() => locale.value === "en");
 
 const props = defineProps<{
     show: boolean;
@@ -341,31 +340,50 @@ const filteredPatients = computed(() => {
 const selectedRedFlag = ref("");
 const notes = ref("");
 const isSubmitting = ref(false);
-const submissionError = ref("");
+const rawSubmissionError = ref<{ id: string; detail?: string } | string>("");
+const submissionError = computed(() => {
+    const val = rawSubmissionError.value;
+    if (!val) return "";
+    if (typeof val === "string") {
+        return localizeMessage(val, locale.value);
+    }
+    const prefix = isEn.value ? "T0 NOT SAVED YET." : "T0 BELUM TERSIMPAN.";
+    const fallback = isEn.value ? "Try saving again." : "Coba simpan kembali.";
+    const detail = val.detail ? localizeMessage(val.detail, locale.value) : fallback;
+    return `${prefix} ${detail}`;
+});
 const coordinates = ref<{ lat: number; lng: number } | null>(null);
 
-const redFlagOptions = [
+const redFlagOptions = computed(() => [
     {
         type: "SUICIDAL_IDEATION",
-        title: "Ideasi / Perilaku Bunuh Diri",
-        desc: "Ungkapan ingin mengakhiri hidup (SRQ #17) atau tindakan melukai diri aktif.",
+        title: isEn.value ? "Suicidal Ideation / Behavior" : "Ideasi / Perilaku Bunuh Diri",
+        desc: isEn.value
+            ? "Expression of desire to end life (SRQ #17) or active self-harm."
+            : "Ungkapan ingin mengakhiri hidup (SRQ #17) atau tindakan melukai diri aktif.",
     },
     {
         type: "PSYCHOSIS",
-        title: "Gejala Psikosis Akut / Disosiasi Berat",
-        desc: "Halusinasi, delusi paranoid, mutisme total/katatonia pascabencana.",
+        title: isEn.value ? "Acute Psychosis / Severe Dissociation" : "Gejala Psikosis Akut / Disosiasi Berat",
+        desc: isEn.value
+            ? "Hallucinations, paranoid delusions, complete mutism / catatonia post-disaster."
+            : "Halusinasi, delusi paranoid, mutisme total/katatonia pascabencana.",
     },
     {
         type: "SEVERE_AGITATION",
-        title: "Amuk / Agitasi Fisik Parah",
-        desc: "Perilaku merusak, membahayakan keselamatan diri dan orang lain di posko.",
+        title: isEn.value ? "Severe Agitation / Violent Outburst" : "Amuk / Agitasi Fisik Parah",
+        desc: isEn.value
+            ? "Destructive behavior, endangering self and others at the shelter."
+            : "Perilaku merusak, membahayakan keselamatan diri dan orang lain di posko.",
     },
     {
         type: "MEDICAL_CRISIS",
-        title: "Kegawatdaruratan Medis & Somatik",
-        desc: "Pingsan berulang, hiperventilasi parah, atau nyeri dada psikosomatik krisis.",
+        title: isEn.value ? "Medical & Somatic Crisis" : "Kegawatdaruratan Medis & Somatik",
+        desc: isEn.value
+            ? "Recurrent fainting, severe hyperventilation, or crisis psychosomatic chest pain."
+            : "Pingsan berulang, hiperventilasi parah, atau nyeri dada psikosomatik krisis.",
     },
-];
+]);
 
 function acquireGps() {
     const current = scope.capture();
@@ -436,7 +454,7 @@ watch(
                 });
         }
         coordinates.value = null;
-        submissionError.value = "";
+        rawSubmissionError.value = "";
         acquireGps();
     },
     { flush: "sync" },
@@ -454,7 +472,7 @@ function clearPatientSelection() {
 
 function selectRedFlag(type: string) {
     selectedRedFlag.value = type;
-    submissionError.value = "";
+    rawSubmissionError.value = "";
 }
 
 async function submitEmergency() {
@@ -465,7 +483,7 @@ async function submitEmergency() {
         redFlagType: selectedRedFlag.value, shelterId: runtime.shelterId, notes: notes.value,
         latitude: coordinates.value?.lat ?? null, longitude: coordinates.value?.lng ?? null,
     };
-    submissionError.value = "";
+    rawSubmissionError.value = "";
     isSubmitting.value = true;
     let id: string;
     try {
@@ -480,7 +498,10 @@ async function submitEmergency() {
         id = await createLocalEmergency(owner, input);
     } catch (error) {
         if (!current() || !props.show) return;
-        submissionError.value = `T0 BELUM TERSIMPAN. ${error instanceof Error ? error.message : "Coba simpan kembali."}`;
+        rawSubmissionError.value = {
+            id: "T0 BELUM TERSIMPAN.",
+            detail: error instanceof Error ? error.message : "",
+        };
         isSubmitting.value = false;
         return;
     }

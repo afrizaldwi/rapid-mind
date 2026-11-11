@@ -8,13 +8,16 @@
             <h1 class="text-lg font-bold">
                 {{
                     checkingContinuity
-                        ? "Memeriksa akses perangkat…"
-                        : "Akses lokal dikunci"
+                        ? (isEn ? "Checking device access…" : "Memeriksa akses perangkat…")
+                        : (isEn ? "Local access locked" : "Akses lokal dikunci")
                 }}
             </h1>
             <p v-if="!checkingContinuity" class="mt-3">
-                Data di perangkat tetap tersimpan. Masuk kembali untuk
-                mengaksesnya.
+                {{
+                    isEn
+                        ? "Data remains stored on device. Sign in again to access it."
+                        : "Data di perangkat tetap tersimpan. Masuk kembali untuk mengaksesnya."
+                }}
             </p>
             <p v-if="logoutError" class="mt-3 text-sm text-amber-800">
                 {{ logoutError }}
@@ -25,7 +28,7 @@
                 class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-white"
                 @click="retryServerLogout"
             >
-                Selesaikan keluar
+                {{ isEn ? "Complete sign out" : "Selesaikan keluar" }}
             </button>
         </div>
     </div>
@@ -34,7 +37,7 @@
         class="min-h-screen bg-slate-100 p-6 text-slate-900"
         role="status"
     >
-        Memeriksa penyimpanan perangkat…
+        {{ isEn ? "Checking device storage…" : "Memeriksa penyimpanan perangkat…" }}
     </div>
     <OfflineEncryptionGate
         v-else-if="currentOwner && !clinicalViewAvailable"
@@ -51,7 +54,7 @@
                 class="mt-4 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
                 @click="logout"
             >
-                Keluar
+                {{ isEn ? "Sign Out" : "Keluar" }}
             </button>
         </template>
     </OfflineEncryptionGate>
@@ -76,12 +79,13 @@
                     <p
                         class="truncate text-sm text-slate-700 font-semibold leading-tight"
                     >
-                        {{ user?.shelter?.name || "Posko Relawan" }}
+                        {{ user?.shelter?.name || (isEn ? "Volunteer Shelter" : "Posko Relawan") }}
                     </p>
                 </div>
             </div>
 
             <div class="flex shrink-0 items-center space-x-2">
+                <LanguageSwitcher compact />
                 <StatusIndicator
                     :kind="status.kind.value"
                     :label="compactStatusLabel"
@@ -90,8 +94,8 @@
                 <button
                     type="button"
                     @click="logout"
-                    title="Logout Relawan"
-                    aria-label="Logout Relawan"
+                    :title="isEn ? 'Volunteer Logout' : 'Logout Relawan'"
+                    :aria-label="isEn ? 'Volunteer Logout' : 'Logout Relawan'"
                     class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
                 >
                     <LogOut class="w-4 h-4" />
@@ -131,7 +135,7 @@
                     class="mt-3 rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white"
                     @click="openRelawanLogin"
                 >
-                    Masuk kembali
+                    {{ isEn ? "Sign in again" : "Masuk kembali" }}
                 </button>
             </section>
             <LocalEmergencyActive
@@ -197,7 +201,7 @@
                     "
                 >
                     <House class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>Beranda</span>
+                    <span>{{ $t('nav.home') }}</span>
                 </RelawanLink>
 
                 <RelawanLink
@@ -210,7 +214,7 @@
                     "
                 >
                     <BookOpen class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>PFA</span>
+                    <span>{{ $t('nav.pfa') }}</span>
                 </RelawanLink>
 
                 <RelawanLink
@@ -223,7 +227,7 @@
                     "
                 >
                     <ClipboardList class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>Asesmen</span>
+                    <span>{{ $t('nav.assessment') }}</span>
                 </RelawanLink>
 
                 <RelawanLink
@@ -236,7 +240,7 @@
                     "
                 >
                     <FolderOpen class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>Data</span>
+                    <span>{{ $t('nav.data') }}</span>
                     <span
                         v-if="status.pendingCount.value > 0"
                         class="absolute top-2 right-6 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs"
@@ -263,6 +267,10 @@ import { router } from "@inertiajs/vue3";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import StatusIndicator from "@/components/ui/StatusIndicator.vue";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher.vue";
+import { useI18n } from "@/i18n";
+
+const { isEn, t: $t } = useI18n();
 import T0Button from "@/components/Relawan/T0Button.vue";
 import T0Verification from "@/components/Relawan/T0Verification.vue";
 import LocalEmergencyActive from "@/components/Relawan/LocalEmergencyActive.vue";
@@ -356,7 +364,14 @@ const activeLocalId = ref<string | null>(null);
 const showStatusSheet = ref(false);
 const loggedOutLocally = ref(false);
 const checkingContinuity = ref(runtime.mode === "ONLINE_SERVER");
-const logoutError = ref("");
+const rawLogoutError = ref<{ id: string; en: string } | string>("");
+const logoutError = computed(() =>
+    typeof rawLogoutError.value === "string"
+        ? rawLogoutError.value
+        : isEn.value
+          ? rawLogoutError.value.en
+          : rawLogoutError.value.id,
+);
 let continuityCheck = 0;
 let offlineContinuitySubscription: Subscription | undefined;
 function refreshOwnerStorageMode(owner: number | null) {
@@ -435,37 +450,39 @@ function onClinicalUnlocked() {
 const compactStatusLabel = computed(() => {
     switch (status.kind.value) {
         case "local-failure":
-            return "Belum tersimpan";
+            return isEn.value ? "Not saved" : "Belum tersimpan";
         case "unavailable":
-            return "Status belum siap";
+            return isEn.value ? "Status unavailable" : "Status belum siap";
         case "recovering-session":
-            return "Memulihkan…";
+            return isEn.value ? "Recovering…" : "Memulihkan…";
         case "reauthentication-required":
-            return "Perlu masuk";
+            return isEn.value ? "Sign in required" : "Perlu masuk";
         case "syncing":
             return status.pendingCount.value > 0
-                ? `Sinkron ${status.pendingCount.value}`
-                : "Sinkron…";
+                ? (isEn.value ? `Syncing ${status.pendingCount.value}` : `Sinkron ${status.pendingCount.value}`)
+                : (isEn.value ? "Syncing…" : "Sinkron…");
         case "offline":
             if (status.pendingCount.value > 0) {
-                return `Offline • ${status.pendingCount.value} tertunda`;
+                return isEn.value
+                    ? `Offline • ${status.pendingCount.value} pending`
+                    : `Offline • ${status.pendingCount.value} tertunda`;
             }
 
             if (status.unfinishedCount.value > 0) {
-                return "Offline • tersimpan";
+                return isEn.value ? "Offline • saved" : "Offline • tersimpan";
             }
 
             return "Offline";
         case "failed":
-            return "Sinkron gagal";
+            return isEn.value ? "Sync failed" : "Sinkron gagal";
         case "pending":
-            return `${status.pendingCount.value} tertunda`;
+            return isEn.value ? `${status.pendingCount.value} pending` : `${status.pendingCount.value} tertunda`;
         case "unqueued":
-            return "Belum siap";
+            return isEn.value ? "Not ready" : "Belum siap";
         case "local-only":
-            return "Tersimpan lokal";
+            return isEn.value ? "Saved locally" : "Tersimpan lokal";
         case "synced":
-            return "Tersinkron";
+            return isEn.value ? "Synced" : "Tersinkron";
         default:
             return "Status";
     }
@@ -484,14 +501,18 @@ const recoveryMessage = computed(() => {
     if (runtime.mode === "ONLINE_SERVER") {
         if (status.sessionState.value === "RECOVERING_SESSION")
             return {
-                title: "Memulihkan sesi…",
-                detail: "Data tetap aman di perangkat. Sinkronisasi akan dilanjutkan setelah konteks server dipulihkan.",
+                title: isEn.value ? "Recovering session…" : "Memulihkan sesi…",
+                detail: isEn.value
+                    ? "Data remains safe on device. Synchronization will continue after server context is restored."
+                    : "Data tetap aman di perangkat. Sinkronisasi akan dilanjutkan setelah konteks server dipulihkan.",
                 login: false,
             };
         if (status.sessionState.value === "REAUTHENTICATION_REQUIRED")
             return {
-                title: "Perlu masuk kembali untuk sinkronisasi.",
-                detail: "Data tetap aman di perangkat.",
+                title: isEn.value
+                    ? "Sign in again to synchronize."
+                    : "Perlu masuk kembali untuk sinkronisasi.",
+                detail: isEn.value ? "Data remains safe on device." : "Data tetap aman di perangkat.",
                 login: true,
             };
         return null;
@@ -499,38 +520,52 @@ const recoveryMessage = computed(() => {
     switch (relawanSessionRecovery.state) {
         case "CHECKING":
             return {
-                title: "Memulihkan sesi…",
-                detail: "Memeriksa ketersediaan server tanpa mengirim data lokal.",
+                title: isEn.value ? "Recovering session…" : "Memulihkan sesi…",
+                detail: isEn.value
+                    ? "Checking server availability without transmitting local data."
+                    : "Memeriksa ketersediaan server tanpa mengirim data lokal.",
                 login: false,
             };
         case "RESTORING_ONLINE_RUNTIME":
             return {
-                title: "Memulihkan sesi…",
-                detail: "Membuka kembali aplikasi server sebelum sinkronisasi dimulai.",
+                title: isEn.value ? "Recovering session…" : "Memulihkan sesi…",
+                detail: isEn.value
+                    ? "Reopening server application before starting synchronization."
+                    : "Membuka kembali aplikasi server sebelum sinkronisasi dimulai.",
                 login: false,
             };
         case "REAUTHENTICATION_REQUIRED":
             return {
-                title: "Perlu masuk kembali untuk sinkronisasi.",
-                detail: "Data tetap aman di perangkat.",
+                title: isEn.value
+                    ? "Sign in again to synchronize."
+                    : "Perlu masuk kembali untuk sinkronisasi.",
+                detail: isEn.value ? "Data remains safe on device." : "Data tetap aman di perangkat.",
                 login: true,
             };
         case "WRONG_IDENTITY":
             return {
-                title: "Akun server tidak sesuai.",
-                detail: "Data akun Relawan ini tetap aman dan tidak akan disinkronkan melalui akun lain. Keluar dari akun server yang aktif, lalu masuk dengan akun yang benar.",
+                title: isEn.value ? "Server account mismatch." : "Akun server tidak sesuai.",
+                detail: isEn.value
+                    ? "This Volunteer's data remains safe and will not sync through another account. Sign out of the active server account and sign in with the correct one."
+                    : "Data akun Relawan ini tetap aman dan tidak akan disinkronkan melalui akun lain. Keluar dari akun server yang aktif, lalu masuk dengan akun yang benar.",
                 login: true,
             };
         case "ACCOUNT_INACTIVE":
             return {
-                title: "Sinkronisasi tidak diizinkan.",
-                detail: "Akun perlu diaktifkan oleh Admin. Data tetap aman di perangkat.",
+                title: isEn.value ? "Synchronization not allowed." : "Sinkronisasi tidak diizinkan.",
+                detail: isEn.value
+                    ? "Account needs activation by Admin. Data remains safe on device."
+                    : "Akun perlu diaktifkan oleh Admin. Data tetap aman di perangkat.",
                 login: true,
             };
         case "SERVER_REJECTED":
             return {
-                title: "Sinkronisasi belum dapat dilanjutkan.",
-                detail: "Server menolak pemulihan sesi. Data tetap aman di perangkat.",
+                title: isEn.value
+                    ? "Synchronization cannot continue yet."
+                    : "Sinkronisasi belum dapat dilanjutkan.",
+                detail: isEn.value
+                    ? "Server rejected session recovery. Data remains safe on device."
+                    : "Server menolak pemulihan sesi. Data tetap aman di perangkat.",
                 login: true,
             };
         default:
@@ -658,13 +693,17 @@ function isRoute(path: string) {
 
 function retryServerLogout() {
     if (!navigator.onLine) {
-        logoutError.value =
-            "Hubungkan perangkat untuk menyelesaikan logout server.";
+        rawLogoutError.value = {
+            id: "Hubungkan perangkat untuk menyelesaikan logout server.",
+            en: "Connect device to complete server sign-out.",
+        };
         return;
     }
     const failed = () => {
-        logoutError.value =
-            "Logout server belum berhasil. Akses lokal tetap dikunci.";
+        rawLogoutError.value = {
+            id: "Logout server belum berhasil. Akses lokal tetap dikunci.",
+            en: "Server sign-out did not succeed. Local access remains locked.",
+        };
         return false;
     };
     router.post(
@@ -686,8 +725,10 @@ async function logout() {
     } catch {
         if (check === continuityCheck) {
             checkingContinuity.value = false;
-            logoutError.value =
-                "Perangkat belum dapat mencatat permintaan keluar. Coba lagi.";
+            rawLogoutError.value = {
+                id: "Perangkat belum dapat mencatat permintaan keluar. Coba lagi.",
+                en: "Device could not record sign-out request yet. Please try again.",
+            };
         }
         return;
     }
@@ -696,8 +737,10 @@ async function logout() {
     if (navigator.onLine && runtime.mode === "ONLINE_SERVER") {
         retryServerLogout();
     } else {
-        logoutError.value =
-            "Logout server tertunda hingga perangkat terhubung kembali.";
+        rawLogoutError.value = {
+            id: "Logout server tertunda hingga perangkat terhubung kembali.",
+            en: "Server sign-out is deferred until device reconnects.",
+        };
     }
 }
 
@@ -755,15 +798,19 @@ async function checkContinuity() {
             result.state !== "ELIGIBLE" ||
             result.context.owner_user_id !== Number(user.value?.id);
         if (result.state === "STORAGE_UNAVAILABLE") {
-            logoutError.value =
-                "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.";
+            rawLogoutError.value = {
+                id: "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.",
+                en: "Device access cannot be verified yet. Retry when storage is available.",
+            };
         }
     } catch {
         if (check !== continuityCheck) return;
         // If the local store cannot be checked, a previous logout intent is unknown.
         loggedOutLocally.value = true;
-        logoutError.value =
-            "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.";
+        rawLogoutError.value = {
+            id: "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.",
+            en: "Device access cannot be verified yet. Retry when storage is available.",
+        };
     } finally {
         if (check === continuityCheck) checkingContinuity.value = false;
     }

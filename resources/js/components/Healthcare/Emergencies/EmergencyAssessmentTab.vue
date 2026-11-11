@@ -2,13 +2,13 @@
     <div class="space-y-5">
         <AssessmentContextSummary :context="item.assessmentContext" />
         <section class="space-y-3">
-            <h3 class="text-sm font-bold text-slate-900">Instrumen SRQ-20</h3>
+            <h3 class="text-sm font-bold text-slate-900">{{ $t('healthcare.assessmentTab.srqInstrument', 'Instrumen SRQ-20') }}</h3>
             <p class="text-sm text-slate-700">
-                Skor SRQ-20:
+                {{ $t('healthcare.assessmentTab.srqScore', 'Skor SRQ-20:') }}
                 {{
                     item.srqScore !== null
                         ? `${item.srqScore} / 20`
-                        : "Belum tersedia"
+                        : $t('healthcare.assessmentTab.notAvailable', 'Belum tersedia')
                 }}
             </p>
             <SrqResponseList
@@ -25,7 +25,7 @@
                     <h4
                         class="text-xs font-bold text-slate-900 uppercase tracking-wider"
                     >
-                        Faktor Risiko Bencana
+                        {{ $t('healthcare.assessmentTab.disasterRisk', 'Faktor Risiko Bencana') }}
                     </h4>
                 </div>
                 <div
@@ -33,18 +33,18 @@
                     class="divide-y divide-slate-100 text-xs"
                 >
                     <div
-                        v-for="item in riskItems"
-                        :key="item.code"
+                        v-for="risk in localizedRiskItems"
+                        :key="risk.code"
                         class="py-2 flex items-center justify-between text-[11px]"
                     >
-                        <span class="text-slate-700">{{ item.title }}</span>
+                        <span class="text-slate-700">{{ risk.title }}</span>
                         <span class="font-bold text-slate-900">{{
-                            formatRiskAnswer(getRiskAnswer(item.code))
+                            formatRiskAnswer(getRiskAnswer(risk.code), locale)
                         }}</span>
                     </div>
                 </div>
                 <div v-else class="py-4 text-center text-xs text-slate-400">
-                    Data faktor risiko belum tersedia
+                    {{ $t('healthcare.assessmentTab.noRiskData', 'Data faktor risiko belum tersedia') }}
                 </div>
             </div>
 
@@ -54,7 +54,7 @@
                     <h4
                         class="text-xs font-bold text-slate-900 uppercase tracking-wider"
                     >
-                        Penilaian Fungsi & ADL
+                        {{ $t('healthcare.assessmentTab.functioningAssessment', 'Penilaian Fungsi & ADL') }}
                     </h4>
                 </div>
                 <div
@@ -67,7 +67,7 @@
                         class="py-2 flex items-center justify-between text-[11px]"
                     >
                         <span class="text-slate-700">{{
-                            functionLabels[domain]
+                            localizedFunctionLabels[domain]
                         }}</span>
                         <span class="font-bold text-slate-900">{{
                             getFunctionLabel(domain)
@@ -75,7 +75,7 @@
                     </div>
                 </div>
                 <div v-else class="py-4 text-center text-xs text-slate-400">
-                    Data fungsi belum tersedia
+                    {{ $t('healthcare.assessmentTab.noFunctionData', 'Data fungsi belum tersedia') }}
                 </div>
             </div>
         </div>
@@ -83,28 +83,36 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { t as $t, useI18n } from "@/i18n";
 import AssessmentContextSummary from "@/components/Healthcare/Assessments/AssessmentContextSummary.vue";
 import SrqResponseList from "@/components/Healthcare/Assessments/SrqResponseList.vue";
-const functionLabels: Record<string, string> = {
-    F1: "Perawatan diri",
-    F2: "Fungsi peran dan sosial",
-    F3: "Akses kebutuhan dan bantuan",
-};
 import {
     formatRiskAnswer,
     getFunctionLabel as functionLabelForItem,
     getRiskAnswer as riskAnswerForItem,
-    riskItems,
+    getRiskItems,
     type HealthcareEmergencyQueueItem,
 } from "@/lib/healthcareEmergency";
 
 const props = defineProps<{ item: HealthcareEmergencyQueueItem }>();
+const { locale } = useI18n();
+
+const localizedRiskItems = computed(() => getRiskItems(locale.value));
+const localizedFunctionLabels = computed<Record<string, string>>(() => ({
+    F1: $t("healthcare.assessmentTab.f1Label", "Perawatan diri"),
+    F2: $t("healthcare.assessmentTab.f2Label", "Fungsi peran dan sosial"),
+    F3: $t(
+        "healthcare.assessmentTab.f3Label",
+        "Akses kebutuhan dan bantuan",
+    ),
+}));
 
 function getRiskAnswer(code: string): boolean | null {
     return riskAnswerForItem(props.item, code);
 }
 
 function getFunctionLabel(domain: string): string {
-    return functionLabelForItem(props.item, domain);
+    return functionLabelForItem(props.item, domain, locale.value);
 }
 </script>

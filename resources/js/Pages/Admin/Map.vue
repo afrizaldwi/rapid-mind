@@ -4,10 +4,10 @@
       <!-- Minimalist Page Header -->
       <div class="space-y-1">
         <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-          Peta Geospasial Posko & Faskes
+          {{ $t('admin.map.title', 'Peta Geospasial Posko & Faskes') }}
         </h1>
         <p class="text-xs sm:text-sm text-slate-500 font-normal">
-          Visualisasi lokasi Posko, fasilitas kesehatan, dan kondisi triase di wilayah operasional.
+          {{ $t('admin.map.subtitle', 'Visualisasi lokasi Posko, fasilitas kesehatan, dan kondisi triase di wilayah operasional.') }}
         </p>
       </div>
 
@@ -20,20 +20,20 @@
           <!-- Minimal Inline Legend Overlay: Placed in Top-Left to avoid map attribution & navigation controls -->
           <div
             class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-md border border-slate-200/80 shadow-xs text-[11px] flex items-center gap-3 z-10 select-none pointer-events-auto"
-            aria-label="Legenda Peta"
+            :aria-label="$t('admin.summary.mapLegendAria', 'Legenda Peta')"
           >
-            <span class="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Indikator</span>
+            <span class="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{{ $t('admin.map.legendTitle', 'Indikator') }}</span>
             <span class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
               <span class="w-2.5 h-2.5 rounded-full bg-red-600 border border-white shrink-0"></span>
-              T0 Aktif
+              {{ $t('admin.map.t0Active', 'T0 Aktif') }}
             </span>
             <span class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
               <span class="w-2.5 h-2.5 rounded-full bg-teal-700 border border-white shrink-0"></span>
-              Posko
+              {{ $t('admin.map.shelters', 'Posko') }}
             </span>
             <span v-if="facilitiesWithCoords.length > 0" class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
               <span class="w-2.5 h-2.5 rounded-xs bg-slate-800 border border-white shrink-0"></span>
-              Faskes / RS
+              {{ $t('admin.map.healthcareFacilities', 'Faskes / RS') }}
             </span>
           </div>
 
@@ -42,7 +42,7 @@
             v-if="!shelters?.length"
             class="absolute inset-0 flex items-center justify-center bg-slate-50/80 backdrop-blur-xs z-20 text-xs text-slate-500 font-medium pointer-events-none"
           >
-            Belum ada lokasi untuk ditampilkan.
+            {{ $t('admin.map.noLocations', 'Belum ada lokasi untuk ditampilkan.') }}
           </div>
         </div>
 
@@ -52,10 +52,10 @@
           <div class="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div>
               <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-900">
-                Daftar Posko
+                {{ $t('admin.map.shelterDirectory', 'Daftar Posko') }}
               </h2>
               <p class="text-[11px] text-slate-400 mt-0.5 font-normal">
-                {{ shelters?.length || 0 }} lokasi
+                {{ $t('admin.map.locationsCount', { count: shelters?.length || 0 }, '{count} lokasi') }}
               </p>
             </div>
             <span v-if="totalT0Count > 0" class="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700">
@@ -80,25 +80,25 @@
                   {{ s.name }}
                 </div>
                 <div class="text-[11px] text-slate-400 font-normal truncate">
-                  {{ s.address || 'Kawasan Posko Bencana' }}
+                  {{ s.address || $t('admin.summary.defaultShelterArea', 'Kawasan Posko Bencana') }}
                 </div>
               </div>
 
               <div class="mt-2.5 flex items-center justify-between text-xs">
                 <span class="text-[11px] text-slate-500 font-normal">
-                  <span class="font-semibold text-slate-700">{{ s.patient_count || 0 }}</span> penyintas
+                  <span class="font-semibold text-slate-700">{{ s.patient_count || 0 }}</span> {{ $t('admin.logistics.survivorsSuffix', 'penyintas') }}
                 </span>
 
                 <span v-if="Number(s.t0_count) > 0" class="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700">
                   <span class="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"></span>
-                  {{ s.t0_count }} T0 aktif
+                  {{ $t('admin.map.activeT0Lower', { count: s.t0_count }, '{count} T0 aktif') }}
                 </span>
                 <span v-else-if="!s.longitude || !s.latitude" class="text-[11px] text-slate-400 font-normal">
-                  Lokasi peta belum ada
+                  {{ $t('admin.map.noCoordinates', 'Lokasi peta belum ada') }}
                 </span>
                 <span v-else class="inline-flex items-center gap-1 text-[11px] font-normal text-slate-500">
                   <span class="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0"></span>
-                  Aktif
+                  {{ $t('common.active', 'Aktif') }}
                 </span>
               </div>
             </button>
@@ -106,7 +106,7 @@
 
           <!-- Empty Posko List State -->
           <div v-else class="p-8 text-center text-xs text-slate-400">
-            Belum ada data posko.
+            {{ $t('admin.logistics.emptyShelters', 'Belum ada data posko.') }}
           </div>
         </aside>
       </div>
@@ -118,12 +118,17 @@
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import * as maplibregl from '@/lib/maplibre';
+import { t as $t, useI18n } from '@/i18n';
+
+const { locale } = useI18n();
 
 interface MarkerEntry {
   marker: maplibregl.Marker;
   popup: maplibregl.Popup;
+  hitArea: HTMLElement;
   visualEl: HTMLElement;
   hasT0: boolean;
+  shelter: any;
 }
 
 const props = defineProps<{
@@ -135,6 +140,7 @@ const mapContainer = ref<HTMLElement | null>(null);
 const mapInstance = shallowRef<maplibregl.Map | null>(null);
 const selectedShelterId = ref<number | null>(null);
 const markersMap = new Map<number, MarkerEntry>();
+const facilityMarkers: Array<{ popup: maplibregl.Popup; hitArea: HTMLElement; facility: any }> = [];
 let activePopup: maplibregl.Popup | null = null;
 
 const totalT0Count = computed(() => {
@@ -183,6 +189,64 @@ function updateMarkerHighlight(entry: MarkerEntry, isSelected: boolean) {
     wrapper.style.zIndex = '1';
   }
 }
+
+function buildShelterMeta(s: any) {
+  const hasT0 = Number(s.t0_count) > 0;
+  const statusBadge = hasT0
+    ? $t('admin.summary.markerActiveT0Count', { count: s.t0_count }, '{count} T0 Aktif')
+    : $t('admin.map.shelters', 'Posko');
+  const ariaLabel = `${s.name} - ${statusBadge}`;
+  const title = `${s.name} (${statusBadge})`;
+  const addressText = escapeHtml(s.address || $t('admin.summary.defaultShelterArea', 'Kawasan Posko Bencana'));
+  const survivorsLine = escapeHtml($t('admin.map.recordedSurvivorsSuffix', 'penyintas terdata'));
+  const volunteersLine = escapeHtml($t('admin.map.onDutyVolunteersSuffix', 'relawan bertugas'));
+  const emergencyLine = hasT0
+    ? `<div style="color: #B91C1C; font-weight: 600; margin-top: 4px;">● ${escapeHtml($t('admin.map.activeT0Cases', { count: s.t0_count }, '{count} kasus darurat T0 aktif'))}</div>`
+    : `<div style="color: #0F766E; font-weight: 500; margin-top: 4px;">● ${escapeHtml($t('admin.map.shelterControlled', 'Posko terkendali'))}</div>`;
+
+  const popupHTML = `
+    <div style="font-family: inherit; padding: 4px; min-width: 180px;">
+      <div style="font-weight: 700; font-size: 13px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(s.name)}</div>
+      <div style="font-size: 11px; color: #64748B; margin-bottom: 8px;">${addressText}</div>
+      <div style="font-size: 11px; color: #334155; line-height: 1.5; border-top: 1px solid #F1F5F9; padding-top: 6px;">
+        <div><span style="font-weight: 600; color: #0F172A;">${s.patient_count || 0}</span> ${survivorsLine}</div>
+        <div><span style="font-weight: 600; color: #0F172A;">${s.volunteer_count || 0}</span> ${volunteersLine}</div>
+        ${emergencyLine}
+      </div>
+    </div>
+  `;
+
+  return { ariaLabel, title, popupHTML };
+}
+
+function buildFacilityMeta(f: any) {
+  const defaultFacilityType = $t('common.facility', 'Fasilitas Kesehatan');
+  const ariaLabel = `${f.name} - ${defaultFacilityType}`;
+  const popupHTML = `
+    <div style="font-family: inherit; padding: 4px; min-width: 160px;">
+      <div style="font-weight: 700; font-size: 13px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(f.name)}</div>
+      <div style="font-size: 11px; color: #64748B; margin-bottom: 6px;">${escapeHtml(f.address || '')}</div>
+      <div style="font-size: 11px; color: #475569; border-top: 1px solid #F1F5F9; padding-top: 4px;">
+        <span style="font-weight: 600;">${escapeHtml(f.type || defaultFacilityType)}</span>
+      </div>
+    </div>
+  `;
+  return { ariaLabel, popupHTML };
+}
+
+watch(locale, () => {
+  for (const entry of markersMap.values()) {
+    const { ariaLabel, title, popupHTML } = buildShelterMeta(entry.shelter);
+    entry.hitArea.setAttribute('aria-label', ariaLabel);
+    entry.hitArea.setAttribute('title', title);
+    entry.popup.setHTML(popupHTML);
+  }
+  for (const entry of facilityMarkers) {
+    const { ariaLabel, popupHTML } = buildFacilityMeta(entry.facility);
+    entry.hitArea.setAttribute('aria-label', ariaLabel);
+    entry.popup.setHTML(popupHTML);
+  }
+});
 
 watch(selectedShelterId, (newId, oldId) => {
   if (oldId !== null) {
@@ -258,14 +322,15 @@ onMounted(() => {
   // Add clean circular markers for shelters (T0: Red, Normal: Teal)
   for (const s of sheltersWithCoords) {
     const hasT0 = Number(s.t0_count) > 0;
+    const { ariaLabel, title, popupHTML } = buildShelterMeta(s);
 
     // Generous hit target wrapper (36x36px) ensuring easy click and tap on touch devices
     const hitArea = document.createElement('div');
     hitArea.className = 'w-9 h-9 flex items-center justify-center cursor-pointer pointer-events-auto select-none';
     hitArea.setAttribute('role', 'button');
     hitArea.setAttribute('tabindex', '0');
-    hitArea.setAttribute('aria-label', `${s.name} - ${hasT0 ? s.t0_count + ' T0 Aktif' : 'Posko'}`);
-    hitArea.setAttribute('title', `${s.name} (${hasT0 ? s.t0_count + ' T0 Aktif' : 'Posko'})`);
+    hitArea.setAttribute('aria-label', ariaLabel);
+    hitArea.setAttribute('title', title);
 
     // Inner visual marker (24x24px)
     const visualMarker = document.createElement('div');
@@ -290,18 +355,6 @@ onMounted(() => {
       }
     });
 
-    const popupHTML = `
-      <div style="font-family: inherit; padding: 4px; min-width: 180px;">
-        <div style="font-weight: 700; font-size: 13px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(s.name)}</div>
-        <div style="font-size: 11px; color: #64748B; margin-bottom: 8px;">${escapeHtml(s.address || 'Kawasan Posko Bencana')}</div>
-        <div style="font-size: 11px; color: #334155; line-height: 1.5; border-top: 1px solid #F1F5F9; padding-top: 6px;">
-          <div><span style="font-weight: 600; color: #0F172A;">${s.patient_count || 0}</span> penyintas terdata</div>
-          <div><span style="font-weight: 600; color: #0F172A;">${s.volunteer_count || 0}</span> relawan bertugas</div>
-          ${hasT0 ? `<div style="color: #B91C1C; font-weight: 600; margin-top: 4px;">● ${s.t0_count} kasus darurat T0 aktif</div>` : '<div style="color: #0F766E; font-weight: 500; margin-top: 4px;">● Posko terkendali</div>'}
-        </div>
-      </div>
-    `;
-
     const popup = new maplibregl.Popup({ offset: 18 })
       .setLngLat([Number(s.longitude), Number(s.latitude)])
       .setHTML(popupHTML);
@@ -310,16 +363,17 @@ onMounted(() => {
       .setLngLat([Number(s.longitude), Number(s.latitude)])
       .addTo(map);
 
-    markersMap.set(s.id, { marker, popup, visualEl: visualMarker, hasT0 });
+    markersMap.set(s.id, { marker, popup, hitArea, visualEl: visualMarker, hasT0, shelter: s });
   }
 
   // Add square markers for facilities if coordinates are present
   for (const f of facilitiesWithCoords.value) {
+    const { ariaLabel, popupHTML } = buildFacilityMeta(f);
     const hitArea = document.createElement('div');
     hitArea.className = 'w-9 h-9 flex items-center justify-center cursor-pointer pointer-events-auto select-none';
     hitArea.setAttribute('role', 'button');
     hitArea.setAttribute('tabindex', '0');
-    hitArea.setAttribute('aria-label', `${f.name} - Fasilitas Kesehatan`);
+    hitArea.setAttribute('aria-label', ariaLabel);
     hitArea.setAttribute('title', `${f.name}`);
 
     const visualMarker = document.createElement('div');
@@ -331,19 +385,11 @@ onMounted(() => {
 
     hitArea.appendChild(visualMarker);
 
-    const popupHTML = `
-      <div style="font-family: inherit; padding: 4px; min-width: 160px;">
-        <div style="font-weight: 700; font-size: 13px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(f.name)}</div>
-        <div style="font-size: 11px; color: #64748B; margin-bottom: 6px;">${escapeHtml(f.address || '')}</div>
-        <div style="font-size: 11px; color: #475569; border-top: 1px solid #F1F5F9; padding-top: 4px;">
-          <span style="font-weight: 600;">${escapeHtml(f.type || 'Fasilitas Kesehatan')}</span>
-        </div>
-      </div>
-    `;
-
     const popup = new maplibregl.Popup({ offset: 16 })
       .setLngLat([Number(f.longitude), Number(f.latitude)])
       .setHTML(popupHTML);
+
+    facilityMarkers.push({ popup, hitArea, facility: f });
 
     const onFacilityClick = (event: Event) => {
       event.stopPropagation();

@@ -1,6 +1,29 @@
 <template>
   <div class="min-h-screen bg-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8">
-    <div class="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+    <div class="w-full max-w-md space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+      <div class="flex justify-end">
+        <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 text-xs font-semibold shadow-2xs select-none">
+          <button
+            type="button"
+            class="flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
+            :class="!isEn ? 'bg-teal-700 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+            @click="changeLang('id')"
+            title="Bahasa Indonesia"
+          >
+            <span>🇮🇩</span><span>ID</span>
+          </button>
+          <span class="text-slate-300 mx-0.5">|</span>
+          <button
+            type="button"
+            class="flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
+            :class="isEn ? 'bg-teal-700 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+            @click="changeLang('en')"
+            title="English"
+          >
+            <span>🇬🇧</span><span>EN</span>
+          </button>
+        </div>
+      </div>
       <div class="text-center">
         <div class="inline-flex items-center justify-center w-20 h-20 mb-4">
           <img src="/logo.png?v=3" alt="RAPID-MIND Logo" class="w-20 h-20 object-contain drop-shadow-md" />
@@ -9,7 +32,7 @@
           RAPID-MIND
         </h1>
         <p class="mt-2 text-sm text-slate-600">
-          Sistem Pendukung Keputusan Respons Kesehatan Jiwa Bencana
+          {{ $t('common.appSubtitle', 'Sistem Pendukung Keputusan Respons Kesehatan Jiwa Bencana') }}
         </p>
       </div>
 
@@ -28,7 +51,7 @@
         <div class="space-y-4">
           <div>
             <label for="email" class="block text-sm font-semibold text-slate-700">
-              Email atau Username
+              {{ $t('auth.emailOrUsername', 'Email atau Username') }}
             </label>
             <div class="mt-1">
               <input
@@ -37,7 +60,7 @@
                 type="text"
                 autocomplete="username"
                 required
-                placeholder="nama@rapidmind.id"
+                :placeholder="$t('auth.emailPlaceholder', 'nama@rapidmind.id')"
                 class="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-base"
                 :disabled="loading"
               />
@@ -46,7 +69,7 @@
 
           <div>
             <label for="password" class="block text-sm font-semibold text-slate-700">
-              Kata Sandi
+              {{ $t('auth.password', 'Kata Sandi') }}
             </label>
             <div class="mt-1 relative">
               <input
@@ -65,7 +88,7 @@
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm font-medium text-slate-500 hover:text-slate-700"
                 @click="showPassword = !showPassword"
               >
-                {{ showPassword ? 'Sembunyikan' : 'Tampilkan' }}
+                {{ showPassword ? $t('auth.hidePassword', 'Sembunyikan') : $t('auth.showPassword', 'Tampilkan') }}
               </button>
             </div>
           </div>
@@ -77,8 +100,8 @@
             :disabled="loading"
             class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-base font-semibold text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-60 transition"
           >
-            <span v-if="loading">Memeriksa akses…</span>
-            <span v-else>MASUK</span>
+            <span v-if="loading">{{ $t('auth.checkingAccess', 'Memeriksa akses…') }}</span>
+            <span v-else>{{ $t('auth.submitLogin', 'MASUK') }}</span>
           </button>
         </div>
       </form>
@@ -89,13 +112,61 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import DemoLoginAccounts, { type DemoLoginAccount } from '@/components/DemoLoginAccounts.vue';
 import { router } from '@inertiajs/vue3';
 import { lockRelawanContinuity, recordVerifiedRelawan, type VerifiedRelawan } from '@/offline/relawanContinuity';
 
 withDefaults(defineProps<{ demoAccounts?: DemoLoginAccount[] }>(), { demoAccounts: () => [] });
 const passwordInput = ref<HTMLInputElement | null>(null);
+const localIsEn = ref(typeof window !== 'undefined' ? window.localStorage?.getItem('rapid_mind_locale') === 'en' : false);
+const isEn = computed(() => {
+  const globalLocale = (globalThis as any)?.__rapidMindLocale;
+  if (globalLocale && typeof globalLocale === 'object' && 'value' in globalLocale) {
+    return globalLocale.value === 'en';
+  }
+  return localIsEn.value;
+});
+
+onMounted(() => {
+  try {
+    const saved = window.localStorage?.getItem('rapid_mind_locale');
+    if (saved === 'en' || saved === 'id') {
+      localIsEn.value = saved === 'en';
+      const setFn = (globalThis as any)?.__rapidMindSetLocale;
+      if (typeof setFn === 'function') setFn(saved);
+    }
+  } catch {}
+});
+
+function changeLang(lang: 'id' | 'en') {
+  localIsEn.value = lang === 'en';
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage?.setItem('rapid_mind_locale', lang);
+      const setFn = (globalThis as any)?.__rapidMindSetLocale;
+      if (typeof setFn === 'function') setFn(lang);
+    }
+  } catch {}
+}
+
+function $t(key: string, fallback?: string): string {
+  try {
+    const fn = (globalThis as any)?.__rapidMindT;
+    return typeof fn === 'function' ? fn(key, fallback) : (fallback ?? key);
+  } catch {
+    return fallback ?? key;
+  }
+}
+
+function $loc(message: string): string {
+  try {
+    const fn = (globalThis as any)?.__rapidMindLocalize;
+    return typeof fn === 'function' ? fn(message) : message;
+  } catch {
+    return message;
+  }
+}
 
 const form = ref({
   email: '',
@@ -104,19 +175,26 @@ const form = ref({
 
 const loading = ref(false);
 const showPassword = ref(false);
-const errorMessage = ref('');
+const rawErrorMessage = ref('');
+const errorMessage = computed(() => {
+  if (!rawErrorMessage.value) return '';
+  if (rawErrorMessage.value === '__LOGIN_FAILED__') {
+    return $t('auth.loginFailed', 'Gagal masuk. Periksa kembali koneksi atau kredensial Anda.');
+  }
+  return $loc(rawErrorMessage.value);
+});
 
 function quickFill(email: string) {
   form.value.email = email;
   form.value.password = '';
   showPassword.value = false;
   void nextTick(() => passwordInput.value?.focus());
-  errorMessage.value = '';
+  rawErrorMessage.value = '';
 }
 
 function submit() {
   loading.value = true;
-  errorMessage.value = '';
+  rawErrorMessage.value = '';
 
   router.post('/login', form.value, {
     onSuccess: (page) => {
@@ -127,7 +205,7 @@ function submit() {
       else if (user) void lockRelawanContinuity().catch(() => {});
     },
     onError: (errors) => {
-      errorMessage.value = errors.email || errors.auth || errors.access || 'Gagal masuk. Periksa kembali koneksi atau kredensial Anda.';
+      rawErrorMessage.value = errors.email || errors.auth || errors.access || '__LOGIN_FAILED__';
       loading.value = false;
     },
     onFinish: () => {

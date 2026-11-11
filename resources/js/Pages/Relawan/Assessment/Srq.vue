@@ -8,17 +8,17 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-sm font-bold text-slate-900">
-                            {{ patient?.name || "Penyintas" }}
+                            {{ patient?.name || (isEn ? "Survivor" : "Penyintas") }}
                         </h2>
                         <p class="text-xs text-slate-500">
-                            NIK: {{ patient?.nik || "Tanpa NIK" }}
+                            NIK: {{ patient?.nik || (isEn ? "Without NIK" : "Tanpa NIK") }}
                         </p>
                     </div>
                     <div class="text-right">
                         <span
                             class="text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200"
                         >
-                            {{ answeredCount }} dari 20 Terjawab
+                            {{ isEn ? `${answeredCount} of 20 Answered` : `${answeredCount} dari 20 Terjawab` }}
                         </span>
                     </div>
                 </div>
@@ -55,7 +55,7 @@
                                 class="h-3.5 w-3.5"
                                 aria-hidden="true"
                             />
-                            <span>{{ isVerbal ? "Verbal" : "Non-Verbal" }}</span>
+                            <span>{{ isVerbal ? (isEn ? "Verbal" : "Verbal") : (isEn ? "Non-Verbal" : "Non-Verbal") }}</span>
                         </button>
                     </div>
 
@@ -65,7 +65,7 @@
                     >
                         <div
                             role="group"
-                            aria-label="Pilihan mode STT"
+                            :aria-label="isEn ? 'STT mode options' : 'Pilihan mode STT'"
                             class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5"
                         >
                             <button
@@ -81,7 +81,7 @@
                                         : 'text-slate-700 hover:bg-slate-200'
                                 "
                             >
-                                Offline
+                                {{ isEn ? "Offline" : "Offline" }}
                             </button>
                             <button
                                 type="button"
@@ -96,7 +96,7 @@
                                         : 'text-slate-700 hover:bg-slate-200'
                                 "
                             >
-                                Online
+                                {{ isEn ? "Online" : "Online" }}
                             </button>
                         </div>
 
@@ -126,7 +126,7 @@
                             @click="cancelRecording"
                             class="px-3 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-100"
                         >
-                            Batalkan
+                            {{ isEn ? "Cancel" : "Batalkan" }}
                         </button>
                     </div>
                 </div>
@@ -167,15 +167,20 @@
                         class="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 space-y-2"
                     >
                         <p class="font-bold text-amber-900">
-                            Pemberitahuan Privasi STT Online
+                            {{ isEn ? "Online STT Privacy Notice" : "Pemberitahuan Privasi STT Online" }}
                         </p>
                         <p class="leading-relaxed">
-                            Mode STT Online menggunakan <em>SpeechRecognition</em>
-                            bawaan browser yang dapat mengirim dan memproses suara
-                            melalui layanan server penyedia browser (tidak dijamin
-                            diproses secara privat di perangkat). Mode ini hanya
-                            diizinkan untuk pengujian lokal dengan suara dan data
-                            sintetis.
+                            <template v-if="isEn">
+                                Online STT mode uses browser built-in <em>SpeechRecognition</em> which may transmit and process voice via browser provider server services (not guaranteed to be processed privately on-device). This mode is only permitted for local testing with synthetic voice and data.
+                            </template>
+                            <template v-else>
+                                Mode STT Online menggunakan <em>SpeechRecognition</em>
+                                bawaan browser yang dapat mengirim dan memproses suara
+                                melalui layanan server penyedia browser (tidak dijamin
+                                diproses secara privat di perangkat). Mode ini hanya
+                                diizinkan untuk pengujian lokal dengan suara dan data
+                                sintetis.
+                            </template>
                         </p>
                         <div class="flex flex-wrap items-center gap-2 pt-1">
                             <button
@@ -184,7 +189,7 @@
                                 @click="grantOnlineConsent"
                                 class="px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition"
                             >
-                                Setuju & Aktifkan STT Online (Data Sintetis)
+                                {{ isEn ? "Accept & Enable Online STT (Synthetic Data)" : "Setuju & Aktifkan STT Online (Data Sintetis)" }}
                             </button>
                             <button
                                 type="button"
@@ -192,7 +197,7 @@
                                 @click="declineOnlineConsent"
                                 class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition"
                             >
-                                Gunakan STT Offline
+                                {{ isEn ? "Use Offline STT" : "Gunakan STT Offline" }}
                             </button>
                         </div>
                     </div>
@@ -205,7 +210,7 @@
                         "
                         class="mt-1"
                     >
-                        Progres berkas model: {{ sttProgress }}%
+                        {{ isEn ? `Model file progress: ${sttProgress}%` : `Progres berkas model: ${sttProgress}%` }}
                     </p>
                     <p
                         v-if="sttMessage"
@@ -227,14 +232,14 @@
                             @click="fallbackToOffline"
                             class="px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-xs transition"
                         >
-                            Beralih ke STT Offline
+                            {{ isEn ? "Switch to Offline STT" : "Beralih ke STT Offline" }}
                         </button>
                     </div>
                     <p
-                        v-if="sttInterpretationNotice"
+                        v-if="localizedSttInterpretationNotice"
                         class="mt-1 font-semibold text-amber-900"
                     >
-                        {{ sttInterpretationNotice }}
+                        {{ localizedSttInterpretationNotice }}
                     </p>
                     <div
                         v-if="interimTranscript"
@@ -243,7 +248,7 @@
                     >
                         <span
                             class="block text-[11px] font-bold uppercase tracking-wide text-amber-800"
-                            >Transkrip sementara (belum mengisi jawaban)</span
+                            >{{ isEn ? "Interim transcript (not yet answering)" : "Transkrip sementara (belum mengisi jawaban)" }}</span
                         >
                         <p class="mt-1 italic">“{{ interimTranscript }}”</p>
                     </div>
@@ -254,21 +259,22 @@
                     >
                         <span
                             class="block text-[11px] font-bold uppercase tracking-wide text-slate-500"
-                            >Transkrip final</span
+                            >{{ isEn ? "Final transcript" : "Transkrip final" }}</span
                         >
                         <p class="mt-1">“{{ transcriptSnippet }}”</p>
                     </div>
                     <p class="mt-2 text-[11px] text-slate-500">
                         <template v-if="sttMode === 'offline'">
-                            Audio diproses di perangkat. Hanya pernyataan yang
-                            cocok dengan aman yang mengisi jawaban; koreksi
-                            manual selalu dipertahankan.
+                            {{ isEn
+                                ? "Audio is processed entirely on-device. Only safely matching statements populate answers; manual corrections are always preserved."
+                                : "Audio diproses di perangkat. Hanya pernyataan yang cocok dengan aman yang mengisi jawaban; koreksi manual selalu dipertahankan."
+                            }}
                         </template>
                         <template v-else>
-                            Mode Online (khusus uji sintetis): suara dapat
-                            diproses layanan penyedia browser. Hanya hasil
-                            transkripsi final yang diperiksa aturan SRQ
-                            konservatif; koreksi manual selalu dipertahankan.
+                            {{ isEn
+                                ? "Online Mode (synthetic testing only): voice may be processed by browser provider services. Only final transcripts are checked against conservative SRQ rules; manual corrections are always preserved."
+                                : "Mode Online (khusus uji sintetis): suara dapat diproses layanan penyedia browser. Hanya hasil transkripsi final yang diperiksa aturan SRQ konservatif; koreksi manual selalu dipertahankan."
+                            }}
                         </template>
                     </p>
                 </div>
@@ -279,7 +285,7 @@
                 @toggle="saveObservations(toggleObservation(observations, $event))"
                 @note="saveObservations({ ...observations, non_verbal_other_note: $event })"
                 @clear="saveObservations({ non_verbal_reasons: [], non_verbal_other_note: null })" />
-            <div v-if="metadataError" role="alert" class="rounded-lg bg-amber-50 p-3 text-base text-amber-900">{{ metadataError }} <button type="button" class="min-h-14 underline font-bold" :disabled="!draftReady || metadataPending > 0" @click="retryMetadata">Coba Simpan Draf</button></div>
+            <div v-if="metadataError" role="alert" class="rounded-lg bg-amber-50 p-3 text-base text-amber-900">{{ metadataError }} <button type="button" class="min-h-14 underline font-bold" :disabled="!draftReady || metadataPending > 0" @click="retryMetadata">{{ isEn ? "Try Saving Draft" : "Coba Simpan Draf" }}</button></div>
 
             <!-- SRQ-20 Scrollable Question List -->
             <div class="space-y-4">
@@ -309,7 +315,7 @@
                                     class="h-3.5 w-3.5"
                                     aria-hidden="true"
                                 />
-                                <span>Red Flag Gate</span>
+                                <span>{{ $t('assessment.srq.redFlagGate', 'Red Flag Gate') }}</span>
                             </span>
                         </div>
                     </div>
@@ -317,12 +323,12 @@
                     <p
                         class="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500"
                     >
-                        Pertanyaan
+                        {{ isEn ? "Question" : "Pertanyaan" }}
                     </p>
                     <h3
                         class="mt-1 text-xl font-bold leading-snug text-slate-900"
                     >
-                        {{ q.script }}
+                        {{ $t(`assessment.srq.questions.${q.number}.script`, q.script) }}
                     </h3>
 
                     <SrqResponseControl :number="q.number" :answer="answers[q.number]"
@@ -331,12 +337,12 @@
                     <div class="mt-3 border-t border-slate-100 pt-2">
                         <button
                             type="button"
-                            class="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-sm font-bold text-teal-800 transition hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                            class="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-sm font-bold text-teal-800 transition hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 cursor-pointer"
                             :aria-expanded="expandedGuidance.has(q.number)"
                             :aria-controls="`srq-guidance-${q.number}`"
                             @click="toggleGuidance(q.number)"
                         >
-                            <span>Petunjuk relawan</span>
+                            <span>{{ isEn ? "Volunteer guidance" : "Petunjuk relawan" }}</span>
                             <ChevronDown
                                 class="h-5 w-5 shrink-0 transition-transform"
                                 :class="
@@ -352,14 +358,12 @@
                             :id="`srq-guidance-${q.number}`"
                             class="mt-1 rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-700"
                         >
-                            <!-- <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Pertanyaan SRQ-20</p>
-              <p class="mt-1 font-semibold text-slate-900">{{ q.question }}</p> -->
                             <p
                                 class="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500"
                             >
-                                Petunjuk Relawan
+                                {{ isEn ? "Volunteer Guidance" : "Petunjuk Relawan" }}
                             </p>
-                            <p class="mt-1">{{ q.volunteerInstruction }}</p>
+                            <p class="mt-1">{{ $t(`assessment.srq.questions.${q.number}.instruction`, q.volunteerInstruction) }}</p>
                         </div>
                     </div>
                 </div>
@@ -375,7 +379,7 @@
                         href="/relawan/assessment"
                         class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50"
                     >
-                        ← Kembali
+                        ← {{ isEn ? "Back" : "Kembali" }}
                     </RelawanLink>
                     <button
                         type="button"
@@ -383,18 +387,16 @@
                         :disabled="
                             isSaving || !draftReady || answeredCount !== 20 || !!safety || metadataPending > 0
                         "
-                        class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
+                        class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60 cursor-pointer"
                     >
-                        Lanjut: Faktor Risiko ({{ answeredCount }}/20) →
+                        {{ isEn ? `Next: Risk Factors (${answeredCount}/20) →` : `Lanjut: Faktor Risiko (${answeredCount}/20) →` }}
                     </button>
                 </div>
                 <p
                     v-if="answeredCount !== 20"
                     class="mt-2 text-xs text-slate-600"
                 >
-                    Lengkapi semua jawaban sebelum melanjutkan ({{
-                        answeredCount
-                    }}/20).
+                    {{ isEn ? `Complete all answers before proceeding (${answeredCount}/20).` : `Lengkapi semua jawaban sebelum melanjutkan (${answeredCount}/20).` }}
                 </p>
                 <p
                     v-if="draftWarning"
@@ -428,10 +430,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
     mergeAssessmentDraft,
@@ -465,17 +469,31 @@ const answers = ref<SrqAnswers>(
     mergeAssessmentDraft("srq_answers", props.responses, {}),
 );
 const runtime = useRelawanRuntime();
+const { isEn, locale, t: $t } = useI18n();
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(props.patient);
 const isSaving = ref(false);
-const saveError = ref("");
-const draftWarning = ref("");
+type LocalizedMsg = { id: string; en: string } | string;
+const resolveMsg = (msg: LocalizedMsg) =>
+    typeof msg === "string"
+        ? localizeMessage(msg, locale.value)
+        : isEn.value
+          ? msg.en
+          : msg.id;
+const rawSaveError = ref<LocalizedMsg>("");
+const rawDraftWarning = ref<LocalizedMsg>("");
+const rawMetadataError = ref<LocalizedMsg>("");
+const saveError = computed(() => resolveMsg(rawSaveError.value));
+const draftWarning = computed(() => resolveMsg(rawDraftWarning.value));
+const metadataError = computed(() => resolveMsg(rawMetadataError.value));
+const localizedSttInterpretationNotice = computed(() =>
+    localizeMessage(sttInterpretationNotice.value, locale.value),
+);
 const draftReady = ref(false);
 const isVerbal = ref(props.assessment?.mode !== "NON_VERBAL");
 const observations = ref<NonVerbalObservations>({});
 const metadataPending = ref(0);
-const metadataError = ref("");
 const showEmergencyVerification = ref(false);
 const expandedGuidance = ref(new Set<number>());
 const scope = useClinicalTaskScope(() => {
@@ -489,9 +507,9 @@ const scope = useClinicalTaskScope(() => {
     localAssessment.value = null;
     metadataPending.value = 0;
     isSaving.value = false;
-    saveError.value = "";
-    draftWarning.value = "";
-    metadataError.value = "";
+    rawSaveError.value = "";
+    rawDraftWarning.value = "";
+    rawMetadataError.value = "";
 });
 const { safety, safetyEvidence, answeredCount, setManualAnswer, confirmQ17, dismissSafety,
     applySpeechTranscript, reset } = useSrqResponses(answers, () => draftReady.value,
@@ -550,9 +568,14 @@ async function toggleMode() {
     metadataPending.value++;
     try {
         await saveAssessmentMode(owner, props.assessment.id, nextMode, current);
-        if (current()) metadataError.value = "";
+        if (current()) rawMetadataError.value = "";
     } catch {
-        if (current()) metadataError.value = "Mode atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.";
+        if (current()) {
+            rawMetadataError.value = {
+                id: "Mode atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.",
+                en: "Mode or its sync queue has not been saved yet. Try saving draft again.",
+            };
+        }
     } finally { if (current()) metadataPending.value--; }
 }
 
@@ -563,9 +586,14 @@ async function saveObservations(value: NonVerbalObservations) {
     metadataPending.value++;
     try {
         await saveObservationDraft(owner, props.assessment.id, value, current);
-        if (current()) metadataError.value = "";
+        if (current()) rawMetadataError.value = "";
     } catch {
-        if (current()) metadataError.value = "Observasi atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.";
+        if (current()) {
+            rawMetadataError.value = {
+                id: "Observasi atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.",
+                en: "Observations or their sync queue have not been saved yet. Try saving draft again.",
+            };
+        }
     } finally { if (current()) metadataPending.value--; }
 }
 async function retryMetadata() {
@@ -575,9 +603,14 @@ async function retryMetadata() {
     try {
         await saveAssessmentMode(owner, props.assessment.id, isVerbal.value ? "VERBAL" : "NON_VERBAL", current);
         await saveObservationDraft(owner, props.assessment.id, observations.value, current);
-        if (current()) metadataError.value = "";
+        if (current()) rawMetadataError.value = "";
     } catch {
-        if (current()) metadataError.value = "Mode atau observasi belum tersimpan. Coba lagi.";
+        if (current()) {
+            rawMetadataError.value = {
+                id: "Mode atau observasi belum tersimpan. Coba lagi.",
+                en: "Mode or observations have not been saved yet. Please try again.",
+            };
+        }
     } finally { if (current()) metadataPending.value--; }
 }
 
@@ -592,11 +625,13 @@ async function persistDraft() {
             "srq_answers",
             answers.value, current,
         );
-        if (current()) draftWarning.value = "";
+        if (current()) rawDraftWarning.value = "";
     } catch {
         if (!current()) return;
-        draftWarning.value =
-            "Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.";
+        rawDraftWarning.value = {
+            id: "Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.",
+            en: "Local draft is not saved yet. Answers on this page remain intact; please try selecting an answer again.",
+        };
     }
 }
 
@@ -618,14 +653,26 @@ async function loadDraft() {
         };
         answers.value = mergeAssessmentDraft("srq_answers", props.responses, local);
         draftReady.value = context.assessment.status === "IN_PROGRESS";
-        draftWarning.value = draftReady.value ? "" : "Asesmen selesai tidak dapat diubah.";
+        rawDraftWarning.value = draftReady.value
+            ? ""
+            : {
+                  id: "Asesmen selesai tidak dapat diubah.",
+                  en: "Completed assessments cannot be modified.",
+              };
         const target = window.location.hash;
         if (/^#srq-question-(?:[1-9]|1[0-9]|20)$/.test(target)) {
             await nextTick();
             if (current()) document.querySelector<HTMLElement>(target)?.focus();
         }
     } catch (error) {
-        if (current()) draftWarning.value = error instanceof Error ? error.message : "Asesmen lokal tidak dapat dibaca.";
+        if (current()) {
+            rawDraftWarning.value = error instanceof Error
+                ? error.message
+                : {
+                      id: "Asesmen lokal tidak dapat dibaca.",
+                      en: "Local assessment cannot be read.",
+                  };
+        }
     }
 }
 
@@ -633,11 +680,14 @@ async function saveAndNext() {
     if (isSaving.value || !draftReady.value || safety.value || metadataPending.value) return;
     const current = scope.capture();
     if (answeredCount.value !== 20) {
-        saveError.value = "Lengkapi semua jawaban sebelum melanjutkan.";
+        rawSaveError.value = {
+            id: "Lengkapi semua jawaban sebelum melanjutkan.",
+            en: "Complete all answers before proceeding.",
+        };
         return;
     }
     isSaving.value = true;
-    saveError.value = "";
+    rawSaveError.value = "";
     try {
         await persistDraft();
         if (!current()) return;
@@ -646,8 +696,10 @@ async function saveAndNext() {
         runtime.navigate(`/relawan/assessment/${props.assessment.id}/risk`);
     } catch {
         if (!current()) return;
-        saveError.value =
-            "Jawaban belum tersimpan di perangkat ini. Coba lagi.";
+        rawSaveError.value = {
+            id: "Jawaban belum tersimpan di perangkat ini. Coba lagi.",
+            en: "Answers are not saved on this device yet. Please try again.",
+        };
     } finally {
         if (current()) isSaving.value = false;
     }

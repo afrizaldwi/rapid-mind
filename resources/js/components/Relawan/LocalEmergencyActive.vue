@@ -3,10 +3,10 @@
         <div class="rounded-xl bg-red-800 p-6 text-white shadow-xl">
             <div class="flex items-center gap-2 text-xs font-bold uppercase">
                 <Siren class="h-4 w-4" aria-hidden="true" />
-                <p>Insiden T0-Suspect</p>
+                <p>{{ isEn ? "T0-Suspect Incident" : "Insiden T0-Suspect" }}</p>
             </div>
             <h2 class="mt-2 text-2xl font-black">
-                {{ emergency.patient_name || "Penyintas Tanpa Nama" }}
+                {{ emergency.patient_name || (isEn ? "Unidentified Survivor" : "Penyintas Tanpa Nama") }}
             </h2>
             <p class="mt-1 text-sm">{{ reason }}</p>
         </div>
@@ -15,37 +15,36 @@
             class="space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm"
         >
             <div class="flex justify-between gap-3">
-                <span>Status laporan</span><strong>T0-Suspect</strong>
+                <span>{{ isEn ? "Report status" : "Status laporan" }}</span><strong>T0-Suspect</strong>
             </div>
             <div class="flex justify-between gap-3">
-                <span>Transmisi</span><strong>{{ delivery.label }}</strong>
+                <span>{{ isEn ? "Transmission" : "Transmisi" }}</span><strong>{{ delivery.label }}</strong>
             </div>
         </div>
 
         <div
             class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
         >
-            <strong>✓ Tersimpan di perangkat.</strong>
+            <strong>{{ isEn ? "✓ Saved on device." : "✓ Tersimpan di perangkat." }}</strong>
             <p class="mt-1">{{ delivery.detail }}</p>
             <p class="mt-1">{{ delivery.realtime }}</p>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
             <p>
-                <strong>Waktu:</strong>
-                {{ new Date(emergency.created_at).toLocaleString("id-ID") }}
+                <strong>{{ isEn ? "Time:" : "Waktu:" }}</strong>
+                {{ new Date(emergency.created_at).toLocaleString(isEn ? "en-US" : "id-ID") }}
             </p>
             <p>
-                <strong>Lokasi:</strong>
+                <strong>{{ isEn ? "Location:" : "Lokasi:" }}</strong>
                 {{
                     emergency.latitude != null && emergency.longitude != null
-                        ? `${emergency.latitude},
-        ${emergency.longitude}`
-                        : "GPS tidak tersedia"
+                        ? `${emergency.latitude}, ${emergency.longitude}`
+                        : (isEn ? "GPS unavailable" : "GPS tidak tersedia")
                 }}
             </p>
             <p v-if="emergency.notes">
-                <strong>Catatan:</strong> {{ emergency.notes }}
+                <strong>{{ isEn ? "Notes:" : "Catatan:" }}</strong> {{ emergency.notes }}
             </p>
         </div>
 
@@ -62,21 +61,21 @@
             class="w-full rounded-xl bg-teal-700 p-3 font-bold text-white"
             @click="retry"
         >
-            Coba sinkronkan kembali
+            {{ isEn ? "Retry synchronization" : "Coba sinkronkan kembali" }}
         </button>
         <a
             v-else
             :href="`/relawan/emergencies/${emergency.id}`"
             class="block rounded-xl bg-teal-700 p-3 text-center font-bold text-white"
-            >Lihat detail laporan T0</a
+            >{{ isEn ? "View T0 report details" : "Lihat detail laporan T0" }}</a
         >
         <a
-            :href="emergencySmsHref"
+            :href="smsHref"
             class="block rounded-xl bg-slate-800 p-3 text-center font-bold text-white"
-            >Buka aplikasi SMS cadangan</a
+            >{{ isEn ? "Open backup SMS app" : "Buka aplikasi SMS cadangan" }}</a
         >
         <p class="text-center text-xs text-slate-600">
-            {{ emergencySmsGuidance }}
+            {{ smsGuidance }}
         </p>
         <button
             v-if="emergency.sync_state === 'SYNCED'"
@@ -84,7 +83,7 @@
             class="w-full p-2 text-sm font-semibold text-slate-700"
             @click="$emit('close')"
         >
-            Kembali ke halaman sebelumnya
+            {{ isEn ? "Back to previous page" : "Kembali ke halaman sebelumnya" }}
         </button>
     </div>
 </template>
@@ -98,14 +97,23 @@ import { emergencyRepository } from "@/offline/emergencyRepository";
 import { retryEmergency } from "@/offline/emergencyWorkflow";
 import {
     emergencyDeliveryStatus,
-    emergencySmsHref,
-    emergencySmsGuidance,
+    getEmergencySmsHref,
+    getEmergencySmsGuidance,
 } from "@/lib/emergencyDelivery";
+import { useI18n } from "@/i18n";
 
+const { locale, isEn } = useI18n();
 const props = defineProps<{ owner: number; id: string }>();
 defineEmits<{ (e: "close"): void }>();
 const emergency = ref<LocalEmergency | null>(null);
-const retryError = ref("");
+const retryErrorFailed = ref(false);
+const retryError = computed(() =>
+    retryErrorFailed.value
+        ? isEn.value
+            ? "Synchronization attempt did not succeed. Incident remains saved on device."
+            : "Percobaan sinkronisasi belum berhasil. Insiden tetap tersimpan di perangkat."
+        : "",
+);
 
 watch(
     [() => props.owner, () => props.id],
@@ -122,26 +130,39 @@ watch(
 );
 
 const delivery = computed(() =>
-    emergencyDeliveryStatus(emergency.value ?? { sync_state: "LOCAL_SAVED" }),
+    emergencyDeliveryStatus(emergency.value ?? { sync_state: "LOCAL_SAVED" }, locale.value),
 );
+const smsHref = computed(() => getEmergencySmsHref(locale.value));
+const smsGuidance = computed(() => getEmergencySmsGuidance(locale.value));
 
-const reason = computed(
-    () =>
-        ({
+const reason = computed(() => {
+    const code = emergency.value?.red_flag_type ?? "";
+    if (isEn.value) {
+        return (
+            {
+                SUICIDAL_IDEATION: "Suicidal ideation / behavior",
+                PSYCHOSIS: "Acute psychosis / severe dissociation",
+                SEVERE_AGITATION: "Dangerous agitation",
+                MEDICAL_CRISIS: "Medical emergency",
+            }[code] ?? "Red Flag Indicator"
+        );
+    }
+    return (
+        {
             SUICIDAL_IDEATION: "Ideasi / perilaku bunuh diri",
             PSYCHOSIS: "Gejala psikosis akut / disosiasi berat",
             SEVERE_AGITATION: "Agitasi berbahaya",
             MEDICAL_CRISIS: "Kegawatdaruratan medis",
-        })[emergency.value?.red_flag_type ?? ""] ?? "Indikator Red Flag",
-);
+        }[code] ?? "Indikator Red Flag"
+    );
+});
 
 async function retry() {
-    retryError.value = "";
+    retryErrorFailed.value = false;
     try {
         await retryEmergency(props.owner, props.id);
     } catch {
-        retryError.value =
-            "Percobaan sinkronisasi belum berhasil. Insiden tetap tersimpan di perangkat.";
+        retryErrorFailed.value = true;
     }
 }
 </script>

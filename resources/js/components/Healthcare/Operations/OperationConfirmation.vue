@@ -14,12 +14,20 @@
             class="mt-3 rounded-lg border border-slate-300 px-3 py-2"
             @click="emit('cancel')"
         >
-            Batal
+            {{ $t('common.cancel', 'Batal') }}
         </button>
     </dialog>
 </template>
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from "vue";
+
+function $t(key: string, fallback: string): string {
+    const fn =
+        (globalThis as any)?.__rapidMindT ||
+        (typeof window !== "undefined" ? (window as any)?.__rapidMindT : null);
+    return typeof fn === "function" ? fn(key, fallback) : fallback;
+}
+
 defineProps<{ titleId: string; title: string; busy: boolean }>();
 const emit = defineEmits<{ cancel: [] }>();
 const dialog = ref<HTMLDialogElement | null>(null);

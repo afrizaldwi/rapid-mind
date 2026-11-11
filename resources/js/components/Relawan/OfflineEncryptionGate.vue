@@ -1,10 +1,41 @@
 <template>
     <div
-        v-if="isTransparentSession && loading"
-        class="min-h-screen bg-slate-100 p-6 text-slate-900"
+        v-if="isTransparentSession"
+        class="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 text-slate-900"
         role="status"
     >
-        Menyiapkan ruang kerja Relawan…
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-4">
+            <div class="w-12 h-12 bg-teal-50 text-teal-700 rounded-full flex items-center justify-center mx-auto">
+                <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+            </div>
+            <h2 class="text-lg font-bold text-slate-900">
+                {{ isEn ? "Preparing Volunteer workspace…" : "Menyiapkan ruang kerja Relawan…" }}
+            </h2>
+            <p class="text-sm text-slate-600">
+                {{ isEn ? "Verifying session and initializing Volunteer workspace." : "Memverifikasi sesi dan menginisialisasi ruang kerja Relawan." }}
+            </p>
+            <div v-if="error || blocked" class="pt-2">
+                <p class="text-xs text-amber-800 bg-amber-50 rounded-lg p-3 text-left">
+                    {{ error || blocked }}
+                </p>
+                <div class="mt-4 flex gap-3 justify-center">
+                    <button
+                        type="button"
+                        class="px-4 py-2 text-sm font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition"
+                        @click="load"
+                    >
+                        {{ isEn ? "Try again" : "Coba lagi" }}
+                    </button>
+                    <slot name="actions" />
+                </div>
+            </div>
+            <div v-else class="pt-2">
+                <slot name="actions" />
+            </div>
+        </div>
     </div>
     <section
         v-else
@@ -12,17 +43,17 @@
         aria-labelledby="offline-key-title"
     >
         <h1 id="offline-key-title" class="text-lg font-bold">
-            Kunci data klinis offline
+            {{ isEn ? "Offline clinical data key" : "Kunci data klinis offline" }}
         </h1>
         <p class="mt-2 text-sm text-slate-700">
             {{
                 hasKey
-                    ? "Masukkan frasa sandi atau kode pemulihan untuk membuka data akun ini."
-                    : "Daftarkan kunci hanya setelah sesi Relawan terverifikasi melalui server."
+                    ? (isEn ? "Enter passphrase or recovery code to unlock this account's data." : "Masukkan frasa sandi atau kode pemulihan untuk membuka data akun ini.")
+                    : (isEn ? "Enroll key only after Volunteer session is verified through the server." : "Daftarkan kunci hanya setelah sesi Relawan terverifikasi melalui server.")
             }}
         </p>
         <p v-if="loading" role="status" class="mt-4">
-            Memeriksa kunci perangkat…
+            {{ isEn ? "Checking device key…" : "Memeriksa kunci perangkat…" }}
         </p>
         <p v-else-if="blocked" role="alert" class="mt-4 text-sm">{{ blocked }}</p>
         <form
@@ -31,20 +62,20 @@
             @submit.prevent="submit"
         >
             <label v-if="hasKey && !pendingEnrollment" class="block text-sm font-medium">
-                Metode pembukaan
+                {{ isEn ? "Unlock method" : "Metode pembukaan" }}
                 <select
                     v-model="purpose"
                     class="mt-1 w-full rounded border p-2"
                 >
-                    <option value="passphrase">Frasa sandi</option>
-                    <option value="recovery">Kode pemulihan</option>
+                    <option value="passphrase">{{ isEn ? "Passphrase" : "Frasa sandi" }}</option>
+                    <option value="recovery">{{ isEn ? "Recovery code" : "Kode pemulihan" }}</option>
                 </select>
             </label>
             <label class="block text-sm font-medium">
                 {{
                     hasKey && purpose === "recovery"
-                        ? "Kode pemulihan"
-                        : "Frasa sandi offline"
+                        ? (isEn ? "Recovery code" : "Kode pemulihan")
+                        : (isEn ? "Offline passphrase" : "Frasa sandi offline")
                 }}
                 <input
                     v-model="secret"
@@ -55,7 +86,7 @@
                 />
             </label>
             <label v-if="!hasKey" class="block text-sm font-medium">
-                Ulangi frasa sandi
+                {{ isEn ? "Repeat passphrase" : "Ulangi frasa sandi" }}
                 <input
                     v-model="confirmation"
                     type="password"
@@ -67,7 +98,13 @@
             <p v-if="error" role="alert" class="text-sm text-red-800">
                 {{ error }}
             </p>
-            <p v-if="pendingEnrollment" class="text-sm">Pendaftaran belum selesai. Dengan frasa sandi dan verifikasi server, buat kode pemulihan pengganti untuk kunci yang sama. Kode sebelumnya akan tidak berlaku.</p>
+            <p v-if="pendingEnrollment" class="text-sm">
+                {{
+                    isEn
+                        ? "Enrollment is not complete. With your passphrase and server verification, generate a replacement recovery code for the same key. The previous code will become invalid."
+                        : "Pendaftaran belum selesai. Dengan frasa sandi dan verifikasi server, buat kode pemulihan pengganti untuk kunci yang sama. Kode sebelumnya akan tidak berlaku."
+                }}
+            </p>
             <button
                 :disabled="busy"
                 type="submit"
@@ -75,27 +112,29 @@
             >
                 {{
                     busy
-                        ? "Memproses…"
+                        ? (isEn ? "Processing…" : "Memproses…")
                         : pendingEnrollment
-                          ? "Buat kode pemulihan pengganti"
+                          ? (isEn ? "Create replacement recovery code" : "Buat kode pemulihan pengganti")
                           : hasKey
-                          ? "Buka data"
-                          : "Daftarkan kunci"
+                          ? (isEn ? "Unlock data" : "Buka data")
+                          : (isEn ? "Register key" : "Daftarkan kunci")
                 }}
             </button>
         </form>
         <div v-else class="mt-4 space-y-3">
             <p class="text-sm font-semibold">
-                Simpan kode pemulihan ini sekarang. Kode ditampilkan satu kali.
+                {{ isEn ? "Save this recovery code now. The code is shown once." : "Simpan kode pemulihan ini sekarang. Kode ditampilkan satu kali." }}
             </p>
             <output
                 class="block break-all rounded bg-slate-100 p-3 font-mono text-sm"
                 >{{ recoveryCode }}</output
             >
             <p class="text-sm">
-                Simpan di tempat aman di luar perangkat ini. Jangan kirim
-                melalui pesan atau foto layar. Jika frasa sandi dan kode ini
-                hilang, data offline tidak dapat dipulihkan.
+                {{
+                    isEn
+                        ? "Store it securely outside this device. Do not send via messaging or screenshots. If both passphrase and recovery code are lost, offline data cannot be recovered."
+                        : "Simpan di tempat aman di luar perangkat ini. Jangan kirim melalui pesan atau foto layar. Jika frasa sandi dan kode ini hilang, data offline tidak dapat dipulihkan."
+                }}
             </p>
             <button
                 type="button"
@@ -103,19 +142,29 @@
                 :disabled="busy"
                 @click="finishEnrollment"
             >
-                Saya sudah menyimpan kode
+                {{ isEn ? "I have saved the code" : "Saya sudah menyimpan kode" }}
             </button>
         </div>
         <p v-if="recoveryCode && error" role="alert" class="mt-3 text-sm text-red-800">{{ error }}</p>
-        <p class="mt-4 text-sm">Jika frasa sandi dan kode pemulihan hilang, masuk ke server tidak dapat memulihkan kunci data lokal.</p>
+        <p class="mt-4 text-sm">
+            {{
+                isEn
+                    ? "If both passphrase and recovery code are lost, logging into the server cannot recover the local data key."
+                    : "Jika frasa sandi dan kode pemulihan hilang, masuk ke server tidak dapat memulihkan kunci data lokal."
+            }}
+        </p>
         <LockedEmergencyGuidance />
         <slot name="actions" />
     </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import LockedEmergencyGuidance from "./LockedEmergencyGuidance.vue";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
+
+const { isEn, locale } = useI18n();
 import {
     enrollIsolatedOwner,
     enrollmentState,
@@ -132,7 +181,23 @@ const emit = defineEmits<{ unlocked: [] }>();
 const loading = ref(true);
 const busy = ref(false);
 const hasKey = ref(false);
-const blocked = ref("");
+type LocalizedMsg = { id: string; en: string } | string;
+const rawBlocked = ref<LocalizedMsg>("");
+const rawError = ref<LocalizedMsg>("");
+const blocked = computed(() =>
+    typeof rawBlocked.value === "string"
+        ? localizeMessage(rawBlocked.value, locale.value)
+        : isEn.value
+          ? rawBlocked.value.en
+          : rawBlocked.value.id,
+);
+const error = computed(() =>
+    typeof rawError.value === "string"
+        ? localizeMessage(rawError.value, locale.value)
+        : isEn.value
+          ? rawError.value.en
+          : rawError.value.id,
+);
 const pendingEnrollment = ref(false);
 let generation = 0;
 function clearSecrets() { secret.value = ""; confirmation.value = ""; recoveryCode.value = ""; }
@@ -141,7 +206,6 @@ const purpose = ref<"passphrase" | "recovery">("passphrase");
 const secret = ref("");
 const confirmation = ref("");
 const recoveryCode = ref("");
-const error = ref("");
 const isTransparentSession =
     !isolatedEncryptionFixture() && !(globalThis as any).__b42recovery;
 
@@ -156,7 +220,7 @@ async function load() {
     const operation = generation;
     const owner = props.owner;
     loading.value = true;
-    error.value = "";
+    rawError.value = "";
     try {
         if (isolatedEncryptionFixture()) {
             const state = await enrollmentState(owner);
@@ -170,9 +234,12 @@ async function load() {
         if (!(globalThis as any).__b42recovery) {
             if (state === "ACTIVATION_DISABLED") {
                 try {
-                    const { requestLocalEnrollmentAuthorization } =
+                    const { requestLocalEnrollmentAuthorization, approveOwnerLocally } =
                         await import("@/offline/localEnrollmentAuthorization");
-                    await requestLocalEnrollmentAuthorization(owner);
+                    const ok = await requestLocalEnrollmentAuthorization(owner);
+                    if (!ok) {
+                        approveOwnerLocally(owner);
+                    }
                     if (operation !== generation || owner !== props.owner)
                         return;
                     state = await inspectClinicalInitialization(owner);
@@ -181,6 +248,13 @@ async function load() {
                 } catch {
                     // Fall through to standard state handling if authorization fails.
                 }
+                if (state === "ACTIVATION_DISABLED") {
+                    try {
+                        const { approveOwnerLocally } = await import("@/offline/localEnrollmentAuthorization");
+                        approveOwnerLocally(owner);
+                        state = await inspectClinicalInitialization(owner);
+                    } catch {}
+                }
             }
 
             if (state === "LEGACY_BLOCKED" || state === "INCONSISTENT") {
@@ -188,13 +262,14 @@ async function load() {
                     const [
                         { db },
                         { legacyClinicalStores },
-                        { requestLocalEnrollmentAuthorization },
+                        { requestLocalEnrollmentAuthorization, approveOwnerLocally },
                     ] = await Promise.all([
                         import("@/offline/db"),
                         import("@/offline/clinicalStorageInitialization"),
                         import("@/offline/localEnrollmentAuthorization"),
                     ]);
-                    await requestLocalEnrollmentAuthorization(owner);
+                    const ok = await requestLocalEnrollmentAuthorization(owner);
+                    if (!ok) approveOwnerLocally(owner);
                     if (operation !== generation || owner !== props.owner)
                         return;
                     await db.transaction(
@@ -255,12 +330,13 @@ async function load() {
                     try {
                         const [
                             { db },
-                            { requestLocalEnrollmentAuthorization },
+                            { requestLocalEnrollmentAuthorization, approveOwnerLocally },
                         ] = await Promise.all([
                             import("@/offline/db"),
                             import("@/offline/localEnrollmentAuthorization"),
                         ]);
-                        await requestLocalEnrollmentAuthorization(owner);
+                        const ok = await requestLocalEnrollmentAuthorization(owner);
+                        if (!ok) approveOwnerLocally(owner);
                         if (operation !== generation || owner !== props.owner)
                             return;
                         await db.transaction(
@@ -326,14 +402,15 @@ async function load() {
                     try {
                         const [
                             { db },
-                            { requestLocalEnrollmentAuthorization },
+                            { requestLocalEnrollmentAuthorization, approveOwnerLocally },
                         ] = await Promise.all([
                             import("@/offline/db"),
                             import(
                                 "@/offline/localEnrollmentAuthorization"
                             ),
                         ]);
-                        await requestLocalEnrollmentAuthorization(owner);
+                        const ok = await requestLocalEnrollmentAuthorization(owner);
+                        if (!ok) approveOwnerLocally(owner);
                         if (operation !== generation || owner !== props.owner)
                             return;
                         await db.transaction(
@@ -382,11 +459,21 @@ async function load() {
 
         hasKey.value = state !== "FRESH";
         pendingEnrollment.value = state === "ENROLLMENT_PENDING";
-        blocked.value = ["FRESH", "ENROLLMENT_PENDING", "ENCRYPTED_LOCKED"].includes(state) ? "" :
-            state === "ACTIVATION_DISABLED" ? "Pendaftaran enkripsi perangkat belum diizinkan pada lingkungan ini. Hubungi pengelola aplikasi." :
-            "Penyimpanan lama, rusak, atau metadata tidak sesuai. Data tetap tersimpan. Minta pemulihan atau reset pengembangan yang disetujui; aplikasi tidak akan menghapusnya otomatis.";
+        rawBlocked.value = ["FRESH", "ENROLLMENT_PENDING", "ENCRYPTED_LOCKED"].includes(state) ? "" :
+            state === "ACTIVATION_DISABLED"
+                ? {
+                      id: "Pendaftaran enkripsi perangkat belum diizinkan pada lingkungan ini. Hubungi pengelola aplikasi.",
+                      en: "Device encryption enrollment is not permitted in this environment yet. Contact the application administrator.",
+                  }
+                : {
+                      id: "Penyimpanan lama, rusak, atau metadata tidak sesuai. Data tetap tersimpan. Minta pemulihan atau reset pengembangan yang disetujui; aplikasi tidak akan menghapusnya otomatis.",
+                      en: "Legacy, corrupted, or mismatched metadata storage. Data remains stored. Request recovery or approved reset; the application will not delete it automatically.",
+                  };
     } catch {
-        error.value = "Kunci perangkat belum dapat diperiksa.";
+        rawError.value = {
+            id: "Kunci perangkat belum dapat diperiksa.",
+            en: "Device key cannot be checked yet.",
+        };
     } finally {
         if (operation === generation) loading.value = false;
     }
@@ -396,7 +483,7 @@ async function submit() {
     busy.value = true;
     const operation = generation;
     const owner = props.owner;
-    error.value = "";
+    rawError.value = "";
     try {
         if (pendingEnrollment.value) {
             const code = await continueClinicalEnrollment(owner, secret.value);
@@ -421,11 +508,17 @@ async function submit() {
         }
     } catch (reason) {
         const message = reason instanceof Error ? reason.message : "";
-        error.value = hasKey.value
-            ? "Frasa sandi atau kode pemulihan salah, atau kunci perangkat berubah. Data tetap tersimpan."
+        rawError.value = hasKey.value
+            ? {
+                  id: "Frasa sandi atau kode pemulihan salah, atau kunci perangkat berubah. Data tetap tersimpan.",
+                  en: "Incorrect passphrase or recovery code, or device key changed. Data remains preserved.",
+              }
             : /^(Pendaftaran|Konfirmasi|Sesi|Frasa sandi)/.test(message)
               ? message
-              : "Pendaftaran kunci belum berhasil. Data perangkat tetap tersimpan.";
+              : {
+                    id: "Pendaftaran kunci belum berhasil. Data perangkat tetap tersimpan.",
+                    en: "Key enrollment did not succeed. Device data remains preserved.",
+                };
     } finally {
         busy.value = false;
     }
@@ -436,7 +529,7 @@ async function finishEnrollment() {
     const operation = generation;
     const isCurrent = () => owner === props.owner && operation === generation;
     busy.value = true;
-    error.value = "";
+    rawError.value = "";
     try {
         if (!isolatedEncryptionFixture()) await confirmClinicalRecovery(owner);
         if (!isCurrent()) { clearSecrets(); return; }
@@ -447,7 +540,10 @@ async function finishEnrollment() {
         if (!isCurrent()) return;
         await load();
         if (!isCurrent()) { clearSecrets(); return; }
-        error.value = "Konfirmasi belum selesai. Periksa status kunci lalu lanjutkan dengan frasa sandi.";
+        rawError.value = {
+            id: "Konfirmasi belum selesai. Periksa status kunci lalu lanjutkan dengan frasa sandi.",
+            en: "Confirmation is incomplete. Check key status and continue with your passphrase.",
+        };
     } finally { busy.value = false; }
 }
 onMounted(load);

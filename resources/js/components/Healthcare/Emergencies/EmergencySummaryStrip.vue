@@ -6,14 +6,14 @@
         <div class="flex-1 min-w-[130px] sm:pr-4">
             <span
                 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                >Antrean Aktif</span
+                >{{ $t('healthcare.summaryStrip.activeQueue', 'Antrean Aktif') }}</span
             >
             <div class="flex items-baseline gap-1 mt-0.5">
                 <span
                     class="text-2xl font-bold text-slate-900 tracking-tight"
                     >{{ totalSurvivorsCount }}</span
                 >
-                <span class="text-xs text-slate-400 font-normal">kasus</span>
+                <span class="text-xs text-slate-400 font-normal">{{ $t('healthcare.summaryStrip.cases', 'kasus') }}</span>
             </div>
         </div>
 
@@ -26,7 +26,7 @@
                 ></span>
                 <span
                     class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                    >T0 Darurat</span
+                    >{{ $t('healthcare.summaryStrip.t0Emergency', 'T0 Darurat') }}</span
                 >
             </div>
             <div class="flex items-baseline gap-1 mt-0.5">
@@ -37,7 +37,7 @@
                     "
                     >{{ criticalT0Count }}</span
                 >
-                <span class="text-xs text-slate-400 font-normal">kasus</span>
+                <span class="text-xs text-slate-400 font-normal">{{ $t('healthcare.summaryStrip.cases', 'kasus') }}</span>
             </div>
         </div>
 
@@ -45,14 +45,14 @@
         <div class="flex-1 min-w-[130px] pt-3 sm:pt-0 sm:px-4">
             <span
                 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                >Dalam Verifikasi</span
+                >{{ $t('healthcare.summaryStrip.inVerification', 'Dalam Verifikasi') }}</span
             >
             <div class="flex items-baseline gap-1 mt-0.5">
                 <span
                     class="text-2xl font-bold text-slate-900 tracking-tight"
                     >{{ pendingValidationCount }}</span
                 >
-                <span class="text-xs text-slate-400 font-normal">kasus</span>
+                <span class="text-xs text-slate-400 font-normal">{{ $t('healthcare.summaryStrip.cases', 'kasus') }}</span>
             </div>
         </div>
 
@@ -60,20 +60,22 @@
         <div class="flex-1 min-w-[130px] pt-3 sm:pt-0 sm:pl-4">
             <span
                 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block"
-                >Rujukan Aktif</span
+                >{{ $t('healthcare.summaryStrip.activeReferrals', 'Rujukan Aktif') }}</span
             >
             <div class="flex items-baseline gap-1 mt-0.5">
                 <span
                     class="text-2xl font-bold text-slate-900 tracking-tight"
                     >{{ referralsIssuedCount }}</span
                 >
-                <span class="text-xs text-slate-400 font-normal">kasus</span>
+                <span class="text-xs text-slate-400 font-normal">{{ $t('healthcare.summaryStrip.cases', 'kasus') }}</span>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { t as $t } from "@/i18n";
+
 defineProps<{
     totalSurvivorsCount: number;
     criticalT0Count: number;

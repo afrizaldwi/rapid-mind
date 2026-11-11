@@ -4,6 +4,7 @@ import {
     interpretSrqTranscript,
     selectSrqSpeechAnswerUpdates,
 } from "@/domain/srq/srqTranscriptInterpreter";
+import { useI18n } from "@/i18n";
 
 export function useSrqResponses(
     answers: Ref<SrqAnswers>,
@@ -11,6 +12,7 @@ export function useSrqResponses(
     save: () => Promise<void>,
     interrupt: () => void,
 ) {
+    const { isEn } = useI18n();
     const safetyEvidence = ref("");
     const manualOverrides = new Set<number>();
     const sttOwnedAnswers = new Set<number>();
@@ -85,8 +87,12 @@ export function useSrqResponses(
         }
         if (ordinary.length) void save();
         return protectedQuestionNumbers.length
-            ? "Jawaban manual atau tersimpan dipertahankan. Periksa respons yang belum jelas secara manual."
-            : "Hasil suara telah ditinjau. Klarifikasi jawaban yang belum jelas; Q17 Ya memerlukan konfirmasi relawan.";
+            ? (isEn.value
+                  ? "Manual or saved answers remain preserved. Check unclear responses manually."
+                  : "Jawaban manual atau tersimpan dipertahankan. Periksa respons yang belum jelas secara manual.")
+            : (isEn.value
+                  ? "Voice results reviewed. Clarify any unclear responses; Q17 Yes requires volunteer confirmation."
+                  : "Hasil suara telah ditinjau. Klarifikasi jawaban yang belum jelas; Q17 Ya memerlukan konfirmasi relawan.");
     }
     return {
         safety,

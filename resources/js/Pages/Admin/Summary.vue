@@ -6,13 +6,13 @@
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-              Pusat Komando & Pemantauan Kebijakan
+              {{ $t('admin.summary.headerTag', 'Pusat Komando & Pemantauan Kebijakan') }}
             </span>
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-              Ringkasan Operasional Lapangan
+              {{ $t('admin.summary.headerTitle', 'Ringkasan Operasional Lapangan') }}
             </h1>
             <p class="text-xs text-slate-500 mt-0.5">
-              Agregasi laporan T0 dan rekomendasi sistem di seluruh posko penanggulangan bencana
+              {{ $t('admin.summary.headerSubtitle', 'Agregasi laporan T0 dan rekomendasi sistem di seluruh posko penanggulangan bencana') }}
             </p>
           </div>
 
@@ -23,10 +23,10 @@
             </span>
             <div class="text-left">
               <span class="text-xs font-bold text-slate-800 block leading-tight">
-                Kasus Terkonfirmasi
+                {{ $t('admin.summary.confirmedCases', 'Kasus Terkonfirmasi') }}
               </span>
               <span class="text-[10px] text-slate-400 font-normal leading-tight">
-                total terverifikasi faskes
+                {{ $t('admin.summary.confirmedSubtitle', 'total terverifikasi faskes') }}
               </span>
             </div>
           </div>
@@ -36,7 +36,7 @@
         <div class="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
           <!-- T0 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">Laporan T0 Aktif:</span>
+            <span class="text-slate-500 font-medium">{{ $t('admin.summary.activeT0', 'Laporan T0 Aktif:') }}</span>
             <span class="text-sm font-bold tabular-nums" :class="kpis.countT0 > 0 ? 'text-red-600' : 'text-slate-800'">
               {{ kpis.countT0 }}
             </span>
@@ -46,7 +46,7 @@
 
           <!-- T1 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">Rekomendasi T1:</span>
+            <span class="text-slate-500 font-medium">{{ $t('admin.summary.recommendationT1', 'Rekomendasi T1:') }}</span>
             <span class="text-sm font-bold text-orange-600 tabular-nums">
               {{ kpis.countT1 }}
             </span>
@@ -56,7 +56,7 @@
 
           <!-- T2 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">Rekomendasi T2:</span>
+            <span class="text-slate-500 font-medium">{{ $t('admin.summary.recommendationT2', 'Rekomendasi T2:') }}</span>
             <span class="text-sm font-bold text-amber-600 tabular-nums">
               {{ kpis.countT2 }}
             </span>
@@ -66,7 +66,7 @@
 
           <!-- T3 Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">Rekomendasi T3:</span>
+            <span class="text-slate-500 font-medium">{{ $t('admin.summary.recommendationT3', 'Rekomendasi T3:') }}</span>
             <span class="text-sm font-bold text-emerald-600 tabular-nums">
               {{ kpis.countT3 }}
             </span>
@@ -76,7 +76,7 @@
 
           <!-- Posko Terpantau Stat -->
           <div class="flex items-baseline gap-1.5">
-            <span class="text-slate-500 font-medium">Posko Terpantau:</span>
+            <span class="text-slate-500 font-medium">{{ $t('admin.summary.monitoredShelters', 'Posko Terpantau:') }}</span>
             <span class="text-sm font-bold text-slate-800 tabular-nums">
               {{ activeSheltersCount }}
             </span>
@@ -91,14 +91,14 @@
           <div class="flex items-center justify-between pb-1">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Sebaran Laporan T0 dan Rekomendasi per Posko
+                {{ $t('admin.summary.tableTitle', 'Sebaran Laporan T0 dan Rekomendasi per Posko') }}
               </h2>
               <p class="text-[11px] text-slate-500 mt-0.5">
-                Klik baris posko untuk memfokuskan tampilan lokasi pada peta
+                {{ $t('admin.summary.tableSubtitle', 'Klik baris posko untuk memfokuskan tampilan lokasi pada peta') }}
               </p>
             </div>
             <span class="text-[11px] font-semibold text-slate-500 tabular-nums">
-              {{ sheltersList.length }} posko
+              {{ $t('admin.summary.sheltersCount', { count: sheltersList.length }, '{count} posko') }}
             </span>
           </div>
 
@@ -107,18 +107,18 @@
             <table class="w-full text-left text-xs">
               <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[11px]">
                 <tr>
-                  <th class="py-2.5 px-3.5 font-bold text-slate-700">Posko</th>
+                  <th class="py-2.5 px-3.5 font-bold text-slate-700">{{ $t('admin.summary.colShelter', 'Posko') }}</th>
                   <th class="py-2.5 px-3 text-right text-rose-700 font-bold w-14">T0</th>
                   <th class="py-2.5 px-3 text-right text-orange-700 font-bold w-14">T1</th>
                   <th class="py-2.5 px-3 text-right text-amber-700 font-bold w-14">T2</th>
                   <th class="py-2.5 px-3 text-right text-emerald-700 font-bold w-14">T3</th>
-                  <th class="py-2.5 px-3.5 text-right font-extrabold text-slate-900 w-16">Total</th>
+                  <th class="py-2.5 px-3.5 text-right font-extrabold text-slate-900 w-16">{{ $t('admin.summary.colTotal', 'Total') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-if="sheltersList.length === 0">
                   <td colspan="6" class="py-8 text-center text-slate-400 font-normal">
-                    Belum ada posko terdata.
+                    {{ $t('admin.summary.emptyShelters', 'Belum ada posko terdata.') }}
                   </td>
                 </tr>
                 <tr
@@ -133,14 +133,14 @@
                       <span
                         v-if="s.t0_count > 0"
                         class="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"
-                        title="Terdapat laporan T0 aktif"
+                        :title="$t('admin.summary.hasActiveT0Title', 'Terdapat laporan T0 aktif')"
                       ></span>
                       <span class="font-bold text-slate-900 text-xs">
                         {{ s.name }}
                       </span>
                     </div>
                     <span class="text-[10px] text-slate-400 block truncate max-w-xs mt-0.5">
-                      {{ s.address || 'Kawasan Wilayah Bencana' }}
+                      {{ s.address || $t('admin.summary.defaultDisasterArea', 'Kawasan Wilayah Bencana') }}
                     </span>
                   </td>
                   <td class="py-2.5 px-3 text-right tabular-nums">
@@ -171,7 +171,7 @@
               <tfoot v-if="sheltersList.length > 0" class="bg-slate-50/80 border-t border-slate-200 text-xs font-bold text-slate-800">
                 <tr>
                   <td class="py-2 px-3.5 uppercase tracking-wider text-[10px] text-slate-500">
-                    Total Keseluruhan
+                    {{ $t('admin.summary.overallTotal', 'Total Keseluruhan') }}
                   </td>
                   <td class="py-2 px-3 text-right tabular-nums font-bold" :class="kpis.countT0 > 0 ? 'text-red-600' : 'text-slate-800'">
                     {{ kpis.countT0 }}
@@ -199,17 +199,17 @@
           <div class="flex items-center justify-between pb-1">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Peta Sebaran Posko
+                {{ $t('admin.summary.mapTitle', 'Peta Sebaran Posko') }}
               </h2>
               <p class="text-[11px] text-slate-500 mt-0.5">
-                Visualisasi lokasi posko dan status kedaruratan
+                {{ $t('admin.summary.mapSubtitle', 'Visualisasi lokasi posko dan status kedaruratan') }}
               </p>
             </div>
             <Link
               href="/admin/map"
               class="text-xs font-medium text-teal-700 hover:text-teal-900 transition flex items-center gap-1"
             >
-              Peta penuh →
+              {{ $t('admin.summary.fullMapLink', 'Peta penuh →') }}
             </Link>
           </div>
 
@@ -219,15 +219,15 @@
             <!-- Minimal Inline Legend Overlay -->
             <div
               class="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-sm border border-slate-200 shadow-2xs text-[10px] flex items-center gap-3 z-10 select-none pointer-events-auto"
-              aria-label="Legenda Peta"
+              :aria-label="$t('admin.summary.mapLegendAria', 'Legenda Peta')"
             >
               <span class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
                 <span class="w-2 h-2 rounded-full bg-red-600 border border-white shrink-0"></span>
-                T0 Aktif
+                {{ $t('admin.summary.legendActiveT0', 'T0 Aktif') }}
               </span>
               <span class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
                 <span class="w-2 h-2 rounded-full bg-teal-700 border border-white shrink-0"></span>
-                Posko Normal
+                {{ $t('admin.summary.legendNormalShelter', 'Posko Normal') }}
               </span>
             </div>
           </div>
@@ -241,14 +241,14 @@
           <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Proporsi Laporan T0 dan Rekomendasi
+                {{ $t('admin.summary.proportionTitle', 'Proporsi Laporan T0 dan Rekomendasi') }}
               </h2>
               <span class="text-[11px] text-slate-400 mt-0.5 block">
-                Rasio agregat tingkat kedaruratan & distres
+                {{ $t('admin.summary.proportionSubtitle', 'Rasio agregat tingkat kedaruratan & distres') }}
               </span>
             </div>
             <span class="text-xs font-bold text-slate-800 tabular-nums">
-              {{ totalTriageCount }} laporan/rekomendasi
+              {{ $t('admin.summary.reportsCount', { count: totalTriageCount }, '{count} laporan/rekomendasi') }}
             </span>
           </div>
 
@@ -307,7 +307,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-slate-600 flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-xs bg-red-600 shrink-0"></span>
-                  T0 Aktif
+                  {{ $t('admin.summary.legendT0', 'T0 Aktif') }}
                 </span>
                 <span class="font-bold text-slate-900 tabular-nums">
                   {{ kpis.countT0 }} <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT0) }}%)</span>
@@ -316,7 +316,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-slate-600 flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-xs bg-orange-500 shrink-0"></span>
-                  T1 Tinggi
+                  {{ $t('admin.summary.legendT1', 'T1 Tinggi') }}
                 </span>
                 <span class="font-bold text-slate-900 tabular-nums">
                   {{ kpis.countT1 }} <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT1) }}%)</span>
@@ -325,7 +325,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-slate-600 flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-xs bg-amber-500 shrink-0"></span>
-                  T2 Sedang
+                  {{ $t('admin.summary.legendT2', 'T2 Sedang') }}
                 </span>
                 <span class="font-bold text-slate-900 tabular-nums">
                   {{ kpis.countT2 }} <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT2) }}%)</span>
@@ -334,7 +334,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-slate-600 flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-xs bg-emerald-500 shrink-0"></span>
-                  T3 Stabil
+                  {{ $t('admin.summary.legendT3', 'T3 Stabil') }}
                 </span>
                 <span class="font-bold text-slate-900 tabular-nums">
                   {{ kpis.countT3 }} <span class="text-[10px] text-slate-400 font-normal">({{ percentage(kpis.countT3) }}%)</span>
@@ -349,10 +349,10 @@
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Tren T0 dan Rekomendasi (30 Hari)
+                {{ $t('admin.summary.trendTitle', 'Tren T0 dan Rekomendasi (30 Hari)') }}
               </h2>
               <span class="text-[11px] text-slate-400 mt-0.5 block">
-                Laporan T0 dan rekomendasi harian
+                {{ $t('admin.summary.trendSubtitle', 'Laporan T0 dan rekomendasi harian') }}
               </span>
             </div>
             <div v-if="hasTrendData" class="flex items-center gap-3 text-[10px] font-medium text-slate-500">
@@ -366,7 +366,7 @@
           <div class="pt-3 pb-1">
             <div class="h-28 w-full relative flex items-center justify-center">
               <div v-if="!hasTrendData" class="text-center text-slate-400 text-xs font-medium py-8">
-                Belum cukup data untuk menampilkan tren harian
+                {{ $t('admin.summary.insufficientTrendData', 'Belum cukup data untuk menampilkan tren harian') }}
               </div>
               <svg v-else class="w-full h-full overflow-visible" viewBox="0 0 300 100" preserveAspectRatio="none">
                 <line x1="0" y1="25" x2="300" y2="25" stroke="#F1F5F9" stroke-width="1" />
@@ -381,9 +381,9 @@
             </div>
 
             <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-2 border-t border-slate-100">
-              <span>30 hari lalu</span>
-              <span>15 hari lalu</span>
-              <span>Hari ini</span>
+              <span>{{ $t('admin.summary.daysAgo30', '30 hari lalu') }}</span>
+              <span>{{ $t('admin.summary.daysAgo15', '15 hari lalu') }}</span>
+              <span>{{ $t('admin.summary.today', 'Hari ini') }}</span>
             </div>
           </div>
         </div>
@@ -397,6 +397,9 @@ import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vu
 import { Link } from '@inertiajs/vue3';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import * as maplibregl from '@/lib/maplibre';
+import { t as $t, useI18n } from '@/i18n';
+
+const { locale } = useI18n();
 
 interface KPIProps {
   totalConfirmed: number;
@@ -511,7 +514,49 @@ const trendPathT3 = computed(() => buildTrendPath('t3'));
 
 const selectedShelterId = ref<number | null>(null);
 const mapInstance = shallowRef<maplibregl.Map | null>(null);
-const markersMap = new Map<number, { marker: maplibregl.Marker; popup: maplibregl.Popup; visualEl: HTMLElement; hasT0: boolean }>();
+const markersMap = new Map<number, { marker: maplibregl.Marker; popup: maplibregl.Popup; hitArea: HTMLElement; visualEl: HTMLElement; hasT0: boolean; shelter: any }>();
+
+function buildMarkerLabels(s: any) {
+  const hasT0 = Number(s.t0_count || 0) > 0;
+  const activeStatus = hasT0
+    ? $t('admin.summary.markerActiveT0Count', { count: s.t0_count }, '{count} T0 Aktif')
+    : $t('admin.summary.colShelter', 'Posko');
+  const ariaLabel = `${s.name} - ${activeStatus}`;
+  const title = `${s.name} (${activeStatus})`;
+  const totalKasus = s.total_cases ?? s.t0_count;
+  const addressText = escapeHtml(s.address || $t('admin.summary.defaultShelterArea', 'Kawasan Posko Bencana'));
+  const statusLine = hasT0
+    ? `<div style="color: #DC2626; font-weight: 700; margin-bottom: 2px;">● ${escapeHtml($t('admin.summary.popupActiveT0Reports', { count: s.t0_count }, '{count} Laporan T0 aktif'))}</div>`
+    : `<div style="color: #0F766E; font-weight: 600; margin-bottom: 2px;">● ${escapeHtml($t('admin.summary.popupNoActiveT0', 'Tanpa T0 aktif'))}</div>`;
+  const totalLabel = $t('admin.summary.colTotal', 'Total');
+  const reportsSuffix = escapeHtml($t('admin.summary.popupReportsAndRecs', 'laporan dan rekomendasi'));
+  const fullMapText = escapeHtml($t('admin.summary.fullMapPopupLink', 'Peta penuh'));
+
+  const popupHTML = `
+    <div style="font-family: inherit; padding: 2px; min-width: 160px;">
+      <div style="font-weight: 700; font-size: 12px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(s.name)}</div>
+      <div style="font-size: 10px; color: #64748B; margin-bottom: 6px;">${addressText}</div>
+      <div style="font-size: 10px; color: #334155; line-height: 1.4; border-top: 1px solid #F1F5F9; padding-top: 4px;">
+        ${statusLine}
+        <div style="color: #64748B;">${escapeHtml(totalLabel)}: <strong style="color: #0F172A;">${totalKasus}</strong> ${reportsSuffix}</div>
+      </div>
+      <div style="margin-top: 6px; border-top: 1px solid #F1F5F9; padding-top: 4px; text-align: right;">
+        <a href="/admin/map" style="font-size: 10px; font-weight: 600; color: #0F766E; text-decoration: none;">${fullMapText} &rarr;</a>
+      </div>
+    </div>
+  `;
+
+  return { ariaLabel, title, popupHTML };
+}
+
+watch(locale, () => {
+  for (const entry of markersMap.values()) {
+    const { ariaLabel, title, popupHTML } = buildMarkerLabels(entry.shelter);
+    entry.hitArea.setAttribute('aria-label', ariaLabel);
+    entry.hitArea.setAttribute('title', title);
+    entry.popup.setHTML(popupHTML);
+  }
+});
 
 function escapeHtml(str: string): string {
   return String(str || '')
@@ -627,14 +672,15 @@ onMounted(() => {
       const rawLng = Number(s.longitude);
       const rawLat = Number(s.latitude);
       const hasT0 = Number(s.t0_count || 0) > 0;
+      const { ariaLabel, title, popupHTML } = buildMarkerLabels(s);
 
       // Hit area wrapper
       const hitArea = document.createElement('div');
       hitArea.className = 'w-8 h-8 flex items-center justify-center cursor-pointer pointer-events-auto select-none';
       hitArea.setAttribute('role', 'button');
       hitArea.setAttribute('tabindex', '0');
-      hitArea.setAttribute('aria-label', `${s.name} - ${hasT0 ? s.t0_count + ' T0 Aktif' : 'Posko'}`);
-      hitArea.setAttribute('title', `${s.name} (${hasT0 ? s.t0_count + ' T0 Aktif' : 'Posko'})`);
+      hitArea.setAttribute('aria-label', ariaLabel);
+      hitArea.setAttribute('title', title);
 
       // Inner visual marker
       const visualMarker = document.createElement('div');
@@ -645,21 +691,6 @@ onMounted(() => {
       visualMarker.appendChild(innerDot);
 
       hitArea.appendChild(visualMarker);
-
-      const totalKasus = s.total_cases ?? s.t0_count;
-      const popupHTML = `
-        <div style="font-family: inherit; padding: 2px; min-width: 160px;">
-          <div style="font-weight: 700; font-size: 12px; color: #0F172A; margin-bottom: 2px;">${escapeHtml(s.name)}</div>
-          <div style="font-size: 10px; color: #64748B; margin-bottom: 6px;">${escapeHtml(s.address || 'Kawasan Posko Bencana')}</div>
-          <div style="font-size: 10px; color: #334155; line-height: 1.4; border-top: 1px solid #F1F5F9; padding-top: 4px;">
-            ${hasT0 ? `<div style="color: #DC2626; font-weight: 700; margin-bottom: 2px;">● ${s.t0_count} Laporan T0 aktif</div>` : '<div style="color: #0F766E; font-weight: 600; margin-bottom: 2px;">● Tanpa T0 aktif</div>'}
-            <div style="color: #64748B;">Total: <strong style="color: #0F172A;">${totalKasus}</strong> laporan dan rekomendasi</div>
-          </div>
-          <div style="margin-top: 6px; border-top: 1px solid #F1F5F9; padding-top: 4px; text-align: right;">
-            <a href="/admin/map" style="font-size: 10px; font-weight: 600; color: #0F766E; text-decoration: none;">Peta penuh &rarr;</a>
-          </div>
-        </div>
-      `;
 
       const popup = new maplibregl.Popup({ offset: 14 })
         .setLngLat([rawLng, rawLat])
@@ -688,7 +719,7 @@ onMounted(() => {
         .setLngLat([rawLng, rawLat])
         .addTo(map);
 
-      markersMap.set(s.id, { marker, popup, visualEl: visualMarker, hasT0 });
+      markersMap.set(s.id, { marker, popup, hitArea, visualEl: visualMarker, hasT0, shelter: s });
     }
 
     if (points.length > 0) {

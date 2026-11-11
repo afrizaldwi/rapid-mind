@@ -22,6 +22,8 @@ import type {
     LocalPatient,
     OutboxItem,
 } from "@/offline/db";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
 
 export type ServerDataAssessment = ServerAssessment & {
     resume_url?: string;
@@ -61,12 +63,6 @@ export type WorkspaceRow = {
     retryable?: boolean;
 };
 
-const stageLabels: Record<string, string> = {
-    srq: "Lanjutkan SRQ-20",
-    risk: "Lanjutkan Faktor Risiko",
-    function: "Lanjutkan Fungsi Harian",
-    review: "Tinjau Asesmen",
-};
 const key = (type: WorkspaceRow["type"], id: string) => `${type}:${id}`;
 const byNewest = (a: WorkspaceRow, b: WorkspaceRow) =>
     b.date.localeCompare(a.date);
@@ -75,6 +71,7 @@ const byPriority = (a: WorkspaceRow, b: WorkspaceRow) =>
     byNewest(a, b);
 
 export function useOwnedLocalRecords(owner: Ref<number | null>) {
+    const { isEn } = useI18n();
     const records = ref<OwnedRecords>({
         assessments: [],
         emergencies: [],
@@ -82,7 +79,14 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
         outbox: [],
     });
     const ready = ref(false);
-    const error = ref("");
+    const readFailed = ref(false);
+    const error = computed(() =>
+        readFailed.value
+            ? isEn.value
+                ? "Device data cannot be read yet."
+                : "Data di perangkat belum dapat dibaca."
+            : "",
+    );
     let subscription: Subscription | undefined;
     let generation = 0;
     const stop = watch(
@@ -98,7 +102,7 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
                 outbox: [],
             };
             ready.value = false;
-            error.value = "";
+            readFailed.value = false;
             if (!next) return;
             if (!syntheticLegacyFixture() && !clinicalKeyReady(next)) return;
             const current = generation;
@@ -124,14 +128,14 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
                     if (current !== generation) return;
                     records.value = value;
                     ready.value = true;
-                    error.value = "";
+                    readFailed.value = false;
                 },
                 error: () => {
                     if (current !== generation) return;
                     if (!syntheticLegacyFixture() && !clinicalKeyReady(next))
                         return;
                     ready.value = false;
-                    error.value = "Data di perangkat belum dapat dibaca.";
+                    readFailed.value = true;
                 },
             });
         },
@@ -151,8 +155,35 @@ export function useRelawanDataWorkspace(
     serverCompleted: Ref<ServerDataAssessment[]>,
     serverEmergencies: Ref<ServerDataEmergency[]>,
 ) {
+    const { isEn } = useI18n();
     const local = useOwnedLocalRecords(owner);
+    const stageLabels = computed<Record<string, string>>(() =>
+        isEn.value
+            ? {
+                  srq: "Continue SRQ-20",
+                  risk: "Continue Risk Factors",
+                  function: "Continue Daily Function",
+                  review: "Review Assessment",
+              }
+            : {
+                  srq: "Lanjutkan SRQ-20",
+                  risk: "Lanjutkan Faktor Risiko",
+                  function: "Lanjutkan Fungsi Harian",
+                  review: "Tinjau Asesmen",
+              },
+    );
     const projected = computed(() => {
+        const en = isEn.value;
+        const defaultSurvivor = en ? "Survivor" : "Penyintas";
+        const defaultUnidentified = en ? "Unidentified Survivor" : "Penyintas Tanpa Nama";
+        const syncedLabel = en ? "Synchronized" : "Tersinkron";
+        const serverAcceptedLabel = en ? "Accepted by server" : "Diterima server";
+        const savedOnDeviceLabel = en ? "Saved on device" : "Tersimpan di perangkat";
+        const failedSyncLabel = en ? "Synchronization unsuccessful" : "Sinkronisasi belum berhasil";
+        const syncingLabel = en ? "Synchronizing" : "Menyinkronkan";
+        const pendingSyncLabel = en ? "Awaiting synchronization" : "Menunggu sinkronisasi";
+        const unqueuedLabel = en ? "Not yet queued for synchronization" : "Belum masuk antrean sinkronisasi";
+
         const { assessments, emergencies, patients, outbox } =
             local.records.value;
         const patientById = new Map(patients.map((item) => [item.id, item]));
@@ -170,9 +201,9 @@ export function useRelawanDataWorkspace(
                 key: key("ASSESSMENT", item.id),
                 id: item.id,
                 type: "ASSESSMENT",
-                patientName: item.patient?.name || "Penyintas",
+                patientName: item.patient?.name || defaultSurvivor,
                 date: item.completed_at || item.updated_at || "",
-                label: "Tersinkron",
+                label: syncedLabel,
                 source: "server",
                 resultUrl: `/relawan/assessment/${item.id}/result`,
                 triage: normalizeTriage(item.triage_result),
@@ -184,9 +215,9 @@ export function useRelawanDataWorkspace(
                 key: key("EMERGENCY", item.id),
                 id: item.id,
                 type: "EMERGENCY",
-                patientName: item.patient?.name || "Penyintas Tanpa Nama",
+                patientName: item.patient?.name || defaultUnidentified,
                 date: item.created_at,
-                label: "Diterima server",
+                label: serverAcceptedLabel,
                 source: "server",
                 emergencyUrl: `/relawan/emergencies/${item.id}`,
                 triage: null,
@@ -203,9 +234,9 @@ export function useRelawanDataWorkspace(
                 key: itemKey,
                 id: item.id,
                 type: "ASSESSMENT",
-                patientName: patient?.name || "Penyintas",
+                patientName: patient?.name || defaultSurvivor,
                 date: item.completed_at || item.updated_at,
-                label: "Tersimpan di perangkat",
+                label: savedOnDeviceLabel,
                 source: "local",
                 triage: normalizeTriage(item.triage_result),
             };
@@ -214,9 +245,9 @@ export function useRelawanDataWorkspace(
                 inProgress.push({
                     ...base,
                     date: item.updated_at,
-                    label: "Tersimpan di perangkat",
+                    label: savedOnDeviceLabel,
                     resumeUrl: `/relawan/assessment/${item.id}/${stage}`,
-                    status: stageLabels[stage],
+                    status: stageLabels.value[stage],
                 });
                 synchronized.delete(itemKey);
                 continue;
@@ -227,12 +258,12 @@ export function useRelawanDataWorkspace(
                     label:
                         queue?.status === "FAILED" ||
                         item.sync_state === "SYNC_FAILED"
-                            ? "Sinkronisasi belum berhasil"
+                            ? failedSyncLabel
                             : queue?.status === "SYNCING"
-                              ? "Menyinkronkan"
+                              ? syncingLabel
                               : queue
-                                ? "Menunggu sinkronisasi"
-                                : "Belum masuk antrean sinkronisasi",
+                                ? pendingSyncLabel
+                                : unqueuedLabel,
                     resultUrl: `/relawan/assessment/${item.id}/result`,
                     unqueued: !queue,
                     retryable:
@@ -251,11 +282,13 @@ export function useRelawanDataWorkspace(
                     ...base,
                     ...server,
                     patientName:
-                        server?.patientName === "Penyintas"
+                        !server?.patientName ||
+                        server.patientName === "Penyintas" ||
+                        server.patientName === "Survivor"
                             ? base.patientName
-                            : (server?.patientName ?? base.patientName),
+                            : server.patientName,
                     triage: server?.triage ?? base.triage,
-                    label: "Tersinkron",
+                    label: syncedLabel,
                     resultUrl: `/relawan/assessment/${item.id}/result`,
                 });
             }
@@ -266,15 +299,17 @@ export function useRelawanDataWorkspace(
                 key: key("ASSESSMENT", item.id),
                 id: item.id,
                 type: "ASSESSMENT",
-                patientName: item.patient?.name || "Penyintas",
+                patientName: item.patient?.name || defaultSurvivor,
                 date: item.updated_at || item.started_at || "",
                 label: local.ready.value
-                    ? "Hanya tersedia di server"
-                    : "Status di perangkat belum dapat dipastikan",
+                    ? (en ? "Only available on server" : "Hanya tersedia di server")
+                    : (en ? "Device status cannot be confirmed yet" : "Status di perangkat belum dapat dipastikan"),
                 source: "server",
                 resumeUrl:
                     item.resume_url || `/relawan/assessment/${item.id}/srq`,
-                status: item.resume_label || "Lanjutkan",
+                status: item.resume_label
+                    ? localizeMessage(item.resume_label, en ? "en" : "id")
+                    : (en ? "Continue" : "Lanjutkan"),
                 triage: null,
             });
         }
@@ -291,9 +326,9 @@ export function useRelawanDataWorkspace(
                 patientName:
                     item.patient_name ||
                     patient?.name ||
-                    "Penyintas Tanpa Nama",
+                    defaultUnidentified,
                 date: item.created_at,
-                label: "Tersimpan di perangkat",
+                label: savedOnDeviceLabel,
                 source: "local",
                 triage: null,
                 redFlagType: item.red_flag_type,
@@ -306,12 +341,12 @@ export function useRelawanDataWorkspace(
                     label:
                         queue?.status === "FAILED" ||
                         item.sync_state === "SYNC_FAILED"
-                            ? "Sinkronisasi belum berhasil"
+                            ? failedSyncLabel
                             : queue?.status === "SYNCING"
-                              ? "Menyinkronkan"
+                              ? syncingLabel
                               : queue
-                                ? "Menunggu sinkronisasi"
-                                : "Tersimpan di perangkat",
+                                ? pendingSyncLabel
+                                : savedOnDeviceLabel,
                     retryable:
                         !!queue &&
                         (queue.status !== "FAILED" ||
@@ -328,10 +363,12 @@ export function useRelawanDataWorkspace(
                     ...base,
                     ...server,
                     patientName:
-                        server?.patientName === "Penyintas Tanpa Nama"
+                        !server?.patientName ||
+                        server.patientName === "Penyintas Tanpa Nama" ||
+                        server.patientName === "Unidentified Survivor"
                             ? base.patientName
-                            : (server?.patientName ?? base.patientName),
-                    label: "Diterima server",
+                            : server.patientName,
+                    label: serverAcceptedLabel,
                     emergencyUrl: `/relawan/emergencies/${item.id}`,
                 });
             }
