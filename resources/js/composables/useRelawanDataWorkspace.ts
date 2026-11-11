@@ -10,6 +10,12 @@ import {
     type ServerPatient,
 } from "@/offline/assessmentWorkflow";
 import { normalizeTriage, type DisplayTriage } from "@/offline/triageDisplay";
+import {
+    clinicalKeyReady,
+    clinicalKeyVersion,
+    encryptedMode,
+} from "@/offline/encryptedClinicalStorage";
+import { syntheticLegacyFixture } from "@/offline/clinicalStorageInitialization";
 import type {
     LocalAssessment,
     LocalEmergency,
@@ -80,8 +86,8 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
     let subscription: Subscription | undefined;
     let generation = 0;
     const stop = watch(
-        owner,
-        (next) => {
+        [owner, clinicalKeyVersion],
+        ([next]) => {
             generation++;
             subscription?.unsubscribe();
             subscription = undefined;
@@ -94,8 +100,17 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
             ready.value = false;
             error.value = "";
             if (!next) return;
+            if (!syntheticLegacyFixture() && !clinicalKeyReady(next)) return;
             const current = generation;
             subscription = liveQuery(async (): Promise<OwnedRecords> => {
+                if ((await encryptedMode(next)) && !clinicalKeyReady(next)) {
+                    return {
+                        assessments: [],
+                        emergencies: [],
+                        patients: [],
+                        outbox: [],
+                    };
+                }
                 const [assessments, emergencies, patients, outbox] =
                     await Promise.all([
                         assessmentRepository.list(next),
@@ -113,6 +128,8 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
                 },
                 error: () => {
                     if (current !== generation) return;
+                    if (!syntheticLegacyFixture() && !clinicalKeyReady(next))
+                        return;
                     ready.value = false;
                     error.value = "Data di perangkat belum dapat dibaca.";
                 },

@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout>
+  <RelawanLayout @clinical-ready="loadIdentityContext">
     <div class="space-y-5">
       <div class="bg-white rounded-xl border border-slate-200 p-5">
         <h1 class="text-lg font-extrabold text-slate-900">Konfirmasi Identitas Penyintas</h1>
@@ -30,11 +30,13 @@ const assessment = props.assessment;
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(null);
 const error = ref('');
-onMounted(async () => {
+async function loadIdentityContext() {
+  error.value = '';
   try {
     const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
     localAssessment.value = context.assessment;
     patient.value = context.patient;
   } catch (e) { error.value = e instanceof Error ? e.message : 'Asesmen lokal tidak tersedia.'; }
-});
+}
+onMounted(() => { void loadIdentityContext(); });
 </script>

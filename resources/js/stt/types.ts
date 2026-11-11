@@ -1,3 +1,5 @@
+export type SttMode = "offline" | "online";
+
 export type WhisperBackend = "webgpu" | "wasm";
 
 export type WhisperStatus =
@@ -10,7 +12,8 @@ export type WhisperStatus =
 
 export type WhisperWorkerRequest =
     | { type: "PREPARE"; backend?: WhisperBackend }
-    | { type: "TRANSCRIBE"; audio: Float32Array }
+    | { type: "TRANSCRIBE"; audio: Float32Array; durationSeconds?: number }
+    | { type: "CANCEL" }
     | { type: "DISPOSE" };
 
 export type WhisperWorkerEvent =

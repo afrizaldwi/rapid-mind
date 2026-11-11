@@ -1,24 +1,67 @@
 const WHISPER_SAMPLE_RATE = 16_000;
+const SILENCE_THRESHOLD = 0.008;
+const SILENCE_MARGIN_SECONDS = 0.25;
 
 function stopTracks(stream: MediaStream | null): void {
     stream?.getTracks().forEach((track) => track.stop());
 }
 
-function resampleMono(
+export function trimSilence(
+    samples: Float32Array,
+    sampleRate = WHISPER_SAMPLE_RATE,
+): Float32Array {
+    const length = samples.length;
+    if (length === 0) return samples;
+
+    let firstActive = -1;
+    for (let i = 0; i < length; i++) {
+        if (Math.abs(samples[i]) >= SILENCE_THRESHOLD) {
+            firstActive = i;
+            break;
+        }
+    }
+
+    if (firstActive === -1) {
+        return samples.subarray(0, Math.min(length, Math.round(sampleRate * 0.5)));
+    }
+
+    let lastActive = firstActive;
+    for (let i = length - 1; i >= firstActive; i--) {
+        if (Math.abs(samples[i]) >= SILENCE_THRESHOLD) {
+            lastActive = i;
+            break;
+        }
+    }
+
+    const margin = Math.round(sampleRate * SILENCE_MARGIN_SECONDS);
+    const start = Math.max(0, firstActive - margin);
+    const end = Math.min(length, lastActive + margin + 1);
+    if (start === 0 && end === length) return samples;
+    return samples.slice(start, end);
+}
+
+export function resampleMono(
     audioBuffer: AudioBuffer,
     targetRate = WHISPER_SAMPLE_RATE,
 ): Float32Array {
     const sourceLength = audioBuffer.length;
-    const mono = new Float32Array(sourceLength);
+    const numChannels = audioBuffer.numberOfChannels;
+    const mono =
+        numChannels === 1
+            ? new Float32Array(audioBuffer.getChannelData(0))
+            : new Float32Array(sourceLength);
 
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-        const samples = audioBuffer.getChannelData(channel);
-        for (let index = 0; index < sourceLength; index++) {
-            mono[index] += samples[index] / audioBuffer.numberOfChannels;
+    if (numChannels > 1) {
+        const scale = 1 / numChannels;
+        for (let channel = 0; channel < numChannels; channel++) {
+            const samples = audioBuffer.getChannelData(channel);
+            for (let index = 0; index < sourceLength; index++) {
+                mono[index] += samples[index] * scale;
+            }
         }
     }
 
-    if (audioBuffer.sampleRate === targetRate) return mono;
+    if (audioBuffer.sampleRate === targetRate) return trimSilence(mono, targetRate);
 
     const targetLength = Math.max(
         1,
@@ -35,7 +78,7 @@ function resampleMono(
         output[index] = mono[left] * (1 - weight) + mono[right] * weight;
     }
 
-    return output;
+    return trimSilence(output, targetRate);
 }
 
 export class LocalAudioCapture {
@@ -102,7 +145,12 @@ export class LocalAudioCapture {
         if (this.cancelled) throw new Error("RECORDING_CANCELLED");
         if (blob.size === 0) throw new Error("EMPTY_RECORDING");
 
-        const audioContext = new AudioContext();
+        let audioContext: AudioContext;
+        try {
+            audioContext = new AudioContext({ sampleRate: WHISPER_SAMPLE_RATE });
+        } catch {
+            audioContext = new AudioContext();
+        }
         try {
             const decoded = await audioContext.decodeAudioData(
                 await blob.arrayBuffer(),

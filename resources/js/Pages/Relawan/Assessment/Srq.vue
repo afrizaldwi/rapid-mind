@@ -33,9 +33,9 @@
                     ></div>
                 </div>
 
-                <!-- Verbal / Non-Verbal Mode & Local Whisper STT -->
+                <!-- Verbal / Non-Verbal Mode & Dual-Mode STT -->
                 <div
-                    class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs"
+                    class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs"
                 >
                     <div class="flex items-center space-x-2">
                         <span class="font-semibold text-slate-600">Mode:</span>
@@ -59,9 +59,50 @@
                         </button>
                     </div>
 
-                    <div v-if="isVerbal" class="flex items-center gap-2">
+                    <div
+                        v-if="isVerbal"
+                        class="flex flex-wrap items-center gap-2"
+                    >
+                        <div
+                            role="group"
+                            aria-label="Pilihan mode STT"
+                            class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5"
+                        >
+                            <button
+                                type="button"
+                                data-stt-mode="offline"
+                                :aria-pressed="sttMode === 'offline'"
+                                :disabled="!draftReady || !!safety"
+                                @click="selectSttMode('offline')"
+                                class="px-2.5 py-1 rounded-md text-xs font-bold transition disabled:opacity-60"
+                                :class="
+                                    sttMode === 'offline'
+                                        ? 'bg-teal-700 text-white shadow-2xs'
+                                        : 'text-slate-700 hover:bg-slate-200'
+                                "
+                            >
+                                Offline
+                            </button>
+                            <button
+                                type="button"
+                                data-stt-mode="online"
+                                :aria-pressed="sttMode === 'online'"
+                                :disabled="!draftReady || !!safety"
+                                @click="selectSttMode('online')"
+                                class="px-2.5 py-1 rounded-md text-xs font-bold transition disabled:opacity-60"
+                                :class="
+                                    sttMode === 'online'
+                                        ? 'bg-teal-700 text-white shadow-2xs'
+                                        : 'text-slate-700 hover:bg-slate-200'
+                                "
+                            >
+                                Online
+                            </button>
+                        </div>
+
                         <button
                             type="button"
+                            data-stt-action
                             :disabled="sttButtonDisabled"
                             @click="handleSttAction"
                             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition border disabled:opacity-60"
@@ -81,6 +122,7 @@
                         <button
                             v-if="sttStatus === 'recording'"
                             type="button"
+                            data-stt-cancel
                             @click="cancelRecording"
                             class="px-3 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-100"
                         >
@@ -101,7 +143,7 @@
                             sttStatusLabel
                         }}</span>
                         <span
-                            v-if="sttBackend"
+                            v-if="sttMode === 'offline' && sttBackend"
                             class="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 font-bold text-teal-800"
                         >
                             Backend:
@@ -111,9 +153,56 @@
                                     : "WASM / CPU"
                             }}
                         </span>
+                        <span
+                            v-else-if="sttMode === 'online'"
+                            class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 font-bold text-amber-900"
+                        >
+                            Mode: Web Speech (id-ID)
+                        </span>
                     </div>
+
+                    <div
+                        v-if="onlineConsentRequired"
+                        data-stt-online-consent
+                        class="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 space-y-2"
+                    >
+                        <p class="font-bold text-amber-900">
+                            Pemberitahuan Privasi STT Online
+                        </p>
+                        <p class="leading-relaxed">
+                            Mode STT Online menggunakan <em>SpeechRecognition</em>
+                            bawaan browser yang dapat mengirim dan memproses suara
+                            melalui layanan server penyedia browser (tidak dijamin
+                            diproses secara privat di perangkat). Mode ini hanya
+                            diizinkan untuk pengujian lokal dengan suara dan data
+                            sintetis.
+                        </p>
+                        <div class="flex flex-wrap items-center gap-2 pt-1">
+                            <button
+                                type="button"
+                                data-stt-consent-accept
+                                @click="grantOnlineConsent"
+                                class="px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition"
+                            >
+                                Setuju & Aktifkan STT Online (Data Sintetis)
+                            </button>
+                            <button
+                                type="button"
+                                data-stt-consent-decline
+                                @click="declineOnlineConsent"
+                                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition"
+                            >
+                                Gunakan STT Offline
+                            </button>
+                        </div>
+                    </div>
+
                     <p
-                        v-if="sttStatus === 'preparing' && sttProgress !== null"
+                        v-if="
+                            sttMode === 'offline' &&
+                            sttStatus === 'preparing' &&
+                            sttProgress !== null
+                        "
                         class="mt-1"
                     >
                         Progres berkas model: {{ sttProgress }}%
@@ -128,6 +217,19 @@
                     >
                         {{ sttMessage }}
                     </p>
+                    <div
+                        v-if="sttMode === 'online' && sttFallbackSuggested"
+                        class="mt-2"
+                    >
+                        <button
+                            type="button"
+                            data-stt-fallback-offline
+                            @click="fallbackToOffline"
+                            class="px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-xs transition"
+                        >
+                            Beralih ke STT Offline
+                        </button>
+                    </div>
                     <p
                         v-if="sttInterpretationNotice"
                         class="mt-1 font-semibold text-amber-900"
@@ -135,19 +237,39 @@
                         {{ sttInterpretationNotice }}
                     </p>
                     <div
+                        v-if="interimTranscript"
+                        data-stt-interim
+                        class="mt-2 rounded-lg bg-amber-50/70 p-2 text-sm text-slate-800 border border-amber-200"
+                    >
+                        <span
+                            class="block text-[11px] font-bold uppercase tracking-wide text-amber-800"
+                            >Transkrip sementara (belum mengisi jawaban)</span
+                        >
+                        <p class="mt-1 italic">“{{ interimTranscript }}”</p>
+                    </div>
+                    <div
                         v-if="transcriptSnippet"
+                        data-stt-final
                         class="mt-2 rounded-lg bg-white p-2 text-sm text-slate-900 border border-slate-200"
                     >
                         <span
                             class="block text-[11px] font-bold uppercase tracking-wide text-slate-500"
-                            >Transkrip sementara</span
+                            >Transkrip final</span
                         >
                         <p class="mt-1">“{{ transcriptSnippet }}”</p>
                     </div>
                     <p class="mt-2 text-[11px] text-slate-500">
-                        Audio diproses di perangkat. Hanya pernyataan yang cocok
-                        dengan aman yang mengisi jawaban; koreksi manual selalu
-                        dipertahankan.
+                        <template v-if="sttMode === 'offline'">
+                            Audio diproses di perangkat. Hanya pernyataan yang
+                            cocok dengan aman yang mengisi jawaban; koreksi
+                            manual selalu dipertahankan.
+                        </template>
+                        <template v-else>
+                            Mode Online (khusus uji sintetis): suara dapat
+                            diproses layanan penyedia browser. Hanya hasil
+                            transkripsi final yang diperiksa aturan SRQ
+                            konservatif; koreksi manual selalu dipertahankan.
+                        </template>
                     </p>
                 </div>
             </div>
@@ -374,12 +496,31 @@ const scope = useClinicalTaskScope(() => {
 const { safety, safetyEvidence, answeredCount, setManualAnswer, confirmQ17, dismissSafety,
     applySpeechTranscript, reset } = useSrqResponses(answers, () => draftReady.value,
         persistDraft, () => cleanupStt());
-const { sttStatus, sttBackend, sttProgress, sttMessage, transcriptSnippet,
-    sttInterpretationNotice, sttButtonDisabled, sttButtonLabel, sttStatusLabel,
-    handleSttAction, cancelRecording, cleanupStt } = useSrqSpeech(
-        () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
-        text => { const notice = applySpeechTranscript(text); if (notice) sttInterpretationNotice.value = notice; },
-    );
+const {
+    sttMode,
+    onlineConsentRequired,
+    sttFallbackSuggested,
+    sttStatus,
+    sttBackend,
+    sttProgress,
+    sttMessage,
+    interimTranscript,
+    transcriptSnippet,
+    sttInterpretationNotice,
+    sttButtonDisabled,
+    sttButtonLabel,
+    sttStatusLabel,
+    selectSttMode,
+    grantOnlineConsent,
+    declineOnlineConsent,
+    fallbackToOffline,
+    handleSttAction,
+    cancelRecording,
+    cleanupStt,
+} = useSrqSpeech(
+    () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
+    text => { const notice = applySpeechTranscript(text); if (notice) sttInterpretationNotice.value = notice; },
+);
 function interruptAssessment() {
     cleanupStt();
     dismissSafety();

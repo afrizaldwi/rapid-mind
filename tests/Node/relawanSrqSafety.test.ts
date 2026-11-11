@@ -96,7 +96,7 @@ test("ordinary manual states survive later STT results, including explicit clear
     }
 });
 
-test("mounted response controls emit all four explicit states and expose selection", async () => {
+test("mounted response controls render three primary buttons and a secondary clear action preserving all four internal states", async () => {
     const component = (
         await import(
             await vueModuleUrl(
@@ -120,26 +120,42 @@ test("mounted response controls emit all four explicit states and expose selecti
         }),
     );
     try {
-        const buttons = fixture.nodes((node) => node.tag === "button");
-        assert.equal(buttons.length, 4);
+        const primaryButtons = () =>
+            fixture.nodes(
+                (node) => node.tag === "button" && "data-srq-option" in node,
+            );
+        const clearButtons = () =>
+            fixture.nodes(
+                (node) => node.tag === "button" && "data-srq-clear" in node,
+            );
+        assert.equal(primaryButtons().length, 3);
+        assert.equal(clearButtons().length, 0);
         for (const [index, value] of [
             true,
             false,
             "UNCLEAR",
-            "UNANSWERED",
         ].entries()) {
-            buttons[index].onClick();
+            primaryButtons()[index].onClick();
             await fixture.flush();
             assert.equal(answer.value, value);
-            assert.equal(buttons[index]["aria-pressed"], true);
+            assert.equal(primaryButtons()[index]["aria-pressed"], true);
             assert.equal(
-                fixture.nodes(
-                    (node) =>
-                        node.tag === "button" && node["aria-pressed"] === true,
-                ).length,
+                primaryButtons().filter((node) => node["aria-pressed"] === true)
+                    .length,
                 1,
             );
+            assert.equal(clearButtons().length, 1);
         }
+        clearButtons()[0].onClick();
+        await fixture.flush();
+        assert.equal(answer.value, "UNANSWERED");
+        assert.equal(
+            primaryButtons().filter((node) => node["aria-pressed"] === true)
+                .length,
+            0,
+        );
+        assert.equal(clearButtons().length, 0);
+        assert.match(fixture.text(), /Belum dijawab/);
         assert.deepEqual(emitted, [true, false, "UNCLEAR", "UNANSWERED"]);
     } finally {
         fixture.app.unmount();
@@ -231,4 +247,167 @@ test("clinical scope rejects old async work on lock, owner/path changes and disp
     const beforeUnmount = scope.capture();
     scope.dispose();
     assert.equal(beforeUnmount(), false);
+});
+
+test("dual-mode STT enforces Online privacy consent, ignores interim transcripts for SRQ answers, and reuses warm Offline worker", async () => {
+    const whisperClients: any[] = [];
+    const webSpeechClients: any[] = [];
+    (globalThis as any).__b31DualSpeech = {
+        supported: true,
+        whisperClients,
+        webSpeechClients,
+    };
+    const speechModule = await import(
+        await vueModuleUrl("resources/js/composables/useSrqSpeech.ts", {
+            "@/stt/audioCapture": moduleStub(`export class LocalAudioCapture {
+                start(){return Promise.resolve();}
+                stop(){return Promise.resolve(new Float32Array(1600));}
+                cancel(){}
+            }`),
+            "@/stt/whisperClient": moduleStub(`export class WhisperClient {
+                constructor(cb){this.callback=cb;globalThis.__b31DualSpeech.whisperClients.push(this);}
+                prepare(){}
+                transcribe(){}
+                cancel(){}
+                dispose(){this.disposed=true;}
+            }`),
+            "@/stt/webSpeechClient": moduleStub(`export function isWebSpeechSupported(){return globalThis.__b31DualSpeech.supported;}
+            export class WebSpeechClient {
+                constructor(cb){this.callback=cb;globalThis.__b31DualSpeech.webSpeechClients.push(this);}
+                start(){this.started=true;this.callback({type:'START'});}
+                stop(){this.stopped=true;}
+                abort(){this.aborted=true;}
+                dispose(){this.disposed=true;}
+            }`),
+        })
+    );
+    (globalThis as any).navigator ??= { onLine: true };
+    const answers = ref<any>({});
+    let state: any;
+    const responseState = responses.useSrqResponses(
+        answers,
+        () => true,
+        async () => {},
+        () => state?.cleanupStt(),
+    );
+    const fixture = mountFixture(
+        defineComponent({
+            setup() {
+                state = speechModule.useSrqSpeech(
+                    () => true,
+                    (text: string) => {
+                        const notice = responseState.applySpeechTranscript(text);
+                        if (notice) state.sttInterpretationNotice.value = notice;
+                    },
+                );
+                return () => h("div");
+            },
+        }),
+    );
+    try {
+        // 1. Default mode is Offline
+        assert.equal(state.sttMode.value, "offline");
+        state.handleSttAction();
+        assert.equal(whisperClients.length, 1);
+        whisperClients[0].callback({ type: "READY", backend: "webgpu" });
+        assert.equal(state.sttStatus.value, "ready");
+
+        // 2. Manual answer on Q2 is protected
+        responseState.setManualAnswer(2, false);
+        assert.equal(answers.value[2], false);
+
+        // 3. Switch to Online requires explicit privacy consent first
+        state.selectSttMode("online");
+        assert.equal(state.sttMode.value, "online");
+        assert.equal(state.onlineConsentRequired.value, true);
+        assert.equal(state.sttButtonDisabled.value, true);
+        state.handleSttAction();
+        assert.equal(
+            webSpeechClients.length,
+            0,
+            "cannot record in Online mode before explicit consent",
+        );
+
+        // 4. Declining consent returns to Offline and keeps prepared Whisper worker warm
+        state.declineOnlineConsent();
+        assert.equal(state.sttMode.value, "offline");
+        assert.equal(state.sttStatus.value, "ready");
+        assert.equal(whisperClients.length, 1);
+
+        // 5. Switch to Online and grant consent explicitly
+        state.selectSttMode("online");
+        state.grantOnlineConsent();
+        assert.equal(state.onlineConsentRequired.value, false);
+        assert.equal(state.onlineConsentGranted.value, true);
+        assert.equal(state.sttStatus.value, "ready");
+        assert.equal(
+            webSpeechClients.length,
+            0,
+            "granting consent does not auto-start microphone",
+        );
+
+        // 6. Start Online recognition; interim transcript NEVER mutates SRQ answers
+        state.handleSttAction();
+        assert.equal(webSpeechClients.length, 1);
+        assert.equal(state.sttStatus.value, "recording");
+        webSpeechClients[0].callback({
+            type: "INTERIM",
+            transcript: "Saya sering sakit kepala dan ingin mengakhiri hidup.",
+        });
+        assert.equal(
+            state.interimTranscript.value,
+            "Saya sering sakit kepala dan ingin mengakhiri hidup.",
+        );
+        assert.equal(answers.value[1], undefined);
+        assert.equal(responseState.safety.value, null);
+
+        // 7. Final transcript applies safe answers, preserves manual Q2, and gates Q17
+        webSpeechClients[0].callback({
+            type: "FINAL",
+            transcript:
+                "Saya sering sakit kepala. Nafsu makan saya buruk. Saya ingin mengakhiri hidup.",
+        });
+        webSpeechClients[0].callback({
+            type: "END",
+            hadFinal: true,
+            hadInterim: true,
+        });
+        assert.equal(state.interimTranscript.value, "");
+        assert.equal(answers.value[1], true);
+        assert.equal(
+            answers.value[2],
+            false,
+            "manual answer on Q2 must not be overwritten by Online STT",
+        );
+        assert.equal(
+            answers.value[17],
+            undefined,
+            "Q17 YES from Online STT must wait for human confirmation",
+        );
+        assert.equal(responseState.safety.value, "CONFIRM");
+        // Q17 safety interrupt cleaned up STT state and reset consent
+        assert.equal(state.sttMode.value, "offline");
+        assert.equal(state.onlineConsentGranted.value, false);
+    } finally {
+        fixture.app.unmount();
+        delete (globalThis as any).__b31DualSpeech;
+    }
+});
+
+test("trimSilence removes long leading/trailing silence while preserving leading speech margin", async () => {
+    const { trimSilence } = await import(
+        await vueModuleUrl("resources/js/stt/audioCapture.ts")
+    );
+    // 2 seconds of silence + 1 second of speech + 2 seconds of silence at 16 kHz
+    const totalSamples = 5 * 16_000;
+    const raw = new Float32Array(totalSamples);
+    for (let i = 2 * 16_000; i < 3 * 16_000; i++) {
+        raw[i] = 0.1;
+    }
+    const trimmed = trimSilence(raw, 16_000);
+    // Expected: 1.0s speech + 0.25s pre-margin + 0.25s post-margin = 1.5s (24,000 samples)
+    assert.ok(trimmed.length >= 23_000 && trimmed.length <= 25_000);
+    // Pure silence is capped at 0.5s (8,000 samples)
+    const silent = trimSilence(new Float32Array(48_000), 16_000);
+    assert.equal(silent.length, 8_000);
 });

@@ -31,4 +31,43 @@ final class LocalOfflineEnrollment
             && $owner > 0
             && $user->id === $owner;
     }
+
+    public static function resolvedOrigin(string $environment, string $applicationUrl, bool $optIn, Request $request, ?User $user, int $owner): ?string
+    {
+        if (self::allowed($environment, $applicationUrl, $optIn, $request, $user, $owner)) {
+            return self::ORIGIN;
+        }
+
+        if (
+            $environment !== 'local'
+            || ! $optIn
+            || $user === null
+            || ! $request->hasSession()
+            || $request->session()->get(ValidateWebSessionVersion::USER_ID) !== $user->id
+            || $request->session()->get(ValidateWebSessionVersion::VERSION) !== $user->token_version
+            || ! $user->is_active
+            || $user->role !== UserRole::RELAWAN
+            || $owner <= 0
+            || $user->id !== $owner
+        ) {
+            return null;
+        }
+
+        $originHeader = $request->header('Origin');
+        if (is_string($originHeader) && $originHeader !== '' && ! str_ends_with(strtolower($originHeader), '.example')) {
+            return $originHeader;
+        }
+
+        $forwardedProto = $request->header('X-Forwarded-Proto');
+        $forwardedHost = $request->header('X-Forwarded-Host') ?: $request->headers->get('host');
+        if (is_string($forwardedHost) && $forwardedHost !== '' && ! str_ends_with(strtolower($forwardedHost), '.example')) {
+            $scheme = ($forwardedProto === 'https' || $request->isSecure() || str_contains(strtolower($forwardedHost), 'ngrok'))
+                ? 'https'
+                : $request->getScheme();
+
+            return $scheme . '://' . $forwardedHost;
+        }
+
+        return null;
+    }
 }

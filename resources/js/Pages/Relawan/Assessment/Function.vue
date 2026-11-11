@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout>
+  <RelawanLayout @clinical-ready="loadFunctionContext">
     <div class="space-y-6 pb-64">
       <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
@@ -161,7 +161,8 @@ async function persistDraft() {
   }
 }
 
-onMounted(async () => {
+async function loadFunctionContext() {
+  draftWarning.value = '';
   try {
     const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
     localAssessment.value = context.assessment;
@@ -175,7 +176,9 @@ onMounted(async () => {
   } catch (error) {
     draftWarning.value = error instanceof Error ? error.message : 'Asesmen lokal tidak dapat dibaca.';
   }
-});
+}
+
+onMounted(() => { void loadFunctionContext(); });
 
 async function saveAndNext() {
   if (isSaving.value || !draftReady.value) return;

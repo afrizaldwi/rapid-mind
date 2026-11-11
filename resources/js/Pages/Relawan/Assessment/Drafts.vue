@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout>
+  <RelawanLayout @clinical-ready="loadDrafts">
     <div class="space-y-4">
       <header class="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
         <h1 class="text-xl font-extrabold text-slate-900">Asesmen Belum Selesai</h1>
@@ -42,7 +42,10 @@ const loading = ref(true);
 const readFailed = ref(false);
 const error = ref('');
 
-onMounted(async () => {
+async function loadDrafts() {
+  loading.value = true;
+  readFailed.value = false;
+  error.value = '';
   try {
     const loaded = await loadRelawanAssessmentDrafts(owner, props.inProgressAssessments);
     drafts.value = loaded.drafts;
@@ -53,7 +56,9 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(() => { void loadDrafts(); });
 
 function formatDate(value: string) {
   const date = new Date(value);

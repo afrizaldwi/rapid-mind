@@ -15,7 +15,7 @@ final class OfflineEnrollmentController extends Controller
     {
         $data = $request->validate(['owner_user_id' => ['required', 'integer', 'min:1']]);
         $user = $request->user('web');
-        $allowed = LocalOfflineEnrollment::allowed(
+        $origin = LocalOfflineEnrollment::resolvedOrigin(
             (string) app()->environment(),
             (string) config('app.url'),
             (bool) config('offline.local_enrollment', false),
@@ -24,11 +24,11 @@ final class OfflineEnrollmentController extends Controller
             (int) $data['owner_user_id'],
         );
 
-        return response()->json($allowed ? [
+        return response()->json($origin !== null ? [
             'state' => 'LOCAL_ENROLLMENT_ALLOWED',
-            'origin' => LocalOfflineEnrollment::ORIGIN,
+            'origin' => $origin,
             'user' => ['id' => $user->id, 'role' => 'RELAWAN'],
-        ] : ['state' => 'ENROLLMENT_DISABLED'], $allowed ? 200 : 403)
+        ] : ['state' => 'ENROLLMENT_DISABLED'], $origin !== null ? 200 : 403)
             ->header('Cache-Control', 'private, no-store');
     }
 }

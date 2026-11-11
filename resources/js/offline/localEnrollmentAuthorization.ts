@@ -57,9 +57,17 @@ export async function requestLocalEnrollmentAuthorization(
         const result = await response.json();
         const context = await db.relawanContinuity.get("active");
         assertClinicalAccess(ticket);
+        const expectedOrigin =
+            typeof window !== "undefined" && window.location?.origin
+                ? window.location.origin
+                : LOCAL_ENROLLMENT_ORIGIN;
+        const originMatches =
+            result.origin === expectedOrigin ||
+            (expectedOrigin !== LOCAL_ENROLLMENT_ORIGIN &&
+                result.origin === LOCAL_ENROLLMENT_ORIGIN);
         if (
             result.state !== "LOCAL_ENROLLMENT_ALLOWED" ||
-            result.origin !== LOCAL_ENROLLMENT_ORIGIN ||
+            !originMatches ||
             result.user?.id !== owner ||
             result.user?.role !== "RELAWAN" ||
             context?.owner_user_id !== owner ||

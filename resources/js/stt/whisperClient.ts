@@ -21,14 +21,7 @@ export class WhisperClient {
         worker.addEventListener(
             "message",
             (event: MessageEvent<WhisperWorkerEvent>) => {
-                if (event.data.type === "BACKEND_FALLBACK") {
-                    this.onEvent(event.data);
-                    worker.terminate();
-                    if (this.disposed) return;
-                    this.worker = this.createWorker();
-                    this.post({ type: "PREPARE", backend: "wasm" });
-                    return;
-                }
+                if (this.disposed || this.worker !== worker) return;
                 this.onEvent(event.data);
             },
         );
@@ -49,8 +42,18 @@ export class WhisperClient {
 
     transcribe(audio: Float32Array): void {
         if (this.disposed) return;
-        const message: WhisperWorkerRequest = { type: "TRANSCRIBE", audio };
+        const durationSeconds = Math.max(0.5, audio.length / 16_000);
+        const message: WhisperWorkerRequest = {
+            type: "TRANSCRIBE",
+            audio,
+            durationSeconds,
+        };
         this.worker.postMessage(message, [audio.buffer]);
+    }
+
+    cancel(): void {
+        if (this.disposed) return;
+        this.post({ type: "CANCEL" });
     }
 
     dispose(): void {

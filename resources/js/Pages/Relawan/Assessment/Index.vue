@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout>
+  <RelawanLayout @clinical-ready="onClinicalReady">
     <div class="space-y-6">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
@@ -177,12 +177,16 @@ const patients = computed(() => {
   return [...byId.values()];
 });
 async function refreshDrafts() {
+  localError.value = '';
   const loaded = await loadRelawanAssessmentDrafts(owner, props.inProgressAssessments);
   drafts.value = loaded.drafts;
   localPatients.value = loaded.patients;
   if (loaded.hydrationFailed) localError.value = 'Sebagian asesmen server belum dapat disalin ke perangkat ini.';
 }
-onMounted(() => { void refreshDrafts().catch(() => { localError.value = 'Daftar asesmen lokal belum dapat dibaca.'; }); });
+function onClinicalReady() {
+  void refreshDrafts().catch(() => { localError.value = 'Daftar asesmen lokal belum dapat dibaca.'; });
+}
+onMounted(() => { void refreshDrafts().catch(() => {}); });
 
 const loading = ref(false);
 const form = ref({
