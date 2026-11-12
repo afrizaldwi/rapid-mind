@@ -1,84 +1,83 @@
 <template>
   <RelawanLayout @clinical-ready="loadRiskContext">
-    <div class="space-y-6 pb-64">
-      <div class="bg-white rounded-xl p-5 shadow-xs border border-slate-200">
-        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
-          {{ isEn ? 'Part A: Risk Factors' : 'Bagian A: Faktor Risiko' }}
-        </span>
-        <h2 class="text-lg font-extrabold text-slate-900 mt-1">
-          {{ isEn ? 'Background Vulnerability Assessment' : 'Penilaian Kerentanan Latar Belakang' }}
-        </h2>
-        <p class="text-xs text-slate-500 mt-1">
-          {{ patient?.name }} • {{ isEn ? 'Select Yes or No for each condition based on observation or survivor account.' : 'Pilih Ya atau Tidak untuk setiap kondisi berdasarkan observasi atau cerita penyintas.' }}
-        </p>
-      </div>
+    <div class="flex-1 min-h-0 flex flex-col">
+      <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-4">
+        <div class="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
+            {{ isEn ? 'Part A: Risk Factors' : 'Bagian A: Faktor Risiko' }}
+          </span>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900 mt-1">
+            {{ isEn ? 'Background Vulnerability Assessment' : 'Penilaian Kerentanan Latar Belakang' }}
+          </h2>
+          <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+            {{ patient?.name }} • {{ isEn ? 'Select Yes or No for each condition based on observation or survivor account.' : 'Pilih Ya atau Tidak untuk setiap kondisi berdasarkan observasi atau cerita penyintas.' }}
+          </p>
+        </div>
 
-      <div class="space-y-3">
-        <div v-for="item in localizedRiskItems" :key="item.code" class="p-4 rounded-xl border-2 transition"
-          :class="risks[item.code] === true ? 'bg-amber-50/70 border-amber-500 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'">
-          <div class="space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-amber-900 uppercase">
-                {{ item.code }} • {{ item.category }}
-              </span>
-              <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                +{{ item.weight }} {{ isEn ? 'Points' : 'Poin' }}
-              </span>
-            </div>
-            <h3 class="text-sm font-bold text-slate-900 leading-snug">
-              {{ item.title }}
-            </h3>
-            <p class="text-xs text-slate-600 leading-relaxed">
-              {{ item.description }}
-            </p>
-            <div class="grid grid-cols-2 gap-3 mt-4">
-              <button type="button" :disabled="!draftReady" @click="setRiskAnswer(item.code, true)"
-                class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
-                :class="risks[item.code] === true
-                  ? 'border-amber-700 bg-amber-600 text-white shadow-md'
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
-                <span v-if="risks[item.code] === true">✓</span>
-                <span>{{ isEn ? 'YES' : 'YA' }}</span>
-              </button>
-              <button type="button" :disabled="!draftReady" @click="setRiskAnswer(item.code, false)"
-                class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
-                :class="risks[item.code] === false
-                  ? 'border-slate-700 bg-slate-700 text-white shadow-md'
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
-                <span v-if="risks[item.code] === false">✓</span>
-                <span>{{ isEn ? 'NO' : 'TIDAK' }}</span>
-              </button>
+        <div class="space-y-3">
+          <div v-for="item in localizedRiskItems" :key="item.code" class="p-4 sm:p-5 rounded-xl border-2 transition"
+            :class="risks[item.code] === true ? 'bg-amber-50/70 border-amber-500 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'">
+            <div class="space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold text-amber-900 uppercase">
+                  {{ item.code }} • {{ item.category }}
+                </span>
+                <span class="shrink-0 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  +{{ item.weight }} {{ isEn ? 'Points' : 'Poin' }}
+                </span>
+              </div>
+              <h3 class="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                {{ item.title }}
+              </h3>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                {{ item.description }}
+              </p>
+              <div class="grid grid-cols-2 gap-2.5 sm:gap-3 mt-3.5">
+                <button type="button" :disabled="!draftReady" @click="setRiskAnswer(item.code, true)"
+                  class="min-h-[48px] sm:min-h-[54px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
+                  :class="risks[item.code] === true
+                    ? 'border-amber-700 bg-amber-600 text-white shadow-md'
+                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
+                  <span v-if="risks[item.code] === true">✓</span>
+                  <span>{{ isEn ? 'YES' : 'YA' }}</span>
+                </button>
+                <button type="button" :disabled="!draftReady" @click="setRiskAnswer(item.code, false)"
+                  class="min-h-[48px] sm:min-h-[54px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
+                  :class="risks[item.code] === false
+                    ? 'border-slate-700 bg-slate-700 text-white shadow-md'
+                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
+                  <span v-if="risks[item.code] === false">✓</span>
+                  <span>{{ isEn ? 'NO' : 'TIDAK' }}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Current Risk Subtotal Indicator -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold">
+          <span class="text-slate-600">{{ isEn ? 'Risk Score Subtotal:' : 'Subtotal Skor Risiko:' }}</span>
+          <span class="text-sm text-amber-800 bg-amber-100 px-3 py-1 rounded-lg">
+            {{ riskScore }} / 8 {{ isEn ? 'Points' : 'Poin' }}
+          </span>
+        </div>
       </div>
 
-      <!-- Current Risk Subtotal Indicator -->
-      <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold">
-        <span class="text-slate-600">{{ isEn ? 'Risk Score Subtotal:' : 'Subtotal Skor Risiko:' }}</span>
-        <span class="text-sm text-amber-800 bg-amber-100 px-3 py-1 rounded-lg">
-          {{ riskScore }} / 8 {{ isEn ? 'Points' : 'Poin' }}
-        </span>
-      </div>
-
-      <!-- Sticky Bottom Navigation Bar -->
+      <!-- Bottom Assessment Action Bar -->
       <div data-assessment-action-bar
-        class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto">
-        <div class="flex items-center justify-between space-x-3">
+        class="shrink-0 bg-white border-t border-slate-200 px-3.5 sm:px-4 py-2 sm:py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-4px_16px_rgba(15,23,42,0.06)] z-30">
+        <div class="flex items-center justify-between gap-2.5 sm:gap-3">
           <RelawanLink :href="`/relawan/assessment/${assessment.id}/srq`"
-            class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">
+            class="shrink-0 min-h-[44px] flex items-center justify-center py-2.5 px-3.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">
             ← {{ isEn ? 'Back' : 'Kembali' }}
           </RelawanLink>
           <button type="button" @click="saveAndNext" :disabled="isSaving || !draftReady || answeredCount !== 5"
-            class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60 cursor-pointer">
-            {{ isEn ? 'Next: Daily Function →' : 'Lanjut: Fungsi Harian →' }}
+            class="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-xs sm:text-sm shadow-md transition disabled:opacity-60 cursor-pointer">
+            {{ isEn ? `Next: Daily Function (${answeredCount}/5) →` : `Lanjut: Fungsi Harian (${answeredCount}/5) →` }}
           </button>
         </div>
-        <p v-if="answeredCount !== 5" class="mt-2 text-xs text-slate-600">
-          {{ isEn ? `Complete all answers before proceeding (${answeredCount}/5).` : `Lengkapi semua jawaban sebelum melanjutkan (${answeredCount}/5).` }}
-        </p>
-        <p v-if="draftWarning" role="alert" class="mt-2 text-xs font-semibold text-amber-900">{{ draftWarning }}</p>
-        <p v-if="saveError" role="alert" class="mt-2 text-xs font-semibold text-red-800">{{ saveError }}</p>
+        <p v-if="draftWarning" role="alert" class="mt-1.5 text-xs font-semibold text-amber-900">{{ draftWarning }}</p>
+        <p v-if="saveError" role="alert" class="mt-1.5 text-xs font-semibold text-red-800">{{ saveError }}</p>
       </div>
     </div>
   </RelawanLayout>

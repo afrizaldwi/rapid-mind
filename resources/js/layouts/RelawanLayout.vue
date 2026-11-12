@@ -1,5 +1,5 @@
 <template>
-    <OfflineReadinessNotice />
+    <OfflineReadinessNotice v-if="loggedOutLocally || checkingContinuity || ownerStorageMode === 'CHECKING' || (currentOwner && !clinicalViewAvailable)" />
     <div
         v-if="loggedOutLocally || checkingContinuity"
         class="min-h-screen bg-slate-100 p-6 text-slate-900"
@@ -62,29 +62,29 @@
         v-else-if="clinicalViewAvailable"
         ref="clinicalViewRoot"
         :key="clinicalViewKey"
-        class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
-        :class="isFocusedAssessment ? 'pb-0' : 'pb-20'"
+        class="h-dvh overflow-hidden bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
     >
+        <OfflineReadinessNotice />
         <!-- Top Application Bar -->
         <header
-            class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-2 shadow-xs"
+            class="shrink-0 z-30 bg-white border-b border-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-1.5 sm:gap-2 shadow-xs"
         >
-            <div class="flex min-w-0 flex-1 items-center space-x-3">
+            <div class="flex min-w-0 flex-1 items-center space-x-2 sm:space-x-3">
                 <img
                     src="/logo.png?v=3"
                     alt="RAPID-MIND Logo"
-                    class="w-8 h-8 object-contain shrink-0"
+                    class="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
                 />
                 <div class="min-w-0">
                     <p
-                        class="truncate text-sm text-slate-700 font-semibold leading-tight"
+                        class="truncate text-xs sm:text-sm text-slate-700 font-semibold leading-tight"
                     >
                         {{ user?.shelter?.name || (isEn ? "Volunteer Shelter" : "Posko Relawan") }}
                     </p>
                 </div>
             </div>
 
-            <div class="flex shrink-0 items-center space-x-2">
+            <div class="flex shrink-0 items-center space-x-1 sm:space-x-2">
                 <LanguageSwitcher compact />
                 <StatusIndicator
                     :kind="status.kind.value"
@@ -96,7 +96,7 @@
                     @click="logout"
                     :title="isEn ? 'Volunteer Logout' : 'Logout Relawan'"
                     :aria-label="isEn ? 'Volunteer Logout' : 'Logout Relawan'"
-                    class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                    class="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                 >
                     <LogOut class="w-4 h-4" />
                 </button>
@@ -104,7 +104,10 @@
         </header>
 
         <!-- Main Content Area -->
-        <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
+        <main
+            class="flex-1 min-h-0 max-w-lg w-full mx-auto"
+            :class="hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'overflow-y-auto px-3.5 py-4 pb-20 lg:pb-6 sm:p-6'"
+        >
             <OfflineEncryptionGate
                 v-if="
                     isolatedEncryptionFixture() &&
@@ -118,14 +121,16 @@
             <p
                 v-if="logoutError"
                 role="alert"
-                class="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900"
+                class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900"
+                :class="hasAssessmentActionBar ? 'mx-3.5 mt-3 sm:mx-6 shrink-0' : 'mb-4'"
             >
                 {{ logoutError }}
             </p>
             <section
                 v-if="recoveryMessage"
                 role="status"
-                class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+                class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+                :class="hasAssessmentActionBar ? 'mx-3.5 mt-3 sm:mx-6 shrink-0' : 'mb-4'"
             >
                 <p class="font-bold">{{ recoveryMessage.title }}</p>
                 <p class="mt-1">{{ recoveryMessage.detail }}</p>
@@ -156,6 +161,7 @@
         <!-- Persistent Floating Red Flag Button -->
         <T0Button
             :focused="isFocusedAssessment"
+            :has-bottom-nav="!isFocusedAssessment"
             @trigger="openEmergencyModal"
         />
 
@@ -188,7 +194,7 @@
         <!-- Bottom Navigation Bar (4 items) -->
         <nav
             v-if="!isFocusedAssessment"
-            class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-md mx-auto sm:max-w-lg"
+            class="shrink-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-lg w-full mx-auto pb-[env(safe-area-inset-bottom)]"
         >
             <div class="grid grid-cols-4 h-16">
                 <RelawanLink
@@ -496,6 +502,11 @@ const isFocusedAssessment = computed(
         /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(
             runtime.path.split("?")[0],
         ),
+);
+const hasAssessmentActionBar = computed(() =>
+    /^\/relawan\/assessment\/[^/]+\/(srq|risk|function|review)\/?$/.test(
+        runtime.path.split("?")[0],
+    ),
 );
 const recoveryMessage = computed(() => {
     if (runtime.mode === "ONLINE_SERVER") {

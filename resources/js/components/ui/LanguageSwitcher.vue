@@ -17,8 +17,8 @@
             @click="setLocale('id')"
             title="Bahasa Indonesia"
         >
-            <span aria-hidden="true" class="text-xs">🇮🇩</span>
-            <span :class="compact ? 'inline' : 'inline'">ID</span>
+            <span v-if="!compact" aria-hidden="true" class="text-xs">🇮🇩</span>
+            <span>ID</span>
         </button>
         <span class="text-slate-300 mx-0.5" aria-hidden="true">|</span>
         <button
@@ -33,8 +33,8 @@
             @click="setLocale('en')"
             title="English"
         >
-            <span aria-hidden="true" class="text-xs">🇬🇧</span>
-            <span :class="compact ? 'inline' : 'inline'">EN</span>
+            <span v-if="!compact" aria-hidden="true" class="text-xs">🇬🇧</span>
+            <span>EN</span>
         </button>
     </div>
 </template>

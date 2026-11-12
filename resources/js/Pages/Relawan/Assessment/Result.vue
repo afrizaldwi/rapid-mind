@@ -43,13 +43,13 @@
                 <!-- Score Breakdown Cards -->
                 <div
                     v-if="triageResult"
-                    class="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 text-center"
+                    class="grid grid-cols-4 gap-1.5 sm:gap-2 pt-3 border-t border-slate-100 text-center"
                 >
                     <div
-                        class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80"
+                        class="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-slate-500 uppercase block"
+                            class="text-[10px] font-bold text-slate-500 uppercase block truncate"
                             >SRQ-20</span
                         >
                         <span class="text-base font-extrabold text-slate-900">{{
@@ -59,10 +59,10 @@
                     </div>
 
                     <div
-                        class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80"
+                        class="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-slate-500 uppercase block"
+                            class="text-[10px] font-bold text-slate-500 uppercase block truncate"
                             >{{ isEn ? "Risk" : "Risiko" }}</span
                         >
                         <span class="text-base font-extrabold text-amber-800">{{
@@ -72,10 +72,10 @@
                     </div>
 
                     <div
-                        class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80"
+                        class="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-slate-500 uppercase block"
+                            class="text-[10px] font-bold text-slate-500 uppercase block truncate"
                             >{{ isEn ? "Function" : "Fungsi" }}</span
                         >
                         <span class="text-base font-extrabold text-teal-800">{{
@@ -85,10 +85,10 @@
                     </div>
 
                     <div
-                        class="p-2.5 rounded-xl bg-teal-50 border border-teal-200"
+                        class="p-2 sm:p-2.5 rounded-xl bg-teal-50 border border-teal-200 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-teal-800 uppercase block"
+                            class="text-[10px] font-bold text-teal-800 uppercase block truncate"
                             >Total</span
                         >
                         <span class="text-base font-bold text-teal-950">{{
