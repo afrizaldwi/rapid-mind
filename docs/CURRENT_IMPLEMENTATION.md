@@ -530,3 +530,17 @@ Documentation and checkpoint references:
 The most relevant source entry points are `routes/web.php`,
 `resources/js/layouts/`, `resources/js/Pages/`, `app/Http/Controllers/`,
 `app/Domain/Healthcare/`, `app/Models/`, `app/Enums/`, and `tests/`.
+
+
+## Adendum 13 November 2026: unlock UX dan bantuan darurat
+
+Passphrase menjadi metode utama; recovery menjadi pilihan sekunder pada gate yang sudah ada. Tombol Bantuan Darurat membuka panduan dan status jaringan perangkat tanpa DEK atau akses ke repository klinis. Pemilik mengonfirmasi belum ada kontak terverifikasi: UI menampilkan kondisi kosong tanpa nomor/tel fiktif. Tidak ada pelaporan T0 baru saat terkunci; desain online tanpa DEK dan outbox offline tanpa DEK tidak diimplementasikan. Enrollment, enkripsi dan invalidasi hidden/pagehide/reload/logout/owner tetap sama.
+
+Bukti baru: 55 tes Node, TypeScript/build dan11 skenario browser sintetis PASS; bukan uji Laravel live atau native mobile background. Aset kandidat belum dipublikasikan. Bukti historis di atas tidak ditimpa atau dianggap uji ulang. Lihat [laporan dan batas verifikasi](checkpoints/offline-unlock-emergency-assistance-2026-11-13.md).
+
+
+## Later owner correction, 13 November 2026: operation-specific unlock
+
+This decision supersedes the earlier same-day global-gate UX. Server-authenticated Home/PFA and a new assessment form render without a clinical DEK; saving the encrypted draft requests unlock explicitly. An authorized persisted server emergency projection is readable without local decryption. Existing local clinical workspaces retain an inline operation gate while app navigation remains available. Offline LOCKED shows a limited shell and independent assistance; opening local data requires a user action. No plaintext clinical outbox, automatic unlock, cryptographic migration, data reset or ciphertext deletion was added. AES-GCM, ownership, session/key invalidation and stale-generation fences remain.
+
+Final evidence:47 focused Node tests, TypeScript/build PASS;15 published Chrome–Laravel scenarios PASS, including actual asset-byte verification, login dashboard without passphrase, PFA/back, draft-save unlock and encrypted offline T0/sync. Current localhost app asset is assets/app-C76lqTlK.js, manifest f2ee7d9b6d0eaf4523a8016d10c2f14cd602db6d1197cd663e98e48681d7c9f4. Native mobile/background acceptance is still not established. See [checkpoint, source baseline, files, fixtures and limits](checkpoints/operation-specific-clinical-unlock-2026-11-13.md). Historical evidence above is preserved.

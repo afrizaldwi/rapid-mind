@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout @clinical-ready="onClinicalReady">
+  <RelawanLayout :clinical-access-requested="needsClinicalKey" @clinical-ready="onClinicalReady">
     <div class="space-y-6">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
@@ -151,11 +151,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Mic, UserRound } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
+import { clinicalKeyReady, clinicalKeyVersion } from '@/offline/encryptedClinicalStorage';
 import { relawanOwner, startLocalAssessment } from '@/offline/assessmentWorkflow';
 import { loadRelawanAssessmentDrafts, type AssessmentDraft } from '@/composables/relawanAssessmentDrafts';
 import type { LocalPatient } from '@/offline/db';
@@ -168,6 +169,7 @@ const props = defineProps<{
   inProgressAssessments?: ServerAssessment[];
   patients?: Array<{ id: string; name: string; nik?: string; age?: number; gender?: string; shelter_id?: number; created_by?: number }>;
 }>();
+const needsClinicalKey = ref(false);
 const runtime = useRelawanRuntime();
 const owner = relawanOwner();
 const shelterId = runtime.shelterId;
@@ -186,8 +188,11 @@ const patients = computed(() => {
   return [...byId.values()];
 });
 async function refreshDrafts() {
+  if (!clinicalKeyReady(owner)) { drafts.value = []; localPatients.value = []; return; }
   rawLocalError.value = '';
+  const generation = clinicalKeyVersion();
   const loaded = await loadRelawanAssessmentDrafts(owner, props.inProgressAssessments);
+  if (generation !== clinicalKeyVersion() || !clinicalKeyReady(owner)) return;
   drafts.value = loaded.drafts;
   localPatients.value = loaded.patients;
   if (loaded.hydrationFailed) {
@@ -198,6 +203,7 @@ async function refreshDrafts() {
   }
 }
 function onClinicalReady() {
+  needsClinicalKey.value = false;
   void refreshDrafts().catch(() => {
     rawLocalError.value = {
       id: 'Daftar asesmen lokal belum dapat dibaca.',
@@ -217,7 +223,12 @@ const form = ref({
   mode: 'VERBAL',
 });
 
+watch(clinicalKeyVersion, () => {
+  if (!clinicalKeyReady(owner)) { drafts.value = []; localPatients.value = []; form.value = { patient_id: '', name: '', nik: '', age: undefined, gender: 'Perempuan', mode: 'VERBAL' }; }
+}, { flush: 'sync' });
+
 async function startNew() {
+  if (!clinicalKeyReady(owner)) { needsClinicalKey.value = true; return; }
   if (loading.value) return;
   loading.value = true;
   rawLocalError.value = '';

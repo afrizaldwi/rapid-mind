@@ -80,7 +80,7 @@ for (const state of ["FRESH", "ENROLLMENT_PENDING", "ENCRYPTED_LOCKED", "LEGACY_
             view = await mountGate(f);
             assert.equal(view.unlocked.value, 0);
             assert.deepEqual(snapshot(f), before);
-            assert.match(view.text(), /Kunci data klinis offline/);
+            assert.match(view.text(), /Buka data klinis/);
             assert.ok(view.text().includes("Panduan darurat"));
             view.app.unmount();
             view = await mountGate(f);
@@ -152,4 +152,27 @@ test("normal gate preserves pending key when server denies recovery confirmation
         assert.deepEqual(snapshot(f), before);
         assert.equal((await f.db.ownerEncryptionModes.get(owner)).mode, "ENROLLMENT_PENDING");
     } finally { view?.app.unmount(); f.cleanup(); delete (globalThis as any).__p0Gate; }
+});
+
+
+test("recovery stays secondary and switching methods clears the entered secret", async (t) => {
+    const f = await setup(t);
+    try {
+        await f.enrollment.beginClinicalEnrollment(owner, passphrase, passphrase);
+        await f.enrollment.confirmClinicalRecovery(owner);
+        f.storage.lockAllClinicalKeys();
+        const view = await mountGate(f);
+        t.after(() => view.app.unmount());
+        assert.equal(view.nodes((n: any) => n.tag === "select").length, 0);
+        const before = snapshot(f);
+        const input = view.nodes((n: any) => n.tag === "input")[0];
+        input.value = "secret not to carry to recovery";
+        input.listeners.input({ target: input });
+        const recovery = view.nodes((n: any) => n.tag === "button" && view.text(n).includes("Lupa frasa sandi"))[0];
+        recovery.onClick(); await view.flush();
+        assert.match(view.text(), /Gunakan frasa sandi/);
+        assert.equal(view.nodes((n: any) => n.tag === "input")[0].value, "");
+        assert.deepEqual(snapshot(f), before);
+        assert.equal(view.unlocked.value, 0);
+    } finally { f.cleanup(); delete (globalThis as any).__p0Gate; }
 });

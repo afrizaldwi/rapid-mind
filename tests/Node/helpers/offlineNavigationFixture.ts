@@ -86,6 +86,7 @@ export async function offlineNavigationFixture(t: any) {
         ),
         "@/offline/relawanContinuity": bind("continuity", [
             "resolveRelawanContinuity",
+            "lockRelawanContinuity",
         ]),
         "@/offline/clinicalAccessFence": bind("fence", [
             "captureClinicalAccess",

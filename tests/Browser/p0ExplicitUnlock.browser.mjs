@@ -69,7 +69,15 @@ async function waitFor(expression, timeout = 20000) {
     }
     throw new Error(`Condition timed out during ${phase}`);
 }
-async function textIncludes(text) { await waitFor(`document.body.innerText.includes(${JSON.stringify(text)})`); }
+async function textIncludes(text) {
+    if (text === "Buka data" || text === "Daftarkan kunci") {
+        await waitFor("(()=>{if(document.querySelector('input[type=password]'))return true;const b=[...document.querySelectorAll('button')].find(b=>['Buka data offline / lanjutkan pekerjaan','T0 DARURAT'].includes(b.textContent.trim()));if(b)b.click();return false;})()");
+    }
+    if (text.startsWith('Pendaftaran enkripsi') || text.startsWith('Penyimpanan lama')) {
+        await waitFor(`(()=>{if(document.body.innerText.includes(${JSON.stringify(text)}))return true;if(!document.querySelector('#offline-key-title')){const b=[...document.querySelectorAll('button')].find(b=>['T0 DARURAT','Buka data offline / lanjutkan pekerjaan'].includes(b.textContent.trim()));if(b)b.click();}return false;})()`);
+    }
+    await waitFor(`document.body.innerText.includes(${JSON.stringify(text)})`);
+    if (text === "Buka data" || text === "Daftarkan kunci") await waitFor("!!document.querySelector('input[type=password]')"); }
 async function navigate(path) {
     await cdp.call("Page.navigate", { url: origin + path });
     await waitFor(`document.readyState === 'complete' && !!document.querySelector('#offline-key-title, main, #offline-state')`);
@@ -145,6 +153,10 @@ try {
     await openBrowser("explicit-owner");
     report.browserVersion = (await cdp.call("Browser.getVersion")).product;
     await navigate("/relawan/home");
+    await waitFor("!!document.querySelector('main') && !document.querySelector('#offline-key-title')");
+    assert.equal(await cdp.evaluate("!!document.querySelector('input[type=password]')"), false);
+    await click("Bantuan Darurat"); await textIncludes("Kontak bantuan terverifikasi belum tersedia"); await click("Bantuan Darurat");
+    await click("T0 DARURAT");
     await textIncludes("Daftarkan kunci");
     await waitFor("navigator.serviceWorker.controller?.state === 'activated'");
     let saved = await storage();
@@ -184,6 +196,20 @@ try {
     server.state.offline = true;
     await cdp.call("Page.reload"); await textIncludes("Buka data");
     saved = await storage();
+    await cdp.call("Emulation.setDeviceMetricsOverride", {width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await cdp.evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Bantuan Darurat').focus()");
+    await cdp.call("Input.dispatchKeyEvent", {type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
+    await cdp.call("Input.dispatchKeyEvent", {type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
+    await textIncludes("Kontak bantuan terverifikasi belum tersedia");
+    assert.equal(await cdp.evaluate("document.documentElement.scrollWidth <= innerWidth"), true);
+    assert.equal(await cdp.evaluate("document.activeElement.getAttribute('aria-expanded')"), 'true');
+    assert.ok(await cdp.evaluate("document.activeElement.getBoundingClientRect().height >= 44"));
+    await screenshot("02a-locked-assistance-mobile");
+    await cdp.call("Emulation.setDeviceMetricsOverride", {width:1280,height:900,deviceScaleFactor:1,mobile:false});
+    assert.equal(await cdp.evaluate("document.querySelectorAll('a[href^=\"tel:\"]').length"), 0);
+    assert.equal(await cdp.evaluate(`document.body.textContent.includes(${JSON.stringify(patientName)})`), false);
+    assert.deepEqual(clinical(await storage()), clinical(saved));
+    await click("Bantuan Darurat");
     await unlock("passphrase salah sintetis"); await textIncludes("Frasa sandi atau kode pemulihan salah");
     assert.equal(await cdp.evaluate(`document.body.textContent.includes(${JSON.stringify(patientName)})`), false);
     assert.deepEqual(clinical(await storage()), clinical(saved));
@@ -215,7 +241,7 @@ try {
     assert.equal((await assessmentEvidence()).answer, false);
     pass("offline-reload-explicit-unlock", "Offline shell retained saved answer; reload stayed locked until passphrase input.");
     await cdp.call("Page.reload"); await textIncludes("Buka data");
-    await cdp.evaluate(`(() => { const s = document.querySelector('select'); s.value = 'recovery'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await click("Lupa frasa sandi / Gunakan kode pemulihan");
     await cdp.evaluate(`(() => { const input = document.querySelector('input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(pendingRecovery)}); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     await click("Buka data"); await textIncludes(patientName);
     pass("offline-recovery-unlock", "Explicit saved recovery code opens same key offline.");
@@ -270,7 +296,7 @@ try {
     report.status = "PASS";
 } catch (error) {
     report.status = "FAIL";
-    report.failure = { phase, kind: error.name, message: "Scenario failed; no secret-bearing exception or DOM was recorded." };
+    report.failure = { phase, kind: error.name, location: String(error.stack).split("\n").filter(line => line.trim().startsWith("at ")).slice(0, 2), message: "Scenario failed; no secret-bearing exception or DOM was recorded." };
     if (cdp) {
         report.failure.dom = await cdp.evaluate(`({title: document.title, headings: [...document.querySelectorAll('h1,h2')].map(e=>e.textContent.trim()), buttons: [...document.querySelectorAll('button')].map(e=>e.textContent.trim()), inputTypes: [...document.querySelectorAll('input')].map(e=>e.type), alerts: [...document.querySelectorAll('[role="alert"]')].map(e=>e.textContent.trim())})`).catch(() => null);
         if (!await cdp.evaluate("!!document.querySelector('output')").catch(() => true)) await screenshot("failure").catch(() => {});

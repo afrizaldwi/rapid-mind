@@ -106,7 +106,12 @@ async function waitFor(expression, timeout = 20000) {
     }
     throw new Error(`Condition timed out during ${phase}`);
 }
-async function textIncludes(text) { await waitFor(`document.body.innerText.includes(${JSON.stringify(text)})`); }
+async function textIncludes(text) {
+    if (text === "Buka data" || text === "Daftarkan kunci") {
+        await waitFor("(()=>{if(document.querySelector('input[type=password]'))return true;const b=[...document.querySelectorAll('button')].find(b=>['Buka data offline / lanjutkan pekerjaan','T0 DARURAT'].includes(b.textContent.trim()));if(b)b.click();return false;})()");
+    }
+    await waitFor(`document.body.innerText.includes(${JSON.stringify(text)})`);
+    if (text === "Buka data" || text === "Daftarkan kunci") await waitFor("!!document.querySelector('input[type=password]')"); }
 async function navigate(path) {
     await cdp.call("Page.navigate", { url: origin + path });
     await waitFor(`document.readyState === 'complete' && !!document.querySelector('#offline-key-title, main, #offline-state')`);
@@ -213,10 +218,26 @@ echo json_encode(['id'=>$u->id,'database'=>'rapid_mind']);`);
     await waitFor("!!document.querySelector('#email')");
     await fillSelector("#email", email); await fillSelector("#password", password);
     await cdp.evaluate("document.querySelector('form').requestSubmit()");
-    await textIncludes("Daftarkan kunci");
+    await waitFor("!!document.querySelector('main') && !document.querySelector('#offline-key-title')");
+    assert.equal(await cdp.evaluate("!!document.querySelector('input[type=password]')"), false);
+    await click("Bantuan Darurat"); await textIncludes("Kontak bantuan terverifikasi belum tersedia"); await click("Bantuan Darurat");
+    await cdp.evaluate("document.querySelector('main a[href=\"/relawan/pfa\"]').click()");
+    await waitFor("location.pathname==='/relawan/pfa' && !!document.querySelector('main')");
+    assert.equal(await cdp.evaluate("!!document.querySelector('#offline-key-title')"), false);
+    await cdp.evaluate("document.querySelector('a[href=\"/relawan/home\"]').click()");
+    await waitFor("location.pathname==='/relawan/home' && !!document.querySelector('main a[href=\"/relawan/pfa\"]')");
+    pass("online-dashboard-and-navigation-with-locked-dek", "Real login renders dashboard, assistance and PFA/back navigation with no passphrase or key creation.");
+    await screenshot("00-dashboard-locked");
+    await navigate("/relawan/assessment"); await textIncludes("Mulai Asesmen Baru");
+    assert.equal(await cdp.evaluate("!!document.querySelector('#offline-key-title')"), false);
+    await fillSelector('input[type="text"]','P0-LOCKED-FORM-SYNTHETIC');
+    await fillSelector('input[type="number"]','29');
+    await click("Mulai Asesmen →"); await textIncludes("Daftarkan kunci");
+    pass("new-assessment-unlock-at-draft-save", "Assessment form opens locked; explicit draft creation asks for key before writing clinical data.");
     await waitFor("(async()=> (await navigator.serviceWorker.getRegistration('/relawan/'))?.active?.state === 'activated')()");
     if (!await cdp.evaluate("!!navigator.serviceWorker.controller")) {
         await cdp.call("Page.reload");
+        await waitFor("!!document.querySelector('main')"); await click("T0 DARURAT");
         await textIncludes("Daftarkan kunci");
     }
     await waitFor("navigator.serviceWorker.controller?.state === 'activated'");
@@ -233,6 +254,7 @@ echo json_encode(['id'=>$u->id,'database'=>'rapid_mind']);`);
     assert.equal(pending.ownerEncryptionModes[0].mode,"ENROLLMENT_PENDING");
     const proof = pending.offlineKeys[0].verification;
     await click("Saya sudah menyimpan kode");
+    await navigate("/relawan/home");
     await waitFor(`!!document.querySelector('main a[href="/relawan/pfa"]') && !document.querySelector('#offline-key-title')`);
     pass("real-authorized-explicit-enrollment", "Laravel reverified identity at registration and recovery confirmation; explicit confirmation installs fresh key.");
     phase = "offline UI creation";

@@ -1,15 +1,15 @@
 <template>
     <section
-        class="mx-auto mt-16 max-w-md rounded-xl bg-white p-6 text-slate-900 shadow"
+        class="mx-auto my-6 w-full max-w-md rounded-xl bg-white p-6 text-slate-900 shadow-sm"
         aria-labelledby="offline-key-title"
     >
         <h1 id="offline-key-title" class="text-lg font-bold">
-            {{ isEn ? "Offline clinical data key" : "Kunci data klinis offline" }}
+            {{ isEn ? "Open clinical data" : "Buka data klinis" }}
         </h1>
         <p class="mt-2 text-sm text-slate-700">
             {{
                 hasKey
-                    ? (isEn ? "Enter passphrase or recovery code to unlock this account's data." : "Masukkan frasa sandi atau kode pemulihan untuk membuka data akun ini.")
+                    ? (isEn ? "Patient data is encrypted. Enter your offline passphrase to continue." : "Data pasien terlindungi enkripsi. Masukkan frasa sandi offline untuk melanjutkan.")
                     : (isEn ? "Enroll key only after Volunteer session is verified through the server." : "Daftarkan kunci hanya setelah sesi Relawan terverifikasi melalui server.")
             }}
         </p>
@@ -22,16 +22,6 @@
             class="mt-4 space-y-3"
             @submit.prevent="submit"
         >
-            <label v-if="hasKey && !pendingEnrollment" class="block text-sm font-medium">
-                {{ isEn ? "Unlock method" : "Metode pembukaan" }}
-                <select
-                    v-model="purpose"
-                    class="mt-1 w-full rounded border p-2"
-                >
-                    <option value="passphrase">{{ isEn ? "Passphrase" : "Frasa sandi" }}</option>
-                    <option value="recovery">{{ isEn ? "Recovery code" : "Kode pemulihan" }}</option>
-                </select>
-            </label>
             <label class="block text-sm font-medium">
                 {{
                     hasKey && purpose === "recovery"
@@ -42,7 +32,7 @@
                     v-model="secret"
                     :type="purpose === 'recovery' ? 'text' : 'password'"
                     autocomplete="off"
-                    class="mt-1 w-full rounded border p-2"
+                    class="mt-1 min-h-11 w-full rounded-lg border border-slate-400 p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                     required
                 />
             </label>
@@ -52,7 +42,7 @@
                     v-model="confirmation"
                     type="password"
                     autocomplete="off"
-                    class="mt-1 w-full rounded border p-2"
+                    class="mt-1 min-h-11 w-full rounded-lg border border-slate-400 p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                     required
                 />
             </label>
@@ -69,7 +59,7 @@
             <button
                 :disabled="busy"
                 type="submit"
-                class="rounded bg-teal-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                class="min-h-11 w-full rounded-lg bg-teal-700 px-4 py-2 font-semibold text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-50"
             >
                 {{
                     busy
@@ -80,6 +70,13 @@
                           ? (isEn ? "Unlock data" : "Buka data")
                           : (isEn ? "Register key" : "Daftarkan kunci")
                 }}
+            </button>
+            <button v-if="hasKey && !pendingEnrollment" type="button"
+                class="min-h-11 text-left text-sm font-semibold text-teal-800 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                :disabled="busy" :aria-pressed="purpose === 'recovery'" @click="switchPurpose">
+                {{ purpose === 'passphrase'
+                    ? (isEn ? 'Forgot passphrase / Use recovery code' : 'Lupa frasa sandi / Gunakan kode pemulihan')
+                    : (isEn ? 'Use passphrase' : 'Gunakan frasa sandi') }}
             </button>
         </form>
         <div v-else class="mt-4 space-y-3">
@@ -167,6 +164,11 @@ const purpose = ref<"passphrase" | "recovery">("passphrase");
 const secret = ref("");
 const confirmation = ref("");
 const recoveryCode = ref("");
+function switchPurpose() {
+    secret.value = "";
+    rawError.value = "";
+    purpose.value = purpose.value === "passphrase" ? "recovery" : "passphrase";
+}
 async function load() {
     const operation = generation;
     const owner = props.owner;

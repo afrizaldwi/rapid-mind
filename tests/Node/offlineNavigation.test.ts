@@ -169,7 +169,8 @@ for (const event of ["pagehide", "hidden", "storage", "protocol"]) {
         await settle();
         await mounted.flush();
         assert.equal(n.view.value.status, "LOCKED");
-        assert.match(mounted.text(), /OFFLINE LOCKED/);
+        assert.match(mounted.text(), /Mode terbatas/);
+        assert.doesNotMatch(mounted.text(), /OFFLINE LOCKED/);
         assert.doesNotMatch(mounted.text(), /STALE CLINICAL CONTENT/);
         if (event === "pagehide") {
             n.stop();

@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="id" class="scroll-smooth">
+<html lang="id" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RAPID-MIND — Master Design System & Interactive Experience Showcase</title>
+  <title>RAPID-MIND — Real System Interface & Workspaces</title>
   
   <!-- Inter Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS CDN with Full RAPID-MIND Config -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -49,14 +49,19 @@
   <style>
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: #F8FAFC;
-      color: #0F172A;
       -webkit-font-smoothing: antialiased;
     }
     .tabular-nums {
       font-variant-numeric: tabular-nums;
     }
-    /* Custom scrollbars */
+    /* Mobile frame styling */
+    .phone-mockup-frame {
+      width: 390px;
+      height: 844px;
+      border-radius: 44px;
+      box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35), 0 0 0 12px #0F172A;
+    }
+    /* Clean custom scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -71,1297 +76,1164 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #94A3B8;
     }
-    /* Mobile frame mockup */
-    .mobile-frame {
-      width: 390px;
-      height: 844px;
-      border-radius: 40px;
-      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 12px #0F172A;
-    }
-    @keyframes pulse-subtle {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
-    }
-    .animate-pulse-subtle {
-      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
   </style>
 </head>
-<body class="bg-slate-50 text-brand-ink antialiased">
+<body class="h-full bg-slate-900 text-brand-ink flex flex-col font-sans select-none overflow-hidden">
 
-  <!-- ========================================== -->
-  <!-- TOP GLOBAL STICKY NAVBAR                   -->
-  <!-- ========================================== -->
-  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-xs">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      
-      <!-- Logo & System Title -->
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-brand-teal flex items-center justify-center text-white shadow-xs">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14"/>
-          </svg>
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <span class="font-bold text-lg tracking-tight text-brand-ink">RAPID-MIND</span>
-            <span class="text-[10px] font-semibold bg-brand-teal/10 text-brand-teal px-2 py-0.5 rounded-full border border-brand-teal/20" data-i18n="badge_design_system">DESIGN SYSTEM</span>
-          </div>
-          <p class="text-xs text-brand-slate" data-i18n="app_tagline">Operational Humanitarian UI • Decision Support System</p>
-        </div>
+  <!-- ========================================================================= -->
+  <!-- 0. TOP SYSTEM CONTROL BAR (ROLE & VIEW SWITCHER)                          -->
+  <!-- ========================================================================= -->
+  <aside class="shrink-0 bg-slate-950 text-white border-b border-slate-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 z-50 shadow-md">
+    <!-- Brand Title & Active Role Indicator -->
+    <div class="flex items-center space-x-3">
+      <div class="w-7 h-7 rounded-lg bg-teal-700 flex items-center justify-center font-black text-sm text-white tracking-tighter">
+        RM
       </div>
-
-      <!-- Quick Nav Links -->
-      <nav class="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-medium">
-        <a href="#tokens" class="px-2.5 py-1.5 rounded-md text-brand-slate hover:text-brand-ink hover:bg-slate-100 transition" data-i18n="nav_tokens">Tokens & Warna</a>
-        <a href="#components" class="px-2.5 py-1.5 rounded-md text-brand-slate hover:text-brand-ink hover:bg-slate-100 transition" data-i18n="nav_components">Komponen UI</a>
-        <a href="#relawan-view" class="px-2.5 py-1.5 rounded-md text-brand-slate hover:text-brand-ink hover:bg-slate-100 transition" data-i18n="nav_relawan">Relawan (PWA)</a>
-        <a href="#healthcare-view" class="px-2.5 py-1.5 rounded-md text-brand-slate hover:text-brand-ink hover:bg-slate-100 transition" data-i18n="nav_healthcare">Healthcare</a>
-        <a href="#admin-view" class="px-2.5 py-1.5 rounded-md text-brand-slate hover:text-brand-ink hover:bg-slate-100 transition" data-i18n="nav_admin">Admin</a>
-        <a href="#safety-flow" class="px-2.5 py-1.5 rounded-md text-brand-slate hover:text-brand-ink hover:bg-slate-100 transition" data-i18n="nav_flow">Alur Keselamatan</a>
-      </nav>
-
-      <!-- Language Switcher & Source Badge -->
-      <div class="flex items-center space-x-3">
-        <!-- Interactive ID | EN Language Switcher -->
-        <div class="inline-flex p-0.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold" role="group" aria-label="Language selector">
-          <button id="lang-id-btn" type="button" onclick="setLanguage('id')" class="px-2.5 py-1 rounded-md transition duration-150 bg-brand-teal text-white shadow-xs">
-            🇮🇩 ID
-          </button>
-          <button id="lang-en-btn" type="button" onclick="setLanguage('en')" class="px-2.5 py-1 rounded-md transition duration-150 text-brand-slate hover:text-brand-ink">
-            🇬🇧 EN
-          </button>
-        </div>
-
-        <a href="#tokens" class="hidden sm:inline-flex items-center text-xs font-semibold text-brand-teal bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-md hover:bg-teal-100 transition">
-          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-          <span data-i18n="btn_inspect">Prinsip Desain</span>
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- ========================================== -->
-  <!-- HERO BANNER                                -->
-  <!-- ========================================== -->
-  <section class="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <div class="max-w-3xl">
-        <div class="inline-flex items-center space-x-2 text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-brand-ink border border-slate-200 mb-4">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span data-i18n="hero_status">Dokumentasi & Desain Sistem Terintegrasi RAPID-MIND</span>
-        </div>
-        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-brand-ink leading-tight mb-4" data-i18n="hero_title">
-          Satu Sistem Desain, Tiga Pengalaman Kerja Spesifik
-        </h1>
-        <p class="text-base sm:text-lg text-brand-slate leading-relaxed mb-6" data-i18n="hero_desc">
-          RAPID-MIND menerapkan <strong>Operational Humanitarian UI</strong>: antarmuka yang tenang secara default, kontras tinggi di lapangan, mengutamakan aksi di atas dekorasi, dan mengkhususkan warna merah murni hanya untuk kegawatdaruratan klinis (T0 Emergency).
-        </p>
-
-        <!-- Role Badges Matrix -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-lg bg-teal-50 text-brand-teal flex items-center justify-center font-bold text-sm">R</div>
-            <div>
-              <h4 class="text-sm font-bold text-brand-ink" data-i18n="role_relawan_title">RELAWAN</h4>
-              <p class="text-xs text-brand-slate" data-i18n="role_relawan_sub">PWA Mobile • Skrining Lapangan</p>
-            </div>
-          </div>
-          <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-lg bg-red-50 text-triage-t0 flex items-center justify-center font-bold text-sm">H</div>
-            <div>
-              <h4 class="text-sm font-bold text-brand-ink" data-i18n="role_healthcare_title">HEALTHCARE</h4>
-              <p class="text-xs text-brand-slate" data-i18n="role_healthcare_sub">Desktop • Verifikasi T0 & Validasi</p>
-            </div>
-          </div>
-          <div class="p-3.5 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-lg bg-slate-100 text-brand-ink flex items-center justify-center font-bold text-sm">A</div>
-            <div>
-              <h4 class="text-sm font-bold text-brand-ink" data-i18n="role_admin_title">ADMIN</h4>
-              <p class="text-xs text-brand-slate" data-i18n="role_admin_sub">Desktop • Pemantauan Makro Regional</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================================== -->
-  <!-- SECTION 1: VISUAL FOUNDATION & TOKENS      -->
-  <!-- ========================================== -->
-  <section id="tokens" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-slate-200">
-    <div class="mb-8">
-      <span class="text-xs font-bold uppercase tracking-wider text-brand-teal" data-i18n="sec1_tag">Fondasi Visual</span>
-      <h2 class="text-2xl font-bold text-brand-ink" data-i18n="sec1_title">1. Palet Warna & Tipografi</h2>
-      <p class="text-sm text-brand-slate mt-1" data-i18n="sec1_desc">Sistem palet 5 warna inti dan palet semantik triase (T0–T3) sesuai spesifikasi RAPID_MIND_VISUAL_FOUNDATION.md.</p>
-    </div>
-
-    <!-- Core 5 Colors -->
-    <div class="mb-10">
-      <h3 class="text-base font-bold text-brand-ink mb-4 flex items-center space-x-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-brand-ink"></span>
-        <span data-i18n="core_palette_title">Palet Warna Inti (5 Warna Utama)</span>
-      </h3>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        
-        <!-- Ink -->
-        <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs">
-          <div class="h-20 rounded-lg bg-[#0F172A] mb-3 flex items-end p-2 text-white font-mono text-xs font-semibold shadow-inner">
-            #0F172A
-          </div>
-          <div class="font-bold text-sm text-brand-ink">Ink</div>
-          <div class="text-[11px] text-brand-slate font-mono">color-ink</div>
-          <p class="text-xs text-slate-500 mt-2" data-i18n="color_ink_usage">Teks utama, judul, navigasi struktural desktop.</p>
-        </div>
-
-        <!-- Teal -->
-        <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs">
-          <div class="h-20 rounded-lg bg-[#0F766E] mb-3 flex items-end p-2 text-white font-mono text-xs font-semibold shadow-inner">
-            #0F766E
-          </div>
-          <div class="font-bold text-sm text-brand-ink">Teal</div>
-          <div class="text-[11px] text-brand-slate font-mono">color-primary</div>
-          <p class="text-xs text-slate-500 mt-2" data-i18n="color_teal_usage">Aksi utama, tombol CTA, tautan, navigasi aktif.</p>
-        </div>
-
-        <!-- Slate -->
-        <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs">
-          <div class="h-20 rounded-lg bg-[#64748B] mb-3 flex items-end p-2 text-white font-mono text-xs font-semibold shadow-inner">
-            #64748B
-          </div>
-          <div class="font-bold text-sm text-brand-ink">Slate</div>
-          <div class="text-[11px] text-brand-slate font-mono">color-muted</div>
-          <p class="text-xs text-slate-500 mt-2" data-i18n="color_slate_usage">Teks sekunder, metadata, status aman offline.</p>
-        </div>
-
-        <!-- Soft Gray -->
-        <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs">
-          <div class="h-20 rounded-lg bg-[#F1F5F9] border border-slate-200 mb-3 flex items-end p-2 text-brand-ink font-mono text-xs font-semibold shadow-inner">
-            #F1F5F9
-          </div>
-          <div class="font-bold text-sm text-brand-ink">Soft Gray</div>
-          <div class="text-[11px] text-brand-slate font-mono">color-canvas</div>
-          <p class="text-xs text-slate-500 mt-2" data-i18n="color_softgray_usage">Latar belakang aplikasi, grup panel konten.</p>
-        </div>
-
-        <!-- White -->
-        <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs">
-          <div class="h-20 rounded-lg bg-[#FFFFFF] border border-slate-200 mb-3 flex items-end p-2 text-brand-ink font-mono text-xs font-semibold shadow-inner">
-            #FFFFFF
-          </div>
-          <div class="font-bold text-sm text-brand-ink">White</div>
-          <div class="text-[11px] text-brand-slate font-mono">color-surface</div>
-          <p class="text-xs text-slate-500 mt-2" data-i18n="color_white_usage">Kartu pertanyaan, panel asesmen, data form.</p>
-        </div>
-
-      </div>
-      
-      <!-- Balance Notice -->
-      <div class="mt-4 p-3 bg-slate-100 border border-slate-200 rounded-lg text-xs text-brand-slate flex items-center justify-between">
-        <span data-i18n="palette_balance"><strong>Proporsi Tampilan:</strong> 70–80% White/Soft Gray • 15–20% Ink/Slate • 5–10% Teal (Interaksi & CTA)</span>
-        <span class="text-brand-teal font-semibold">Strict Rule</span>
-      </div>
-    </div>
-
-    <!-- Triage Semantic Palette -->
-    <div class="mb-10">
-      <h3 class="text-base font-bold text-brand-ink mb-4 flex items-center space-x-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-triage-t0"></span>
-        <span data-i18n="triage_palette_title">Palet Semantik Triase (Pengecualian Klinis T0–T3)</span>
-      </h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <!-- T0 -->
-        <div class="bg-white rounded-xl border-2 border-red-300 p-4 shadow-sm bg-gradient-to-b from-red-50/30 to-white">
-          <div class="flex items-center justify-between mb-2">
-            <span class="px-2 py-0.5 rounded text-xs font-extrabold bg-red-800 text-white font-mono">T0 DARURAT</span>
-            <span class="font-mono text-xs font-bold text-red-900">#991B1B</span>
-          </div>
-          <div class="h-10 rounded bg-[#991B1B] text-white flex items-center justify-center font-bold text-xs mb-3 shadow-xs">
-            Critical Emergency (T0)
-          </div>
-          <p class="text-xs text-slate-600" data-i18n="t0_desc">
-            Kedaruratan psikiatri / risiko tinggi bunuh diri. Dilindungi khusus; tidak boleh digunakan untuk tombol biasa.
-          </p>
-        </div>
-
-        <!-- T1 -->
-        <div class="bg-white rounded-xl border border-orange-200 p-4 shadow-xs">
-          <div class="flex items-center justify-between mb-2">
-            <span class="px-2 py-0.5 rounded text-xs font-bold bg-orange-700 text-white font-mono">T1 TINGGI</span>
-            <span class="font-mono text-xs font-bold text-orange-900">#C2410C</span>
-          </div>
-          <div class="h-10 rounded bg-[#C2410C] text-white flex items-center justify-center font-bold text-xs mb-3 shadow-xs">
-            High Risk (T1)
-          </div>
-          <p class="text-xs text-slate-600" data-i18n="t1_desc">
-            Gejala klinis berat memerlukan rujukan segera dan intervensi tenaga medis spesialis.
-          </p>
-        </div>
-
-        <!-- T2 -->
-        <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-xs">
-          <div class="flex items-center justify-between mb-2">
-            <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-700 text-white font-mono">T2 SEDANG</span>
-            <span class="font-mono text-xs font-bold text-amber-900">#A16207</span>
-          </div>
-          <div class="h-10 rounded bg-[#A16207] text-white flex items-center justify-center font-bold text-xs mb-3 shadow-xs">
-            Moderate Risk (T2)
-          </div>
-          <p class="text-xs text-slate-600" data-i18n="t2_desc">
-            Distres sedang yang membutuhkan pendampingan terstruktur dan pemantauan berkala.
-          </p>
-        </div>
-
-        <!-- T3 -->
-        <div class="bg-white rounded-xl border border-emerald-200 p-4 shadow-xs">
-          <div class="flex items-center justify-between mb-2">
-            <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-700 text-white font-mono">T3 RENDAH</span>
-            <span class="font-mono text-xs font-bold text-emerald-900">#15803D</span>
-          </div>
-          <div class="h-10 rounded bg-[#15803D] text-white flex items-center justify-center font-bold text-xs mb-3 shadow-xs">
-            Low Risk (T3)
-          </div>
-          <p class="text-xs text-slate-600" data-i18n="t3_desc">
-            Kondisi adaptif/ringan; didukung dengan Psychological First Aid (PFA) oleh relawan.
-          </p>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Typography Scale -->
-    <div>
-      <h3 class="text-base font-bold text-brand-ink mb-4 flex items-center space-x-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-brand-slate"></span>
-        <span data-i18n="typography_title">Hierarki Tipografi (Inter Variable)</span>
-      </h3>
-      <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-xs">
-        
-        <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div class="w-48 text-xs font-mono text-brand-slate">Display (32px / 40px)</div>
-          <div class="text-3xl font-extrabold text-brand-ink tracking-tight flex-1" data-i18n="sample_display">
-            Pusat Komando Siaga Jiwa Sleman
-          </div>
-          <div class="text-xs text-slate-400 font-mono">font-extrabold</div>
-        </div>
-
-        <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div class="w-48 text-xs font-mono text-brand-slate">H1 (28px / 36px)</div>
-          <div class="text-2xl font-bold text-brand-ink tracking-tight flex-1" data-i18n="sample_h1">
-            Skrining Psikologis SRQ-20
-          </div>
-          <div class="text-xs text-slate-400 font-mono">font-bold</div>
-        </div>
-
-        <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div class="w-48 text-xs font-mono text-brand-slate">Assessment Q (20px / 30px)</div>
-          <div class="text-xl font-bold text-brand-ink flex-1" data-i18n="sample_q">
-            Apakah Anda sering menderita sakit kepala atau pusing berulang?
-          </div>
-          <div class="text-xs text-brand-teal font-semibold">Standard Lapangan</div>
-        </div>
-
-        <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div class="w-48 text-xs font-mono text-brand-slate">Body (16px / 24px)</div>
-          <div class="text-base text-slate-700 flex-1" data-i18n="sample_body">
-            Gunakan panduan relawan untuk membangun rasa aman dan mendengarkan penyintas dengan empati.
-          </div>
-          <div class="text-xs text-slate-400 font-mono">font-normal</div>
-        </div>
-
-        <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div class="w-48 text-xs font-mono text-brand-slate">Compact / Meta (14px / 20px)</div>
-          <div class="text-sm text-slate-600 flex-1 tabular-nums" data-i18n="sample_compact">
-            NIK: 3404018274910002 • Posko Candi • Skor SRQ: 14/20 (Ya)
-          </div>
-          <div class="text-xs text-brand-teal font-mono">tabular-nums</div>
-        </div>
-
-        <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div class="w-48 text-xs font-mono text-brand-slate">Caption (12px / 16px)</div>
-          <div class="text-xs text-slate-400 flex-1 tabular-nums" data-i18n="sample_caption">
-            Terakhir disinkronkan 12 Nov 2026, 19:42 WIB • Enkripsi AES-256-GCM Aktif
-          </div>
-          <div class="text-xs text-slate-400 font-mono">font-normal</div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================================== -->
-  <!-- SECTION 2: INTERACTIVE UI COMPONENT LIBRARY-->
-  <!-- ========================================== -->
-  <section id="components" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-slate-200">
-    <div class="mb-8">
-      <span class="text-xs font-bold uppercase tracking-wider text-brand-teal" data-i18n="sec2_tag">Komponen UI Inti</span>
-      <h2 class="text-2xl font-bold text-brand-ink" data-i18n="sec2_title">2. Katalog Komponen & Kontrol Interaktif</h2>
-      <p class="text-sm text-brand-slate mt-1" data-i18n="sec2_desc">Semua elemen dasar yang digunakan pada halaman Asesmen, Workspace Healthcare, dan Command Center Admin.</p>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      
-      <!-- Component Card A: Buttons & Actions -->
-      <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-        <h3 class="text-base font-bold text-brand-ink mb-1" data-i18n="comp_btn_title">Tombol & Kontrol Aksi</h3>
-        <p class="text-xs text-brand-slate mb-4" data-i18n="comp_btn_desc">Hierarki tombol aksi sistem: Utama (Teal), Sekunder (Garis), Bahaya/Darurat (Merah T0).</p>
-        
-        <div class="space-y-4">
-          <!-- Primary CTA -->
-          <div class="flex flex-wrap items-center gap-3">
-            <button type="button" class="bg-brand-teal hover:bg-brand-teal-hover active:scale-98 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-xs transition duration-150 inline-flex items-center space-x-2">
-              <span data-i18n="btn_primary_sample">Lanjut: Faktor Risiko (16/20) →</span>
-            </button>
-            <span class="text-xs font-mono text-brand-slate">Primary CTA (Teal)</span>
-          </div>
-
-          <!-- Secondary Outlined -->
-          <div class="flex flex-wrap items-center gap-3">
-            <button type="button" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 active:scale-98 text-sm font-semibold px-4 py-2.5 rounded-lg transition duration-150 inline-flex items-center space-x-2">
-              <span data-i18n="btn_secondary_sample">← Kembali ke Identitas</span>
-            </button>
-            <span class="text-xs font-mono text-brand-slate">Secondary Outlined</span>
-          </div>
-
-          <!-- T0 Floating Emergency Pill -->
-          <div class="flex flex-wrap items-center gap-3 pt-2">
-            <button type="button" onclick="triggerT0ModalDemo()" class="flex items-center space-x-2 bg-red-800 hover:bg-red-900 active:scale-95 text-white px-4 py-2 rounded-full shadow-lg border border-red-700 font-bold tracking-wide transition duration-150 min-h-[42px] cursor-pointer">
-              <svg class="w-4 h-4 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-              <span data-i18n="btn_t0_emergency">T0 DARURAT</span>
-            </button>
-            <span class="text-xs font-mono text-red-800 font-semibold" data-i18n="t0_pill_note">Floating Emergency Pill (Clean, No BG)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Component Card B: System Status Indicators -->
-      <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-        <h3 class="text-base font-bold text-brand-ink mb-1" data-i18n="comp_status_title">Status Operasional & Sinkronisasi</h3>
-        <p class="text-xs text-brand-slate mb-4" data-i18n="comp_status_desc">Status operasional tanpa menciptakan variasi warna pelangi yang membingungkan.</p>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <!-- Synced -->
-          <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-lg flex items-center space-x-2 text-brand-teal font-medium">
-            <span class="w-2 h-2 rounded-full bg-brand-teal"></span>
-            <span data-i18n="status_synced">✓ Tersinkron ke Server</span>
-          </div>
-          <!-- Syncing -->
-          <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-lg flex items-center space-x-2 text-brand-teal font-medium">
-            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span data-i18n="status_syncing">↻ Menyinkronkan 3 data...</span>
-          </div>
-          <!-- Offline Safe -->
-          <div class="p-3 bg-slate-100 border border-slate-200 rounded-lg flex items-center space-x-2 text-slate-700 font-medium">
-            <span class="w-2 h-2 rounded-full bg-slate-500"></span>
-            <span data-i18n="status_offline">● Tersimpan lokal (Offline)</span>
-          </div>
-          <!-- Storage Encrypted -->
-          <div class="p-3 bg-slate-100 border border-slate-200 rounded-lg flex items-center space-x-2 text-slate-700 font-medium">
-            <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            <span data-i18n="status_encrypted">Terenkripsi AES-256-GCM</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Component Card C: 4-State SRQ Assessment Controls -->
-      <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs lg:col-span-2">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
-          <div>
-            <h3 class="text-base font-bold text-brand-ink flex items-center space-x-2">
-              <span>Kontrol Respons 4-Keadaan SRQ-20 (Interaktif)</span>
-              <span class="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">P2 Safety Rule</span>
-            </h3>
-            <p class="text-xs text-brand-slate" data-i18n="srq_ctrl_desc">Jawaban tidak jelas atau belum terjawab dilarang dipaksa (coerce) menjadi TIDAK atau 0.</p>
-          </div>
-          <div class="text-xs font-mono bg-slate-100 px-3 py-1 rounded-md text-slate-700">
-            Nilai Aktif: <span id="interactive-srq-val" class="font-bold text-brand-teal">UNANSWERED</span>
-          </div>
-        </div>
-
-        <!-- Simulated Question Card -->
-        <div class="mt-4 p-4 sm:p-6 bg-slate-50/70 border border-slate-200 rounded-xl">
-          <div class="flex items-center space-x-2 mb-2">
-            <span class="text-xs font-bold text-brand-teal bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">#01</span>
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="q_badge">PERTANYAAN</span>
-          </div>
-          <h4 class="text-lg sm:text-xl font-bold text-brand-ink mb-4" data-i18n="srq_demo_q">
-            Apakah Anda sering menderita sakit kepala, rasa berat di kepala, atau pusing berulang?
-          </h4>
-
-          <!-- The 3 Primary Buttons -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-            <button id="srq-btn-yes" type="button" onclick="selectSrqState('YES')" class="py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-white border-slate-200 text-brand-ink hover:border-brand-teal hover:bg-teal-50/50">
-              <span data-i18n="srq_btn_yes">Ya</span>
-            </button>
-            <button id="srq-btn-no" type="button" onclick="selectSrqState('NO')" class="py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-white border-slate-200 text-brand-ink hover:border-brand-teal hover:bg-teal-50/50">
-              <span data-i18n="srq_btn_no">Tidak</span>
-            </button>
-            <button id="srq-btn-unclear" type="button" onclick="selectSrqState('UNCLEAR')" class="py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-white border-slate-200 text-brand-ink hover:border-brand-teal hover:bg-teal-50/50">
-              <span data-i18n="srq_btn_unclear">Respons Tidak Jelas</span>
-            </button>
-          </div>
-
-          <!-- Secondary Clear Action -->
-          <div class="flex items-center justify-between pt-2">
-            <span id="srq-status-text" class="text-xs text-brand-slate italic" data-i18n="srq_unrecorded">Belum tercatat</span>
-            <button type="button" onclick="selectSrqState('UNANSWERED')" class="text-xs font-semibold text-slate-500 hover:text-red-700 underline transition" data-i18n="srq_clear_btn">
-              Bersihkan jawaban
-            </button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ========================================== -->
-  <!-- SECTION 3: ROLE 1 — RELAWAN PWA (MOBILE)   -->
-  <!-- ========================================== -->
-  <section id="relawan-view" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-slate-200">
-    <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-teal" data-i18n="role1_tag">Pengalaman Relawan</span>
-        <h2 class="text-2xl font-bold text-brand-ink" data-i18n="role1_title">3. Tampilan Frontline Relawan (Mobile PWA)</h2>
-        <p class="text-sm text-brand-slate mt-1" data-i18n="role1_desc">Antarmuka lapangan untuk relawan penilai di posko pengungsian: ringkas, mudah dibaca di bawah sinar matahari, dan tahan offline.</p>
-      </div>
-
-      <!-- Viewport Simulation Toggle -->
-      <div class="flex items-center space-x-2 bg-white p-1 rounded-lg border border-slate-200 shadow-xs text-xs font-semibold">
-        <button id="view-mobile-frame-btn" onclick="toggleRelawanFrame(true)" class="px-3 py-1.5 rounded-md bg-brand-teal text-white shadow-xs">
-          📱 Mobile 390px
-        </button>
-        <button id="view-wide-frame-btn" onclick="toggleRelawanFrame(false)" class="px-3 py-1.5 rounded-md text-brand-slate hover:text-brand-ink">
-          💻 Flat View
-        </button>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-extrabold tracking-tight text-white">RAPID-MIND</span>
+          <span class="text-[10px] bg-slate-800 text-teal-400 font-mono px-1.5 py-0.2 rounded border border-slate-700">REAL SYSTEM SIMULATOR</span>
+        </div>
+        <p class="text-[10px] text-slate-400 hidden sm:block" data-i18n="top_bar_subtitle">Satu Aplikasi, Tiga Ruang Kerja Spesifik (Relawan • Healthcare • Admin)</p>
       </div>
     </div>
 
-    <!-- Phone Mockup Frame Container -->
-    <div class="flex justify-center items-center py-6">
-      <div id="relawan-container" class="mobile-frame bg-slate-50 border-4 border-slate-900 relative overflow-hidden flex flex-col transition-all duration-300">
+    <!-- Real Page Destination Switcher Tabs -->
+    <div class="flex items-center space-x-1 overflow-x-auto text-xs py-0.5">
+      <!-- 1. Relawan Group -->
+      <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800">
+        <button id="nav-btn-relawan-home" type="button" onclick="switchPage('relawan-home')" class="px-2.5 py-1 rounded-md font-semibold transition bg-teal-700 text-white shadow-xs">
+          📱 <span data-i18n="nav_relawan_home">Relawan: Beranda</span>
+        </button>
+        <button id="nav-btn-relawan-srq" type="button" onclick="switchPage('relawan-srq')" class="px-2.5 py-1 rounded-md font-semibold transition text-slate-300 hover:text-white">
+          📝 <span data-i18n="nav_relawan_srq">Asesmen SRQ-20</span>
+        </button>
+        <button id="nav-btn-relawan-result" type="button" onclick="switchPage('relawan-result')" class="px-2.5 py-1 rounded-md font-semibold transition text-slate-300 hover:text-white">
+          📊 <span data-i18n="nav_relawan_result">Hasil Triase</span>
+        </button>
+      </div>
+
+      <!-- 2. Healthcare -->
+      <button id="nav-btn-healthcare" type="button" onclick="switchPage('healthcare-emergencies')" class="px-2.5 py-1 rounded-lg font-semibold transition text-slate-300 hover:text-white border border-slate-800 hover:bg-slate-900">
+        🏥 <span data-i18n="nav_healthcare">Healthcare: Kedaruratan</span>
+      </button>
+
+      <!-- 3. Admin -->
+      <button id="nav-btn-admin" type="button" onclick="switchPage('admin-summary')" class="px-2.5 py-1 rounded-lg font-semibold transition text-slate-300 hover:text-white border border-slate-800 hover:bg-slate-900">
+        🏛️ <span data-i18n="nav_admin">Admin: Pusat Komando</span>
+      </button>
+
+      <!-- 4. Login Screen -->
+      <button id="nav-btn-login" type="button" onclick="switchPage('auth-login')" class="px-2 py-1 rounded-lg font-semibold transition text-slate-400 hover:text-white">
+        🔐 <span data-i18n="nav_login">Login</span>
+      </button>
+    </div>
+
+    <!-- Right Controls: Viewport frame toggle & Language Switcher -->
+    <div class="flex items-center space-x-2">
+      <!-- Frame Toggle for Relawan Views -->
+      <div id="relawan-frame-toggle-wrap" class="hidden sm:inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-[11px] font-semibold">
+        <button id="frame-phone-btn" type="button" onclick="setRelawanFrame(true)" class="px-2 py-0.5 rounded bg-teal-800 text-white font-bold" title="Tampilan Frame Smartphone">
+          390px
+        </button>
+        <button id="frame-wide-btn" type="button" onclick="setRelawanFrame(false)" class="px-2 py-0.5 rounded text-slate-400 hover:text-white" title="Tampilan Lebar Responsif">
+          Wide
+        </button>
+      </div>
+
+      <!-- Live Bilingual Switcher (ID | EN) -->
+      <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs font-bold">
+        <button id="lang-btn-id" type="button" onclick="setLanguage('id')" class="px-2 py-0.5 rounded bg-teal-700 text-white shadow-xs">
+          🇮🇩 ID
+        </button>
+        <button id="lang-btn-en" type="button" onclick="setLanguage('en')" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">
+          🇬🇧 EN
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN WORKSPACE VIEWS CONTAINER                                            -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 min-h-0 bg-slate-100 relative overflow-hidden flex flex-col">
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 1: RELAWAN HOME (/relawan/home)                                  -->
+    <!-- ===================================================================== -->
+    <section id="view-relawan-home" class="view-panel h-full w-full flex flex-col items-center justify-start overflow-hidden py-0 sm:py-4">
+      <div id="relawan-home-frame" class="phone-mockup-frame bg-slate-100 flex flex-col overflow-hidden relative border-4 border-slate-900 transition-all duration-200">
         
-        <!-- Mobile Status Bar (Simulated) -->
-        <div class="h-6 bg-white px-6 flex items-center justify-between text-[11px] font-semibold text-slate-800 shrink-0">
-          <span>09:41</span>
-          <div class="flex items-center space-x-1.5">
-            <span>5G</span>
-            <span>100%</span>
-          </div>
-        </div>
-
-        <!-- 1. Relawan Slim Top Header -->
-        <header class="bg-white border-b border-slate-200 px-3.5 py-2.5 flex items-center justify-between shrink-0 shadow-xs z-30">
-          <div class="flex items-center space-x-2">
-            <div class="w-7 h-7 rounded-lg bg-brand-teal flex items-center justify-center text-white">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>
+        <!-- PWA Top Mobile Bar -->
+        <header class="shrink-0 z-30 bg-white border-b border-slate-200 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-xs">
+          <div class="flex min-w-0 flex-1 items-center space-x-2">
+            <div class="w-7 h-7 rounded-lg bg-teal-700 flex items-center justify-center text-white shrink-0 font-extrabold text-xs">RM</div>
+            <div class="min-w-0">
+              <p class="truncate text-xs text-slate-700 font-bold leading-tight" data-i18n="shelter_name">Posko Candi Sleman</p>
             </div>
-            <span class="font-bold text-xs text-brand-ink">Posko Candi</span>
           </div>
-
-          <div class="flex items-center space-x-2 text-[11px]">
-            <span class="inline-flex items-center font-medium text-brand-slate">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-teal mr-1"></span>
-              <span data-i18n="pwa_saved_locally">Tersimpan lokal</span>
+          <div class="flex shrink-0 items-center space-x-2 text-xs">
+            <span class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
+              <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+              <span data-i18n="status_saved_locally">Tersimpan lokal</span>
             </span>
-            <div class="flex p-0.5 bg-slate-100 rounded border border-slate-200 text-[10px] font-bold">
-              <span class="px-1 text-slate-500">ID</span>
-              <span class="px-1 bg-brand-teal text-white rounded-xs">EN</span>
-            </div>
+            <button type="button" onclick="switchPage('auth-login')" class="p-1 text-slate-400 hover:text-slate-700 rounded-md">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
           </div>
         </header>
 
-        <!-- 2. Patient & Progress Header Strip -->
-        <div class="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between shrink-0 shadow-xs">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="font-bold text-sm text-brand-ink">Juhoon</span>
-              <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">Verbal</span>
+        <!-- Scrollable Home Content -->
+        <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+          
+          <!-- Greeting Card -->
+          <div class="bg-white rounded-xl p-4 shadow-xs border border-slate-200">
+            <p class="text-[11px] font-bold text-teal-700 uppercase tracking-wider" data-i18n="relawan_role_badge">Relawan Lapangan Dukungan Psikososial</p>
+            <h2 class="text-lg font-bold text-slate-900 mt-0.5">Budi Setiawan</h2>
+            <div class="mt-2.5 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+              <svg class="w-3.5 h-3.5 mr-1 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <span>Posko Pengungsian Candi (Tenda 4)</span>
             </div>
-            <div class="text-[11px] text-brand-slate">NIK: Tanpa NIK</div>
           </div>
-          <div class="text-right">
-            <span class="text-xs font-bold text-brand-teal bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full tabular-nums">
+
+          <!-- Active T0-Suspect Emergency Banner (if any) -->
+          <div class="bg-red-50 border-2 border-red-500 rounded-xl p-4 text-red-950 shadow-xs space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-red-800" data-i18n="t0_active_banner_title">Laporan Kedaruratan Aktif</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-800 text-white font-mono">T0-SUSPECT</span>
+            </div>
+            <div>
+              <h3 class="font-bold text-sm text-slate-900">Juhoon (28 Thn)</h3>
+              <p class="text-xs text-red-800 mt-0.5" data-i18n="t0_active_banner_desc">Terikrar ide bunuh diri aktif pada SRQ-17. Menunggu verifikasi faskes.</p>
+            </div>
+            <p class="text-[11px] font-semibold text-red-900" data-i18n="t0_delivery_state">Tersimpan lokal di outbox prioritas • Diterima antrean server</p>
+          </div>
+
+          <!-- Incomplete Draft Resume Banner -->
+          <div class="bg-amber-50 border border-amber-300 rounded-xl p-4 shadow-xs space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-amber-900 uppercase tracking-wider" data-i18n="draft_title">Draf Asesmen Belum Selesai</span>
+              <span class="text-xs text-amber-700 font-medium" data-i18n="draft_step">Lanjut dari tahap terakhir</span>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-sm">Dafasufisol</h3>
+              <p class="text-xs text-slate-600 mt-0.5" data-i18n="draft_desc">Tahap berikutnya mengikuti jawaban yang tersimpan di perangkat ini.</p>
+            </div>
+            <button type="button" onclick="switchPage('relawan-srq')" class="w-full py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center justify-center space-x-1">
+              <span data-i18n="btn_continue_srq">Lanjutkan Asesmen SRQ-20 →</span>
+            </button>
+          </div>
+
+          <!-- Quick Action Cards (PFA vs Structured SRQ-20) -->
+          <div class="space-y-2.5">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider" data-i18n="quick_actions_title">Menu Aksi Lapangan</h3>
+
+            <!-- PFA Guidebook Card (Hari 1-3) -->
+            <div class="bg-white hover:bg-teal-50/40 p-4 rounded-xl border border-slate-200 shadow-xs transition cursor-pointer">
+              <div class="flex items-start justify-between">
+                <div>
+                  <span class="text-[10px] font-bold text-teal-800 uppercase tracking-wider block" data-i18n="pfa_phase_tag">FASE AKUT • HARI 1–3</span>
+                  <h4 class="text-base font-bold text-slate-900" data-i18n="pfa_guide_title">Panduan Intervensi PFA</h4>
+                  <p class="text-xs text-slate-600 mt-0.5 leading-relaxed" data-i18n="pfa_guide_desc">Protokol Look, Listen, Link (WHO) untuk pendampingan darurat garis depan.</p>
+                </div>
+                <div class="w-9 h-9 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Structured SRQ-20 Screening Card (Hari 4-30) -->
+            <div onclick="switchPage('relawan-srq')" class="bg-white hover:bg-teal-50/40 p-4 rounded-xl border-2 border-teal-600/30 shadow-xs transition cursor-pointer">
+              <div class="flex items-start justify-between">
+                <div>
+                  <span class="text-[10px] font-bold text-teal-800 uppercase tracking-wider block" data-i18n="srq_phase_tag">FASE LANJUTAN • HARI 4–30</span>
+                  <h4 class="text-base font-bold text-teal-900" data-i18n="start_screening_title">Mulai Skrining Baru</h4>
+                  <p class="text-xs text-slate-600 mt-0.5 leading-relaxed" data-i18n="start_screening_desc">Lakukan asesmen psikologis terstruktur 3 tahap (SRQ-20, Faktor Risiko, Fungsi Harian).</p>
+                </div>
+                <div class="w-9 h-9 rounded-lg bg-teal-700 text-white flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Floating T0 Emergency Pill (Real Positioned, No BG bar) -->
+        <div class="absolute right-3.5 bottom-20 z-40">
+          <button type="button" onclick="openT0VerificationModal()" class="flex items-center space-x-1.5 bg-red-800 hover:bg-red-900 active:scale-95 text-white px-3.5 py-2 rounded-full shadow-lg border border-red-700/60 font-bold tracking-wide transition duration-150 min-h-[42px] cursor-pointer">
+            <svg class="w-4 h-4 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span class="text-xs" data-i18n="btn_t0_emergency">T0 DARURAT</span>
+          </button>
+        </div>
+
+        <!-- Real Bottom Navigation Bar (4 destinations) -->
+        <nav class="shrink-0 z-30 bg-white border-t border-slate-200 shadow-md">
+          <div class="grid grid-cols-4 h-15">
+            <button type="button" onclick="switchPage('relawan-home')" class="flex flex-col items-center justify-center text-xs font-bold text-teal-800 py-1">
+              <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              <span data-i18n="nav_b_home">Beranda</span>
+            </button>
+            <button type="button" class="flex flex-col items-center justify-center text-xs font-semibold text-slate-500 hover:text-slate-800 py-1">
+              <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+              <span data-i18n="nav_b_pfa">PFA</span>
+            </button>
+            <button type="button" onclick="switchPage('relawan-srq')" class="flex flex-col items-center justify-center text-xs font-semibold text-slate-500 hover:text-slate-800 py-1">
+              <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+              <span data-i18n="nav_b_assessment">Asesmen</span>
+            </button>
+            <button type="button" class="flex flex-col items-center justify-center text-xs font-semibold text-slate-500 hover:text-slate-800 py-1">
+              <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+              <span data-i18n="nav_b_data">Data</span>
+            </button>
+          </div>
+        </nav>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 2: RELAWAN SRQ-20 ASSESSMENT (/relawan/assessment/srq)           -->
+    <!-- ===================================================================== -->
+    <section id="view-relawan-srq" class="view-panel hidden h-full w-full flex flex-col items-center justify-start overflow-hidden py-0 sm:py-4">
+      <div id="relawan-srq-frame" class="phone-mockup-frame bg-slate-100 flex flex-col overflow-hidden relative border-4 border-slate-900 transition-all duration-200">
+        
+        <!-- Slim Top Patient & Progress Header Strip -->
+        <div class="shrink-0 bg-white border-b border-slate-200 px-3.5 py-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex items-center gap-1.5">
+              <h2 class="text-sm font-bold text-slate-900 truncate">Juhoon</h2>
+              <span id="srq-mode-chip" class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">Verbal</span>
+              <span class="text-[11px] text-slate-500 truncate">• NIK: Tanpa NIK</span>
+            </div>
+            <span id="srq-progress-badge" class="shrink-0 whitespace-nowrap text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 tabular-nums">
               16 / 20 Terjawab
             </span>
-            <div class="w-24 h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
-              <div class="w-4/5 h-full bg-brand-teal rounded-full"></div>
-            </div>
+          </div>
+          <!-- Progress Bar -->
+          <div class="mt-1.5 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div id="srq-progress-bar" class="bg-teal-600 h-1.5 rounded-full transition-all duration-300" style="width: 80%;"></div>
           </div>
         </div>
 
-        <!-- 3. Scrollable Assessment Content Area -->
-        <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+        <!-- Scrollable SRQ Content Area -->
+        <div class="flex-1 overflow-y-auto px-3.5 sm:px-4 py-3 space-y-3 pb-24">
           
           <!-- Compact STT Configuration Box -->
-          <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center space-x-2">
-                <span class="text-xs font-semibold text-slate-600">Mode:</span>
-                <span class="inline-flex items-center text-xs font-bold text-brand-teal bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
-                  🎤 Asesmen Verbal
+          <div class="bg-white rounded-xl p-3 shadow-xs border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="font-semibold text-slate-600">Mode:</span>
+                <span class="px-2.5 py-1 rounded-lg border font-bold inline-flex items-center gap-1 bg-teal-50 text-teal-800 border-teal-300">
+                  🎤 <span>Verbal</span>
                 </span>
               </div>
-              <button type="button" onclick="toggleSttTechDetails()" class="text-xs font-semibold text-brand-teal hover:underline flex items-center">
-                <span id="stt-details-text">Detail</span>
-                <svg id="stt-details-chevron" class="w-3.5 h-3.5 ml-0.5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-              </button>
+              <div class="flex items-center gap-1.5">
+                <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs font-bold">
+                  <span class="px-2 py-0.5 rounded bg-teal-700 text-white">Offline</span>
+                  <span class="px-2 py-0.5 text-slate-600">Online</span>
+                </div>
+                <button id="srq-stt-record-btn" type="button" onclick="toggleSttRecordingSim()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">
+                  <span>Siapkan STT</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Collapsible technical details -->
-            <div id="stt-tech-details" class="hidden text-xs text-brand-slate pt-2 border-t border-slate-100 space-y-1">
-              <p>STT Lokal On-Device aktif. Audio diproses secara privat tanpa koneksi internet ke server eksternal.</p>
-              <div class="flex items-center space-x-2 pt-1">
-                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold text-[10px]">Model Siap</span>
-                <span class="text-[10px] text-slate-400">Latensi ~180ms</span>
+            <!-- Collapsible technical details on mobile -->
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-800" id="srq-stt-status-label">STT Lokal Siap (WebGPU On-Device)</span>
+                <button type="button" onclick="toggleSttInfo()" class="text-[11px] font-bold text-teal-800 hover:underline">
+                  <span id="stt-info-toggle-btn">Detail</span>
+                </button>
+              </div>
+              <div id="stt-info-collapsed" class="hidden mt-1.5 pt-1.5 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed">
+                Audio diproses secara pribadi langsung pada peramban perangkat lapangan. Hanya pernyataan yang cocok secara konservatif yang mengisi jawaban; koreksi manual relawan selalu diutamakan.
               </div>
             </div>
           </div>
 
-          <!-- Question #17 (Critical Safety Demonstration) -->
-          <div class="bg-white border-2 border-red-200 rounded-xl p-4 shadow-xs relative">
+          <!-- Non-Verbal Observations Card (P1) -->
+          <div class="bg-white rounded-xl p-3 shadow-xs border border-slate-200">
             <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center space-x-2">
-                <span class="text-xs font-extrabold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded">#17</span>
-                <span class="text-[11px] font-bold text-red-800 uppercase tracking-wide">PERTANYAAN KRITIS SRQ</span>
-              </div>
-              <span class="text-[10px] bg-red-100 text-red-900 font-bold px-1.5 py-0.5 rounded">Pemicu T0</span>
+              <span class="text-xs font-bold text-slate-900 uppercase tracking-wider" data-i18n="p1_obs_title">Observasi Perilaku Nonverbal (P1)</span>
+              <span class="text-[10px] text-slate-500" data-i18n="p1_obs_sub">Tidak mengubah skor SRQ</span>
             </div>
-
-            <h3 class="text-base font-bold text-brand-ink leading-snug mb-3">
-              Apakah Anda pernah memiliki pikiran untuk mengakhiri hidup atau merasa tidak ada gunanya lagi melanjutkan hidup?
-            </h3>
-
-            <!-- 4-State Response Buttons -->
-            <div class="grid grid-cols-2 gap-2 mb-2">
-              <button type="button" onclick="triggerT0ModalDemo()" class="py-2.5 px-3 rounded-lg border-2 border-red-400 bg-red-50 font-bold text-xs text-red-900 hover:bg-red-100 flex items-center justify-center space-x-1">
-                <span>⚠️ Ya (Verifikasi T0)</span>
-              </button>
-              <button type="button" class="py-2.5 px-3 rounded-lg border-2 border-brand-teal bg-teal-50 font-bold text-xs text-brand-teal flex items-center justify-center">
-                <span>✓ Tidak</span>
-              </button>
-            </div>
-            <button type="button" class="w-full py-2 px-3 rounded-lg border border-slate-300 font-medium text-xs text-slate-700 hover:bg-slate-50">
-              Respons Belum Jelas / Ragu-ragu
-            </button>
-
-            <!-- Volunteer Guidance Accordion -->
-            <div class="mt-3 pt-2.5 border-t border-slate-100">
-              <details class="text-xs text-brand-slate group">
-                <summary class="font-semibold text-brand-teal cursor-pointer hover:underline list-none flex items-center justify-between">
-                  <span>📘 Petunjuk Relawan (Look, Listen, Link)</span>
-                  <svg class="w-3.5 h-3.5 transform group-open:rotate-180 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                </summary>
-                <p class="mt-2 text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  Jaga kontak mata yang menenangkan. Jangan tinggalkan penyintas sendirian. Jawaban 'Ya' memerlukan konfirmasi manual sebelum mengirimkan sinyal T0 ke posko kesehatan.
-                </p>
-              </details>
-            </div>
-          </div>
-
-          <!-- Non-Verbal Observations Card (P1 Requirement) -->
-          <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <h4 class="text-xs font-bold text-brand-ink uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Observasi Nonverbal (P1)</span>
-              <span class="text-[10px] font-semibold text-slate-400">Multi-pilihan</span>
-            </h4>
-            <div class="space-y-1.5 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
               <label class="flex items-center space-x-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer">
-                <input type="checkbox" checked class="rounded text-brand-teal focus:ring-brand-teal">
+                <input type="checkbox" checked class="rounded text-teal-700">
                 <span class="text-slate-700">Tatapan kosong / tanda disosiasi</span>
               </label>
               <label class="flex items-center space-x-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer">
-                <input type="checkbox" checked class="rounded text-brand-teal focus:ring-brand-teal">
-                <span class="text-slate-700">Menangis berulang / sangat emosional</span>
+                <input type="checkbox" checked class="rounded text-teal-700">
+                <span class="text-slate-700">Menangis berulang / histeris</span>
               </label>
               <label class="flex items-center space-x-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer">
-                <input type="checkbox" class="rounded text-brand-teal focus:ring-brand-teal">
-                <span class="text-slate-700">Tremor hebat atau kegelisahan motorik</span>
+                <input type="checkbox" class="rounded text-teal-700">
+                <span class="text-slate-700">Gelisah motorik / tremor hebat</span>
               </label>
             </div>
           </div>
 
-        </div>
-
-        <!-- 4. Floating T0 Emergency Pill Button (Clean, No BG dock bar) -->
-        <div class="absolute right-3.5 bottom-16 z-40">
-          <button type="button" onclick="triggerT0ModalDemo()" class="flex items-center space-x-1.5 bg-red-800 hover:bg-red-900 active:scale-95 text-white px-3.5 py-2 rounded-full shadow-lg border border-red-700/60 font-bold tracking-wide transition duration-150 min-h-[42px] cursor-pointer">
-            <svg class="w-4 h-4 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <span class="text-xs" data-i18n="floating_t0_text">T0 DARURAT</span>
-          </button>
-        </div>
-
-        <!-- 5. Fixed Bottom Action Bar -->
-        <div class="shrink-0 bg-white border-t border-slate-200 px-3 py-2 flex items-center justify-between shadow-xs z-30">
-          <button type="button" class="px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">
-            ← Kembali
-          </button>
-          <button type="button" class="px-4 py-2 bg-brand-teal hover:bg-brand-teal-hover text-white rounded-lg text-xs font-bold shadow-xs">
-            Lanjut: Faktor Risiko (16/20) →
-          </button>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================================== -->
-  <!-- SECTION 4: ROLE 2 — HEALTHCARE WORKSPACE   -->
-  <!-- ========================================== -->
-  <section id="healthcare-view" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-slate-200">
-    <div class="mb-8">
-      <span class="text-xs font-bold uppercase tracking-wider text-triage-t0" data-i18n="role2_tag">Pengalaman Tenaga Kesehatan</span>
-      <h2 class="text-2xl font-bold text-brand-ink" data-i18n="role2_title">4. Workspace Healthcare & Antrean Kedaruratan T0</h2>
-      <p class="text-sm text-brand-slate mt-1" data-i18n="role2_desc">Ruang kerja klinis dua panel untuk dokter/psikolog: verifikasi T0-Suspect, aksi downgrade resmi ke T1/T2/T3, serta koordinasi rujukan & respon lapangan.</p>
-    </div>
-
-    <!-- 2-Panel Healthcare Desktop Workspace -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      
-      <!-- Healthcare Top Shell Bar -->
-      <div class="bg-brand-ink text-white px-6 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="w-8 h-8 rounded-lg bg-red-700 flex items-center justify-center font-bold text-white text-sm">PSC</div>
-          <div>
-            <div class="font-bold text-sm">Pusat Komando Medis & Kedaruratan Jiwa</div>
-            <div class="text-[11px] text-slate-400">RSUD Sleman • Posko Faskes Induk</div>
-          </div>
-        </div>
-        <div class="flex items-center space-x-4 text-xs">
-          <span class="flex items-center space-x-1.5 bg-red-950/80 border border-red-800 text-red-200 px-2.5 py-1 rounded-full font-bold">
-            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-            <span>2 KASUS T0-SUSPECT PERLU TINDAKAN</span>
-          </span>
-          <span class="text-slate-300">dr. Siti Rahma, Sp.KJ</span>
-        </div>
-      </div>
-
-      <!-- 2-Panel Layout Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
-        
-        <!-- Left Panel: Emergency Priority Queue (4 cols) -->
-        <div class="lg:col-span-4 border-r border-slate-200 bg-slate-50/50 flex flex-col">
-          <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h4 class="font-bold text-xs uppercase tracking-wider text-brand-ink" data-i18n="hc_queue_title">Antrean Triase & Kedaruratan</h4>
-            <span class="text-[11px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded-full">Prioritas Tinggi</span>
-          </div>
-
-          <div class="divide-y divide-slate-200 overflow-y-auto flex-1">
+          <!-- Question #01 Card -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">#01</span>
+              <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">PERTANYAAN</span>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 leading-snug">
+              Apakah Anda sering menderita sakit kepala, rasa berat di kepala, atau pusing berulang?
+            </h3>
             
-            <!-- Case 1: T0-Suspect (Selected) -->
-            <div class="p-4 bg-white border-l-4 border-red-700 cursor-pointer shadow-xs">
-              <div class="flex items-center justify-between mb-1.5">
-                <span class="text-[10px] font-extrabold bg-red-800 text-white px-2 py-0.5 rounded font-mono">T0-SUSPECT</span>
-                <span class="text-[11px] font-mono text-red-700 font-bold">4 Menit Lalu</span>
+            <!-- 4-State Response Control for Q1 -->
+            <div class="grid grid-cols-3 gap-2">
+              <button id="q1-btn-yes" type="button" onclick="selectAnswer(1, 'YES')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-900 hover:border-teal-600">
+                Ya
+              </button>
+              <button id="q1-btn-no" type="button" onclick="selectAnswer(1, 'NO')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-teal-700 border-teal-700 text-white shadow-xs">
+                Tidak
+              </button>
+              <button id="q1-btn-unclear" type="button" onclick="selectAnswer(1, 'UNCLEAR')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-700 hover:border-teal-600">
+                Ragu-ragu
+              </button>
+            </div>
+            <div class="flex justify-between items-center pt-1 text-xs">
+              <span id="q1-status-label" class="text-slate-500 italic">Tercatat: Tidak</span>
+              <button type="button" onclick="selectAnswer(1, 'UNANSWERED')" class="text-slate-400 hover:text-red-700 underline text-[11px]">Bersihkan</button>
+            </div>
+          </div>
+
+          <!-- Question #17 Card (Critical Red Flag Gate) -->
+          <div class="bg-white p-4 rounded-xl border-2 border-red-300 shadow-xs space-y-3 bg-red-50/20">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-extrabold px-2 py-0.5 rounded-md bg-red-800 text-white font-mono">#17</span>
+                <span class="text-[11px] font-bold uppercase tracking-wide text-red-900 flex items-center gap-1">
+                  ⚠️ Red Flag Gate
+                </span>
               </div>
-              <div class="font-bold text-sm text-brand-ink">Juhoon (28 Thn)</div>
-              <div class="text-xs text-brand-slate mb-2">Posko Candi • Relawan: Budi S.</div>
-              <div class="text-xs bg-red-50 text-red-900 p-2 rounded border border-red-200 font-medium">
-                ⚠️ Pemicu: SRQ-17 terkonfirmasi relawan + risiko bunuh diri aktif.
+              <span class="text-[10px] font-extrabold bg-red-100 text-red-900 px-2 py-0.5 rounded">Pemicu T0</span>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 leading-snug">
+              Apakah Anda pernah memiliki pikiran untuk mengakhiri hidup atau merasa tidak ada gunanya lagi melanjutkan hidup?
+            </h3>
+            
+            <!-- 4-State Response Control for Q17 -->
+            <div class="grid grid-cols-3 gap-2">
+              <button id="q17-btn-yes" type="button" onclick="openT0VerificationModal()" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-red-50 border-red-400 text-red-900 hover:bg-red-100">
+                ⚠️ Ya
+              </button>
+              <button id="q17-btn-no" type="button" onclick="selectAnswer(17, 'NO')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-900 hover:border-teal-600">
+                Tidak
+              </button>
+              <button id="q17-btn-unclear" type="button" onclick="selectAnswer(17, 'UNCLEAR')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-700 hover:border-teal-600">
+                Ragu-ragu
+              </button>
+            </div>
+            <div class="flex justify-between items-center pt-1 text-xs">
+              <span id="q17-status-label" class="text-red-700 font-medium italic">Konfirmasi eksplisit diperlukan</span>
+              <button type="button" onclick="selectAnswer(17, 'UNANSWERED')" class="text-slate-400 hover:text-red-700 underline text-[11px]">Bersihkan</button>
+            </div>
+          </div>
+
+          <!-- Question #20 Card -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">#20</span>
+              <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">PERTANYAAN</span>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 leading-snug">
+              Setelah bergerak atau mengerjakan hal kecil sebentar saja, apakah Anda langsung merasa kehabisan tenaga dan capek sekali?
+            </h3>
+            
+            <div class="grid grid-cols-3 gap-2">
+              <button id="q20-btn-yes" type="button" onclick="selectAnswer(20, 'YES')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-teal-700 border-teal-700 text-white shadow-xs">
+                Ya
+              </button>
+              <button id="q20-btn-no" type="button" onclick="selectAnswer(20, 'NO')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-900 hover:border-teal-600">
+                Tidak
+              </button>
+              <button id="q20-btn-unclear" type="button" onclick="selectAnswer(20, 'UNCLEAR')" class="py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-700 hover:border-teal-600">
+                Ragu-ragu
+              </button>
+            </div>
+            <div class="flex justify-between items-center pt-1 text-xs">
+              <span id="q20-status-label" class="text-slate-500 italic">Tercatat: Ya</span>
+              <button type="button" onclick="selectAnswer(20, 'UNANSWERED')" class="text-slate-400 hover:text-red-700 underline text-[11px]">Bersihkan</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Floating T0 Button (Single Pill, Clean, No dock bar) -->
+        <div class="absolute right-3.5 bottom-16 z-40">
+          <button type="button" onclick="openT0VerificationModal()" class="flex items-center space-x-1.5 bg-red-800 hover:bg-red-900 active:scale-95 text-white px-3.5 py-2 rounded-full shadow-lg border border-red-700/60 font-bold tracking-wide transition duration-150 min-h-[42px] cursor-pointer">
+            <svg class="w-4 h-4 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span class="text-xs" data-i18n="btn_t0_emergency">T0 DARURAT</span>
+          </button>
+        </div>
+
+        <!-- Docked Bottom Action Bar (Back & Next) -->
+        <div class="shrink-0 bg-white border-t border-slate-200 px-3.5 py-2 sm:px-5 sm:py-2.5 shadow-md z-30 flex items-center gap-2.5">
+          <button type="button" onclick="switchPage('relawan-home')" class="shrink-0 min-h-[42px] px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50">
+            ← <span data-i18n="btn_back">Kembali</span>
+          </button>
+          <button type="button" onclick="switchPage('relawan-result')" class="flex-1 min-h-[42px] px-3.5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs sm:text-sm shadow-xs transition text-center leading-tight">
+            <span data-i18n="btn_next_risk">Lanjut: Hasil & Review (16/20) →</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 3: RELAWAN ASSESSMENT RESULT (/relawan/assessment/result)         -->
+    <!-- ===================================================================== -->
+    <section id="view-relawan-result" class="view-panel hidden h-full w-full flex flex-col items-center justify-start overflow-hidden py-0 sm:py-4">
+      <div id="relawan-result-frame" class="phone-mockup-frame bg-slate-100 flex flex-col overflow-hidden relative border-4 border-slate-900 transition-all duration-200">
+        
+        <header class="shrink-0 bg-white border-b border-slate-200 px-3.5 py-2.5 flex items-center justify-between">
+          <button type="button" onclick="switchPage('relawan-srq')" class="text-xs font-bold text-slate-700 hover:text-teal-800">
+            ← Kembali ke SRQ
+          </button>
+          <span class="font-bold text-xs text-slate-900" data-i18n="result_screen_title">Hasil Asesmen Triase</span>
+          <span class="w-10"></span>
+        </header>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-20">
+          
+          <!-- Recommendation Banner -->
+          <div class="bg-orange-50 border-2 border-orange-500 rounded-2xl p-5 text-orange-950 shadow-xs space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold px-2.5 py-1 rounded bg-orange-700 text-white font-mono tracking-wider">T1 TINGGI</span>
+              <span class="text-xs font-bold text-orange-800">Skor SRQ: 14/20</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-extrabold text-slate-900" data-i18n="triage_rec_t1_title">Rekomendasi Sistem: Rujukan Tenaga Medis</h3>
+              <p class="text-xs text-orange-900 mt-1 leading-relaxed" data-i18n="triage_rec_t1_desc">
+                Penyintas mengalami distres psikologis berat disertai 2 faktor risiko klinis. Memerlukan konsultasi psikiatri atau rujukan ke Faskes rujukan primer.
+              </p>
+            </div>
+            <!-- Mandatory Safety Disclaimer -->
+            <div class="p-2.5 bg-white/80 rounded-lg border border-orange-200 text-[11px] text-slate-700 leading-snug">
+              <strong>Catatan Keselamatan:</strong> Rekomendasi di atas dihasilkan otomatis sebagai sistem pendukung keputusan, bukan merupakan diagnosis medis definitif.
+            </div>
+          </div>
+
+          <!-- Score Breakdown Card -->
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="score_breakdown_title">Rincian Komponen Penilaian</h4>
+            <div class="divide-y divide-slate-100 text-xs">
+              <div class="py-2 flex justify-between">
+                <span class="text-slate-700">1. Skrining Gejala SRQ-20</span>
+                <span class="font-bold text-slate-900 font-mono">14 Gejala Ya</span>
+              </div>
+              <div class="py-2 flex justify-between">
+                <span class="text-slate-700">2. Faktor Risiko Klinis (R1–R5)</span>
+                <span class="font-bold text-orange-700 font-mono">+2 Poin (R4)</span>
+              </div>
+              <div class="py-2 flex justify-between">
+                <span class="text-slate-700">3. Penurunan Fungsi Harian (F1–F3)</span>
+                <span class="font-bold text-slate-900 font-mono">Terganggu Sedang</span>
+              </div>
+              <div class="py-2 flex justify-between">
+                <span class="text-slate-700">4. Kedaruratan Seketika (T0)</span>
+                <span class="font-bold text-slate-500 font-mono">Tidak Aktif</span>
               </div>
             </div>
+          </div>
 
-            <!-- Case 2: T0-Suspect (Waiting) -->
-            <div class="p-4 hover:bg-white cursor-pointer transition border-l-4 border-transparent">
-              <div class="flex items-center justify-between mb-1.5">
-                <span class="text-[10px] font-extrabold bg-red-100 text-red-900 border border-red-300 px-2 py-0.5 rounded font-mono">T0-SUSPECT</span>
-                <span class="text-[11px] font-mono text-slate-500">18 Menit Lalu</span>
+          <!-- Next Steps & Action Buttons -->
+          <div class="space-y-2 pt-2">
+            <button type="button" onclick="switchPage('relawan-home')" class="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-xs transition">
+              Simpan & Selesaikan Asesmen
+            </button>
+            <button type="button" onclick="openT0VerificationModal()" class="w-full py-2.5 bg-white border border-red-300 text-red-700 hover:bg-red-50 font-bold text-xs rounded-xl transition">
+              Eskalasi ke Kedaruratan T0-Suspect
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 4: HEALTHCARE EMERGENCIES (/healthcare/emergencies)              -->
+    <!-- ===================================================================== -->
+    <section id="view-healthcare-emergencies" class="view-panel hidden h-full w-full flex flex-col bg-[#F7F8FA] overflow-hidden">
+      
+      <!-- Top Healthcare Navigation Bar (64px) -->
+      <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-700 flex items-center justify-center font-extrabold text-white text-xs">RM</div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-bold tracking-tight text-slate-900 leading-none">RAPID-MIND</span>
+                <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider leading-none">Healthcare</span>
               </div>
-              <div class="font-bold text-sm text-brand-ink">Ny. Sumiyati (52 Thn)</div>
-              <div class="text-xs text-brand-slate">Posko Maguwoharjo • Relawan: Anisa</div>
+              <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">Triase & Respons Medis Kedaruratan</span>
             </div>
-
-            <!-- Case 3: T1 High Risk Validation -->
-            <div class="p-4 hover:bg-white cursor-pointer transition border-l-4 border-transparent">
-              <div class="flex items-center justify-between mb-1.5">
-                <span class="text-[10px] font-bold bg-orange-100 text-orange-900 border border-orange-300 px-2 py-0.5 rounded font-mono">T1 HIGH RISK</span>
-                <span class="text-[11px] font-mono text-slate-500">42 Menit Lalu</span>
-              </div>
-              <div class="font-bold text-sm text-brand-ink">Tn. Hendra (34 Thn)</div>
-              <div class="text-xs text-brand-slate">Posko Candi • Skor SRQ: 16/20</div>
-            </div>
-
           </div>
         </div>
 
-        <!-- Right Panel: Active Case Workspace (8 cols) -->
-        <div class="lg:col-span-8 flex flex-col bg-white">
+        <div class="flex items-center space-x-4">
+          <!-- Connection Status Dot -->
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Realtime Terhubung (Reverb)</span>
+          </div>
+
+          <!-- Doctor Profile Pill -->
+          <div class="flex items-center space-x-2 p-1 rounded-lg hover:bg-slate-50 transition cursor-pointer">
+            <div class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center">SR</div>
+            <div class="text-left hidden md:block">
+              <span class="text-xs font-bold text-slate-800 block leading-tight">dr. Siti Rahma, Sp.KJ</span>
+              <span class="text-[10px] text-slate-400 block leading-tight">RSUD Sleman • PSC 119</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Shell: Left Sidebar (240px) + Operational Workspace -->
+      <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0">
+          <div class="p-3 space-y-6">
+            <div>
+              <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">RUANG KERJA KLINIS</div>
+              <div class="space-y-0.5 text-xs">
+                <a href="#hc" class="flex items-center justify-between px-3 py-2 rounded-lg bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600">
+                  <div class="flex items-center space-x-2.5">
+                    <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Triase & Kedaruratan</span>
+                  </div>
+                  <span class="text-[11px] font-bold text-rose-600 font-mono">2</span>
+                </a>
+                <a href="#hc" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                  <span>Validasi Klinis</span>
+                </a>
+                <a href="#hc" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                  <span>Rujukan Pasien</span>
+                </a>
+                <a href="#hc" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                  <span>Data Pasien & Rekam</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right: 2-Panel Healthcare Workspace -->
+        <div class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
           
-          <!-- Case Detail Header -->
-          <div class="p-6 border-b border-slate-200">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xl font-extrabold text-brand-ink">Juhoon</span>
-                  <span class="text-xs font-semibold text-slate-500">(Laki-laki, 28 Thn)</span>
-                  <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-900 border border-red-300">T0 Suspect</span>
+          <!-- Summary Metric Strip -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs text-xs">
+            <div>
+              <span class="text-slate-400 font-medium block">Total Kasus Masuk</span>
+              <span class="text-lg font-bold text-slate-900 tabular-nums">48</span>
+            </div>
+            <div>
+              <span class="text-red-700 font-medium block">Kedaruratan T0 Aktif</span>
+              <span class="text-lg font-bold text-red-700 tabular-nums">2 Kasus</span>
+            </div>
+            <div>
+              <span class="text-amber-700 font-medium block">Menunggu Validasi</span>
+              <span class="text-lg font-bold text-amber-800 tabular-nums">9 Pasien</span>
+            </div>
+            <div>
+              <span class="text-teal-700 font-medium block">Rujukan Diterbitkan</span>
+              <span class="text-lg font-bold text-teal-800 tabular-nums">14 Surat</span>
+            </div>
+          </div>
+
+          <!-- Two-Panel Grid (Queue Left 4 Cols, Case Detail Right 8 Cols) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            
+            <!-- LEFT PANEL: CASE QUEUE -->
+            <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
+              <div class="p-3 border-b border-slate-200 flex items-center justify-between">
+                <h4 class="font-bold text-xs uppercase tracking-wider text-slate-900">Antrean Triase Masuk</h4>
+                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-900 font-bold text-[10px]">T0 Suspect (2)</span>
+              </div>
+
+              <div class="divide-y divide-slate-100 overflow-y-auto max-h-[540px]">
+                <!-- Case 1 (Selected) -->
+                <div class="p-3.5 bg-red-50/50 border-l-4 border-red-700 cursor-pointer">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-800 text-white font-mono">T0-SUSPECT</span>
+                    <span class="text-[11px] font-mono text-red-800 font-bold">4m Lalu</span>
+                  </div>
+                  <div class="font-bold text-sm text-slate-900">Juhoon (28 Thn)</div>
+                  <div class="text-xs text-slate-500">Posko Candi • Relawan: Budi S.</div>
+                  <div class="mt-1 text-[11px] bg-red-100/70 text-red-900 p-1.5 rounded">
+                    ⚠️ Pengakuan eksplisit ide bunuh diri pada SRQ-17.
+                  </div>
                 </div>
-                <p class="text-xs text-brand-slate mt-1">
-                  ID Kasus: <span class="font-mono text-slate-700">RM-2026-T0-0081</span> • Lokasi: <strong>Posko Pengungsian Candi (Tenda 4)</strong>
+
+                <!-- Case 2 -->
+                <div class="p-3.5 hover:bg-slate-50 cursor-pointer transition">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-900 border border-red-300 font-mono">T0-SUSPECT</span>
+                    <span class="text-[11px] font-mono text-slate-500">18m Lalu</span>
+                  </div>
+                  <div class="font-bold text-sm text-slate-900">Ny. Sumiyati (52 Thn)</div>
+                  <div class="text-xs text-slate-500">Posko Maguwoharjo • Relawan: Anisa</div>
+                </div>
+
+                <!-- Case 3 -->
+                <div class="p-3.5 hover:bg-slate-50 cursor-pointer transition">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-900 border border-orange-300 font-mono">T1 TINGGI</span>
+                    <span class="text-[11px] font-mono text-slate-500">42m Lalu</span>
+                  </div>
+                  <div class="font-bold text-sm text-slate-900">Tn. Hendra (34 Thn)</div>
+                  <div class="text-xs text-slate-500">Posko Candi • Skor SRQ: 16/20</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT PANEL: CASE WORKSPACE & ACTIONS -->
+            <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-[560px]">
+              
+              <!-- Patient Banner -->
+              <div class="p-5 border-b border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div class="flex items-center space-x-2">
+                      <span class="text-xl font-extrabold text-slate-900">Juhoon</span>
+                      <span class="text-xs text-slate-500 font-medium">(Laki-laki, 28 Thn)</span>
+                      <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-900 border border-red-300 font-mono">T0 Suspect</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">
+                      ID: <span class="font-mono text-slate-800">RM-2026-T0-0081</span> • Posko: <strong>Posko Candi (Tenda 4)</strong> • Kontak: 0812-9988-1234
+                    </p>
+                  </div>
+                  <button type="button" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold shadow-xs">
+                    ✓ Terima & Buka Tindakan
+                  </button>
+                </div>
+
+                <!-- Tabs (Ringkasan, Asesmen, Tindakan, Riwayat) -->
+                <div class="flex items-center gap-6 mt-4 border-t border-slate-100 pt-3 text-xs font-bold">
+                  <button type="button" onclick="switchHcTab('tindakan')" id="hc-tab-btn-tindakan" class="text-teal-800 border-b-2 border-teal-600 pb-2">
+                    Tindakan & Validasi Klinis
+                  </button>
+                  <button type="button" onclick="switchHcTab('asesmen')" id="hc-tab-btn-asesmen" class="text-slate-500 hover:text-slate-800 pb-2">
+                    Data Asesmen SRQ-20 (Lengkap)
+                  </button>
+                  <button type="button" onclick="switchHcTab('ringkasan')" id="hc-tab-btn-ringkasan" class="text-slate-500 hover:text-slate-800 pb-2">
+                    Ringkasan Pasien
+                  </button>
+                </div>
+              </div>
+
+              <!-- TAB 1: Tindakan & Validasi Klinis -->
+              <div id="hc-pane-tindakan" class="p-5 space-y-5 flex-1">
+                
+                <!-- Decision Box -->
+                <div class="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-red-900">Validasi Klinis Dokter / Psikolog</h5>
+                    <span class="text-[10px] font-semibold text-red-700">Audit Keputusan Klinis</span>
+                  </div>
+                  <p class="text-xs text-red-800 leading-relaxed">
+                    Dokter penanggung jawab dapat <strong>Mengonfirmasi T0</strong> jika terdapat indikasi rawat segera, atau melakukan <strong>Downgrade resmi ke T1, T2, atau T3</strong> disertai catatan medis.
+                  </p>
+                  <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <button type="button" onclick="alert('Kasus T0 berhasil dikonfirmasi secara resmi!')" class="px-3.5 py-2 bg-red-800 hover:bg-red-900 text-white text-xs font-bold rounded-lg shadow-xs">
+                      ✓ Konfirmasi T0 (Emergency)
+                    </button>
+                    <button type="button" onclick="alert('Kasus di-downgrade ke T1 (Tinggi)')" class="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg">
+                      ⬇ Downgrade ke T1
+                    </button>
+                    <button type="button" onclick="alert('Kasus di-downgrade ke T2 (Sedang)')" class="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg">
+                      ⬇ Downgrade ke T2
+                    </button>
+                    <button type="button" onclick="alert('Kasus di-downgrade ke T3 (Rendah)')" class="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg">
+                      ⬇ Downgrade ke T3
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Referral & Dispatch Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h5 class="text-xs font-bold text-slate-900 mb-1">Rujukan Rumah Sakit (Referral)</h5>
+                    <p class="text-xs text-slate-500 mb-3">Tujuan: RSUP Dr. Sardjito (Bangsal Psikiatri Akut).</p>
+                    <button type="button" class="w-full py-2 bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs">
+                      Terbitkan Surat Rujukan
+                    </button>
+                  </div>
+
+                  <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h5 class="text-xs font-bold text-slate-900 mb-1">Respons Ambulans (Dispatch)</h5>
+                    <p class="text-xs text-slate-500 mb-3">Unit: Ambulans PSC 119 Wilayah Sleman Utara.</p>
+                    <button type="button" class="w-full py-2 bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 rounded-lg text-xs font-bold">
+                      Tugaskan Tim Reaksi Cepat
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- TAB 2: Data Asesmen SRQ-20 (Lengkap) -->
+              <div id="hc-pane-asesmen" class="hidden p-5 space-y-3 flex-1 overflow-y-auto max-h-[460px] text-xs">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span class="font-bold text-slate-900">Lembar Jawaban SRQ-20 WHO (20 Item)</span>
+                  <span class="font-mono text-teal-700 font-bold">14 Ya • 4 Tidak • 2 Unclear</span>
+                </div>
+                <div class="space-y-2">
+                  <div class="p-2 bg-slate-50 rounded border border-slate-200 flex justify-between items-center">
+                    <span>#01 Sakit kepala, pusing berulang</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-200 font-bold font-mono">TIDAK</span>
+                  </div>
+                  <div class="p-2 bg-red-50 rounded border border-red-200 flex justify-between items-center">
+                    <span class="font-bold text-red-900">#17 Pikiran mengakhiri hidup / keputusasaan</span>
+                    <span class="px-2 py-0.5 rounded bg-red-800 text-white font-bold font-mono">YA</span>
+                  </div>
+                  <div class="p-2 bg-teal-50 rounded border border-teal-200 flex justify-between items-center">
+                    <span>#20 Mudah lelah setelah aktivitas ringan</span>
+                    <span class="px-2 py-0.5 rounded bg-teal-700 text-white font-bold font-mono">YA</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TAB 3: Ringkasan Pasien -->
+              <div id="hc-pane-ringkasan" class="hidden p-5 space-y-3 flex-1 text-xs text-slate-700">
+                <p><strong>Nama:</strong> Juhoon</p>
+                <p><strong>Usia:</strong> 28 Tahun • Laki-laki</p>
+                <p><strong>Riwayat:</strong> Mengungsi sejak gempa hari ke-2. Memiliki riwayat pengobatan sebelumnya di Puskesmas Sleman.</p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 5: ADMIN SUMMARY (/admin/summary)                                -->
+    <!-- ===================================================================== -->
+    <section id="view-admin-summary" class="view-panel hidden h-full w-full flex flex-col bg-[#F7F8FA] overflow-hidden">
+      
+      <!-- Top Admin Header (64px) -->
+      <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-teal-700 flex items-center justify-center font-extrabold text-white text-xs">RM</div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-bold tracking-tight text-slate-900 leading-none">RAPID-MIND</span>
+                <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider leading-none">Pusat Komando</span>
+              </div>
+              <span class="text-[11px] text-slate-400 font-normal leading-tight block mt-0.5">Pemantauan Respons Bencana & Kebijakan</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Online</span>
+          </div>
+
+          <div class="flex items-center space-x-2 p-1 rounded-lg hover:bg-slate-50 transition cursor-pointer">
+            <div class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center">BP</div>
+            <div class="text-left hidden md:block">
+              <span class="text-xs font-bold text-slate-800 block leading-tight">Admin BPBD Sleman</span>
+              <span class="text-[10px] text-slate-400 block leading-tight">Koordinator Darurat</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Shell: Left Sidebar (240px) + Operational Workspace -->
+      <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside class="w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0">
+          <div class="p-3 space-y-6">
+            <div>
+              <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">PUSAT KOMANDO</div>
+              <div class="space-y-0.5 text-xs">
+                <a href="#admin" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg bg-teal-50 text-teal-800 font-bold border-l-2 border-teal-600">
+                  <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                  <span>Ringkasan Operasional</span>
+                </a>
+                <a href="#admin" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                  <span>Data Longitudinal</span>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">OPERASIONAL</div>
+              <div class="space-y-0.5 text-xs">
+                <a href="#admin" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <span>Manajemen Relawan</span>
+                </a>
+                <a href="#admin" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                  <span>Faskes & Posko</span>
+                </a>
+                <a href="#admin" class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium">
+                  <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  <span>Logistik & Kit PFA</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Content: Admin Operational Dashboard -->
+        <div class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+          
+          <!-- Editorial Header & Metric Baseline -->
+          <div class="border-b border-slate-200 pb-4">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
+                  PUSAT KOMANDO & PEMANTAUAN KEBIJAKAN
+                </span>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+                  Ringkasan Operasional Lapangan
+                </h1>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Agregasi laporan T0 dan rekomendasi sistem di seluruh posko penanggulangan bencana
                 </p>
               </div>
 
-              <!-- Secondary Verification Status -->
-              <div class="text-right">
-                <div class="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-900">
-                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span>Belum Divalidasi Klinis</span>
+              <!-- Primary Counter Box -->
+              <div class="flex items-center gap-2.5 shrink-0 bg-white border border-slate-200 p-4 rounded-xl shadow-2xs">
+                <span class="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">1,428</span>
+                <div class="text-left">
+                  <span class="text-xs font-bold text-slate-800 block leading-tight">Kasus Terkonfirmasi</span>
+                  <span class="text-[10px] text-slate-400 block">total terverifikasi faskes</span>
                 </div>
+              </div>
+            </div>
+
+            <!-- Horizontal Metric Baseline -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-slate-500 font-medium">Laporan T0 Aktif:</span>
+                <span class="text-sm font-bold text-red-600 tabular-nums">6</span>
+              </div>
+              <span class="text-slate-200 hidden sm:inline">|</span>
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-slate-500 font-medium">Rekomendasi T1:</span>
+                <span class="text-sm font-bold text-orange-600 tabular-nums">42</span>
+              </div>
+              <span class="text-slate-200 hidden sm:inline">|</span>
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-slate-500 font-medium">Rekomendasi T2:</span>
+                <span class="text-sm font-bold text-amber-600 tabular-nums">89</span>
+              </div>
+              <span class="text-slate-200 hidden sm:inline">|</span>
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-slate-500 font-medium">Rekomendasi T3:</span>
+                <span class="text-sm font-bold text-emerald-600 tabular-nums">312</span>
+              </div>
+              <span class="text-slate-200 hidden sm:inline">|</span>
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-slate-500 font-medium">Posko Terpantau:</span>
+                <span class="text-sm font-bold text-slate-800 tabular-nums">8</span>
               </div>
             </div>
           </div>
 
-          <!-- Clinical Actions Hub -->
-          <div class="p-6 flex-1 space-y-6">
+          <!-- Two-Col Grid: Table Left (7 cols) + Map Right (5 cols) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             
-            <!-- Safety Alert Box -->
-            <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
-              <h5 class="text-xs font-bold uppercase tracking-wider text-red-900 mb-1" data-i18n="hc_clinical_verif">
-                Verifikasi Sekunder & Validasi Klinis Dokter/Psikolog
-              </h5>
-              <p class="text-xs text-red-800 leading-relaxed mb-4">
-                Sesuai keputusan tim 7 Nov 2026, Tenaga Kesehatan memiliki wewenang untuk <strong>Mengonfirmasi T0</strong> atau secara eksplisit melakukan <strong>Downgrade T0-Suspect ke T1, T2, atau T3</strong> disertai catatan alasan klinis yang dapat diaudit.
+            <!-- Table View (7 cols) -->
+            <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-xs p-4 space-y-3">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900">Sebaran Kasus per Posko</h4>
+                <span class="text-xs text-slate-400 font-mono">Deduplikasi Valid</span>
+              </div>
+              <table class="w-full text-xs text-left">
+                <thead>
+                  <tr class="text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
+                    <th class="pb-2">Posko Pengungsian</th>
+                    <th class="pb-2">T0</th>
+                    <th class="pb-2">T1</th>
+                    <th class="pb-2">T2</th>
+                    <th class="pb-2">T3</th>
+                    <th class="pb-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 tabular-nums">
+                  <tr class="hover:bg-slate-50">
+                    <td class="py-2.5 font-bold text-slate-900">Posko Candi</td>
+                    <td class="py-2.5 font-extrabold text-red-700">2</td>
+                    <td class="py-2.5 font-bold text-orange-700">14</td>
+                    <td class="py-2.5 text-amber-700">28</td>
+                    <td class="py-2.5 text-emerald-700">84</td>
+                    <td class="py-2.5 font-bold text-right text-slate-800">128</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50">
+                    <td class="py-2.5 font-bold text-slate-900">Posko Maguwoharjo</td>
+                    <td class="py-2.5 font-extrabold text-red-700">1</td>
+                    <td class="py-2.5 font-bold text-orange-700">18</td>
+                    <td class="py-2.5 text-amber-700">35</td>
+                    <td class="py-2.5 text-emerald-700">112</td>
+                    <td class="py-2.5 font-bold text-right text-slate-800">166</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50">
+                    <td class="py-2.5 font-bold text-slate-900">Posko Kaliurang</td>
+                    <td class="py-2.5 font-semibold text-slate-400">0</td>
+                    <td class="py-2.5 font-bold text-orange-700">6</td>
+                    <td class="py-2.5 text-amber-700">14</td>
+                    <td class="py-2.5 text-emerald-700">58</td>
+                    <td class="py-2.5 font-bold text-right text-slate-800">78</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50">
+                    <td class="py-2.5 font-bold text-slate-900">Posko Pakem</td>
+                    <td class="py-2.5 font-semibold text-slate-400">0</td>
+                    <td class="py-2.5 font-bold text-orange-700">4</td>
+                    <td class="py-2.5 text-amber-700">12</td>
+                    <td class="py-2.5 text-emerald-700">48</td>
+                    <td class="py-2.5 font-bold text-right text-slate-800">64</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+                🔒 Data disajikan secara agregat regional tanpa NIK atau identitas rekam medis penyintas.
               </p>
-
-              <!-- Healthcare Action Buttons -->
-              <div class="flex flex-wrap items-center gap-3">
-                <button type="button" class="px-4 py-2.5 rounded-lg bg-red-800 hover:bg-red-900 text-white text-xs font-bold shadow-xs transition">
-                  ✓ Konfirmasi Status T0 (Confirmed)
-                </button>
-                <button type="button" class="px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-xs transition">
-                  ⬇ Downgrade ke T1 (Tinggi)
-                </button>
-                <button type="button" class="px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-xs transition">
-                  ⬇ Downgrade ke T2 (Sedang)
-                </button>
-                <button type="button" class="px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-xs transition">
-                  ⬇ Downgrade ke T3 (Rendah)
-                </button>
-              </div>
             </div>
 
-            <!-- Clinical Assessment Tab Summary -->
-            <div class="border border-slate-200 rounded-xl overflow-hidden">
-              <div class="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-brand-ink">
-                <span>Rangkuman Asesmen Lapangan Terkait</span>
-                <span class="text-brand-teal font-mono">SRQ: 14 Ya • 2 Unclear • 4 Tidak</span>
+            <!-- GIS Map View (5 cols) -->
+            <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+              <div class="p-3 border-b border-slate-200 flex items-center justify-between text-xs">
+                <span class="font-bold uppercase tracking-wider text-slate-900">Peta Sebaran Bencana</span>
+                <span class="text-slate-400 font-mono text-[10px]">MapLibre GIS</span>
               </div>
-              <div class="p-4 space-y-3 text-xs">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <div class="font-bold text-slate-800">#17 Ide Bunuh Diri / Keputusasaan</div>
-                    <div class="text-slate-500">Relawan mengonfirmasi pengakuan langsung penyintas.</div>
-                  </div>
-                  <span class="px-2 py-0.5 rounded bg-red-800 text-white font-bold font-mono">YA</span>
-                </div>
-                <div class="flex items-start justify-between pt-2 border-t border-slate-100">
-                  <div>
-                    <div class="font-bold text-slate-800">Faktor Risiko Klinis: R4 Riwayat Gangguan Jiwa</div>
-                    <div class="text-slate-500">Penyintas sebelumnya rutin kontrol obat antipsikotik di RSJ.</div>
-                  </div>
-                  <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900 font-bold font-mono">+2 POIN</span>
-                </div>
-                <div class="flex items-start justify-between pt-2 border-t border-slate-100">
-                  <div>
-                    <div class="font-bold text-slate-800">Observasi Perilaku Nonverbal</div>
-                    <div class="text-slate-500">Disosiasi, tatapan kosong, menangis terus-menerus.</div>
-                  </div>
-                  <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-medium">B2A-DISOSIASI</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Referral & Dispatch Dispatch Coordination -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div class="text-xs font-bold text-brand-ink mb-1">Rujukan Rumah Sakit (Referral)</div>
-                <p class="text-xs text-brand-slate mb-3">Tujuan: RSUP Dr. Sardjito (Kamar Psikiatri Siaga).</p>
-                <button type="button" class="w-full py-2 bg-brand-teal text-white rounded-lg text-xs font-bold">
-                  Buat Lembar Rujukan Klinis
-                </button>
-              </div>
-
-              <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div class="text-xs font-bold text-brand-ink mb-1">Respons Cepat Lapangan (Dispatch)</div>
-                <p class="text-xs text-brand-slate mb-3">Penugasan internal: Ambulans PSC 119 Pos 2.</p>
-                <button type="button" class="w-full py-2 bg-white border border-slate-300 text-slate-800 rounded-lg text-xs font-bold hover:bg-slate-50">
-                  Kirim Tim Reaksi Cepat
-                </button>
+              <div class="p-3 bg-slate-100 flex items-center justify-center min-h-[260px]">
+                <svg class="w-full h-56" viewBox="0 0 400 220" fill="none">
+                  <path d="M20 50 Q100 20 200 40 T380 60 Q340 180 240 190 T80 160 Z" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="2"/>
+                  <!-- Posko Candi Marker with T0 Pulsing Ring -->
+                  <g transform="translate(140, 110)">
+                    <circle cx="0" cy="0" r="14" fill="#FEF2F2" stroke="#991B1B" stroke-width="1.5" class="animate-ping" opacity="0.5"/>
+                    <circle cx="0" cy="0" r="8" fill="#991B1B"/>
+                    <text x="12" y="4" font-size="10" font-weight="bold" fill="#0F172A">Posko Candi (2 T0)</text>
+                  </g>
+                  <!-- Posko Maguwo -->
+                  <g transform="translate(260, 130)">
+                    <circle cx="0" cy="0" r="7" fill="#C2410C"/>
+                    <text x="10" y="3" font-size="10" font-weight="bold" fill="#0F172A">Maguwo (1 T0)</text>
+                  </g>
+                  <!-- RS Sardjito -->
+                  <g transform="translate(300, 70)">
+                    <rect x="-8" y="-8" width="16" height="16" rx="3" fill="#0F766E"/>
+                    <path d="M-4 0 H4 M0 -4 V4" stroke="white" stroke-width="2"/>
+                    <text x="12" y="3" font-size="10" font-weight="bold" fill="#0F766E">RSUP Sardjito</text>
+                  </g>
+                </svg>
               </div>
             </div>
 
           </div>
 
         </div>
-
       </div>
+    </section>
 
-    </div>
-  </section>
-
-  <!-- ========================================== -->
-  <!-- SECTION 5: ROLE 3 — ADMIN COMMAND CENTER   -->
-  <!-- ========================================== -->
-  <section id="admin-view" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-slate-200">
-    <div class="mb-8">
-      <span class="text-xs font-bold uppercase tracking-wider text-brand-slate" data-i18n="role3_tag">Pengalaman Administrator BPBD / Dinkes</span>
-      <h2 class="text-2xl font-bold text-brand-ink" data-i18n="role3_title">5. Pusat Komando Regional & Monitoring Agregat</h2>
-      <p class="text-sm text-brand-slate mt-1" data-i18n="role3_desc">Visualisasi makro data bencana untuk BPBD & Dinas Kesehatan tanpa mengekspos NIK atau rekam medis personal penyintas.</p>
-    </div>
-
-    <!-- 4 Macro KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      
-      <!-- KPI 1 -->
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
-        <div class="text-xs font-semibold text-brand-slate mb-1" data-i18n="kpi_screenings">Total Skrining Valid</div>
-        <div class="text-3xl font-extrabold text-brand-ink tabular-nums">1,428</div>
-        <div class="text-xs text-emerald-700 font-semibold mt-1">↑ +142 dalam 24 jam</div>
-      </div>
-
-      <!-- KPI 2 -->
-      <div class="bg-white rounded-xl border-2 border-red-200 p-5 shadow-xs bg-red-50/20">
-        <div class="text-xs font-bold text-red-900 mb-1" data-i18n="kpi_t0">Kedaruratan T0 Aktif</div>
-        <div class="text-3xl font-extrabold text-triage-t0 tabular-nums">6</div>
-        <div class="text-xs text-red-700 font-semibold mt-1">Semua dalam penanganan medis</div>
-      </div>
-
-      <!-- KPI 3 -->
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
-        <div class="text-xs font-semibold text-brand-slate mb-1" data-i18n="kpi_faskes">Kapasitas Tempat Tidur Jiwa</div>
-        <div class="text-3xl font-extrabold text-brand-teal tabular-nums">14 / 22</div>
-        <div class="text-xs text-slate-500 font-semibold mt-1">63% Terisi di 3 RS Rujukan</div>
-      </div>
-
-      <!-- KPI 4 -->
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
-        <div class="text-xs font-semibold text-brand-slate mb-1" data-i18n="kpi_volunteers">Relawan Lapangan Bertugas</div>
-        <div class="text-3xl font-extrabold text-brand-ink tabular-nums">48</div>
-        <div class="text-xs text-slate-500 font-semibold mt-1">Tersebar di 8 Posko Aktif</div>
-      </div>
-
-    </div>
-
-    <!-- Geospatial Map & Posko Breakdown Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      
-      <!-- Simulated Interactive Disaster Map (7 cols) -->
-      <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs flex flex-col">
-        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <svg class="w-4 h-4 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-            <h4 class="font-bold text-xs uppercase tracking-wider text-brand-ink" data-i18n="map_title">Peta Distribusi Triase & Posko Bencana</h4>
+    <!-- ===================================================================== -->
+    <!-- VIEW 6: AUTH LOGIN (/login)                                           -->
+    <!-- ===================================================================== -->
+    <section id="view-auth-login" class="view-panel hidden h-full w-full flex items-center justify-center bg-slate-900 p-4 overflow-y-auto">
+      <div class="w-full max-w-md bg-white p-7 sm:p-8 rounded-2xl shadow-2xl border border-slate-200 space-y-5">
+        
+        <div class="text-center">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-700 text-white font-black text-2xl mb-3 shadow-md">
+            RM
           </div>
-          <span class="text-xs text-slate-500 font-mono">MapLibre Engine Simulation</span>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">RAPID-MIND</h1>
+          <p class="mt-1 text-xs text-slate-600" data-i18n="login_subtitle">Sistem Pendukung Keputusan Respons Kesehatan Jiwa Bencana</p>
         </div>
 
-        <!-- Simulated SVG Map Canvas -->
-        <div class="relative bg-slate-100 flex-1 min-h-[340px] flex items-center justify-center p-4">
-          <svg class="w-full h-full max-h-[320px]" viewBox="0 0 600 320" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Contour & District Boundaries -->
-            <path d="M40 80 Q120 40 240 60 T460 70 T560 140 Q520 260 380 270 T180 240 Z" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="2"/>
-            <path d="M120 120 Q180 90 280 110 T420 160 Q360 220 220 210 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 4"/>
-            
-            <!-- Posko Candi Marker (with Active T0 Emergency) -->
-            <g transform="translate(180, 140)">
-              <circle cx="0" cy="0" r="16" fill="#FEF2F2" stroke="#991B1B" stroke-width="2" class="animate-ping" opacity="0.4"/>
-              <circle cx="0" cy="0" r="10" fill="#991B1B"/>
-              <text x="14" y="4" font-size="11" font-weight="bold" fill="#0F172A">Posko Candi (2 T0)</text>
-            </g>
-
-            <!-- Posko Maguwoharjo Marker -->
-            <g transform="translate(340, 180)">
-              <circle cx="0" cy="0" r="8" fill="#C2410C"/>
-              <text x="12" y="4" font-size="11" font-weight="bold" fill="#0F172A">Posko Maguwo (T1)</text>
-            </g>
-
-            <!-- Posko Kaliurang Marker -->
-            <g transform="translate(260, 80)">
-              <circle cx="0" cy="0" r="7" fill="#A16207"/>
-              <text x="12" y="4" font-size="11" font-weight="bold" fill="#0F172A">Posko Kaliurang</text>
-            </g>
-
-            <!-- Hospital RSUP Sardjito (Anchor) -->
-            <g transform="translate(420, 120)">
-              <rect x="-10" y="-10" width="20" height="20" rx="4" fill="#0F766E"/>
-              <path d="M-5 0 H5 M0 -5 V5" stroke="white" stroke-width="2.5"/>
-              <text x="14" y="4" font-size="11" font-weight="bold" fill="#0F766E">RSUP Sardjito</text>
-            </g>
-          </svg>
-
-          <!-- Legend Overlay -->
-          <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur p-2.5 rounded-lg border border-slate-200 text-[10px] space-y-1 shadow-xs">
-            <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-triage-t0"></span><span>T0 Kedaruratan Aktif</span></div>
-            <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-triage-t1"></span><span>T1 Risiko Tinggi</span></div>
-            <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-teal"></span><span>Fasilitas Kesehatan Rujukan</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Posko Regional Breakdown Table (5 cols) -->
-      <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-        <div>
-          <h4 class="font-bold text-xs uppercase tracking-wider text-brand-ink mb-3" data-i18n="table_posko_title">Distribusi Kasus per Posko</h4>
-          <div class="divide-y divide-slate-100 text-xs">
-            
-            <div class="py-2.5 flex items-center justify-between">
-              <div>
-                <div class="font-bold text-brand-ink">Posko Candi</div>
-                <div class="text-slate-400">Kapasitas: 420 Penyintas</div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="px-2 py-0.5 rounded bg-red-100 text-red-900 font-bold font-mono">2 T0</span>
-                <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900 font-mono">14 T1</span>
-              </div>
-            </div>
-
-            <div class="py-2.5 flex items-center justify-between">
-              <div>
-                <div class="font-bold text-brand-ink">Posko Maguwoharjo</div>
-                <div class="text-slate-400">Kapasitas: 650 Penyintas</div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="px-2 py-0.5 rounded bg-red-100 text-red-900 font-bold font-mono">1 T0</span>
-                <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900 font-mono">28 T1</span>
-              </div>
-            </div>
-
-            <div class="py-2.5 flex items-center justify-between">
-              <div>
-                <div class="font-bold text-brand-ink">Posko Kaliurang</div>
-                <div class="text-slate-400">Kapasitas: 210 Penyintas</div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">0 T0</span>
-                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-mono">19 T2</span>
-              </div>
-            </div>
-
-            <div class="py-2.5 flex items-center justify-between">
-              <div>
-                <div class="font-bold text-brand-ink">Posko Pakem</div>
-                <div class="text-slate-400">Kapasitas: 380 Penyintas</div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">0 T0</span>
-                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-mono">45 T3</span>
-              </div>
-            </div>
-
+        <!-- Quick Demo Role Switcher Chips -->
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+          <span class="font-bold text-slate-500 uppercase tracking-wider block text-[10px]" data-i18n="demo_accounts_title">AKUN DEMO CEPAT (KLIK UNTUK MASUK):</span>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button type="button" onclick="switchPage('relawan-home')" class="p-2 text-left bg-white border border-slate-200 rounded-lg hover:border-teal-600 hover:bg-teal-50/50 transition">
+              <span class="font-bold text-teal-800 block">Relawan Candi</span>
+              <span class="text-[10px] text-slate-400">relawan@rapidmind.id</span>
+            </button>
+            <button type="button" onclick="switchPage('healthcare-emergencies')" class="p-2 text-left bg-white border border-slate-200 rounded-lg hover:border-red-600 hover:bg-red-50/50 transition">
+              <span class="font-bold text-red-800 block">Healthcare (PSC 119)</span>
+              <span class="text-[10px] text-slate-400">dokter@rapidmind.id</span>
+            </button>
+            <button type="button" onclick="switchPage('admin-summary')" class="p-2 text-left bg-white border border-slate-200 rounded-lg hover:border-slate-800 hover:bg-slate-100 transition col-span-2">
+              <span class="font-bold text-slate-900 block">Administrator BPBD Regional</span>
+              <span class="text-[10px] text-slate-400">admin@rapidmind.id</span>
+            </button>
           </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-100 text-xs text-brand-slate">
-          <p data-i18n="admin_privacy_notice">🔒 Seluruh metrik agregat di atas telah diverifikasi secara klinis oleh Healthcare dan tidak memuat NIK atau riwayat rekam medis individual penyintas.</p>
-        </div>
+        <!-- Form fields -->
+        <form class="space-y-4" onsubmit="event.preventDefault(); switchPage('relawan-home');">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700" data-i18n="label_email">Email atau Username</label>
+            <input type="text" value="relawan@rapidmind.id" class="mt-1 block w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700" data-i18n="label_password">Kata Sandi</label>
+            <input type="password" value="password" class="mt-1 block w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm shadow-sm transition">
+            <span data-i18n="btn_login">Masuk ke Sistem</span>
+          </button>
+        </form>
+
       </div>
+    </section>
 
-    </div>
-  </section>
+  </main>
 
-  <!-- ========================================== -->
-  <!-- SECTION 6: T0 SAFETY & FLOWCHART           -->
-  <!-- ========================================== -->
-  <section id="safety-flow" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-slate-200">
-    <div class="mb-8">
-      <span class="text-xs font-bold uppercase tracking-wider text-triage-t0" data-i18n="flow_tag">Integritas Alur Klinis</span>
-      <h2 class="text-2xl font-bold text-brand-ink" data-i18n="flow_title">6. Siklus Kedaruratan T0 & Transisi Bisnis</h2>
-      <p class="text-sm text-brand-slate mt-1" data-i18n="flow_desc">Prinsip pemisahan wewenang: Relawan hanya membuat T0-Suspect; Tenaga Medis (Healthcare) yang mengonfirmasi atau melakukan downgrade.</p>
-    </div>
-
-    <!-- Step-by-Step Flow Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      
-      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs relative">
-        <div class="w-8 h-8 rounded-lg bg-teal-50 text-brand-teal font-extrabold flex items-center justify-center text-sm mb-3">1</div>
-        <h4 class="font-bold text-sm text-brand-ink mb-1" data-i18n="flow_step1_title">Skrining di Lapangan</h4>
-        <p class="text-xs text-brand-slate leading-relaxed" data-i18n="flow_step1_desc">
-          Relawan mendeteksi risiko (misal: SRQ-17 positif atau kegawatdaruratan psikologis nyata).
-        </p>
-      </div>
-
-      <div class="bg-white rounded-xl border-2 border-red-200 p-4 shadow-xs relative bg-red-50/20">
-        <div class="w-8 h-8 rounded-lg bg-red-800 text-white font-extrabold flex items-center justify-center text-sm mb-3">2</div>
-        <h4 class="font-bold text-sm text-brand-ink mb-1" data-i18n="flow_step2_title">Laporan T0-Suspect</h4>
-        <p class="text-xs text-brand-slate leading-relaxed" data-i18n="flow_step2_desc">
-          Konfirmasi manual relawan membuat status <strong>T0-Suspect</strong>. Masuk antrean outbox lokal dan disinkronkan ke Reverb/Echo.
-        </p>
-      </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs relative">
-        <div class="w-8 h-8 rounded-lg bg-slate-100 text-brand-ink font-extrabold flex items-center justify-center text-sm mb-3">3</div>
-        <h4 class="font-bold text-sm text-brand-ink mb-1" data-i18n="flow_step3_title">Verifikasi Sekunder</h4>
-        <p class="text-xs text-brand-slate leading-relaxed" data-i18n="flow_step3_desc">
-          Healthcare (Dokter/Psikolog) menerima notifikasi audio/visual dan melakukan telaah rekam asesmen.
-        </p>
-      </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs relative">
-        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-extrabold flex items-center justify-center text-sm mb-3">4</div>
-        <h4 class="font-bold text-sm text-brand-ink mb-1" data-i18n="flow_step4_title">Keputusan Klinis Final</h4>
-        <p class="text-xs text-brand-slate leading-relaxed" data-i18n="flow_step4_desc">
-          Healthcare memilih: <strong>Konfirmasi T0</strong> (rujukan darurat/dispatch) ATAU <strong>Downgrade ke T1/T2/T3</strong>.
-        </p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ========================================== -->
-  <!-- MODAL: INTERACTIVE T0 CONFIRMATION DIALOG  -->
-  <!-- ========================================== -->
-  <div id="t0-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-red-300 transform transition-all">
-      <div class="flex items-center space-x-3 mb-4">
+  <!-- ========================================================================= -->
+  <!-- MODAL: REAL T0 EMERGENCY VERIFICATION SHEET (T0Verification.vue)          -->
+  <!-- ========================================================================= -->
+  <div id="t0-verification-modal" class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-red-400 space-y-4 transform transition-all">
+      <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-full bg-red-100 text-red-800 flex items-center justify-center shrink-0">
           <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
         <div>
-          <h3 class="text-lg font-bold text-brand-ink" data-i18n="modal_t0_title">Konfirmasi Sinyal Darurat T0</h3>
-          <p class="text-xs text-red-700 font-semibold" data-i18n="modal_t0_subtitle">Pemicu Kedaruratan Psikiatri / Risiko Bunuh Diri</p>
+          <h3 class="text-base font-bold text-slate-900" data-i18n="modal_t0_title">Verifikasi Kedaruratan Klinis (T0-Suspect)</h3>
+          <p class="text-xs text-red-700 font-semibold" data-i18n="modal_t0_sub">Gerbang Verifikasi Manual Sebelum Transmisi</p>
         </div>
       </div>
 
-      <div class="space-y-3 text-xs text-slate-600 mb-6 bg-red-50 p-3.5 rounded-xl border border-red-100">
-        <p><strong>Penyintas:</strong> Juhoon (Posko Candi - Tenda 4)</p>
-        <p>Sinyal ini akan segera diteruskan ke Dokter/Psikolog PSC 119 sebagai status <strong>T0-Suspect</strong>.</p>
-        <p class="text-[11px] text-slate-500 italic">Data disimpan secara offline lokal terlebih dahulu sebelum transmisi jaringan diupayakan.</p>
+      <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-xs space-y-1.5 text-slate-800">
+        <p><strong>Penyintas:</strong> Juhoon (Posko Candi)</p>
+        <p><strong>Pemicu Kedaruratan:</strong> Pengakuan eksplisit pikiran mengakhiri hidup pada Pertanyaan #17 SRQ-20.</p>
+        <p class="text-[11px] text-slate-500 italic">Sinyal akan disimpan terlebih dahulu di perangkat offline sebelum transmisi ke Healthcare.</p>
       </div>
 
-      <div class="flex items-center justify-end space-x-3">
-        <button type="button" onclick="closeT0ModalDemo()" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">
-          Batal
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button type="button" onclick="closeT0VerificationModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          Batalkan
         </button>
-        <button type="button" onclick="confirmT0ModalDemo()" class="px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-xs font-bold shadow-xs">
-          Kirim Darurat T0-Suspect
+        <button type="button" onclick="confirmT0SendSim()" class="px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-xs font-bold shadow-xs">
+          Kirim Sinyal T0-Suspect
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- FOOTER                                     -->
-  <!-- ========================================== -->
-  <footer class="bg-brand-ink text-white py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-      <div>
-        <div class="flex items-center space-x-2">
-          <span class="font-extrabold text-lg tracking-tight">RAPID-MIND</span>
-          <span class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Prototype v1.3</span>
-        </div>
-        <p class="text-xs text-slate-400 mt-1" data-i18n="footer_rights">Sistem Pendukung Keputusan Respons Kesehatan Jiwa Bencana</p>
-      </div>
-
-      <div class="text-xs text-slate-400 space-y-1 md:text-right">
-        <p>Tech Baseline: Laravel 13 • Vue 3 • TypeScript • Tailwind CSS • Dexie (IndexedDB)</p>
-        <p>Protokol: AES-256-GCM Offline Encryption • Reverb / Echo Realtime • SRQ-20 WHO</p>
-      </div>
-    </div>
-  </footer>
-
-  <!-- ========================================== -->
-  <!-- JAVASCRIPT: BILINGUAL & INTERACTIVE ENGINE -->
-  <!-- ========================================== -->
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT APP CONTROLLER & BILINGUAL ENGINE                              -->
+  <!-- ========================================================================= -->
   <script>
-    // Bilingual dictionary for dynamic switching
+    // Bilingual dictionary for exact text
     const i18n = {
       id: {
-        badge_design_system: 'DESIGN SYSTEM',
-        app_tagline: 'Operational Humanitarian UI • Sistem Pendukung Keputusan',
-        nav_tokens: 'Tokens & Warna',
-        nav_components: 'Komponen UI',
-        nav_relawan: 'Relawan (PWA)',
-        nav_healthcare: 'Healthcare',
-        nav_admin: 'Admin',
-        nav_flow: 'Alur Keselamatan',
-        btn_inspect: 'Prinsip Desain',
-        hero_status: 'Dokumentasi & Desain Sistem Terintegrasi RAPID-MIND',
-        hero_title: 'Satu Sistem Desain, Tiga Pengalaman Kerja Spesifik',
-        hero_desc: 'RAPID-MIND menerapkan Operational Humanitarian UI: antarmuka yang tenang secara default, kontras tinggi di lapangan, mengutamakan aksi di atas dekorasi, dan mengkhususkan warna merah murni hanya untuk kegawatdaruratan klinis (T0 Emergency).',
-        role_relawan_title: 'RELAWAN',
-        role_relawan_sub: 'PWA Mobile • Skrining Lapangan',
-        role_healthcare_title: 'HEALTHCARE',
-        role_healthcare_sub: 'Desktop • Verifikasi T0 & Validasi',
-        role_admin_title: 'ADMIN',
-        role_admin_sub: 'Desktop • Pemantauan Makro Regional',
-        sec1_tag: 'Fondasi Visual',
-        sec1_title: '1. Palet Warna & Tipografi',
-        sec1_desc: 'Sistem palet 5 warna inti dan palet semantik triase (T0–T3) sesuai spesifikasi RAPID_MIND_VISUAL_FOUNDATION.md.',
-        core_palette_title: 'Palet Warna Inti (5 Warna Utama)',
-        color_ink_usage: 'Teks utama, judul, navigasi struktural desktop.',
-        color_teal_usage: 'Aksi utama, tombol CTA, tautan, navigasi aktif.',
-        color_slate_usage: 'Teks sekunder, metadata, status aman offline.',
-        color_softgray_usage: 'Latar belakang aplikasi, grup panel konten.',
-        color_white_usage: 'Kartu pertanyaan, panel asesmen, data form.',
-        palette_balance: 'Proporsi Tampilan: 70–80% White/Soft Gray • 15–20% Ink/Slate • 5–10% Teal (Interaksi & CTA)',
-        triage_palette_title: 'Palet Semantik Triase (Pengecualian Klinis T0–T3)',
-        t0_desc: 'Kedaruratan psikiatri / risiko tinggi bunuh diri. Dilindungi khusus; tidak boleh digunakan untuk tombol biasa.',
-        t1_desc: 'Gejala klinis berat memerlukan rujukan segera dan intervensi tenaga medis spesialis.',
-        t2_desc: 'Distres sedang yang membutuhkan pendampingan terstruktur dan pemantauan berkala.',
-        t3_desc: 'Kondisi adaptif/ringan; didukung dengan Psychological First Aid (PFA) oleh relawan.',
-        typography_title: 'Hierarki Tipografi (Inter Variable)',
-        sample_display: 'Pusat Komando Siaga Jiwa Sleman',
-        sample_h1: 'Skrining Psikologis SRQ-20',
-        sample_q: 'Apakah Anda sering menderita sakit kepala atau pusing berulang?',
-        sample_body: 'Gunakan panduan relawan untuk membangun rasa aman dan mendengarkan penyintas dengan empati.',
-        sample_compact: 'NIK: 3404018274910002 • Posko Candi • Skor SRQ: 14/20 (Ya)',
-        sample_caption: 'Terakhir disinkronkan 12 Nov 2026, 19:42 WIB • Enkripsi AES-256-GCM Aktif',
-        sec2_tag: 'Komponen UI Inti',
-        sec2_title: '2. Katalog Komponen & Kontrol Interaktif',
-        sec2_desc: 'Semua elemen dasar yang digunakan pada halaman Asesmen, Workspace Healthcare, dan Command Center Admin.',
-        comp_btn_title: 'Tombol & Kontrol Aksi',
-        comp_btn_desc: 'Hierarki tombol aksi sistem: Utama (Teal), Sekunder (Garis), Bahaya/Darurat (Merah T0).',
-        btn_primary_sample: 'Lanjut: Faktor Risiko (16/20) →',
-        btn_secondary_sample: '← Kembali ke Identitas',
+        top_bar_subtitle: 'Satu Aplikasi, Tiga Ruang Kerja Spesifik (Relawan • Healthcare • Admin)',
+        nav_relawan_home: 'Relawan: Beranda',
+        nav_relawan_srq: 'Asesmen SRQ-20',
+        nav_relawan_result: 'Hasil Triase',
+        nav_healthcare: 'Healthcare: Kedaruratan',
+        nav_admin: 'Admin: Pusat Komando',
+        nav_login: 'Login',
+        shelter_name: 'Posko Candi Sleman',
+        status_saved_locally: 'Tersimpan lokal',
+        relawan_role_badge: 'Relawan Lapangan Dukungan Psikososial',
+        t0_active_banner_title: 'Laporan Kedaruratan Aktif',
+        t0_active_banner_desc: 'Terikrar ide bunuh diri aktif pada SRQ-17. Menunggu verifikasi faskes.',
+        t0_delivery_state: 'Tersimpan lokal di outbox prioritas • Diterima antrean server',
+        draft_title: 'Draf Asesmen Belum Selesai',
+        draft_step: 'Lanjut dari tahap terakhir',
+        draft_desc: 'Tahap berikutnya mengikuti jawaban yang tersimpan di perangkat ini.',
+        btn_continue_srq: 'Lanjutkan Asesmen SRQ-20 →',
+        quick_actions_title: 'Menu Aksi Lapangan',
+        pfa_phase_tag: 'FASE AKUT • HARI 1–3',
+        pfa_guide_title: 'Panduan Intervensi PFA',
+        pfa_guide_desc: 'Protokol Look, Listen, Link (WHO) untuk pendampingan darurat garis depan.',
+        srq_phase_tag: 'FASE LANJUTAN • HARI 4–30',
+        start_screening_title: 'Mulai Skrining Baru',
+        start_screening_desc: 'Lakukan asesmen psikologis terstruktur 3 tahap (SRQ-20, Faktor Risiko, Fungsi Harian).',
         btn_t0_emergency: 'T0 DARURAT',
-        t0_pill_note: 'Floating Emergency Pill (Rapi, Tanpa Bar Dock)',
-        comp_status_title: 'Status Operasional & Sinkronisasi',
-        comp_status_desc: 'Status operasional tanpa menciptakan variasi warna pelangi yang membingungkan.',
-        status_synced: '✓ Tersinkron ke Server',
-        status_syncing: '↻ Menyinkronkan 3 data...',
-        status_offline: '● Tersimpan lokal (Offline)',
-        status_encrypted: 'Terenkripsi AES-256-GCM',
-        srq_ctrl_desc: 'Jawaban tidak jelas atau belum terjawab dilarang dipaksa (coerce) menjadi TIDAK atau 0.',
-        q_badge: 'PERTANYAAN',
-        srq_demo_q: 'Apakah Anda sering menderita sakit kepala, rasa berat di kepala, atau pusing berulang?',
-        srq_btn_yes: 'Ya',
-        srq_btn_no: 'Tidak',
-        srq_btn_unclear: 'Respons Tidak Jelas',
-        srq_unrecorded: 'Belum tercatat',
-        srq_clear_btn: 'Bersihkan jawaban',
-        role1_tag: 'Pengalaman Relawan',
-        role1_title: '3. Tampilan Frontline Relawan (Mobile PWA)',
-        role1_desc: 'Antarmuka lapangan untuk relawan penilai di posko pengungsian: ringkas, mudah dibaca di bawah sinar matahari, dan tahan offline.',
-        pwa_saved_locally: 'Tersimpan lokal',
-        floating_t0_text: 'T0 DARURAT',
-        role2_tag: 'Pengalaman Tenaga Kesehatan',
-        role2_title: '4. Workspace Healthcare & Antrean Kedaruratan T0',
-        role2_desc: 'Ruang kerja klinis dua panel untuk dokter/psikolog: verifikasi T0-Suspect, aksi downgrade resmi ke T1/T2/T3, serta koordinasi rujukan & respon lapangan.',
-        hc_queue_title: 'Antrean Triase & Kedaruratan',
-        hc_clinical_verif: 'Verifikasi Sekunder & Validasi Klinis Dokter/Psikolog',
-        role3_tag: 'Pengalaman Administrator BPBD / Dinkes',
-        role3_title: '5. Pusat Komando Regional & Monitoring Agregat',
-        role3_desc: 'Visualisasi makro data bencana untuk BPBD & Dinas Kesehatan tanpa mengekspos NIK atau rekam medis personal penyintas.',
-        kpi_screenings: 'Total Skrining Valid',
-        kpi_t0: 'Kedaruratan T0 Aktif',
-        kpi_faskes: 'Kapasitas Tempat Tidur Jiwa',
-        kpi_volunteers: 'Relawan Lapangan Bertugas',
-        map_title: 'Peta Distribusi Triase & Posko Bencana',
-        table_posko_title: 'Distribusi Kasus per Posko',
-        admin_privacy_notice: '🔒 Seluruh metrik agregat di atas telah diverifikasi secara klinis oleh Healthcare dan tidak memuat NIK atau riwayat rekam medis individual penyintas.',
-        flow_tag: 'Integritas Alur Klinis',
-        flow_title: '6. Siklus Kedaruratan T0 & Transisi Bisnis',
-        flow_desc: 'Prinsip pemisahan wewenang: Relawan hanya membuat T0-Suspect; Tenaga Medis (Healthcare) yang mengonfirmasi atau melakukan downgrade.',
-        flow_step1_title: 'Skrining di Lapangan',
-        flow_step1_desc: 'Relawan mendeteksi risiko (misal: SRQ-17 positif atau kegawatdaruratan psikologis nyata).',
-        flow_step2_title: 'Laporan T0-Suspect',
-        flow_step2_desc: 'Konfirmasi manual relawan membuat status T0-Suspect. Masuk antrean outbox lokal dan disinkronkan ke Reverb/Echo.',
-        flow_step3_title: 'Verifikasi Sekunder',
-        flow_step3_desc: 'Healthcare (Dokter/Psikolog) menerima notifikasi audio/visual dan melakukan telaah rekam asesmen.',
-        flow_step4_title: 'Keputusan Klinis Final',
-        flow_step4_desc: 'Healthcare memilih: Konfirmasi T0 (rujukan darurat/dispatch) ATAU Downgrade ke T1/T2/T3.',
-        modal_t0_title: 'Konfirmasi Sinyal Darurat T0',
-        modal_t0_subtitle: 'Pemicu Kedaruratan Psikiatri / Risiko Bunuh Diri',
-        footer_rights: 'Sistem Pendukung Keputusan Respons Kesehatan Jiwa Bencana',
+        nav_b_home: 'Beranda',
+        nav_b_pfa: 'PFA',
+        nav_b_assessment: 'Asesmen',
+        nav_b_data: 'Data',
+        btn_back: 'Kembali',
+        btn_next_risk: 'Lanjut: Hasil & Review (16/20) →',
+        p1_obs_title: 'Observasi Perilaku Nonverbal (P1)',
+        p1_obs_sub: 'Tidak mengubah skor SRQ',
+        result_screen_title: 'Hasil Asesmen Triase',
+        triage_rec_t1_title: 'Rekomendasi Sistem: Rujukan Tenaga Medis',
+        triage_rec_t1_desc: 'Penyintas mengalami distres psikologis berat disertai 2 faktor risiko klinis. Memerlukan konsultasi psikiatri atau rujukan ke Faskes rujukan primer.',
+        score_breakdown_title: 'Rincian Komponen Penilaian',
+        modal_t0_title: 'Verifikasi Kedaruratan Klinis (T0-Suspect)',
+        modal_t0_sub: 'Gerbang Verifikasi Manual Sebelum Transmisi',
+        login_subtitle: 'Sistem Pendukung Keputusan Respons Kesehatan Jiwa Bencana',
+        demo_accounts_title: 'AKUN DEMO CEPAT (KLIK UNTUK MASUK):',
+        label_email: 'Email atau Username',
+        label_password: 'Kata Sandi',
+        btn_login: 'Masuk ke Sistem'
       },
       en: {
-        badge_design_system: 'DESIGN SYSTEM',
-        app_tagline: 'Operational Humanitarian UI • Decision Support System',
-        nav_tokens: 'Tokens & Colors',
-        nav_components: 'UI Components',
-        nav_relawan: 'Volunteer (PWA)',
-        nav_healthcare: 'Healthcare',
-        nav_admin: 'Admin',
-        nav_flow: 'Safety Lifecycle',
-        btn_inspect: 'Design Rules',
-        hero_status: 'RAPID-MIND Integrated Design System & Interactive Showcase',
-        hero_title: 'One Design System, Three Role-Specific Workspaces',
-        hero_desc: 'RAPID-MIND implements an Operational Humanitarian UI: calm by default, high field contrast, prioritizing action over decoration, and strictly reserving pure emergency red solely for clinical critical emergencies (T0 Emergency).',
-        role_relawan_title: 'VOLUNTEER',
-        role_relawan_sub: 'Mobile PWA • Field Screening',
-        role_healthcare_title: 'HEALTHCARE',
-        role_healthcare_sub: 'Desktop • T0 Verification & Clinical Validation',
-        role_admin_title: 'ADMIN',
-        role_admin_sub: 'Desktop • Macro Regional Command Center',
-        sec1_tag: 'Visual Foundation',
-        sec1_title: '1. Color Palette & Typography',
-        sec1_desc: 'Core 5-color palette system and triage semantic exception palette (T0–T3) compliant with RAPID_MIND_VISUAL_FOUNDATION.md.',
-        core_palette_title: 'Core Color Palette (5 Main Colors)',
-        color_ink_usage: 'Primary body text, headings, structural desktop navigation.',
-        color_teal_usage: 'Primary CTAs, positive interaction, active navigation, links.',
-        color_slate_usage: 'Secondary text, metadata, safe offline indicator.',
-        color_softgray_usage: 'Application background, grouped content regions.',
-        color_white_usage: 'Question cards, assessment panels, form surfaces.',
-        palette_balance: 'Screen Proportion: 70–80% White/Soft Gray • 15–20% Ink/Slate • 5–10% Teal (Interactions & CTAs)',
-        triage_palette_title: 'Triage Semantic Palette (Clinical Exceptions T0–T3)',
-        t0_desc: 'Psychiatric emergency / high suicide risk. Strictly protected; never used for routine buttons.',
-        t1_desc: 'Severe clinical symptoms requiring immediate referral and specialist medical intervention.',
-        t2_desc: 'Moderate psychological distress requiring structured support and regular monitoring.',
-        t3_desc: 'Mild / adaptive condition; supported with Psychological First Aid (PFA) by field volunteers.',
-        typography_title: 'Typography Hierarchy (Inter Variable)',
-        sample_display: 'Sleman Mental Health Command Center',
-        sample_h1: 'SRQ-20 Psychological Screening',
-        sample_q: 'Do you often suffer from headaches, a heavy head, or recurring dizziness?',
-        sample_body: 'Follow volunteer guidance to establish psychological safety and listen with empathy.',
-        sample_compact: 'NIK: 3404018274910002 • Shelter: Candi • SRQ Score: 14/20 (Yes)',
-        sample_caption: 'Last synced 12 Nov 2026, 19:42 WIB • AES-256-GCM Encryption Active',
-        sec2_tag: 'Core UI Components',
-        sec2_title: '2. Component Catalog & Interactive Controls',
-        sec2_desc: 'All foundational elements across Assessment pages, Healthcare Workspace, and Admin Command Center.',
-        comp_btn_title: 'Buttons & Action Controls',
-        comp_btn_desc: 'System action hierarchy: Primary CTA (Teal), Secondary (Outlined), Emergency/Danger (T0 Red).',
-        btn_primary_sample: 'Next: Risk Factors (16/20) →',
-        btn_secondary_sample: '← Back to Identity',
+        top_bar_subtitle: 'One Application, Three Dedicated Workspaces (Volunteer • Healthcare • Admin)',
+        nav_relawan_home: 'Volunteer: Home',
+        nav_relawan_srq: 'SRQ-20 Assessment',
+        nav_relawan_result: 'Triage Result',
+        nav_healthcare: 'Healthcare: Emergencies',
+        nav_admin: 'Admin: Command Center',
+        nav_login: 'Login',
+        shelter_name: 'Candi Shelter Sleman',
+        status_saved_locally: 'Saved locally',
+        relawan_role_badge: 'Psychosocial Support Field Volunteer',
+        t0_active_banner_title: 'Active Emergency Report',
+        t0_active_banner_desc: 'Expressed active suicide ideation on SRQ-17. Awaiting healthcare verification.',
+        t0_delivery_state: 'Saved locally in priority outbox • Received in server queue',
+        draft_title: 'Incomplete Assessment Draft',
+        draft_step: 'Continue from last stage',
+        draft_desc: 'Next stage follows answers saved on this device.',
+        btn_continue_srq: 'Continue SRQ-20 Assessment →',
+        quick_actions_title: 'Field Action Menu',
+        pfa_phase_tag: 'ACUTE PHASE • DAY 1–3',
+        pfa_guide_title: 'PFA Intervention Guide',
+        pfa_guide_desc: 'Look, Listen, Link protocol (WHO) for frontline psychological first aid.',
+        srq_phase_tag: 'FOLLOW-UP PHASE • DAY 4–30',
+        start_screening_title: 'Start New Screening',
+        start_screening_desc: 'Perform 3-stage structured psychological assessment (SRQ-20, Risk Factors, Daily Function).',
         btn_t0_emergency: 'T0 EMERGENCY',
-        t0_pill_note: 'Floating Emergency Pill (Clean, No Dock Strip)',
-        comp_status_title: 'Operational Status & Synchronization',
-        comp_status_desc: 'Explicit operational indicators without introducing confusing rainbow colors.',
-        status_synced: '✓ Synced with Server',
-        status_syncing: '↻ Syncing 3 records...',
-        status_offline: '● Saved locally (Offline)',
-        status_encrypted: 'Encrypted AES-256-GCM',
-        srq_ctrl_desc: 'Unclear or unanswered responses are strictly forbidden from being coerced into NO or zero.',
-        q_badge: 'QUESTION',
-        srq_demo_q: 'Do you often suffer from headaches, heavy feeling in head, or recurring dizziness?',
-        srq_btn_yes: 'Yes',
-        srq_btn_no: 'No',
-        srq_btn_unclear: 'Unclear Response',
-        srq_unrecorded: 'Not recorded',
-        srq_clear_btn: 'Clear answer',
-        role1_tag: 'Volunteer Experience',
-        role1_title: '3. Frontline Volunteer Experience (Mobile PWA)',
-        role1_desc: 'Frontline screening interface at evacuation shelters: concise, readable under sunlight, and offline-first.',
-        pwa_saved_locally: 'Saved locally',
-        floating_t0_text: 'T0 EMERGENCY',
-        role2_tag: 'Healthcare Experience',
-        role2_title: '4. Healthcare Workspace & T0 Emergency Queue',
-        role2_desc: 'High-density two-panel clinical workspace: verify T0-Suspect cases, perform audited downgrades to T1/T2/T3, and coordinate referrals.',
-        hc_queue_title: 'Triage & Emergency Queue',
-        hc_clinical_verif: 'Secondary Verification & Doctor/Psychologist Clinical Validation',
-        role3_tag: 'BPBD / Health Office Administrator',
-        role3_title: '5. Regional Command Center & Aggregate Monitoring',
-        role3_desc: 'Macro disaster intelligence for coordination agencies without exposing survivor personal identity or private medical records.',
-        kpi_screenings: 'Total Valid Screenings',
-        kpi_t0: 'Active T0 Emergencies',
-        kpi_faskes: 'Psychiatric Bed Availability',
-        kpi_volunteers: 'Active Field Volunteers',
-        map_title: 'Triage Distribution & Shelter Disaster Map',
-        table_posko_title: 'Case Distribution per Shelter',
-        admin_privacy_notice: '🔒 All macro metrics above are clinically verified by Healthcare and omit survivor NIK and identifiable medical history.',
-        flow_tag: 'Clinical Safety Integrity',
-        flow_title: '6. T0 Emergency Lifecycle & Business Transitions',
-        flow_desc: 'Separation of authority: Volunteers only report T0-Suspect; Healthcare validates, confirms, or downgrades.',
-        flow_step1_title: 'Field Screening',
-        flow_step1_desc: 'Volunteer detects clinical risk (e.g. positive SRQ-17 or acute psychological crisis).',
-        flow_step2_title: 'T0-Suspect Report',
-        flow_step2_desc: 'Manual volunteer confirmation creates T0-Suspect. Stored in priority local outbox and synced via Reverb/Echo.',
-        flow_step3_title: 'Secondary Verification',
-        flow_step3_desc: 'Healthcare clinician receives real-time notification and audits the assessment evidence.',
-        flow_step4_title: 'Final Clinical Decision',
-        flow_step4_desc: 'Clinician selects: Confirm T0 (immediate dispatch/referral) OR Downgrade to T1/T2/T3.',
-        modal_t0_title: 'Confirm T0 Emergency Signal',
-        modal_t0_subtitle: 'Acute Psychiatric Emergency / Suicide Risk Trigger',
-        footer_rights: 'Decision Support System for Disaster Mental-Health Response',
+        nav_b_home: 'Home',
+        nav_b_pfa: 'PFA',
+        nav_b_assessment: 'Assessment',
+        nav_b_data: 'Data',
+        btn_back: 'Back',
+        btn_next_risk: 'Next: Result & Review (16/20) →',
+        p1_obs_title: 'Non-Verbal Observations (P1)',
+        p1_obs_sub: 'Does not alter SRQ scores',
+        result_screen_title: 'Triage Assessment Result',
+        triage_rec_t1_title: 'System Recommendation: Medical Specialist Referral',
+        triage_rec_t1_desc: 'Survivor presents with severe psychological distress and 2 clinical risk factors. Requires psychiatric evaluation or primary hospital referral.',
+        score_breakdown_title: 'Assessment Component Breakdown',
+        modal_t0_title: 'Clinical Emergency Verification (T0-Suspect)',
+        modal_t0_sub: 'Manual Verification Gate Before Transmission',
+        login_subtitle: 'Decision Support System for Disaster Mental-Health Response',
+        demo_accounts_title: 'QUICK DEMO ACCOUNTS (CLICK TO ENTER):',
+        label_email: 'Email or Username',
+        label_password: 'Password',
+        btn_login: 'Sign in to System'
       }
     };
 
@@ -1377,89 +1249,174 @@
         }
       });
 
-      // Update button toggle appearance
-      const idBtn = document.getElementById('lang-id-btn');
-      const enBtn = document.getElementById('lang-en-btn');
+      // Update button styling
+      const idBtn = document.getElementById('lang-btn-id');
+      const enBtn = document.getElementById('lang-btn-en');
       if (lang === 'id') {
-        idBtn.className = 'px-2.5 py-1 rounded-md transition duration-150 bg-brand-teal text-white shadow-xs';
-        enBtn.className = 'px-2.5 py-1 rounded-md transition duration-150 text-brand-slate hover:text-brand-ink';
+        idBtn.className = 'px-2 py-0.5 rounded bg-teal-700 text-white shadow-xs';
+        enBtn.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white';
       } else {
-        enBtn.className = 'px-2.5 py-1 rounded-md transition duration-150 bg-brand-teal text-white shadow-xs';
-        idBtn.className = 'px-2.5 py-1 rounded-md transition duration-150 text-brand-slate hover:text-brand-ink';
+        enBtn.className = 'px-2 py-0.5 rounded bg-teal-700 text-white shadow-xs';
+        idBtn.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white';
       }
     }
 
-    // Toggle Mobile Frame vs Wide view for Relawan
-    function toggleRelawanFrame(isMobile) {
-      const frame = document.getElementById('relawan-container');
-      const mobBtn = document.getElementById('view-mobile-frame-btn');
-      const wideBtn = document.getElementById('view-wide-frame-btn');
-
-      if (isMobile) {
-        frame.className = 'mobile-frame bg-slate-50 border-4 border-slate-900 relative overflow-hidden flex flex-col transition-all duration-300';
-        mobBtn.className = 'px-3 py-1.5 rounded-md bg-brand-teal text-white shadow-xs';
-        wideBtn.className = 'px-3 py-1.5 rounded-md text-brand-slate hover:text-brand-ink';
-      } else {
-        frame.className = 'w-full max-w-xl h-[700px] rounded-2xl bg-slate-50 border-2 border-slate-300 relative overflow-hidden flex flex-col shadow-lg transition-all duration-300';
-        wideBtn.className = 'px-3 py-1.5 rounded-md bg-brand-teal text-white shadow-xs';
-        mobBtn.className = 'px-3 py-1.5 rounded-md text-brand-slate hover:text-brand-ink';
-      }
-    }
-
-    // Toggle STT Tech details accordion in Relawan preview
-    function toggleSttTechDetails() {
-      const panel = document.getElementById('stt-tech-details');
-      const chevron = document.getElementById('stt-details-chevron');
-      if (panel.classList.contains('hidden')) {
-        panel.classList.remove('hidden');
-        chevron.classList.add('rotate-180');
-      } else {
+    // View Navigation Switcher
+    function switchPage(pageKey) {
+      // Hide all view panels
+      document.querySelectorAll('.view-panel').forEach(panel => {
         panel.classList.add('hidden');
-        chevron.classList.remove('rotate-180');
+      });
+
+      // Show selected panel
+      const target = document.getElementById(`view-${pageKey}`);
+      if (target) {
+        target.classList.remove('hidden');
+      }
+
+      // Reset all nav buttons
+      const btnMap = {
+        'relawan-home': 'nav-btn-relawan-home',
+        'relawan-srq': 'nav-btn-relawan-srq',
+        'relawan-result': 'nav-btn-relawan-result',
+        'healthcare-emergencies': 'nav-btn-healthcare',
+        'admin-summary': 'nav-btn-admin',
+        'auth-login': 'nav-btn-login'
+      };
+
+      Object.values(btnMap).forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.className = 'px-2.5 py-1 rounded-md font-semibold transition text-slate-300 hover:text-white';
+        }
+      });
+
+      const activeBtn = document.getElementById(btnMap[pageKey]);
+      if (activeBtn) {
+        activeBtn.className = 'px-2.5 py-1 rounded-md font-semibold transition bg-teal-700 text-white shadow-xs';
+      }
+
+      // Show or hide phone frame controls depending on role
+      const frameToggle = document.getElementById('relawan-frame-toggle-wrap');
+      if (pageKey.startsWith('relawan')) {
+        frameToggle.classList.remove('hidden');
+      } else {
+        frameToggle.classList.add('hidden');
       }
     }
 
-    // Interactive SRQ 4-State Controller
-    let currentSrqState = 'UNANSWERED';
-    function selectSrqState(state) {
-      currentSrqState = state;
-      document.getElementById('interactive-srq-val').innerText = state;
+    // Toggle Phone Mockup frame vs Wide frame
+    function setRelawanFrame(isPhone) {
+      const frames = [
+        document.getElementById('relawan-home-frame'),
+        document.getElementById('relawan-srq-frame'),
+        document.getElementById('relawan-result-frame')
+      ];
 
-      const yesBtn = document.getElementById('srq-btn-yes');
-      const noBtn = document.getElementById('srq-btn-no');
-      const unclearBtn = document.getElementById('srq-btn-unclear');
-      const statusText = document.getElementById('srq-status-text');
+      const phoneBtn = document.getElementById('frame-phone-btn');
+      const wideBtn = document.getElementById('frame-wide-btn');
 
-      // Reset styles
-      const defaultClass = 'py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-white border-slate-200 text-brand-ink hover:border-brand-teal hover:bg-teal-50/50';
+      frames.forEach(frame => {
+        if (!frame) return;
+        if (isPhone) {
+          frame.className = 'phone-mockup-frame bg-slate-100 flex flex-col overflow-hidden relative border-4 border-slate-900 transition-all duration-200';
+        } else {
+          frame.className = 'w-full max-w-2xl h-full rounded-2xl bg-slate-100 flex flex-col overflow-hidden relative border-2 border-slate-300 shadow-xl transition-all duration-200';
+        }
+      });
+
+      if (isPhone) {
+        phoneBtn.className = 'px-2 py-0.5 rounded bg-teal-800 text-white font-bold';
+        wideBtn.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white';
+      } else {
+        wideBtn.className = 'px-2 py-0.5 rounded bg-teal-800 text-white font-bold';
+        phoneBtn.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white';
+      }
+    }
+
+    // SRQ Question Answering Logic
+    let answersState = { 1: 'NO', 17: 'UNANSWERED', 20: 'YES' };
+
+    function selectAnswer(qNum, state) {
+      answersState[qNum] = state;
+      const yesBtn = document.getElementById(`q${qNum}-btn-yes`);
+      const noBtn = document.getElementById(`q${qNum}-btn-no`);
+      const unclearBtn = document.getElementById(`q${qNum}-btn-unclear`);
+      const statusLabel = document.getElementById(`q${qNum}-status-label`);
+
+      const defaultClass = 'py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-white border-slate-200 text-slate-900 hover:border-teal-600';
       yesBtn.className = defaultClass;
       noBtn.className = defaultClass;
       unclearBtn.className = defaultClass;
 
       if (state === 'YES') {
-        yesBtn.className = 'py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-brand-teal border-brand-teal text-white shadow-sm';
-        statusText.innerText = currentLang === 'id' ? 'Tercatat: Ya (Gejala Hadir)' : 'Recorded: Yes (Symptom Present)';
+        yesBtn.className = 'py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-teal-700 border-teal-700 text-white shadow-xs';
+        statusLabel.innerText = currentLang === 'id' ? 'Tercatat: Ya' : 'Recorded: Yes';
       } else if (state === 'NO') {
-        noBtn.className = 'py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-brand-teal border-brand-teal text-white shadow-sm';
-        statusText.innerText = currentLang === 'id' ? 'Tercatat: Tidak (Gejala Absen)' : 'Recorded: No (Symptom Absent)';
+        noBtn.className = 'py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-teal-700 border-teal-700 text-white shadow-xs';
+        statusLabel.innerText = currentLang === 'id' ? 'Tercatat: Tidak' : 'Recorded: No';
       } else if (state === 'UNCLEAR') {
-        unclearBtn.className = 'py-3 px-4 rounded-xl border-2 font-bold text-sm transition duration-150 flex items-center justify-center space-x-2 bg-amber-500 border-amber-500 text-white shadow-sm';
-        statusText.innerText = currentLang === 'id' ? 'Tercatat: Respons Belum Jelas (Skor Tertunda)' : 'Recorded: Unclear (Definitive Score Deferred)';
+        unclearBtn.className = 'py-2.5 px-2 rounded-xl border-2 font-bold text-xs bg-amber-500 border-amber-500 text-white shadow-xs';
+        statusLabel.innerText = currentLang === 'id' ? 'Tercatat: Ragu-ragu' : 'Recorded: Unclear';
       } else {
-        statusText.innerText = currentLang === 'id' ? 'Belum tercatat' : 'Not recorded';
+        statusLabel.innerText = currentLang === 'id' ? 'Belum tercatat' : 'Not recorded';
       }
     }
 
-    // Modal dialog demo
-    function triggerT0ModalDemo() {
-      document.getElementById('t0-modal').classList.remove('hidden');
+    // Toggle STT Tech Info
+    function toggleSttInfo() {
+      const panel = document.getElementById('stt-info-collapsed');
+      const btn = document.getElementById('stt-info-toggle-btn');
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        btn.innerText = currentLang === 'id' ? 'Tutup' : 'Close';
+      } else {
+        panel.classList.add('hidden');
+        btn.innerText = currentLang === 'id' ? 'Detail' : 'Details';
+      }
     }
-    function closeT0ModalDemo() {
-      document.getElementById('t0-modal').classList.add('hidden');
+
+    // STT Recording Simulation
+    let isRecording = false;
+    function toggleSttRecordingSim() {
+      const btn = document.getElementById('srq-stt-record-btn');
+      const label = document.getElementById('srq-stt-status-label');
+      isRecording = !isRecording;
+      if (isRecording) {
+        btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border border-red-700 bg-red-700 text-white animate-pulse cursor-pointer';
+        btn.innerHTML = '<span>🔴 Merekam...</span>';
+        label.innerText = currentLang === 'id' ? 'Mendengarkan ucapan penyintas...' : 'Listening to survivor speech...';
+      } else {
+        btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer';
+        btn.innerHTML = '<span>Siapkan STT</span>';
+        label.innerText = currentLang === 'id' ? 'STT Lokal Siap (WebGPU On-Device)' : 'Local STT Ready (WebGPU On-Device)';
+      }
     }
-    function confirmT0ModalDemo() {
-      alert(currentLang === 'id' ? 'Sinyal T0-Suspect berhasil dibuat dan disimpan di outbox lokal berprioritas tinggi.' : 'T0-Suspect emergency created and stored into priority local outbox.');
-      closeT0ModalDemo();
+
+    // Healthcare Tab Switcher
+    function switchHcTab(tabKey) {
+      ['tindakan', 'asesmen', 'ringkasan'].forEach(key => {
+        document.getElementById(`hc-pane-${key}`).classList.add('hidden');
+        document.getElementById(`hc-tab-btn-${key}`).className = 'text-slate-500 hover:text-slate-800 pb-2';
+      });
+
+      document.getElementById(`hc-pane-${tabKey}`).classList.remove('hidden');
+      document.getElementById(`hc-tab-btn-${tabKey}`).className = 'text-teal-800 border-b-2 border-teal-600 pb-2 font-bold';
+    }
+
+    // Modal T0 Verification Controls
+    function openT0VerificationModal() {
+      document.getElementById('t0-verification-modal').classList.remove('hidden');
+    }
+    function closeT0VerificationModal() {
+      document.getElementById('t0-verification-modal').classList.add('hidden');
+    }
+    function confirmT0SendSim() {
+      closeT0VerificationModal();
+      alert(currentLang === 'id' 
+        ? 'Laporan T0-Suspect berhasil dibuat! Disimpan di outbox lokal dan ditransmisikan ke Healthcare.'
+        : 'T0-Suspect reported! Stored in priority local outbox and transmitted to Healthcare.');
+      switchPage('healthcare-emergencies');
     }
   </script>
 </body>

@@ -1,5 +1,5 @@
 <template>
-    <OfflineReadinessNotice v-if="loggedOutLocally || checkingContinuity || ownerStorageMode === 'CHECKING' || (currentOwner && !clinicalViewAvailable)" />
+    <OfflineReadinessNotice v-if="loggedOutLocally || checkingContinuity" />
     <div
         v-if="loggedOutLocally || checkingContinuity"
         class="min-h-screen bg-slate-100 p-6 text-slate-900"
@@ -33,35 +33,7 @@
         </div>
     </div>
     <div
-        v-else-if="ownerStorageMode === 'CHECKING'"
-        class="min-h-screen bg-slate-100 p-6 text-slate-900"
-        role="status"
-    >
-        {{ isEn ? "Checking device storage…" : "Memeriksa penyimpanan perangkat…" }}
-    </div>
-    <OfflineEncryptionGate
-        v-else-if="currentOwner && !clinicalViewAvailable"
-        :key="encryptionGateKey"
-        :owner="currentOwner"
-        @unlocked="onClinicalUnlocked"
-    >
-        <template #actions>
-            <p v-if="logoutError" role="alert" class="mt-4 text-sm text-amber-800">
-                {{ logoutError }}
-            </p>
-            <button
-                type="button"
-                class="mt-4 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
-                @click="logout"
-            >
-                {{ isEn ? "Sign Out" : "Keluar" }}
-            </button>
-        </template>
-    </OfflineEncryptionGate>
-    <div
-        v-else-if="clinicalViewAvailable"
-        ref="clinicalViewRoot"
-        :key="clinicalViewKey"
+        v-else-if="currentOwner"
         class="h-dvh overflow-hidden bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
     >
         <OfflineReadinessNotice />
@@ -108,16 +80,11 @@
             class="flex-1 min-h-0 max-w-lg w-full mx-auto"
             :class="hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'overflow-y-auto px-3.5 py-4 pb-20 lg:pb-6 sm:p-6'"
         >
-            <OfflineEncryptionGate
-                v-if="
-                    isolatedEncryptionFixture() &&
-                    ownerStorageMode === 'LEGACY' &&
-                    currentOwner &&
-                    !clinicalUnlocked
-                "
-                :owner="currentOwner"
-                @unlocked="onClinicalUnlocked"
-            />
+            <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
+            <LockedEmergencyGuidance v-if="!clinicalViewAvailable && !requiresClinicalKey" />
+            <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked" />
+            <button v-if="emergencyUnlockRequested && !clinicalViewAvailable" type="button" class="min-h-11 underline" @click="emergencyUnlockRequested = false">Kembali ke dashboard tanpa membuka data</button>
+            <div v-if="!requiresClinicalKey || clinicalViewAvailable" ref="clinicalViewRoot" :key="clinicalViewKey" :class="hasAssessmentActionBar ? 'flex min-h-0 flex-1 flex-col' : ''">
             <p
                 v-if="logoutError"
                 role="alert"
@@ -156,6 +123,7 @@
                 @close="activeLocalId = null"
             />
             <slot v-else />
+            </div>
         </main>
 
         <!-- Persistent Floating Red Flag Button -->
@@ -284,6 +252,7 @@ import { emergencyRepository } from "@/offline/emergencyRepository";
 import { assessmentRepository } from "@/offline/assessmentRepository";
 import { patientRepository } from "@/offline/patientRepository";
 import RelawanStatusDataSheet from "@/components/Relawan/RelawanStatusDataSheet.vue";
+import LockedEmergencyGuidance from "@/components/Relawan/LockedEmergencyGuidance.vue";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
 import {
     clinicalKeyReady,
@@ -313,6 +282,7 @@ import {
     relawanSessionRecovery,
 } from "@/offline/sessionRecovery";
 
+const layoutProps = defineProps<{ clinicalAccessRequested?: boolean }>();
 const emit = defineEmits<{
     "clinical-lock": [];
     "clinical-ready": [];
@@ -415,6 +385,8 @@ watch(currentOwner, refreshOwnerStorageMode, {
     immediate: true,
     flush: "sync",
 });
+const emergencyUnlockRequested = ref(false);
+const requiresClinicalKey = computed(() => layoutProps.clinicalAccessRequested || emergencyUnlockRequested.value || (!/^\/relawan\/(home|pfa|assessment)\/?$/.test(runtime.path.split(/[?#]/)[0]) && !(runtime.mode === "ONLINE_SERVER" && /^\/relawan\/emergencies\//.test(runtime.path) && !!runtime.pageProps.emergency)));
 const clinicalViewAvailable = computed(
     () =>
         !!currentOwner.value &&
@@ -430,17 +402,17 @@ const status = useRelawanOperationalStatus(
 watch(
     clinicalViewAvailable,
     (available) => {
-        if (!available) maskClinicalView();
+        if (!available && requiresClinicalKey.value) maskClinicalView();
     },
     { flush: "sync" },
 );
 watch(
     [clinicalViewAvailable, clinicalViewKey],
     ([available]) => {
-        if (available) {
+        if (available || !requiresClinicalKey.value) {
             clinicalViewRoot.value?.style.removeProperty("display");
             clinicalViewRoot.value?.removeAttribute("aria-hidden");
-            emit("clinical-ready");
+            if (available) emit("clinical-ready");
             if (!syntheticLegacyFixture() && runtime.mode === "ONLINE_SERVER")
                 void rememberUnlockedRelawan(user.value).catch(() => {});
         }
@@ -449,6 +421,7 @@ watch(
 );
 
 function onClinicalUnlocked() {
+    emergencyUnlockRequested.value = false;
     status.refresh();
     if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
         void syncManager.sync(currentOwner.value).catch(() => {});
@@ -624,6 +597,7 @@ const t0AssessmentContext = ref<T0AssessmentContext | null>(null);
 const showEmergencyModal = ref(false);
 let emergencyOpenCheck = 0;
 async function openEmergencyModal() {
+    if (!clinicalViewAvailable.value) { emergencyUnlockRequested.value = true; return; }
     emit("emergency-interrupt");
     const check = ++emergencyOpenCheck;
     const keyVersion = clinicalKeyVersion();
@@ -678,7 +652,7 @@ watch(
     clinicalKeyVersion,
     () => {
         // Hide synchronously; Vue then unmounts the old view on its next render.
-        maskClinicalView();
+        if (requiresClinicalKey.value) maskClinicalView();
         refreshOwnerStorageMode(currentOwner.value);
         ++emergencyOpenCheck;
         showEmergencyModal.value = false;
