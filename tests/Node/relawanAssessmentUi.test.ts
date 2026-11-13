@@ -415,3 +415,41 @@ test("lock after starting a durable T0 write suppresses stale UI callbacks witho
         f.app.unmount();
     }
 });
+
+
+test("T0 binds the active assessment patient when show and context props update together", async () => {
+    state.emergencyCalls = [];
+    const show = ref(false);
+    const context = ref<{ patientId: string; patientName: string; assessmentId: string }>();
+    const { defineComponent, openBlock, createElementBlock, createVNode } = await import("vue");
+    const f = mountFixture(defineComponent({
+        setup: () => () => {
+            openBlock();
+            return createElementBlock("div", null, [createVNode(T0, {
+            show: show.value,
+            patientId: context.value?.patientId,
+            patientName: context.value?.patientName,
+            assessmentId: context.value?.assessmentId,
+        }, null, 8, ["show", "patientId", "patientName", "assessmentId"]) ]);
+        },
+    }));
+    try {
+        for (const suffix of ["first", "second"]) {
+            context.value = { patientId: `patient-${suffix}`, patientName: `Sintetis ${suffix}`, assessmentId: `assessment-${suffix}` };
+            show.value = true;
+            await f.flush();
+            assert.equal(state.emergencyCalls.length, suffix === "first" ? 0 : 1, "opening does not create T0");
+            assert.match(f.text(), new RegExp(`Sintetis ${suffix}`));
+            button(f, "Kegawatdaruratan Medis").onClick();
+            await f.flush();
+            await button(f, "KIRIM T0-SUSPECT").onClick();
+            await f.flush();
+            assert.equal(state.emergencyCalls.at(-1).patientId, `patient-${suffix}`);
+            assert.equal(state.emergencyCalls.at(-1).assessmentId, `assessment-${suffix}`);
+            show.value = false;
+            await f.flush();
+            context.value = undefined;
+            await f.flush();
+        }
+    } finally { f.app.unmount(); }
+});

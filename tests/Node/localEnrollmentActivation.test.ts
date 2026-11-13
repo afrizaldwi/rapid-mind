@@ -217,3 +217,51 @@ test("server denial at recovery confirmation preserves the pending key and permi
     await f.enrollment.confirmClinicalRecovery(101);
     assert.equal(f.storage.clinicalKeyReady(101), true);
 });
+
+for (const responseOrigin of [
+    "https://localhost:8080", "https://localhost.attacker.invalid",
+    "https://demo.ngrok-free.app", "http://192.168.1.20:8080",
+    "http://10.0.0.1:8080", "http://172.99.1.1:8080",
+]) {
+    test(`authorization rejects non-exact response origin ${responseOrigin}`, async (t) => {
+        const f = await localFixture(t);
+        t.mock.method(globalThis, "fetch", async () => allowed(101, "RELAWAN", responseOrigin));
+        const before = await f.db.relawanContinuity.get("active");
+        assert.equal(await f.authorization.requestLocalEnrollmentAuthorization(101), false);
+        assert.equal(f.authorization.encryptedEnrollmentAllowed(101), false);
+        assert.deepEqual(await f.db.relawanContinuity.get("active"), before);
+    });
+}
+
+for (const browserOrigin of ["https://rapid-mind.invalid", "https://demo.ngrok-free.app", "https://192.168.1.20:8080"]) {
+    test(`ordinary assets reject enrollment at ${browserOrigin}`, async (t) => {
+        const f = await localFixture(t, "production", browserOrigin);
+        const request = t.mock.method(globalThis, "fetch", async () => allowed());
+        assert.equal(await f.authorization.requestLocalEnrollmentAuthorization(101), false);
+        assert.equal(request.mock.callCount(), 0);
+    });
+}
+
+for (const change of ["missing", "wrong-owner", "logout", "lock-after-read"]) {
+    test(`authorization cannot replace continuity or revive access: ${change}`, async (t) => {
+        const f = await localFixture(t);
+        t.mock.method(globalThis, "fetch", async () => allowed());
+        const initial = await f.db.relawanContinuity.get("active");
+        if (change === "missing") await f.db.relawanContinuity.delete("active");
+        if (change === "wrong-owner") await f.db.relawanContinuity.put({ ...initial, owner_user_id: 102 });
+        if (change === "logout") await f.db.relawanContinuity.put({ ...initial, logout_pending: true });
+        const before = await f.db.relawanContinuity.get("active");
+        if (change === "lock-after-read") {
+            const get = f.db.relawanContinuity.get.bind(f.db.relawanContinuity);
+            t.mock.method(f.db.relawanContinuity, "get", async (key) => {
+                const value = await get(key);
+                f.storage.lockAllClinicalKeys();
+                return value;
+            });
+        }
+        assert.equal(await f.authorization.requestLocalEnrollmentAuthorization(101), false);
+        assert.equal(f.authorization.encryptedEnrollmentAllowed(101), false);
+        assert.deepEqual(f.db.relawanContinuity.rows.get("active"), before);
+        assert.equal(f.db.offlineKeys.rows.size, 0);
+    });
+}

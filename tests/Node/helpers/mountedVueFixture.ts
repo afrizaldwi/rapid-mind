@@ -58,6 +58,7 @@ export function mountFixture(component: any, props: Record<string, any> = {}) {
             tag,
             tagName: tag.toUpperCase(),
             children: [],
+            get options() { return this.children.filter((child: any) => child.tag === "option"); },
             style: { removeProperty(name: string) { delete this[name]; } } as Record<string, any>,
             text: "",
             listeners: {},

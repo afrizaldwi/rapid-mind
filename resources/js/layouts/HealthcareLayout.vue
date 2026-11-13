@@ -1,5 +1,9 @@
 <template>
+    <p v-if="accessRevoked" role="alert" class="p-6 text-slate-800">
+        Akses berubah. Memuat halaman yang diizinkan…
+    </p>
     <div
+        v-else
         class="min-h-screen bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased"
     >
         <!-- Top Global Header (64px high, crisp white, minimal clinical workspace style) -->
@@ -443,6 +447,7 @@ function onSocketState(state: { current: string }) {
         void probeServer();
     }
 }
+const accessRevoked = ref(false);
 const deferredUpdate = ref(false);
 let editing = false;
 let stopDraftSubscription: (() => void) | undefined;
@@ -607,6 +612,7 @@ async function probeServer() {
             credentials: "same-origin",
             signal: controller.signal,
         });
+        if (response.ok) await probeAccess(controller.signal);
         const wasUnavailable = serverReachable.value === false;
         serverReachable.value = response.ok;
         if (
@@ -620,6 +626,38 @@ async function probeServer() {
         clearTimeout(timeout);
         healthProbeInFlight = false;
     }
+}
+
+// Authorization must not wait for a dirty clinical form to reconcile.
+async function probeAccess(signal: AbortSignal) {
+    const url = page.url;
+    const channel = page.props.healthcareChannel;
+    const response = await fetch(url, {
+        cache: "no-store",
+        credentials: "same-origin",
+        signal,
+        headers: {
+            Accept: "application/json",
+            "X-Inertia": "true",
+            "X-Inertia-Version": page.version ?? "",
+            "X-Inertia-Partial-Component": page.component,
+            "X-Inertia-Partial-Data": "auth,healthcareChannel,clinicalScopeAvailable",
+        },
+    });
+    if (!mounted || accessRevoked.value || page.url !== url || page.props.healthcareChannel !== channel) return;
+    let destination: string | null = null;
+    if (response.status === 401) destination = "/login";
+    else if (response.status === 403 || response.status === 404) destination = "/healthcare/emergencies";
+    else if (response.ok) {
+        const canonical = await response.json().catch(() => null);
+        if (!mounted || page.url !== url || page.props.healthcareChannel !== channel) return;
+        if (canonical?.props && canonical.props.healthcareChannel !== channel) destination = "/healthcare/emergencies";
+    }
+    if (!destination) return;
+    accessRevoked.value = true;
+    reconciliation.stop();
+    leaveClinicalChannel();
+    window.location.replace(destination);
 }
 
 function playAudioNotification() {

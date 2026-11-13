@@ -50,12 +50,10 @@ final class LocalOfflineEnrollmentTest extends TestCase
         ]) : null;
 
         self::assertSame($expected, LocalOfflineEnrollment::allowed(
-            $case['environment'],
-            $case['url'],
-            $case['opt_in'],
-            $request,
-            $user,
-            $case['owner'],
+            $case['environment'], $case['url'], $case['opt_in'], $request, $user, $case['owner'],
+        ));
+        self::assertSame($expected ? LocalOfflineEnrollment::ORIGIN : null, LocalOfflineEnrollment::resolvedOrigin(
+            $case['environment'], $case['url'], $case['opt_in'], $request, $user, $case['owner'],
         ));
     }
 
@@ -73,6 +71,8 @@ final class LocalOfflineEnrollmentTest extends TestCase
             'remote Host' => [['request_url' => 'http://rapid-mind.example:8080'], false],
             'forwarded Host does not authorize remote request' => [['request_url' => 'http://rapid-mind.example:8080', 'headers' => ['X-Forwarded-Host' => 'localhost:8080']], false],
             'foreign Origin' => [['headers' => ['Origin' => 'https://other.example']], false],
+            'custom header cannot authorize remote Host' => [['request_url' => 'https://demo.ngrok-free.app', 'headers' => ['X-Client-Origin' => 'https://demo.ngrok-free.app']], false],
+            'custom header cannot override foreign Origin' => [['headers' => ['Origin' => 'https://foreign.invalid', 'X-Client-Origin' => LocalOfflineEnrollment::ORIGIN]], false],
             'missing web session' => [['session' => false], false],
             'wrong session owner' => [['session_owner' => 102], false],
             'stale session version' => [['session_version' => 6], false],

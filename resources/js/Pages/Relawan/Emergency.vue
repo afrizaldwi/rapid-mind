@@ -1,6 +1,9 @@
 <template>
-    <RelawanLayout>
-        <div class="space-y-6 pb-20">
+    <RelawanLayout @clinical-ready="localDetail.load" @clinical-lock="localDetail.lock">
+        <p v-if="!emergency" :role="localDetail.state.value === 'CHECKING' ? 'status' : 'alert'" class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            {{ localMessage }}
+        </p>
+        <div v-else class="space-y-6 pb-20">
             <div
                 v-if="broadcastWarning"
                 role="alert"
@@ -135,6 +138,7 @@ import { computed } from "vue";
 import { ShieldAlert, Siren, Smartphone } from "lucide-vue-next";
 import Badge from "@/components/ui/Badge.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
+import { useLocalEmergencyDetail } from "@/composables/useLocalEmergencyDetail";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import type { LocalEmergency } from "@/offline/db";
 import {
@@ -150,22 +154,29 @@ const { locale } = useI18n();
 const props = defineProps<{
     emergency?: any;
     localEmergency?: LocalEmergency;
+    localEmergencyId?: string;
 }>();
 const runtime = useRelawanRuntime();
-const emergency = computed(() =>
-    props.localEmergency
+const localDetail = useLocalEmergencyDetail(() => props.localEmergencyId);
+const localEmergency = computed(() => props.localEmergency ?? localDetail.record.value);
+const localMessage = computed(() => {
+    const isEn = locale.value === "en";
+    if (localDetail.state.value === "CHECKING")
+        return isEn ? "Checking this account's local emergency report…" : "Memeriksa laporan darurat lokal akun ini…";
+    if (localDetail.state.value === "MISSING")
+        return isEn ? "This report is not available for this account on this device." : "Laporan ini tidak tersedia untuk akun ini di perangkat ini.";
+    return isEn ? "The local report cannot be read yet. Stored data remains preserved." : "Laporan lokal belum dapat dibaca. Data yang tersimpan tetap dipertahankan.";
+});
+const emergency = computed(() => {
+    const local = localEmergency.value;
+    return local
         ? {
-              ...props.localEmergency,
-              patient: { name: props.localEmergency.patient_name },
-              shelter: {
-                  name:
-                      props.localEmergency.shelter_id === runtime.shelterId
-                          ? runtime.shelterName
-                          : null,
-              },
+              ...local,
+              patient: { name: local.patient_name },
+              shelter: { name: local.shelter_id === runtime.shelterId ? runtime.shelterName : null },
           }
-        : props.emergency,
-);
+        : props.emergency;
+});
 const broadcastWarning = computed(() =>
     localizeMessage(
         (runtime.pageProps.flash as { error?: string } | undefined)?.error,
@@ -174,7 +185,7 @@ const broadcastWarning = computed(() =>
 );
 const delivery = computed(() =>
     emergencyDeliveryStatus(
-        props.localEmergency ??
+        localEmergency.value ??
             { sync_state: "SYNCED", routing_status: props.emergency?.routing_status,
                 realtime_status: broadcastWarning.value ? "UNAVAILABLE" : "UNCONFIRMED" },
         locale.value,

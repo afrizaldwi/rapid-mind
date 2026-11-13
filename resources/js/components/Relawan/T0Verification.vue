@@ -317,12 +317,17 @@ const selectablePatients = computed(() => {
             });
     return [...byId.values()];
 });
+// Assessment context is authoritative; a synchronous show watcher can run before
+// Vue finishes updating the other dynamic props in a production render block.
+const effectivePatientId = computed(() =>
+    props.assessmentId ? (props.patientId ?? "") : chosenPatientId.value,
+);
 const selectedPatientName = computed(
     () =>
         selectablePatients.value.find(
-            (patient) => patient.id === chosenPatientId.value,
+            (patient) => patient.id === effectivePatientId.value,
         )?.name ||
-        (chosenPatientId.value === props.patientId
+        (effectivePatientId.value === props.patientId
             ? props.patientName
             : undefined),
 );
@@ -418,9 +423,7 @@ watch(
                 : "";
         notes.value = "";
         isSubmitting.value = false;
-        chosenPatientId.value = props.assessmentId
-            ? (props.patientId ?? "")
-            : "";
+        chosenPatientId.value = "";
         patientSearch.value = "";
         availablePatients.value = [];
         fetchedPatients.value = [];
@@ -479,7 +482,7 @@ async function submitEmergency() {
     if (!props.show || isSubmitting.value || !selectedRedFlag.value) return;
     const current = scope.capture();
     const input = {
-        patientId: chosenPatientId.value || null, assessmentId: props.assessmentId,
+        patientId: effectivePatientId.value || null, assessmentId: props.assessmentId,
         redFlagType: selectedRedFlag.value, shelterId: runtime.shelterId, notes: notes.value,
         latitude: coordinates.value?.lat ?? null, longitude: coordinates.value?.lng ?? null,
     };

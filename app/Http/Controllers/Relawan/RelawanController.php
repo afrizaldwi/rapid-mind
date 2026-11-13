@@ -471,6 +471,7 @@ final class RelawanController extends Controller
 
     public function emergencyDetail(string $emergencyId): InertiaResponse
     {
+        abort_unless(\Illuminate\Support\Str::isUuid($emergencyId), 404);
         $emergency = EmergencyEvent::query()
             ->select([
                 'id',
@@ -486,7 +487,15 @@ final class RelawanController extends Controller
             ->when(\Illuminate\Support\Facades\Schema::hasColumn('emergency_events', 'routing_status'), fn ($query) => $query->addSelect('routing_status'))
             ->with(['patient:id,name', 'shelter:id,name'])
             ->where('user_id', Auth::id())
-            ->findOrFail($emergencyId);
+            ->find($emergencyId);
+
+        if (!$emergency) {
+            // A foreign persisted UUID must never become a local lookup shell.
+            abort_if(EmergencyEvent::whereKey($emergencyId)->exists(), 404);
+            return Inertia::render('Relawan/Emergency', [
+                'localEmergencyId' => $emergencyId,
+            ]);
+        }
 
         return Inertia::render('Relawan/Emergency', [
             'emergency' => $emergency,
