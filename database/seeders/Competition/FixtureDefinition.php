@@ -23,11 +23,11 @@ final class FixtureDefinition
 
     public const IDENTITIES = [
         'admin' => ['admin', 'admin@rapidmind.test'],
-        'relawan-1' => ['Budi Santoso', 'budi.santoso@rapidmind.test'],
-        'relawan-2' => ['Rani Prameswari', 'rani.prameswari@rapidmind.test'],
-        'relawan-3' => ['Dimas Prakoso', 'dimas.prakoso@rapidmind.test'],
-        'healthcare-a' => ['dr. Maya Lestari', 'maya.lestari@rapidmind.test'],
-        'healthcare-b' => ['dr. Arief Wicaksono', 'arief.wicaksono@rapidmind.test'],
+        'relawan-1' => ['relawan1', 'budi.santoso@rapidmind.test'],
+        'relawan-2' => ['relawan2', 'rani.prameswari@rapidmind.test'],
+        'relawan-3' => ['relawan3', 'dimas.prakoso@rapidmind.test'],
+        'healthcare-a' => ['medis1', 'maya.lestari@rapidmind.test'],
+        'healthcare-b' => ['medis2', 'arief.wicaksono@rapidmind.test'],
     ];
 
     public static function email(string $alias): string

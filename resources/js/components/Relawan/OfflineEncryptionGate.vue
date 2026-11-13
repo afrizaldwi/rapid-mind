@@ -32,10 +32,17 @@
                     v-model="secret"
                     :type="purpose === 'recovery' ? 'text' : 'password'"
                     autocomplete="off"
+                    :aria-describedby="purpose === 'passphrase' ? 'offline-phrase-help' : undefined"
+                    :minlength="!hasKey ? 20 : undefined"
                     class="mt-1 min-h-11 w-full rounded-lg border border-slate-400 p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                     required
                 />
             </label>
+            <p v-if="purpose === 'passphrase'" id="offline-phrase-help" class="text-sm leading-relaxed text-slate-700">
+                {{ !hasKey
+                    ? (isEn ? 'Create your own phrase using several unrelated words, at least 20 characters in total. Spaces are allowed; special symbols are not required. Do not use your account password or a shared example.' : 'Buat frasa pribadi dari beberapa kata yang tidak saling berkaitan, total minimal 20 karakter. Boleh memakai spasi; tidak wajib simbol khusus. Jangan gunakan sandi akun atau contoh yang dipakai bersama.')
+                    : (isEn ? 'Enter the phrase you created on this device. Creating a different phrase here cannot open an existing key. This is separate from your login password.' : 'Masukkan frasa yang Anda buat di perangkat ini. Membuat frasa berbeda di sini tidak akan membuka kunci yang sudah ada. Frasa ini terpisah dari sandi login.') }}
+            </p>
             <label v-if="!hasKey" class="block text-sm font-medium">
                 {{ isEn ? "Repeat passphrase" : "Ulangi frasa sandi" }}
                 <input
