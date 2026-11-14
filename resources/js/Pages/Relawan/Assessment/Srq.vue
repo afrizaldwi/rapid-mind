@@ -32,25 +32,17 @@
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-3 sm:space-y-4">
-                <!-- Compact Assessment Configuration (Mode & Dual-Mode STT) -->
-                <div
-                    class="bg-white rounded-xl p-3 sm:p-3.5 shadow-xs border border-slate-200 space-y-2"
-                >
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-2 text-xs"
-                    >
-                        <div class="flex items-center gap-1.5">
-                            <span class="font-semibold text-slate-600">Mode:</span>
+                <section aria-labelledby="interview-mode-title" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <div class="flex items-center justify-between gap-3 px-3 py-1 sm:px-4">
+                            <h3 id="interview-mode-title" class="text-sm font-semibold text-slate-900">
+                                {{ isEn ? 'Interview mode' : 'Mode wawancara' }}
+                            </h3>
                             <button
                                 type="button"
                                 @click="toggleMode"
                                 :disabled="!draftReady || !!safety"
-                                class="min-h-[38px] px-2.5 py-1 rounded-lg border font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
-                                :class="
-                                    isVerbal
-                                        ? 'bg-teal-50 text-teal-800 border-teal-300'
-                                        : 'bg-slate-100 text-slate-700 border-slate-300'
-                                "
+                                class="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-60"
+                                :title="isEn ? 'Change interview mode' : 'Ubah mode wawancara'"
                             >
                                 <Mic
                                     v-if="isVerbal"
@@ -58,17 +50,19 @@
                                     aria-hidden="true"
                                 />
                                 <span>{{ isVerbal ? "Verbal" : "Non-Verbal" }}</span>
+                                <ArrowLeftRight class="size-3.5" aria-hidden="true" />
                             </button>
                         </div>
 
                         <div
                             v-if="isVerbal"
-                            class="flex flex-wrap items-center gap-1.5"
+                            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-slate-200 px-3 py-2 sm:px-4"
                         >
+                            <h4 class="text-sm font-semibold text-slate-800">{{ isEn ? 'Voice transcription' : 'Transkripsi suara' }}</h4>
                             <div
                                 role="group"
                                 :aria-label="isEn ? 'STT mode options' : 'Pilihan mode STT'"
-                                class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5"
+                                class="inline-flex rounded-lg bg-slate-100 p-0.5"
                             >
                                 <button
                                     type="button"
@@ -79,7 +73,7 @@
                                     class="min-h-[32px] px-2.5 py-1 rounded-md text-xs font-bold transition disabled:opacity-60 cursor-pointer"
                                     :class="
                                         sttMode === 'offline'
-                                            ? 'bg-teal-700 text-white shadow-2xs'
+                                            ? 'bg-white text-teal-800 shadow-sm ring-1 ring-slate-200'
                                             : 'text-slate-700 hover:bg-slate-200'
                                     "
                                 >
@@ -94,24 +88,25 @@
                                     class="min-h-[32px] px-2.5 py-1 rounded-md text-xs font-bold transition disabled:opacity-60 cursor-pointer"
                                     :class="
                                         sttMode === 'online'
-                                            ? 'bg-teal-700 text-white shadow-2xs'
+                                            ? 'bg-white text-teal-800 shadow-sm ring-1 ring-slate-200'
                                             : 'text-slate-700 hover:bg-slate-200'
                                     "
                                 >
                                     Online
                                 </button>
                             </div>
-
+                        </div>
+                        <div v-if="isVerbal && sttStatus !== 'preparing' && sttStatus !== 'processing'" class="flex flex-wrap gap-2 px-3 pb-3 sm:px-4">
                             <button
                                 type="button"
                                 data-stt-action
                                 :disabled="sttButtonDisabled"
                                 @click="handleSttAction"
-                                class="inline-flex min-h-[38px] items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition border disabled:opacity-60 cursor-pointer"
+                                class="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-60"
                                 :class="
                                     sttStatus === 'recording'
-                                        ? 'bg-red-700 text-white border-red-700'
-                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
+                                        ? 'bg-red-700 text-white'
+                                        : 'bg-teal-700 text-white hover:bg-teal-800'
                                 "
                             >
                                 <Mic
@@ -131,23 +126,20 @@
                                 {{ isEn ? "Cancel" : "Batalkan" }}
                             </button>
                         </div>
-                    </div>
-
                     <div
                         v-if="isVerbal"
-                        class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 sm:p-2.5 text-xs text-slate-700"
-                        aria-live="polite"
+                        class="border-t border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 sm:px-4"
                     >
                         <div
                             class="flex items-center justify-between gap-2"
                         >
-                            <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+                            <div role="status" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                 <span class="font-semibold text-slate-800">{{
                                     sttStatusLabel
                                 }}</span>
                                 <span
                                     v-if="sttMode === 'offline' && sttBackend"
-                                    class="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800"
+                                    class="text-xs font-medium text-slate-600"
                                 >
                                     {{
                                         sttBackend === "webgpu"
@@ -157,7 +149,7 @@
                                 </span>
                                 <span
                                     v-else-if="sttMode === 'online'"
-                                    class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900"
+                                    class="text-xs font-medium text-slate-600"
                                 >
                                     Web Speech
                                 </span>
@@ -165,7 +157,7 @@
 
                             <button
                                 type="button"
-                                class="sm:hidden shrink-0 inline-flex items-center gap-1 min-h-[32px] px-2 rounded-md text-[11px] font-bold text-teal-800 hover:bg-teal-50 cursor-pointer"
+                                class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md px-1 text-xs font-semibold text-teal-800 hover:bg-teal-50"
                                 :aria-expanded="sttDetailsOpen"
                                 aria-controls="srq-stt-technical-details"
                                 @click="sttDetailsOpen = !sttDetailsOpen"
@@ -224,16 +216,20 @@
                             </div>
                         </div>
 
-                        <p
+                        <div
                             v-if="
                                 sttMode === 'offline' &&
                                 sttStatus === 'preparing' &&
                                 sttProgress !== null
                             "
-                            class="mt-1.5"
+                            class="mb-2"
                         >
-                            {{ isEn ? `Model file progress: ${sttProgress}%` : `Progres berkas model: ${sttProgress}%` }}
-                        </p>
+                            <div class="mb-1 flex items-baseline justify-between gap-3 text-xs">
+                                <span id="stt-model-file">{{ isEn ? 'Model file' : 'Berkas model' }}</span>
+                                <span class="font-semibold tabular-nums">{{ sttProgress }}%</span>
+                            </div>
+                            <progress aria-labelledby="stt-model-file" :value="sttProgress" max="100" class="stt-file-progress block h-1.5 w-full"></progress>
+                        </div>
                         <div
                             v-if="sttMode === 'online' && sttFallbackSuggested"
                             class="mt-2"
@@ -276,20 +272,13 @@
                             <p class="mt-1">“{{ transcriptSnippet }}”</p>
                         </div>
 
-                        <!-- Technical STT explanation: collapsible on mobile (<640px) unless actively preparing/errored -->
+                        <p v-if="sttStatus === 'error' && sttMessage" role="alert" class="mb-2 font-semibold text-red-800">{{ sttMessage }}</p>
                         <div
                             id="srq-stt-technical-details"
-                            class="mt-1.5 pt-1.5 border-t border-slate-200/80 space-y-1 text-[11px] leading-relaxed"
-                            :class="sttDetailsOpen || sttNeedsAttention ? 'block' : 'hidden sm:block'"
+                            v-show="sttDetailsOpen"
+                            class="mt-1 space-y-1 border-t border-slate-200 pb-2 pt-2 text-sm leading-relaxed"
                         >
-                            <p
-                                v-if="sttMessage"
-                                :class="
-                                    sttStatus === 'error'
-                                        ? 'font-semibold text-red-800'
-                                        : 'text-slate-600'
-                                "
-                            >
+                            <p v-if="sttMessage && sttStatus !== 'error'" class="text-slate-600">
                                 {{ sttMessage }}
                             </p>
                             <p class="text-slate-500">
@@ -308,7 +297,7 @@
                             </p>
                         </div>
                     </div>
-                </div>
+                </section>
 
             <NonVerbalObservationFields v-if="!isVerbal || observations.non_verbal_reasons?.length"
                 :model-value="observations" :disabled="!draftReady || !!safety"
@@ -456,7 +445,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from "vue";
-import { ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
+import { ArrowLeftRight, ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useI18n } from "@/i18n";
@@ -566,9 +555,6 @@ const {
 } = useSrqSpeech(
     () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
     text => { const notice = applySpeechTranscript(text); if (notice) sttInterpretationNotice.value = notice; },
-);
-const sttNeedsAttention = computed(
-    () => sttStatus.value === "preparing" || sttStatus.value === "error",
 );
 function interruptAssessment() {
     cleanupStt();
@@ -736,3 +722,17 @@ async function saveAndNext() {
     }
 }
 </script>
+
+<style scoped>
+.stt-file-progress {
+    appearance: none;
+    overflow: hidden;
+    border: 0;
+    border-radius: 1rem;
+    background: var(--color-slate-200);
+    color: var(--color-teal-700);
+}
+.stt-file-progress::-webkit-progress-bar { background: var(--color-slate-200); }
+.stt-file-progress::-webkit-progress-value { background: var(--color-teal-700); }
+.stt-file-progress::-moz-progress-bar { background: var(--color-teal-700); }
+</style>

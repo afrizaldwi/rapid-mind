@@ -67,46 +67,45 @@
 
       <!-- TAHAP 2: LISTEN -->
       <div v-if="activeTab === 'LISTEN'" class="space-y-4">
-        <!-- Sapaan Awal -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>{{ $t('relawan.pfa.greetingTitle') }}</h4>
-          </div>
-          <blockquote class="bg-teal-50/60 p-4 rounded-xl border-l-4 border-teal-600 text-xs text-teal-950 italic leading-relaxed">
+        <section aria-labelledby="pfa-greeting" class="rounded-xl border border-teal-900/10 bg-teal-50/70 p-4 sm:p-5">
+          <h3 id="pfa-greeting" class="mb-2 flex items-center gap-2 text-sm font-semibold text-teal-800">
+            <MessageCircle class="size-4 shrink-0" aria-hidden="true" />
+            {{ $t('relawan.pfa.greetingTitle') }}
+          </h3>
+          <blockquote class="max-w-prose text-base leading-relaxed text-slate-900">
             {{ $t('relawan.pfa.greetingScript') }}
           </blockquote>
-        </div>
+        </section>
 
-        <!-- Do's and Don'ts -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <h4 class="font-bold text-sm text-slate-900">
+        <section aria-labelledby="pfa-conduct" class="@container rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+          <h3 id="pfa-conduct" class="border-b border-slate-200 pb-3 text-base font-semibold text-slate-900">
             {{ $t('relawan.pfa.dosAndDonts') }}
-          </h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5 text-emerald-950">
-              <div class="flex items-center gap-2 font-bold text-emerald-800">
-                <CircleCheck class="h-4 w-4" aria-hidden="true" />
-                <span>{{ $t('relawan.pfa.dos') }}</span>
-              </div>
-              <ul class="space-y-1 list-disc list-inside text-emerald-900">
+          </h3>
+          <div class="grid gap-4 pt-3 text-[15px] leading-6 text-slate-700 @xl:grid-cols-2">
+            <div>
+              <h4 class="mb-1.5 flex items-center gap-2 font-semibold text-teal-800">
+                <CircleCheck class="size-4 shrink-0" aria-hidden="true" />
+                {{ $t('relawan.pfa.dos') }}
+              </h4>
+              <ul class="list-disc space-y-1 ps-6 marker:text-teal-700">
                 <li>{{ $t('relawan.pfa.dos1') }}</li>
                 <li>{{ $t('relawan.pfa.dos2') }}</li>
                 <li>{{ $t('relawan.pfa.dos3') }}</li>
               </ul>
             </div>
-            <div class="p-3 rounded-xl bg-red-50 border border-red-200 space-y-1.5 text-red-950">
-              <div class="flex items-center gap-2 font-bold text-red-800">
-                <CircleX class="h-4 w-4" aria-hidden="true" />
-                <span>{{ $t('relawan.pfa.donts') }}</span>
-              </div>
-              <ul class="space-y-1 list-disc list-inside text-red-900">
+            <div class="border-t border-slate-200 pt-3 @xl:border-s @xl:border-t-0 @xl:ps-4 @xl:pt-0">
+              <h4 class="mb-1.5 flex items-center gap-2 font-semibold text-slate-800">
+                <CircleX class="size-4 shrink-0" aria-hidden="true" />
+                <span class="text-red-800">{{ $t('relawan.pfa.donts') }}</span>
+              </h4>
+              <ul class="list-disc space-y-1 ps-6 marker:text-slate-500">
                 <li>{{ $t('relawan.pfa.donts1') }}</li>
                 <li>{{ $t('relawan.pfa.donts2') }}</li>
                 <li>{{ $t('relawan.pfa.donts3') }}</li>
               </ul>
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- Grounding 5-4-3-2-1 -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
@@ -154,23 +153,20 @@
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>{{ $t('relawan.pfa.familyTitle') }}</h4>
-          </div>
-          <blockquote class="bg-slate-50 p-4 rounded-xl border-l-4 border-slate-400 text-xs text-slate-800 italic leading-relaxed">
-            {{ $t('relawan.pfa.familyScript') }}
+        <section
+          v-for="script in linkScripts"
+          :key="script.id"
+          :aria-labelledby="script.id"
+          class="rounded-xl border border-teal-900/10 bg-teal-50/70 p-4 sm:p-5"
+        >
+          <h3 :id="script.id" class="mb-2 flex items-center gap-2 text-sm font-semibold text-teal-800">
+            <MessageCircle class="size-4 shrink-0" aria-hidden="true" />
+            {{ $t(script.title) }}
+          </h3>
+          <blockquote class="max-w-prose text-base leading-relaxed text-slate-900">
+            {{ $t(script.text) }}
           </blockquote>
-        </div>
-
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div class="flex items-center space-x-2 text-teal-800 font-bold text-sm">
-            <h4>{{ $t('relawan.pfa.closingTitle') }}</h4>
-          </div>
-          <blockquote class="bg-teal-50 p-4 rounded-xl border border-teal-200 text-xs text-teal-950 italic leading-relaxed">
-            {{ $t('relawan.pfa.closingScript') }}
-          </blockquote>
-        </div>
+        </section>
       </div>
     </div>
   </RelawanLayout>
@@ -178,11 +174,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { CircleCheck, CircleX } from 'lucide-vue-next';
+import { CircleCheck, CircleX, MessageCircle } from 'lucide-vue-next';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { t as $t } from '@/i18n';
 
 const activeTab = ref<'LOOK' | 'LISTEN' | 'LINK'>('LOOK');
+
+const linkScripts = [
+  { id: 'pfa-family', title: 'relawan.pfa.familyTitle', text: 'relawan.pfa.familyScript' },
+  { id: 'pfa-closing', title: 'relawan.pfa.closingTitle', text: 'relawan.pfa.closingScript' },
+] as const;
 
 const tabs = [
   { id: 'LOOK' as const, label: 'LOOK' },

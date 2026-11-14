@@ -1,16 +1,28 @@
 <template>
     <RelawanLayout :identity-shelter="shelter?.name || userShelterName">
         <template #greeting="{ statusKind, statusLabel, openStatus }">
-            <section class="home-identity">
-                <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                    <h2 class="text-2xl font-bold text-slate-900">{{ isEn ? 'Hello,' : 'Halo,' }} {{ userName }}</h2>
-                    <StatusIndicator :kind="statusKind" :label="statusLabel" @open="openStatus" />
+            <section class="home-identity my-4 overflow-hidden rounded-xl border border-slate-200 bg-white" aria-labelledby="home-greeting">
+                <div class="flex items-center gap-3 px-4 py-4 sm:px-5">
+                    <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-800" aria-hidden="true">
+                        <ContactRound class="size-6" :stroke-width="1.6" />
+                    </div>
+                    <div class="min-w-0">
+                        <h2 id="home-greeting" class="text-2xl font-semibold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere]">
+                            {{ isEn ? 'Hello,' : 'Halo,' }} {{ userName }}
+                        </h2>
+                        <p class="mt-0.5 text-sm leading-snug text-slate-600">{{ $t('relawan.roleBadge') }}</p>
+                    </div>
                 </div>
-                <p class="mt-1 text-sm font-medium text-slate-600">{{ $t('relawan.roleBadge') }}</p>
-                <p class="mt-3 flex items-start gap-2 text-sm text-slate-600" :aria-label="isEn ? 'Assigned shelter' : 'Posko penugasan'">
-                    <MapPin class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span class="min-w-0 break-words">{{ shelter?.name || userShelterName || (isEn ? 'Shelter information unavailable' : 'Informasi posko belum tersedia') }}</span>
-                </p>
+                <div class="home-assignment grid items-center gap-x-2 border-t border-slate-200 bg-slate-50 py-1 ps-4 pe-2 sm:ps-5 sm:pe-3">
+                    <p class="flex min-w-0 items-start gap-2 py-1.5 text-sm font-medium leading-snug text-slate-700">
+                        <MapPin class="mt-0.5 size-4 shrink-0 text-teal-700" aria-hidden="true" />
+                        <span class="min-w-0 [overflow-wrap:anywhere]">
+                            <span class="sr-only">{{ isEn ? 'Assigned shelter' : 'Posko penugasan' }}: </span>
+                            {{ shelter?.name || userShelterName || (isEn ? 'Shelter information unavailable' : 'Informasi posko belum tersedia') }}
+                        </span>
+                    </p>
+                    <StatusIndicator class="home-status" :kind="statusKind" :label="statusLabel" @open="openStatus" />
+                </div>
             </section>
         </template>
         <div class="space-y-6">
@@ -185,7 +197,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { BookOpen, ClipboardList, Info, MapPin, Siren } from "lucide-vue-next";
+import { BookOpen, ClipboardList, ContactRound, Info, MapPin, Siren } from "lucide-vue-next";
 import StatusIndicator from "@/components/ui/StatusIndicator.vue";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
@@ -276,11 +288,28 @@ const displayDraft = computed(() => {
 </script>
 
 <style scoped>
-.home-identity { margin-inline: -.875rem; margin-bottom: 1rem; padding: 1.25rem .875rem; background: white; border-bottom: 1px solid #e2e8f0; }
-.home-identity h2 { overflow-wrap: anywhere; min-width: 0; }
-.home-identity :deep(.rm-status) { max-inline-size: 100%; }
-.home-identity :deep(.truncate) { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
-@media (min-width: 640px) {
-    .home-identity { margin-inline: -1.5rem; padding-inline: 1.5rem; }
+.home-assignment {
+    grid-template-columns: minmax(0, 1fr) fit-content(44%);
+}
+.home-assignment .home-status {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding-inline: .5rem;
+}
+.home-status:hover, .home-status:focus-visible {
+    background: white;
+}
+.home-status::after {
+    content: '';
+    inline-size: .375rem;
+    block-size: .375rem;
+    flex-shrink: 0;
+    border-block-start: 1.5px solid currentColor;
+    border-inline-end: 1.5px solid currentColor;
+    transform: rotate(45deg);
+}
+.home-status :deep(.truncate) {
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 </style>
