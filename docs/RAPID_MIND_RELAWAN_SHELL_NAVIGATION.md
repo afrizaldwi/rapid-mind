@@ -1,5 +1,13 @@
 # RAPID-MIND — Relawan Mobile Shell, Navigation, and SRQ-20 Interaction Design
 
+## Offline reload — 14 November 2026
+
+With verified local owner continuity, Home, PFA and the assessment start page
+reopen directly offline while the clinical key is locked. Saved assessments
+and emergency records still require unlock. The Home action on the clinical
+lock screen returns to the dashboard. This supersedes the global offline
+unlock described in the historical navigation checkpoint below.
+
 # Current navigation checkpoint — 10 November 2026
 
 Source: `demo` at `7076e13`. [Current implementation](CURRENT_IMPLEMENTATION.md)

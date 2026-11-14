@@ -63,7 +63,7 @@ final class AssessmentLocalShellTest extends TestCase
         $this->assertDatabaseCount('patients', 0);
     }
 
-    public function test_data_keeps_owned_server_history_without_exposing_another_relawan(): void
+    public function test_removed_history_redirects_without_returning_owned_or_foreign_history(): void
     {
         $owner = $this->relawan();
         $other = $this->relawan();
@@ -96,17 +96,7 @@ final class AssessmentLocalShellTest extends TestCase
             'status' => EmergencyStatus::PENDING,
         ]);
 
-        $this->actingAs($owner)->get('/relawan/data')->assertInertia(fn(Assert $page) => $page
-            ->component('Relawan/Data', false)
-            ->has('completed', 1)
-            ->where('completed.0.id', $assessment->id)
-            ->has('emergencies', 1)
-            ->where('emergencies.0.id', $emergency->id)
-            ->where('emergencies.0.patient.name', 'Penyintas Pemilik')
-            ->missing('emergencies.0.status')
-            ->missing('emergencies.0.updated_at')
-            ->missing('emergencies.0.verifications')
-            ->etc());
+        $this->actingAs($owner)->get('/relawan/data')->assertRedirect('/relawan/home');
     }
 
     public function test_t0_result_exposes_an_existing_linked_emergency_without_leaking_another_relawan_event(): void

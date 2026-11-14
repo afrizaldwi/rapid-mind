@@ -53,7 +53,7 @@ async function checkServerSession(): Promise<void> {
             Number(payload.user.id) === owner
         ) {
             relawanSessionRecovery.state = "RESTORING_ONLINE_RUNTIME";
-            window.location.assign("/relawan/data");
+            window.location.assign("/relawan/home");
             return;
         }
         if (

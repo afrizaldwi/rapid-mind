@@ -1,5 +1,5 @@
 <template>
-    <OfflineReadinessNotice v-if="loggedOutLocally || checkingContinuity" />
+    <OfflineReadinessNotice v-if="loggedOutLocally || checkingContinuity" compact />
     <div
         v-if="loggedOutLocally || checkingContinuity"
         class="min-h-screen bg-slate-100 p-6 text-slate-900"
@@ -37,49 +37,8 @@
         class="rm-app h-dvh overflow-hidden bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
     >
         <a href="#relawan-main" class="rm-skip-link">Langsung ke konten utama</a>
-        <OfflineReadinessNotice />
-        <!-- Top Application Bar -->
-        <header
-            class="relawan-app-header shrink-0 z-30 bg-white border-b border-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2"
-            :class="{ 'relawan-identity-header': !!$slots.greeting }"
-        >
-            <div class="flex min-w-0 basis-full sm:basis-auto sm:flex-1 items-center space-x-2 sm:space-x-3">
-                <img
-                    src="/logo.png?v=3"
-                    alt="RAPID-MIND Logo"
-                    class="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
-                />
-                <div class="min-w-0">
-                    <p
-                        class="break-words text-xs sm:text-sm text-slate-700 font-semibold leading-tight"
-                    >
-                        {{ $slots.greeting ? shelterIdentity.name : user?.shelter?.name || (isEn ? "Volunteer Shelter" : "Posko Relawan") }}
-                    </p>
-                    <p v-if="$slots.greeting && shelterIdentity.location" class="mt-0.5 text-xs text-slate-600 break-words">{{ shelterIdentity.location }}</p>
-                </div>
-            </div>
-
-            <div class="relawan-header-controls flex w-full sm:w-auto sm:max-w-[65%] items-center gap-2">
-                <LanguageSwitcher compact />
-                <StatusIndicator
-                    v-if="!$slots.greeting"
-                    class="relawan-header-status"
-                    :kind="status.kind.value"
-                    :label="compactStatusLabel"
-                    @open="showStatusSheet = true"
-                />
-                <button
-                    type="button"
-                    @click="logout"
-                    :title="isEn ? 'Volunteer Logout' : 'Logout Relawan'"
-                    :aria-label="isEn ? 'Volunteer Logout' : 'Logout Relawan'"
-                    class="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
-                >
-                    <LogOut class="w-4 h-4" />
-                </button>
-            </div>
-        </header>
-
+        <OfflineReadinessNotice compact />
+        <AssessmentAppHeader :shelter="layoutProps.identityShelter || runtime.shelterName || (isEn ? 'Volunteer Shelter' : 'Posko Relawan')" :kind="status.kind.value" :label="compactStatusLabel" :online-server="runtime.mode === 'ONLINE_SERVER'" @status="showStatusSheet = true" @logout="logout" />
         <!-- Main Content Area -->
         <main
             id="relawan-main" tabindex="-1" class="rm-field-content flex-1 min-h-0"
@@ -87,9 +46,8 @@
         >
             <slot name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
             <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
-            <LockedEmergencyGuidance v-if="!clinicalViewAvailable && !requiresClinicalKey" />
+            <slot v-if="requiresClinicalKey && !clinicalViewAvailable" name="clinical-unlock-notice" />
             <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked" />
-            <p v-if="onlineAssessmentAvailable" role="status" class="m-3 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">{{ isEn ? 'Online assessment. Partial answers awaiting server save remain on this page. If the connection fails, stay here and retry.' : 'Asesmen online. Jawaban parsial yang belum tersimpan di server tetap berada di halaman ini. Jika koneksi terputus, tetap di halaman ini dan coba simpan kembali.' }}</p>
             <p
                 v-if="logoutError"
                 role="alert"
@@ -120,8 +78,7 @@
                 v-if="
                     runtime.mode === 'ONLINE_SERVER' &&
                     activeLocalId &&
-                    currentOwner &&
-                    !isDataRoute
+                    currentOwner
                 "
                 :key="String(currentOwner) + activeLocalId"
                 :owner="currentOwner"
@@ -149,7 +106,9 @@
         />
 
         <RelawanStatusDataSheet
+            :server-assessment="onlineAssessmentAvailable"
             :show="showStatusSheet"
+            :owner="currentOwner"
             :kind="status.kind.value"
             :label="status.label.value"
             :ready="status.ready.value"
@@ -165,12 +124,12 @@
             @retry="status.retry"
         />
 
-        <!-- Bottom Navigation Bar (4 items) -->
+        <!-- Bottom Navigation Bar -->
         <nav
             v-if="!isFocusedAssessment"
             class="rm-field-content shrink-0 z-30 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
         >
-            <div class="grid grid-cols-4 h-16">
+            <div class="grid grid-cols-3 h-16">
                 <RelawanLink
                     href="/relawan/home"
                     class="flex flex-col items-center justify-center text-xs font-semibold transition"
@@ -210,24 +169,6 @@
                     <span>{{ $t('nav.assessment') }}</span>
                 </RelawanLink>
 
-                <RelawanLink
-                    href="/relawan/data"
-                    class="flex flex-col items-center justify-center text-xs font-semibold transition relative"
-                    :class="
-                        isRoute('/relawan/data')
-                            ? 'text-teal-700 font-bold'
-                            : 'text-slate-500 hover:text-slate-800'
-                    "
-                >
-                    <FolderOpen class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>{{ $t('nav.data') }}</span>
-                    <span
-                        v-if="status.pendingCount.value > 0"
-                        class="absolute top-2 right-6 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs"
-                    >
-                        {{ status.pendingCount.value }}
-                    </span>
-                </RelawanLink>
             </div>
         </nav>
     </div>
@@ -238,16 +179,15 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import {
     BookOpen,
     ClipboardList,
-    FolderOpen,
     House,
-    LogOut,
+
 } from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
 import { router } from "@inertiajs/vue3";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import RelawanLink from "@/relawan/RelawanLink.vue";
-import StatusIndicator from "@/components/ui/StatusIndicator.vue";
-import LanguageSwitcher from "@/components/ui/LanguageSwitcher.vue";
+
+
 import { useI18n } from "@/i18n";
 
 const { isEn, t: $t } = useI18n();
@@ -258,7 +198,6 @@ import { emergencyRepository } from "@/offline/emergencyRepository";
 import { assessmentRepository } from "@/offline/assessmentRepository";
 import { patientRepository } from "@/offline/patientRepository";
 import RelawanStatusDataSheet from "@/components/Relawan/RelawanStatusDataSheet.vue";
-import LockedEmergencyGuidance from "@/components/Relawan/LockedEmergencyGuidance.vue";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
 import {
     clinicalKeyReady,
@@ -283,6 +222,7 @@ import {
 } from "@/offline/relawanContinuity";
 import { registerRelawanServiceWorker } from "@/pwa/register";
 import OfflineReadinessNotice from "@/components/Relawan/OfflineReadinessNotice.vue";
+import AssessmentAppHeader from "@/components/Relawan/Assessment/AssessmentAppHeader.vue";
 import {
     openRelawanLogin,
     relawanSessionRecovery,
@@ -440,12 +380,6 @@ function onClinicalUnlocked() {
     if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
         void syncManager.sync(currentOwner.value).catch(() => {});
 }
-const shelterIdentity = computed(() => {
-    const name = layoutProps.identityShelter || user.value?.shelter?.name || (isEn.value ? "Volunteer Shelter" : "Posko Relawan");
-    const parts = name.match(/^(.*?)\s+(Kel\.\s+.+)$/);
-    return { name: parts?.[1] || name, location: parts?.[2] || "" };
-});
-
 const compactStatusLabel = computed(() => {
     switch (status.kind.value) {
         case "local-failure":
@@ -486,9 +420,6 @@ const compactStatusLabel = computed(() => {
             return "Status";
     }
 });
-const isDataRoute = computed(
-    () => runtime.path.split("?")[0] === "/relawan/data",
-);
 const isFocusedAssessment = computed(
     () =>
         runtime.path.split("?")[0] !== "/relawan/assessment/drafts" &&
@@ -681,9 +612,9 @@ watch(
         if (!unlocking) {
             showEmergencyModal.value = false;
             t0AssessmentContext.value = null;
+            showStatusSheet.value = false;
         }
         activeLocalId.value = null;
-        showStatusSheet.value = false;
     },
     { flush: "sync" },
 );
@@ -769,7 +700,7 @@ watch(
         const keyVersion = clinicalKeyVersion();
         activeLocalId.value = null;
         showStatusSheet.value = false;
-        if (!owner || /^\/relawan\/emergencies\//.test(runtime.path)) return;
+        if (!owner || (!clinicalKeyReady(owner) && !syntheticLegacyFixture()) || /^\/relawan\/emergencies\//.test(runtime.path)) return;
         void emergencyRepository
             .list(owner)
             .then((items) => {
@@ -862,18 +793,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.relawan-header-controls { min-width: 0; }
-.relawan-header-status { flex: 1; min-width: 0; max-inline-size: none; }
-.relawan-header-status :deep(.truncate) { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
-.relawan-header-controls > button:last-child { flex-shrink: 0; }
-.relawan-identity-header { flex-wrap: nowrap; padding: 1rem; gap: .75rem; }
-.relawan-identity-header > div:first-child { flex: 1; flex-basis: auto; }
-.relawan-identity-header .relawan-header-controls { width: auto; max-width: none; flex-shrink: 0; }
-.relawan-identity-header > div:first-child p:first-child { font-size: 1rem; font-weight: 700; color: #0f172a; }
 .relawan-identity-main { padding-top: 0; }
-@media (max-width: 359px) {
-    .relawan-identity-header { flex-wrap: wrap; }
-    .relawan-identity-header > div:first-child { flex-basis: 100%; }
-    .relawan-identity-header .relawan-header-controls { width: 100%; justify-content: space-between; }
-}
 </style>

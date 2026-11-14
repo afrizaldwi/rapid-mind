@@ -22,7 +22,7 @@ final class FixtureAccountRoster
         }
         $m = $marker->first()->new_values;
         if (($m['fixture'] ?? null) !== FixtureDefinition::VERSION
-            || ! in_array(Region::find($m['region_id'] ?? null)?->name, [FixtureDefinition::REGION, FixtureDefinition::LEGACY_REGION], true)
+            || ! in_array(Region::find($m['region_id'] ?? null)?->name, [FixtureDefinition::REGION, FixtureDefinition::LEGACY_REGION, '[SIMULASI KARHUTLA] Palangka Raya'], true)
             || count($m['user_ids'] ?? []) !== 6 || array_diff(array_keys($m['user_ids'] ?? []), array_keys(FixtureDefinition::ACCOUNTS))
             || count(array_unique($m['user_ids'])) !== 6
         ) {
@@ -30,7 +30,7 @@ final class FixtureAccountRoster
         }
         foreach (['a', 'b'] as $key) {
             $f = HealthcareFacility::find($m['facility_ids'][$key] ?? null);
-            if (! $f?->is_active || $f->name !== '[SINTETIS KOMPETISI] Faskes ' . strtoupper($key)) {
+            if (! $f?->is_active || ! in_array($f->name, ['Faskes '.strtoupper($key), '[SINTETIS KOMPETISI] Faskes '.strtoupper($key)], true)) {
                 throw new RuntimeException('Competition facility inconsistent.');
             }
         }

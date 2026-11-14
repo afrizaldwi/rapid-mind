@@ -315,7 +315,7 @@ class SyncManager {
                                     window.setTimeout(() => {
                                         if (this.owner === active)
                                             window.location.assign(
-                                                "/relawan/data",
+                                                "/relawan/home",
                                             );
                                     }, 0);
                                 } else if (
@@ -354,6 +354,8 @@ class SyncManager {
                                         snapshot,
                                     );
                                 else if (!completed) this.syncRequested = true;
+                                if (completed) await outboxRepository.pruneDelivered(active,
+                                    () => this.owner === active && this.ownerLease === requestedLease);
                             }
                         } catch (error) {
                             const message = "Penerimaan server belum terkonfirmasi. Coba lagi setelah koneksi dan sesi tersedia.";
@@ -383,7 +385,7 @@ class SyncManager {
                                 stopCurrentPass = true;
                                 window.setTimeout(() => {
                                     if (this.owner === active)
-                                        window.location.assign("/relawan/data");
+                                        window.location.assign("/relawan/home");
                                 }, 0);
                             } else if (item.type === "EMERGENCY") {
                                 stopCurrentPass = true;

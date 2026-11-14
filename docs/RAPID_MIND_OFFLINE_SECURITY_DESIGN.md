@@ -1,5 +1,80 @@
 # RAPID-MIND — Offline Clinical Data Security
 
+## Offline refresh with a locked key
+
+A verified local Relawan session can reopen Home, PFA and the assessment start
+page from the installed PWA after a reload. These routes can render with empty
+props and generic volunteer identity. Reading the encrypted owner profile,
+drafts, patients and individual reports still requires a valid clinical key.
+The locked clinical screen links back to Home. Local logout and owner mismatch
+still deny the offline session. Reload never restores the key from storage.
+
+## Online assessment creation — 14 November 2026
+
+Assessment Index now creates online assessments directly through the existing
+authorized, idempotent assessment sync endpoint without a clinical DEK or local
+clinical write. Patient and assessment UUIDs are generated once per attempt.
+Uncertain acceptance retains that exact snapshot and those identifiers for an
+encrypted retry, preventing a lost response from producing a second case.
+
+If a valid clinical key is already available, failed creation persists through
+the encrypted repositories and durable assessment outbox. Otherwise it explicitly
+requests unlock, warns that the snapshot exists only in page memory, and requires
+another Start action after unlocking. It never persists plaintext or claims the
+pending snapshot is durable before encryption succeeds. If enrollment is disabled,
+that secure fallback remains blocked; ordinary successful online creation works.
+Existing completion/receipt/routing cleanup and unfinished-draft retention remain.
+
+This change concerns assessment creation. Existing online stage adapters retain
+their separate failure behavior, including page-memory-only partial answers;
+this checkpoint does not claim automatic offline recovery for every online stage.
+See [creation checkpoint](ui/online-assessment-start-2026-11-14.md).
+
+## Emergency guidance inside T0 — 14 November 2026
+
+The owner requested removal of the standalone emergency-help card. Public help
+is now an explicitly expanded guide inside the T0 panel, available before local
+clinical unlock. It is removed from the general layout and encryption gate.
+The locked offline shell also exposes T0 guidance, including while its unlock
+screen is visible. That shell's help dialog contains no report submission form.
+
+Opening or expanding guidance does not unlock data, create an emergency, enqueue
+an operation, call anyone or transmit a T0 request. Existing explicit verification,
+final Send, clinical unlock and atomic encrypted emergency/outbox requirements
+remain unchanged. No verified assistance contacts have been configured, and no
+sample contact numbers are introduced. See the
+[checkpoint evidence](ui/t0-emergency-guidance-panel-2026-11-14.md).
+
+## Relawan delivered-copy retention — 14 November 2026
+
+The owner authorized automatic removal of delivered local History copies.
+Cleanup requires an encrypted record marked SYNCED and ROUTED, a matching
+canonical receipt with a valid acceptance time/revision, and an exact digest
+match to the ciphertext acknowledged by that receipt. A completed assessment
+must also have no pending T0 or outbox dependency. Orphan patient copies are
+removed only when all related work is gone and their local state is SYNCED.
+
+The cleanup transaction rechecks the owner/key access fence, all owner
+ciphertexts, outbox indexes and receipts before deletion. Concurrent writes or
+locking abort cleanup. Minimal receipt/ID bookkeeping remains for idempotency.
+Server records, Healthcare state, device keys and unfinished work are preserved.
+Cleanup runs after sync acceptance and when unlocked local records are loaded.
+
+Relawan has no History page or navigation entry. The old /relawan/data URL
+redirects to Home online and resolves to Home in the offline router. Home no
+longer queries or receives recent server assessment history. Unfinished work
+remains accessible through Assessment. Status Data provides an encrypted pending
+delivery queue, explicit unlock, review, preparation and retry. Unlocking that
+queue keeps the status dialog open; locking or replacing an active key closes it.
+Server-accepted reports whose routing is unresolved remain visible with an
+explicit delivery warning and count as pending, even without an outbox item.
+ROUTED denotes an authorized Healthcare destination, without asserting human
+acknowledgement, review or clinical validation.
+
+Old copies without trustworthy receipts and legacy plaintext storage are not
+automatically erased. This authorization does not permit guessing their
+delivery state or resetting storage. Such cases require separate verification.
+
 ## Operation-specific online assessment and T0 access — 14 November 2026
 
 Owner-authorized server assessment pages and their server draft list can render

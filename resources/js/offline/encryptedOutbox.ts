@@ -391,6 +391,79 @@ export async function encryptedOutboxMark(
     );
 }
 
+export async function pruneDeliveredClinicalRecords(owner: number, stillActive: () => boolean): Promise<number> {
+    requireOwner(owner);
+    const access = captureClinicalAccess();
+    await assertStorageMode(owner, "ENCRYPTED");
+    const before = await db.encryptedStaging.where("owner_user_id").equals(owner).toArray();
+    const indexes = await db.encryptedOutboxIndex.where("owner_user_id").equals(owner).toArray();
+    const receipts = await db.localSyncReceipts.where("owner_user_id").equals(owner).toArray();
+    const [assessments, emergencies, patients, snapshots, queue] = await Promise.all([
+        encryptedList<LocalAssessment>(owner, "assessments"),
+        encryptedList<LocalEmergency>(owner, "emergencies"),
+        encryptedList<LocalPatient>(owner, "patients"),
+        encryptedList<LocalPatient>(owner, "patientSnapshots"),
+        encryptedOutboxList(owner),
+    ]);
+    const candidates = new Set<string>();
+    for (const record of [...assessments, ...emergencies]) {
+        const assessment = "mode" in record;
+        if (record.sync_state !== "SYNCED" || record.routing_status !== "ROUTED" ||
+            (assessment && record.status !== "COMPLETED")) continue;
+        const type = assessment ? "ASSESSMENT" : "EMERGENCY";
+        if (queue.some(item => item.type === type && item.entity_id === record.id)) continue;
+        const key = encryptedKey(assessment ? "assessments" : "emergencies", owner, record.id);
+        const envelope = before.find(row => row.key === key);
+        const receipt = receipts.find(row => row.type === type && row.entity_id === record.id && row.canonical_id === record.id);
+        if (envelope && receipt?.record_digest && receipt.key === `${owner}:${type}:${record.id}` &&
+            typeof receipt.outbox_id === "number" && Number.isSafeInteger(receipt.outbox_id) && receipt.outbox_id > 0 &&
+            Number.isSafeInteger(receipt.revision) && receipt.revision > 0 && Number.isFinite(Date.parse(receipt.accepted_at)) &&
+            await ciphertextDigest(envelope) === receipt.record_digest) candidates.add(key);
+    }
+    // Pending T0 payloads still need the local assessment for safe retries.
+    for (const assessment of assessments) {
+        if (emergencies.some(e => e.assessment_id === assessment.id &&
+            !candidates.has(encryptedKey("emergencies", owner, e.id))) ||
+            queue.some(item => item.payload.assessment_id === assessment.id))
+            candidates.delete(encryptedKey("assessments", owner, assessment.id));
+    }
+    const removedPatients = new Set<string>();
+    for (const record of [...assessments, ...emergencies]) {
+        const type = "mode" in record ? "assessments" : "emergencies";
+        if (record.patient_id && candidates.has(encryptedKey(type, owner, record.id)))
+            removedPatients.add(record.patient_id);
+    }
+    for (const patient of [...patients, ...snapshots]) {
+        if (!removedPatients.has(patient.id) || [...patients, ...snapshots].some(p => p.id === patient.id && p.sync_state !== "SYNCED")) continue;
+        const retained = assessments.some(a => a.patient_id === patient.id && !candidates.has(encryptedKey("assessments", owner, a.id))) ||
+            emergencies.some(e => e.patient_id === patient.id && !candidates.has(encryptedKey("emergencies", owner, e.id))) ||
+            queue.some(item => item.payload.patient_id === patient.id || (item.payload.patient as { id?: string } | undefined)?.id === patient.id);
+        if (!retained) {
+            for (const type of ["patients", "patientSnapshots"] as const) {
+                const key = encryptedKey(type, owner, patient.id);
+                if (before.some(row => row.key === key)) candidates.add(key);
+            }
+        }
+    }
+    if (!candidates.size) return 0;
+    await db.transaction("rw", [db.encryptedStaging, db.encryptedOutboxIndex,
+        db.localSyncReceipts, db.ownerEncryptionModes, db.relawanContinuity, db.offlineKeys], async () => {
+            await assertStorageMode(owner, "ENCRYPTED");
+            assertClinicalAccess(access);
+            if (!stillActive()) throw new Error("Sesi pembersihan berubah.");
+            const latest = await db.encryptedStaging.where("owner_user_id").equals(owner).toArray();
+            const latestIndexes = await db.encryptedOutboxIndex.where("owner_user_id").equals(owner).toArray();
+            const latestReceipts = await db.localSyncReceipts.where("owner_user_id").equals(owner).toArray();
+            if (JSON.stringify(latest) !== JSON.stringify(before) || JSON.stringify(latestIndexes) !== JSON.stringify(indexes) ||
+                JSON.stringify(latestReceipts) !== JSON.stringify(receipts))
+                throw new Error("Data lokal berubah saat pembersihan.");
+            for (const key of candidates) await db.encryptedStaging.delete(key);
+            assertClinicalAccess(access);
+        });
+    return candidates.size;
+}
+
+
 export async function encryptedOutboxComplete(
     owner: number,
     item: OutboxItem,

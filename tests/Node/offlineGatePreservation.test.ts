@@ -81,7 +81,7 @@ for (const state of ["FRESH", "ENROLLMENT_PENDING", "ENCRYPTED_LOCKED", "LEGACY_
             assert.equal(view.unlocked.value, 0);
             assert.deepEqual(snapshot(f), before);
             assert.match(view.text(), /Buka data klinis/);
-            assert.ok(view.text().includes("Panduan darurat"));
+            assert.doesNotMatch(view.text(), /Panduan darurat/);
             view.app.unmount();
             view = await mountGate(f);
             assert.deepEqual(snapshot(f), before);

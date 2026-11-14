@@ -25,24 +25,32 @@
         <p class="text-xs font-semibold text-slate-600">
           {{ drafts.length }} {{ online ? (isEn ? 'assessments on server' : 'asesmen di server') : (isEn ? 'assessments saved on this device' : 'asesmen tersimpan di perangkat ini') }}
         </p>
-        <article v-for="draft in drafts" :key="draft.id" class="rounded-xl border border-amber-200 bg-white p-4 shadow-xs">
-          <h2 class="text-sm font-bold text-slate-900">
-            {{ draft.hasPatientName ? draft.patientName : (isEn ? 'Survivor' : 'Penyintas') }}
-          </h2>
-          <p class="mt-1 text-xs text-slate-600">NIK: {{ draft.nik || (isEn ? 'Without NIK' : 'Tanpa NIK') }}</p>
-          <p class="mt-1 text-xs text-slate-600">
-            Mode: {{ draft.mode === 'NON_VERBAL' ? 'Non-Verbal' : 'Verbal' }} • {{ isEn ? 'Stage:' : 'Tahap:' }} {{ stageTitle(draft.stage) }}
-          </p>
-          <p class="mt-1 text-xs text-slate-600">
-            {{ isEn ? 'Last updated:' : 'Terakhir diperbarui:' }} {{ formatDate(draft.updatedAt) }}
-          </p>
-          <p class="mt-2 text-xs font-semibold text-amber-800">
-            {{ online ? (isEn ? 'Saved on server' : 'Tersimpan di server') : (isEn ? 'Saved on device' : 'Tersimpan di perangkat') }}
-          </p>
-          <RelawanLink :href="draft.resumeUrl" class="mt-3 inline-block rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-amber-700">
-            {{ resumeTitle(draft.stage) }} →
-          </RelawanLink>
-        </article>
+        <ul class="rounded-2xl bg-slate-200/70 p-1">
+          <li
+            v-for="draft in drafts"
+            :key="draft.id"
+            class="grid gap-3 border-b border-slate-100 bg-white p-4 first:rounded-t-xl last:rounded-b-xl last:border-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+          >
+            <div class="min-w-0">
+              <h2 class="break-words text-lg font-bold leading-tight text-slate-900">
+                {{ draft.hasPatientName ? draft.patientName : (isEn ? 'Survivor' : 'Penyintas') }}
+              </h2>
+              <p class="mt-1 break-words text-sm text-slate-600">
+                {{ draft.nik ? 'NIK: ' + draft.nik : (isEn ? 'No NIK' : 'Tanpa NIK') }}
+                · {{ draft.mode === 'NON_VERBAL' ? 'Non-Verbal' : 'Verbal' }}
+              </p>
+              <p class="mt-1 text-xs text-slate-600">
+                {{ isEn ? 'Updated' : 'Diperbarui' }} {{ formatDate(draft.updatedAt) }}
+              </p>
+            </div>
+            <RelawanLink
+              :href="draft.resumeUrl"
+              class="inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+            >
+              {{ resumeTitle(draft.stage) }}
+            </RelawanLink>
+          </li>
+        </ul>
       </section>
     </div>
   </RelawanLayout>

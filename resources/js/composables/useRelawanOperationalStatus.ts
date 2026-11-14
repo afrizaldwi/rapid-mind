@@ -1,6 +1,8 @@
 import { computed, onMounted, onUnmounted, ref, watch, type Ref } from "vue";
 import { liveQuery, type Subscription } from "dexie";
 import { assessmentRepository } from "@/offline/assessmentRepository";
+import { emergencyRepository } from "@/offline/emergencyRepository";
+import { pendingDeliveryCount } from "@/offline/pendingDelivery";
 import { outboxRepository } from "@/offline/outboxRepository";
 import { localPersistenceHealth } from "@/offline/localPersistenceHealth";
 import { syncManager, type SyncExecutionState } from "@/offline/syncManager";
@@ -85,9 +87,10 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
             if (currentGeneration === generation) localFailure.value = failed;
         });
         localSubscription = liveQuery(async (): Promise<LocalCounts> => {
-            const [items, assessments] = await Promise.all([
+            const [items, assessments, emergencies] = await Promise.all([
                 outboxRepository.list(next),
                 assessmentRepository.list(next),
+                emergencyRepository.list(next),
             ]);
             const queued = new Set(
                 items
@@ -95,7 +98,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
                     .map((item) => item.entity_id),
             );
             return {
-                pendingCount: items.length,
+                pendingCount: pendingDeliveryCount(assessments, emergencies, items),
                 failedCount: items.filter(item => item.status === "FAILED").length,
                 retryableCount: items.filter(item => item.status !== "FAILED" || item.last_http_status === undefined || [401, 408, 419, 429].includes(item.last_http_status) || item.last_http_status >= 500).length,
                 unfinishedCount: assessments.filter(
@@ -169,7 +172,7 @@ export function useRelawanOperationalStatus(owner: Ref<number | null>, allowSync
             case "pending":
                 return isEn.value
                     ? `${pendingCount.value} records waiting to sync`
-                    : `${pendingCount.value} data menunggu sinkronisasi`;
+                    : `${pendingCount.value} data menunggu kepastian pengiriman ke Nakes`;
             case "unqueued":
                 return isEn.value ? "Data not ready to sync" : "Data belum siap disinkronkan";
             case "local-only":

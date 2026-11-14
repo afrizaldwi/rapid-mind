@@ -415,12 +415,7 @@ final class RelawanT0SubmissionTest extends TestCase
                 ->missing('emergency.clinical_result')
                 ->etc());
 
-        $this->get('/relawan/data')->assertInertia(fn(Assert $page) => $page
-            ->where('emergencies.0.id', $emergency->id)
-            ->missing('emergencies.0.status')
-            ->missing('emergencies.0.verifications')
-            ->missing('emergencies.0.clinical_result')
-            ->etc());
+        $this->get('/relawan/data')->assertRedirect('/relawan/home');
 
         $this->get('/relawan/home')->assertInertia(fn(Assert $page) => $page
             ->component('Relawan/Home', false)

@@ -51,17 +51,10 @@ final class RelawanController extends Controller
             $resume->attach($activeDraft);
         }
 
-        $recentAssessments = Assessment::with(['patient', 'triageResult'])
-            ->where('user_id', $user->id)
-            ->latest('created_at')
-            ->take(5)
-            ->get();
-
         $shelter = $user->shelter_id ? Shelter::find($user->shelter_id) : null;
 
         return Inertia::render('Relawan/Home', [
             'activeDraft' => $activeDraft,
-            'recentAssessments' => $recentAssessments,
             'shelter' => $shelter,
         ]);
     }
@@ -439,37 +432,9 @@ final class RelawanController extends Controller
         return $shell;
     }
 
-    public function data(AssessmentResume $resume): InertiaResponse
+    public function data(): RedirectResponse
     {
-        $user = Auth::user();
-
-        $inProgress = Assessment::with(['patient', 'srqResponses', 'riskAssessment', 'functionAssessment'])
-            ->where('user_id', $user->id)
-            ->where('status', AssessmentStatus::IN_PROGRESS)
-            ->latest('updated_at')
-            ->get();
-
-        $inProgress->each(fn(Assessment $assessment) => $resume->attach($assessment));
-
-        $completed = Assessment::with(['patient', 'triageResult'])
-            ->where('user_id', $user->id)
-            ->where('status', AssessmentStatus::COMPLETED)
-            ->latest('completed_at')
-            ->get();
-
-        $emergencies = EmergencyEvent::query()
-            ->select(['id', 'user_id', 'patient_id', 'red_flag_type', 'notes', 'created_at'])
-            ->when(\Illuminate\Support\Facades\Schema::hasColumn('emergency_events', 'routing_status'), fn ($query) => $query->addSelect('routing_status'))
-            ->with(['patient:id,name'])
-            ->where('user_id', $user->id)
-            ->latest('created_at')
-            ->get();
-
-        return Inertia::render('Relawan/Data', [
-            'inProgress' => $inProgress,
-            'completed' => $completed,
-            'emergencies' => $emergencies,
-        ]);
+        return redirect()->route('relawan.home');
     }
 
     public function emergencyDetail(string $emergencyId): InertiaResponse

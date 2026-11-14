@@ -92,7 +92,7 @@
 import { computed, ref, watch } from "vue";
 import { Siren } from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
-import { type LocalEmergency } from "@/offline/db";
+import { db, type LocalEmergency } from "@/offline/db";
 import { emergencyRepository } from "@/offline/emergencyRepository";
 import { retryEmergency } from "@/offline/emergencyWorkflow";
 import {
@@ -104,7 +104,7 @@ import { useI18n } from "@/i18n";
 
 const { locale, isEn } = useI18n();
 const props = defineProps<{ owner: number; id: string }>();
-defineEmits<{ (e: "close"): void }>();
+const emit = defineEmits<{ (e: "close"): void }>();
 const emergency = ref<LocalEmergency | null>(null);
 const retryErrorFailed = ref(false);
 const retryError = computed(() =>
@@ -118,13 +118,19 @@ const retryError = computed(() =>
 watch(
     [() => props.owner, () => props.id],
     ([owner, id], _, onCleanup) => {
+        let active = true;
         emergency.value = null;
         const subscription: Subscription = liveQuery(async () => {
             return (await emergencyRepository.get(owner, id)) ?? null;
-        }).subscribe((record) => {
+        }).subscribe(async (record) => {
             emergency.value = record;
+            if (!record) {
+                const receipt = await db.localSyncReceipts.get(`${owner}:EMERGENCY:${id}`).catch(() => undefined);
+                if (active && props.owner === owner && props.id === id && receipt?.canonical_id === id)
+                    emit("close");
+            }
         });
-        onCleanup(() => subscription.unsubscribe());
+        onCleanup(() => { active = false; subscription.unsubscribe(); });
     },
     { immediate: true },
 );

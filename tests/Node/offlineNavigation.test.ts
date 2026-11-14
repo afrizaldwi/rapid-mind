@@ -41,11 +41,35 @@ function until(condition: () => boolean) {
 const stage = (name: string) =>
     `/relawan/assessment/synthetic-assessment/${name}`;
 
+test("offline Home still requires verified owner continuity when the key is locked", async (t) => {
+    const f = await seeded(t);
+    f.storage.lockAllClinicalKeys();
+    await f.continuity.lockRelawanContinuity();
+    f.browser.location.href = f.browser.location.origin + "/relawan/home";
+    await f.state.navigation.start();
+    assert.equal(f.state.navigation.view.value.status, "DENIED");
+    assert.equal(f.state.routeCalls.length, 0);
+});
+
 test("one explicit unlock covers all assessment stages with reactive props and no storage writes", async (t) => {
     const f = await seeded(t);
     f.storage.lockAllClinicalKeys();
     const n = f.state.navigation;
     await n.start();
+    assert.equal(n.view.value.status, "READY");
+    assert.deepEqual(n.runtime.pageProps, {});
+    assert.equal(n.runtime.name, "Relawan");
+    const original = snapshot(f);
+    for (const general of ["/relawan/home", "/relawan/pfa", "/relawan/assessment"]) {
+        n.runtime.navigate(general);
+        await until(() => n.view.value.status === "READY" && n.runtime.path === general);
+        assert.equal(f.storage.clinicalKeyReady(101), false);
+    }
+    const resolved = f.state.routeCalls.length;
+    n.runtime.navigate(stage("identity"));
+    await until(() => n.view.value.status === "LOCKED");
+    assert.equal(f.state.routeCalls.length, resolved);
+    assert.equal(snapshot(f), original);
     assert.equal(n.view.value.status, "LOCKED");
     await f.enrollment.unlockClinicalOwner(
         101,
@@ -76,7 +100,7 @@ test("one explicit unlock covers all assessment stages with reactive props and n
         "Drafts, emergency, outbox and all storage rows remain byte-for-byte unchanged",
     );
     assert.deepEqual(f.assignments, []);
-    assert.deepEqual(f.historyStates, [null, null, null, null, null]);
+    assert.ok(f.historyStates.every(state => state === null));
 });
 
 test("query strings, question anchors and Back/Forward keep URLs and resolved props aligned", async (t) => {

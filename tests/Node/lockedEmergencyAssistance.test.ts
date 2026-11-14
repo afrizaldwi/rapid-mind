@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { nextTick } from "vue";
+import { readFileSync } from "node:fs";
 import { moduleStub, mountFixture, vueModuleUrl } from "./helpers/mountedVueFixture.ts";
 
 test("locked assistance opens without clinical access and tracks network availability", async (t) => {
@@ -22,6 +23,7 @@ test("locked assistance opens without clinical access and tracks network availab
     }))).default;
     view = mountFixture(component);
     const button = view.nodes(n => n.tag === 'button')[0];
+    assert.match(view.text(button), /Panduan bantuan darurat/);
     assert.equal(button['aria-expanded'], false);
     button.onClick(); await nextTick();
     assert.equal(button['aria-expanded'], true);
@@ -34,4 +36,11 @@ test("locked assistance opens without clinical access and tracks network availab
     assert.match(view.text(), /Tidak ada permintaan yang dikirim/);
     button.onClick(); await nextTick();
     assert.equal(button['aria-expanded'], false);
+});
+
+test("the standalone help card is removed from both application layout and unlock gate", () => {
+    for (const file of ['resources/js/layouts/RelawanLayout.vue', 'resources/js/components/Relawan/OfflineEncryptionGate.vue']) {
+        assert.doesNotMatch(readFileSync(file, 'utf8'), /LockedEmergencyGuidance|Bantuan tanpa membuka data pasien/);
+    }
+    assert.match(readFileSync('resources/js/components/Relawan/T0Verification.vue', 'utf8'), /<LockedEmergencyGuidance\s*\/>/);
 });

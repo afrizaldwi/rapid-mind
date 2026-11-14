@@ -9,7 +9,7 @@ final class FixtureDefinition
     public const VERSION = 'competition-v1';
 
     public const LEGACY_REGION = '[SINTETIS KOMPETISI] Wilayah Simulasi';
-    public const REGION = '[SIMULASI KARHUTLA] Palangka Raya';
+    public const REGION = 'Palangka Raya';
     public const GEOGRAPHY_VERSION = 'palangka-raya-karhutla-v1';
     // Historical public Posko Patdu coordinates; fictional cases, not live response locations.
     public const POSKO = [
@@ -40,11 +40,11 @@ final class FixtureDefinition
 
     public const IDENTITIES = [
         'admin' => ['admin', 'admin@rapidmind.test'],
-        'relawan-1' => ['relawan1', 'budi.santoso@rapidmind.test'],
-        'relawan-2' => ['relawan2', 'rani.prameswari@rapidmind.test'],
-        'relawan-3' => ['relawan3', 'dimas.prakoso@rapidmind.test'],
-        'healthcare-a' => ['medis1', 'maya.lestari@rapidmind.test'],
-        'healthcare-b' => ['medis2', 'arief.wicaksono@rapidmind.test'],
+        'relawan-1' => ['relawan1', 'relawan1@rapidmind.test'],
+        'relawan-2' => ['relawan2', 'relawan2@rapidmind.test'],
+        'relawan-3' => ['relawan3', 'relawan3@rapidmind.test'],
+        'healthcare-a' => ['medis1', 'medis1@rapidmind.test'],
+        'healthcare-b' => ['medis2', 'medis2@rapidmind.test'],
     ];
 
     public static function email(string $alias): string

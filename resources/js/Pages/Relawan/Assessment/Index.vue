@@ -1,5 +1,8 @@
 <template>
   <RelawanLayout :clinical-access-requested="needsClinicalKey" @clinical-ready="onClinicalReady">
+    <template #clinical-unlock-notice>
+      <p v-if="localError" role="alert" class="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{{ localError }}</p>
+    </template>
     <div class="space-y-6">
       <div class="border-b border-slate-200 pb-5">
         <h1 class="rm-page-heading text-slate-900">
@@ -11,14 +14,22 @@
         </p>
       </div>
 
-      <section v-if="drafts.length" class="rounded-xl border border-amber-300 bg-amber-50/70 p-4 shadow-xs">
-        <h3 class="text-sm font-extrabold text-slate-900">{{ $t('relawan.dataWorkspace.unfinishedTitle') }}</h3>
-        <p class="mt-1 text-xs text-slate-600">{{ $t('assessment.draftsCount', { count: drafts.length }) }}</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <RelawanLink :href="drafts[0]!.resumeUrl" class="inline-flex items-center rounded-lg bg-amber-800 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-900">{{ $t('assessment.resumeLast') }}</RelawanLink>
-          <RelawanLink href="/relawan/assessment/drafts" class="rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-bold text-amber-900">{{ $t('assessment.viewAllDrafts', { count: drafts.length }) }}</RelawanLink>
+      <section v-if="drafts.length" aria-labelledby="unfinished-assessments" class="rounded-2xl bg-slate-200/70 p-1">
+        <div class="rounded-xl bg-white p-4">
+          <h2 id="unfinished-assessments" class="text-sm font-semibold text-amber-800">{{ $t('relawan.dataWorkspace.unfinishedTitle') }}</h2>
+          <p class="mt-1 text-base font-medium leading-snug text-slate-900">
+            {{ $t(runtime.mode === 'ONLINE_SERVER' ? 'assessment.serverDraftsCount' : 'assessment.draftsCount', { count: drafts.length }) }}
+          </p>
+          <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <RelawanLink :href="drafts[0]!.resumeUrl" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">{{ $t('assessment.resumeLast') }}</RelawanLink>
+            <RelawanLink href="/relawan/assessment/drafts" class="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-teal-800 underline-offset-4 hover:underline">{{ $t('assessment.viewAllDrafts') }}</RelawanLink>
+          </div>
         </div>
       </section>
+
+      <RelawanLink v-if="runtime.mode === 'OFFLINE_FIELD_MODE' && !clinicalKeyReady(owner)" href="/relawan/assessment/drafts" class="inline-flex items-center rounded-lg px-2 text-sm font-semibold text-teal-800 underline">
+        {{ isEn ? 'Open saved assessments' : 'Buka asesmen tersimpan' }}
+      </RelawanLink>
 
       <!-- Start New Assessment Form -->
       <div class="rm-panel p-4 sm:p-6 space-y-5">
@@ -156,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Mic, UserRound } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
@@ -168,6 +179,12 @@ import type { LocalPatient } from '@/offline/db';
 import type { ServerAssessment } from '@/offline/assessmentWorkflow';
 import { useI18n } from '@/i18n';
 import { localizeMessage } from '@/i18n/localizeMessage';
+import { jsonRequest } from '@/offline/jsonRequest';
+import { assessmentSyncPayload } from '@/offline/assessmentContract';
+import { assessmentRepository } from '@/offline/assessmentRepository';
+import { patientRepository } from '@/offline/patientRepository';
+import { queueAssessmentSnapshot } from '@/offline/assessmentSync';
+import type { LocalAssessment } from '@/offline/db';
 
 const { isEn, locale, t: $t } = useI18n();
 const props = defineProps<{
@@ -177,7 +194,6 @@ const props = defineProps<{
 const needsClinicalKey = ref(false);
 const runtime = useRelawanRuntime();
 const owner = relawanOwner();
-const shelterId = runtime.shelterId;
 type LocalizedError = { id: string; en: string } | string;
 const rawLocalError = ref<LocalizedError>('');
 const localError = computed(() =>
@@ -237,18 +253,65 @@ watch(clinicalKeyVersion, () => {
   if (!clinicalKeyReady(owner)) { drafts.value = runtime.mode === 'ONLINE_SERVER' ? serverAssessmentDrafts(owner, props.inProgressAssessments, isEn.value ? 'en' : 'id') : []; localPatients.value = []; form.value = { patient_id: '', name: '', nik: '', age: undefined, gender: 'Perempuan', mode: 'VERBAL' }; }
 }, { flush: 'sync' });
 
+let pendingStart: { assessment: LocalAssessment; patient: LocalPatient } | null = null;
+let startActive = true;
+const startPath = runtime.path;
+const startCurrent = () => startActive && runtime.owner === owner && runtime.path === startPath;
+onUnmounted(() => { startActive = false; pendingStart = null; });
 async function startNew() {
-  if (!clinicalKeyReady(owner)) { needsClinicalKey.value = true; return; }
+  if (!startCurrent()) return;
   if (loading.value) return;
+  const online = runtime.mode === 'ONLINE_SERVER' && navigator.onLine;
+  if ((!online || pendingStart) && !clinicalKeyReady(owner)) { needsClinicalKey.value = true; return; }
   loading.value = true;
   rawLocalError.value = '';
   try {
+    if (pendingStart) {
+      await patientRepository.saveServerSnapshot(owner, pendingStart.patient);
+      await assessmentRepository.save(owner, pendingStart.assessment);
+      await queueAssessmentSnapshot(owner, pendingStart.assessment.id);
+      const id = pendingStart.assessment.id;
+      pendingStart = null;
+      if (startCurrent()) runtime.navigate(`/relawan/assessment/${id}/identity`);
+      return;
+    }
     const selected = patients.value.find(p => p.id === form.value.patient_id);
     const patient = selected
       ? { id: selected.id, name: selected.name, nik: selected.nik, age: selected.age, gender: selected.gender, shelter_id: selected.shelter_id, serverKnown: selected.sync_state === 'SYNCED' }
-      : { name: form.value.name.trim(), nik: form.value.nik || undefined, age: form.value.age, gender: form.value.gender, shelter_id: shelterId ?? undefined };
+      : { name: form.value.name.trim(), nik: form.value.nik || undefined, age: form.value.age, gender: form.value.gender, shelter_id: runtime.shelterId ?? undefined };
     if (!patient.name) {
       throw new Error('Nama penyintas harus diisi.');
+    }
+    if (online) {
+      const now = new Date().toISOString();
+      const draft = {
+        patient: { ...patient, id: patient.id || crypto.randomUUID(), owner_user_id: owner, sync_state: 'LOCAL_SAVED' as const },
+        assessment: { id: crypto.randomUUID(), patient_id: '', owner_user_id: owner, status: 'IN_PROGRESS' as const,
+          mode: form.value.mode as 'VERBAL' | 'NON_VERBAL', started_at: now, updated_at: now, sync_state: 'LOCAL_SAVED' as const },
+      };
+      draft.assessment.patient_id = draft.patient.id;
+      try {
+        const response = await jsonRequest('/relawan/sync/assessments', assessmentSyncPayload(draft.assessment, draft.patient));
+        if (!startCurrent()) return;
+        if (!response.ok) throw new Error('Penerimaan server belum terkonfirmasi.');
+        const body = await response.json();
+        if (body.assessment?.id !== draft.assessment.id) throw new Error('Bukti penerimaan server tidak sesuai.');
+        runtime.navigate(`/relawan/assessment/${draft.assessment.id}/identity`);
+      } catch {
+        if (!startCurrent()) return;
+        pendingStart = draft;
+        if (clinicalKeyReady(owner)) {
+          await patientRepository.saveServerSnapshot(owner, draft.patient);
+          await assessmentRepository.save(owner, draft.assessment);
+          await queueAssessmentSnapshot(owner, draft.assessment.id);
+          pendingStart = null;
+          if (startCurrent()) runtime.navigate(`/relawan/assessment/${draft.assessment.id}/identity`);
+        } else {
+          needsClinicalKey.value = true;
+          rawLocalError.value = 'Pengiriman belum terkonfirmasi. Identitas masih ada di halaman ini dan belum tersimpan di perangkat. Buka kunci, lalu tekan Mulai kembali untuk menyimpan terenkripsi. Jangan tutup halaman ini.';
+        }
+      }
+      return;
     }
     const id = await startLocalAssessment(owner, patient, form.value.mode as 'VERBAL' | 'NON_VERBAL');
     runtime.navigate(`/relawan/assessment/${id}/identity`);

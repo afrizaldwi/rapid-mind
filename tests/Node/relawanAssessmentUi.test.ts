@@ -11,7 +11,7 @@ const vue = import.meta.resolve("vue");
     activeElement: null,
     querySelector: () => null,
 };
-(globalThis as any).window = { location: { hash: "" }, dispatchEvent() {} };
+(globalThis as any).window = Object.assign(new EventTarget(), { location: { hash: "" } });
 (globalThis as any).navigator ??= { onLine: true };
 const state = ((globalThis as any).__b31ui = {
     runtime: reactive({
@@ -268,6 +268,35 @@ test("mounted review lists exact unresolved questions, hides definitive SRQ scor
     } finally {
         f.app.unmount();
         state.assessment.srq_answers = { 17: false };
+    }
+});
+
+for (const online of [true, false]) test(`T0 assistance guide opens with locked clinical data and sends nothing (online=${online})`, async () => {
+    state.unlocked = false;
+    state.patientReads = 0;
+    state.emergencyCalls = [];
+    const previousOnline = navigator.onLine;
+    Object.assign(navigator, { onLine: online });
+    const show = ref(false);
+    const f = mountFixture(defineComponent({ setup: () => () => h(T0, { show: show.value }) }));
+    try {
+        show.value = true; await f.flush();
+        button(f, "Panduan bantuan darurat").onClick(); await f.flush();
+        assert.match(f.text(), /Kontak bantuan terverifikasi belum tersedia/);
+        assert.match(f.text(), /Tidak ada permintaan yang dikirim/);
+        assert.equal(state.patientReads, 0);
+        assert.equal(state.emergencyCalls.length, 0);
+        assert.equal(button(f, "KIRIM T0-SUSPECT").disabled, true);
+        assert.doesNotMatch(f.text(), /Buka kunci sintetis/);
+        button(f, "Panduan bantuan darurat").onClick(); await f.flush();
+        assert.equal(state.emergencyCalls.length, 0);
+        show.value = false; await f.flush();
+        show.value = true; await f.flush();
+        assert.doesNotMatch(f.text(), /Kontak bantuan terverifikasi belum tersedia/);
+    } finally {
+        state.unlocked = true;
+        Object.assign(navigator, { onLine: previousOnline });
+        f.app.unmount();
     }
 });
 

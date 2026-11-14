@@ -1,6 +1,6 @@
 <template>
     <aside
-        v-if="visible"
+        v-if="visible && (!compact || ['ERROR', 'INCOMPLETE', 'UNSUPPORTED'].includes(offlineReadiness.state))"
         role="status"
         aria-live="polite"
         class="shrink-0 border-b px-3 sm:px-4 py-1 text-[11px] leading-snug transition-colors"
@@ -12,7 +12,13 @@
                   : 'border-slate-200 bg-slate-50 text-slate-700'
         "
     >
-        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 max-w-lg mx-auto">
+        <details v-if="compact" class="max-w-lg mx-auto">
+            <summary class="cursor-pointer py-1 font-semibold">{{ conciseMessage }}</summary>
+            <p class="py-2">{{ conciseMessage }}</p>
+            <p v-if="offlineReadiness.updateWaiting" class="pb-2">{{ isEn ? 'Ensure drafts are saved, then close all RAPID-MIND tabs before reopening.' : 'Pastikan draf tersimpan, lalu tutup semua tab RAPID-MIND sebelum membuka kembali.' }}</p>
+            <button v-if="['ERROR', 'INCOMPLETE'].includes(offlineReadiness.state)" type="button" class="min-h-11 font-semibold underline" @click="registerRelawanServiceWorker">{{ isEn ? 'Check offline readiness' : 'Periksa kesiapan offline' }}</button>
+        </details>
+        <div v-else class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 max-w-lg mx-auto">
             <p class="font-medium">{{ conciseMessage }}</p>
             <button
                 v-if="['ERROR', 'INCOMPLETE'].includes(offlineReadiness.state)"
@@ -23,7 +29,7 @@
                 {{ isEn ? "Check offline readiness" : "Periksa kesiapan offline" }}
             </button>
         </div>
-        <p v-if="offlineReadiness.updateWaiting" class="mt-0.5 max-w-lg mx-auto">
+        <p v-if="!compact && offlineReadiness.updateWaiting" class="mt-0.5 max-w-lg mx-auto">
             {{
                 isEn
                     ? "Update available. Ensure drafts are saved, then close all RAPID-MIND tabs before reopening."
@@ -39,6 +45,7 @@ import { offlineReadiness, registerRelawanServiceWorker } from "@/pwa/register";
 import { useI18n } from "@/i18n";
 
 const { isEn } = useI18n();
+withDefaults(defineProps<{ compact?: boolean }>(), { compact: false });
 
 const transientVisible = ref(
     offlineReadiness.state === "INSTALLING" || offlineReadiness.state === "CHECKING",

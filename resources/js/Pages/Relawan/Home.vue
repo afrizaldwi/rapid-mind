@@ -7,6 +7,10 @@
                     <StatusIndicator :kind="statusKind" :label="statusLabel" @open="openStatus" />
                 </div>
                 <p class="mt-1 text-sm font-medium text-slate-600">{{ $t('relawan.roleBadge') }}</p>
+                <p class="mt-3 flex items-start gap-2 text-sm text-slate-600" :aria-label="isEn ? 'Assigned shelter' : 'Posko penugasan'">
+                    <MapPin class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span class="min-w-0 break-words">{{ shelter?.name || userShelterName || (isEn ? 'Shelter information unavailable' : 'Informasi posko belum tersedia') }}</span>
+                </p>
             </section>
         </template>
         <div class="space-y-6">
@@ -14,7 +18,7 @@
                 v-if="runtime.mode === 'OFFLINE_FIELD_MODE'"
                 class="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-900"
             >
-                {{ $t('relawan.offlineFieldMode') }}
+                {{ clinicalKeyReady(owner) ? $t('relawan.offlineFieldMode') : (isEn ? 'Offline field mode · Patient data is locked.' : 'Mode lapangan offline · Data pasien terkunci.') }}
             </p>
             <p
                 v-if="local.error.value"
@@ -61,43 +65,37 @@
                 </p>
             </div>
 
-            <!-- Resume Incomplete Draft Banner -->
-            <div
+            <section
                 v-if="displayDraft"
-                class="bg-amber-50 border border-amber-300 rounded-xl p-4 sm:p-5 space-y-3"
+                aria-labelledby="resume-assessment-title"
+                class="rounded-2xl bg-slate-200/70 p-1"
             >
-                <div class="flex items-center justify-between">
-                    <span
-                        class="text-xs font-bold text-amber-800 uppercase tracking-wider"
+                <div class="rounded-xl bg-white px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
+                    <div class="min-w-0">
+                        <h3 id="resume-assessment-title" class="text-sm font-semibold text-amber-800">
+                            {{ $t('relawan.activeDraftTitle') }}
+                        </h3>
+                        <p class="mt-1 break-words text-xl font-bold leading-tight text-slate-900">
+                            {{ displayDraft.name }}
+                        </p>
+                        <p class="mt-1 text-sm leading-snug text-slate-600">
+                            {{
+                                displayDraft.local
+                                    ? (isEn ? "Answers saved on this device." : "Jawaban tersimpan di perangkat ini.")
+                                    : local.ready.value
+                                      ? (isEn ? "Available on the server. Open while online." : "Tersedia di server. Buka saat terhubung ke internet.")
+                                      : (isEn ? "Available on the server. Offline availability is unconfirmed." : "Tersedia di server. Ketersediaan offline belum terkonfirmasi.")
+                            }}
+                        </p>
+                    </div>
+                    <RelawanLink
+                        :href="displayDraft.resumeUrl"
+                        class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-teal-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 sm:mt-0 sm:w-auto sm:shrink-0"
                     >
-                        {{ $t('relawan.activeDraftTitle') }}
-                    </span>
-                    <span class="text-xs text-amber-700 font-medium"
-                        >{{ $t('relawan.continueLastStage') }}</span
-                    >
+                        {{ displayDraft.resumeLabel }}
+                    </RelawanLink>
                 </div>
-                <div>
-                    <h3 class="font-bold text-slate-900 text-base">
-                        {{ displayDraft?.name || $t('common.survivor') }}
-                    </h3>
-                    <p class="text-xs text-slate-600 mt-0.5">
-                        {{
-                            displayDraft?.local
-                                ? (isEn ? "Next stage follows answers saved on this device." : "Tahap berikutnya mengikuti jawaban yang tersimpan di perangkat.")
-                                : local.ready.value
-                                  ? (isEn ? "Assessment is available on server; open while online to copy to this device." : "Asesmen ini tersedia di server; buka saat online untuk menyalinnya ke perangkat.")
-                                  : (isEn ? "Assessment is available on server. Device status cannot be confirmed yet." : "Asesmen tersedia di server. Status di perangkat belum dapat dipastikan.")
-                        }}
-                    </p>
-                </div>
-                <RelawanLink
-                    :href="displayDraft?.resumeUrl || '/relawan/assessment'"
-                    class="inline-flex min-h-11 items-center justify-center w-full py-3 px-4 bg-amber-800 hover:bg-amber-900 text-white font-semibold text-sm rounded-lg transition-colors"
-                >
-                    {{ displayDraft?.resumeLabel }} →
-                </RelawanLink>
-            </div>
-
+            </section>
             <!-- Main Interaction Paths: PFA vs Structured Screening -->
             <div class="space-y-3">
                 <h3
@@ -187,12 +185,13 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { BookOpen, ClipboardList, Info, Siren } from "lucide-vue-next";
+import { BookOpen, ClipboardList, Info, MapPin, Siren } from "lucide-vue-next";
 import StatusIndicator from "@/components/ui/StatusIndicator.vue";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import { useOwnedLocalRecords } from "@/composables/useRelawanDataWorkspace";
+import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
 import { resumeStage } from "@/offline/assessmentWorkflow";
 import { useI18n } from "@/i18n";
 import { localizeMessage } from "@/i18n/localizeMessage";
@@ -207,7 +206,6 @@ const props = defineProps<{
         resume_url?: string;
         resume_label?: string;
     } | null;
-    recentAssessments?: unknown[];
     shelter?: { name?: string } | null;
 }>();
 const runtime = useRelawanRuntime();

@@ -22,6 +22,7 @@ import {
 import { syntheticLegacyFixture } from "@/offline/clinicalStorageInitialization";
 
 type ResolvedPage = Exclude<OfflineRouteResult, { unavailable: string }>;
+const generalRoute = (pathname: string) => /^\/relawan\/(home|pfa|assessment|data)\/?$/.test(pathname);
 type View =
     | { status: "LOADING" | "LOCKED" | "DENIED" | "UNAVAILABLE" }
     | { status: "READY"; page: ResolvedPage; revision: number };
@@ -50,7 +51,7 @@ export function createOfflineNavigation(owner: number, mask: () => void) {
         if (clinicalKeyReady(owner)) lockAllClinicalKeys();
         clear("DENIED");
     }
-    async function authorize() {
+    async function verifyOwner() {
         const continuity = await resolveRelawanContinuity();
         if (
             continuity.state !== "ELIGIBLE" ||
@@ -59,6 +60,9 @@ export function createOfflineNavigation(owner: number, mask: () => void) {
             deny();
             throw new Error("Konteks Relawan berubah.");
         }
+    }
+    async function authorize() {
+        await verifyOwner();
         const encrypted = await encryptedMode(owner);
         await assertStorageMode(owner, encrypted ? "ENCRYPTED" : "LEGACY");
         return encrypted;
@@ -70,7 +74,7 @@ export function createOfflineNavigation(owner: number, mask: () => void) {
             question?.focus();
         } else if (!url.hash) window.scrollTo(0, 0);
     }
-    async function navigate(href: string, push = true) {
+    async function navigate(href: string, push = true, preservePage = false) {
         if (stopped) return;
         const url = offlineRelawanUrl(href, window.location.href);
         if (!url) {
@@ -81,28 +85,41 @@ export function createOfflineNavigation(owner: number, mask: () => void) {
         const request = ++sequence;
         const version = clinicalKeyVersion();
         const pageUrl = url.pathname + url.search;
-        const anchorOnly =
+        const reusePage =
             view.value.status === "READY" && installedUrl === pageUrl;
-        if (!anchorOnly) clear("LOADING");
+        if (!reusePage) clear("LOADING");
         const current = () =>
             !stopped &&
             request === sequence &&
             version === clinicalKeyVersion();
         try {
-            const ticket = captureClinicalAccess();
-            const encrypted = await authorize();
+            const general = generalRoute(url.pathname);
+            const locked = !clinicalKeyReady(owner) && !syntheticLegacyFixture();
+            if (locked && !general) {
+                await verifyOwner();
+                if (!current()) return;
+                if (push && url.href !== window.location.href)
+                    window.history.pushState(null, "", url.pathname + url.search + url.hash);
+                path.value = pageUrl;
+                clear("LOCKED");
+                return;
+            }
+            const ticket = locked ? null : captureClinicalAccess();
+            const encrypted = locked ? await verifyOwner() : await authorize();
             if (!current()) return;
-            assertClinicalAccess(ticket);
+            if (ticket) assertClinicalAccess(ticket);
             const page =
-                anchorOnly && view.value.status === "READY"
+                reusePage && view.value.status === "READY"
                     ? view.value.page
                     : await resolveOfflineRoute(owner, url.pathname);
-            const ownerProfile = syntheticLegacyFixture()
+            const ownerProfile = locked || syntheticLegacyFixture()
                 ? undefined
                 : await readUnlockedRelawan(owner);
             if (!current()) return;
-            if ((await authorize()) !== encrypted || !current()) return;
-            assertClinicalAccess(ticket);
+            if (locked) await verifyOwner();
+            else if ((await authorize()) !== encrypted) return;
+            if (!current()) return;
+            if (ticket) assertClinicalAccess(ticket);
             if (push && url.href !== window.location.href)
                 window.history.pushState(
                     null,
@@ -116,10 +133,10 @@ export function createOfflineNavigation(owner: number, mask: () => void) {
             }
             profile.value = ownerProfile;
             installedUrl = pageUrl;
-            if (!anchorOnly)
+            if (!reusePage)
                 view.value = { status: "READY", page, revision: request };
             await nextTick();
-            if (current()) focusDestination(url);
+            if (current() && !preservePage) focusDestination(url);
         } catch {
             if (!current()) return;
             clear(clinicalKeyReady(owner) ? "UNAVAILABLE" : "LOCKED");
@@ -156,12 +173,22 @@ export function createOfflineNavigation(owner: number, mask: () => void) {
             void navigate(window.location.href, false);
     }
     async function start() {
+        let wasUnlocked = clinicalKeyReady(owner);
         stopKeyWatch = watch(
             clinicalKeyVersion,
             () => {
                 ++sequence;
+                const url = new URL(window.location.href);
+                const unlocked = clinicalKeyReady(owner);
+                const generalPageOpen = view.value.status === "READY" && generalRoute(url.pathname);
+                const firstUnlock = unlocked && !wasUnlocked;
+                wasUnlocked = unlocked;
+                if (firstUnlock && generalPageOpen) {
+                    void navigate(url.href, false, true);
+                    return;
+                }
                 clear("LOCKED");
-                if (clinicalKeyReady(owner))
+                if (unlocked || generalPageOpen)
                     void navigate(window.location.href, false);
             },
             { flush: "sync" },

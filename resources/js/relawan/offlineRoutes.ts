@@ -14,7 +14,7 @@ export async function resolveOfflineRoute(
 ): Promise<OfflineRouteResult> {
     const owner = requireOwner(ownerInput);
     const path = pathname.replace(/\/+$/, "") || "/";
-    if (path === "/relawan/home")
+    if (path === "/relawan/home" || path === "/relawan/data")
         return {
             component: (await import("@/Pages/Relawan/Home.vue")).default,
             props: {},
@@ -22,11 +22,6 @@ export async function resolveOfflineRoute(
     if (path === "/relawan/pfa")
         return {
             component: (await import("@/Pages/Relawan/Pfa.vue")).default,
-            props: {},
-        };
-    if (path === "/relawan/data")
-        return {
-            component: (await import("@/Pages/Relawan/Data.vue")).default,
             props: {},
         };
     if (path === "/relawan/assessment")

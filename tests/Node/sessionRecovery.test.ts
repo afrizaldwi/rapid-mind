@@ -93,7 +93,7 @@ test("recovery preserves offline access but rejects expired, different and late 
         assert.equal(runtime.relawanSessionRecovery.state, expected[scenario]);
         assert.deepEqual(
             navigations,
-            scenario === "matching" ? ["/relawan/data"] : [],
+            scenario === "matching" ? ["/relawan/home"] : [],
         );
     }
     delete (globalThis as any).__c1Recovery;

@@ -1,5 +1,5 @@
 <template>
-    <fieldset :disabled="disabled" class="mt-4">
+    <fieldset :disabled="disabled" class="relative mt-4">
         <legend class="sr-only">{{ legendText }}</legend>
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
             <button

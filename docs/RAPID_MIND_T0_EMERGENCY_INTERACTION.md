@@ -1,5 +1,17 @@
 # RAPID-MIND — T0 Emergency Interaction Design
 
+## Owner-approved guidance placement — 14 November 2026
+
+The standalone help card is removed from normal Relawan pages and unlock screens.
+The T0 panel now contains a separate “Panduan bantuan darurat” disclosure that
+opens before any offline key prompt. The locked offline shell exposes the same
+guide through its T0 button in a read-only help dialog. Opening either guide
+creates no report and transmits no emergency request. Explicit report verification,
+final send and encrypted persistence requirements are preserved. This placement
+supersedes older descriptions of a persistent standalone help card; it changes
+no clinical, referral or dispatch policy. Evidence is recorded in
+[the guidance checkpoint](ui/t0-emergency-guidance-panel-2026-11-14.md).
+
 ## Current handoff note — 10 November 2026
 
 Committed C2 delivery uses bounded transient retry, stable IDs, atomic encrypted

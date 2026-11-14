@@ -129,6 +129,9 @@ export function useOwnedLocalRecords(owner: Ref<number | null>) {
                     records.value = value;
                     ready.value = true;
                     readFailed.value = false;
+                    if (value.assessments.some(a => a.status === "COMPLETED" && a.sync_state === "SYNCED") ||
+                        value.emergencies.some(e => e.sync_state === "SYNCED"))
+                        void outboxRepository.pruneDelivered(next, () => current === generation).catch(() => {});
                 },
                 error: () => {
                     if (current !== generation) return;
@@ -252,11 +255,11 @@ export function useRelawanDataWorkspace(
                 synchronized.delete(itemKey);
                 continue;
             }
-            if (queue || item.sync_state !== "SYNCED") {
+            if (queue || item.sync_state !== "SYNCED" || item.routing_status !== "ROUTED") {
                 pending.push({
                     ...base,
                     label:
-                        queue?.status === "FAILED" ||
+                        item.sync_state === "SYNCED" && !queue ? (en ? "Accepted by server; Healthcare routing unconfirmed" : "Diterima server; tujuan Nakes belum terkonfirmasi") : queue?.status === "FAILED" ||
                         item.sync_state === "SYNC_FAILED"
                             ? failedSyncLabel
                             : queue?.status === "SYNCING"
@@ -265,7 +268,7 @@ export function useRelawanDataWorkspace(
                                 ? pendingSyncLabel
                                 : unqueuedLabel,
                     resultUrl: `/relawan/assessment/${item.id}/result`,
-                    unqueued: !queue,
+                    unqueued: !queue && item.sync_state !== "SYNCED",
                     retryable:
                         !!queue &&
                         (queue.status !== "FAILED" ||
@@ -335,11 +338,11 @@ export function useRelawanDataWorkspace(
                 notes: item.notes,
                 emergencyUrl: `/relawan/emergencies/${item.id}`,
             };
-            if (queue || item.sync_state !== "SYNCED") {
+            if (queue || item.sync_state !== "SYNCED" || item.routing_status !== "ROUTED") {
                 pending.push({
                     ...base,
                     label:
-                        queue?.status === "FAILED" ||
+                        item.sync_state === "SYNCED" && !queue ? (en ? "Accepted by server; Healthcare routing unconfirmed" : "Diterima server; tujuan Nakes belum terkonfirmasi") : queue?.status === "FAILED" ||
                         item.sync_state === "SYNC_FAILED"
                             ? failedSyncLabel
                             : queue?.status === "SYNCING"

@@ -36,6 +36,7 @@
 
             <!-- Scrollable Form Body -->
             <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 min-h-0 text-slate-900">
+                <LockedEmergencyGuidance />
                 <section v-if="unlockRequested" class="space-y-3">
                     <p role="status" class="text-sm text-slate-700">{{ isEn ? 'Unlock is needed to read device records or save the encrypted T0 report. Nothing has been sent. After unlocking, review the form and press Send again.' : 'Buka kunci diperlukan untuk membaca data perangkat atau menyimpan laporan T0 terenkripsi. Belum ada laporan yang dikirim. Setelah membuka kunci, tinjau formulir lalu tekan Kirim kembali.' }}</p>
                     <OfflineEncryptionGate :owner="owner" @unlocked="onClinicalUnlocked" />
@@ -263,6 +264,7 @@ import { syncManager } from "@/offline/syncManager";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
 import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
 import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
+import LockedEmergencyGuidance from "@/components/Relawan/LockedEmergencyGuidance.vue";
 import { useDialogFocus } from "@/composables/useDialogFocus";
 import { useI18n } from "@/i18n";
 import { localizeMessage } from "@/i18n/localizeMessage";

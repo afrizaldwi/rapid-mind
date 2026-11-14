@@ -6,7 +6,7 @@
         <h1 id="offline-key-title" class="text-lg font-bold">
             {{ isEn ? "Open clinical data" : "Buka data klinis" }}
         </h1>
-        <p class="mt-2 text-sm text-slate-700">
+        <p v-if="!loading && !blocked" class="mt-2 text-sm text-slate-700">
             {{
                 hasKey
                     ? (isEn ? "Patient data is encrypted. Enter your offline passphrase to continue." : "Data pasien terlindungi enkripsi. Masukkan frasa sandi offline untuk melanjutkan.")
@@ -16,7 +16,7 @@
         <p v-if="loading" role="status" class="mt-4">
             {{ isEn ? "Checking device key…" : "Memeriksa kunci perangkat…" }}
         </p>
-        <p v-else-if="blocked" role="alert" class="mt-4 text-sm">{{ blocked }}</p>
+        <p v-else-if="blocked" role="alert" class="mt-3 border-l-2 border-amber-500 pl-3 text-sm text-slate-700">{{ blocked }}</p>
         <form
             v-else-if="!recoveryCode"
             class="mt-4 space-y-3"
@@ -111,21 +111,19 @@
             </button>
         </div>
         <p v-if="recoveryCode && error" role="alert" class="mt-3 text-sm text-red-800">{{ error }}</p>
-        <p class="mt-4 text-sm">
+        <p v-if="!loading && !blocked" class="mt-4 text-sm">
             {{
                 isEn
                     ? "If both passphrase and recovery code are lost, logging into the server cannot recover the local data key."
                     : "Jika frasa sandi dan kode pemulihan hilang, masuk ke server tidak dapat memulihkan kunci data lokal."
             }}
         </p>
-        <LockedEmergencyGuidance />
         <slot name="actions" />
     </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import LockedEmergencyGuidance from "./LockedEmergencyGuidance.vue";
 import { useI18n } from "@/i18n";
 import { localizeMessage } from "@/i18n/localizeMessage";
 

@@ -1,9 +1,8 @@
 <template>
-    <aside aria-labelledby="locked-emergency-title" class="mb-4 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
-        <h2 id="locked-emergency-title" class="font-bold">{{ isEn ? 'Help without opening patient data' : 'Bantuan tanpa membuka data pasien' }}</h2>
+    <section class="text-sm text-slate-800">
         <button type="button" :aria-expanded="expanded" aria-controls="locked-emergency-panel"
-            class="mt-3 min-h-11 w-full rounded-lg bg-red-800 px-4 py-3 font-bold text-white hover:bg-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800"
-            @click="expanded = !expanded">{{ isEn ? 'Emergency Assistance' : 'Bantuan Darurat' }}</button>
+            class="min-h-11 w-full rounded-lg border border-teal-700 px-4 py-3 text-left font-semibold text-teal-800 hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-800"
+            @click="expanded = !expanded">{{ isEn ? 'Emergency assistance guide' : 'Panduan bantuan darurat' }}</button>
         <div v-if="expanded" id="locked-emergency-panel" class="mt-4 space-y-3">
             <p role="status" class="font-semibold">{{ online
                 ? (isEn ? 'Device network available. Server connection has not been verified.' : 'Jaringan perangkat tersedia. Koneksi server belum dipastikan.')
@@ -16,7 +15,7 @@
             </ul>
             <p class="font-medium">{{ isEn ? 'This panel does not create or send a T0 report or call anyone automatically. No request has been sent through this panel.' : 'Panel ini tidak membuat atau mengirim laporan T0 dan tidak menelepon otomatis. Tidak ada permintaan yang dikirim melalui panel ini.' }}</p>
         </div>
-    </aside>
+    </section>
 </template>
 
 <script setup lang="ts">

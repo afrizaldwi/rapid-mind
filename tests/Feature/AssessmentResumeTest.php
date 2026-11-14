@@ -67,12 +67,7 @@ final class AssessmentResumeTest extends TestCase
             ->where('inProgressAssessments.0.resume_label', $label)
             ->etc());
 
-        $this->get('/relawan/data')->assertInertia(fn (Assert $page) => $page
-            ->component('Relawan/Data', false)
-            ->where('inProgress.0.resume_stage', $stage)
-            ->where('inProgress.0.resume_url', $url)
-            ->where('inProgress.0.resume_label', $label)
-            ->etc());
+        $this->get('/relawan/data')->assertRedirect('/relawan/home');
     }
 
     public function test_resume_follows_server_confirmed_stages_without_completing_assessment(): void

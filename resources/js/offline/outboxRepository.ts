@@ -19,6 +19,7 @@ import {
     encryptedOutboxGet,
     encryptedOutboxList,
     encryptedOutboxMark,
+    pruneDeliveredClinicalRecords,
     encryptedOutboxRecover,
 } from "./encryptedOutbox";
 import {
@@ -27,6 +28,10 @@ import {
 } from "./assessmentContract";
 
 export const outboxRepository = {
+    async pruneDelivered(owner: number, stillActive: () => boolean = () => true) {
+        if (!await encryptedMode(requireOwner(owner))) return 0;
+        return pruneDeliveredClinicalRecords(owner, stillActive);
+    },
     async list(owner: number) {
         if (await encryptedMode(owner)) return encryptedOutboxList(owner);
         const items = await db.transaction(
