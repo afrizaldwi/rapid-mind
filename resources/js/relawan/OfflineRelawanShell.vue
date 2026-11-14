@@ -1,5 +1,5 @@
 <template>
-    <section v-if="view.status === 'LOCKED'" class="min-h-screen bg-slate-100 p-4 text-slate-900">
+    <section v-if="view.status === 'LOCKED'" class="rm-app min-h-screen bg-slate-100 p-4 text-slate-900">
         <header class="mx-auto max-w-lg space-y-4">
             <h1 class="text-xl font-bold">RAPID-MIND · Relawan</h1>
             <p>Mode terbatas. Data klinis perangkat terkunci dan belum dibaca.</p>

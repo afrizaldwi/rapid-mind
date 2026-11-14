@@ -1,14 +1,12 @@
 <template>
   <RelawanLayout :clinical-access-requested="needsClinicalKey" @clinical-ready="onClinicalReady">
     <div class="space-y-6">
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
-          {{ $t('assessment.subtitle') }}
-        </span>
-        <h2 class="text-xl font-extrabold text-slate-900 mt-1">
+      <div class="border-b border-slate-200 pb-5">
+        <h1 class="rm-page-heading text-slate-900">
           {{ $t('assessment.title') }}
-        </h2>
-        <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+        </h1>
+        <p class="mt-2 text-sm text-slate-600">{{ $t('assessment.subtitle') }}</p>
+        <p class="rm-page-description text-sm leading-relaxed">
           {{ $t('assessment.description') }}
         </p>
       </div>
@@ -17,13 +15,13 @@
         <h3 class="text-sm font-extrabold text-slate-900">{{ $t('relawan.dataWorkspace.unfinishedTitle') }}</h3>
         <p class="mt-1 text-xs text-slate-600">{{ $t('assessment.draftsCount', { count: drafts.length }) }}</p>
         <div class="mt-3 flex flex-wrap gap-2">
-          <RelawanLink :href="drafts[0]!.resumeUrl" class="rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-amber-700">{{ $t('assessment.resumeLast') }}</RelawanLink>
+          <RelawanLink :href="drafts[0]!.resumeUrl" class="inline-flex items-center rounded-lg bg-amber-800 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-900">{{ $t('assessment.resumeLast') }}</RelawanLink>
           <RelawanLink href="/relawan/assessment/drafts" class="rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-bold text-amber-900">{{ $t('assessment.viewAllDrafts', { count: drafts.length }) }}</RelawanLink>
         </div>
       </section>
 
       <!-- Start New Assessment Form -->
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
+      <div class="rm-panel p-4 sm:p-6 space-y-5">
         <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
           <UserRound class="h-5 w-5" aria-hidden="true" />
           <h3 class="font-extrabold text-slate-900 text-base">
@@ -35,10 +33,11 @@
           <p v-if="localError" role="alert" class="text-xs font-semibold text-red-800">{{ localError }}</p>
           <!-- Existing Patient Selector -->
           <div v-if="patients && patients.length > 0">
-            <label class="block text-xs font-bold text-slate-700 mb-1">
+            <label for="assessment-existing-patient" class="block text-sm font-semibold text-slate-700 mb-2">
               {{ $t('assessment.selectExistingPatient') }}
             </label>
             <select
+              id="assessment-existing-patient"
               v-model="form.patient_id"
               class="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-teal-600 focus:outline-none"
             >
@@ -52,10 +51,11 @@
           <!-- New Patient Input fields (if no existing patient selected) -->
           <div v-if="!form.patient_id" class="space-y-3 pt-2">
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">
+              <label for="assessment-patient-name" class="block text-sm font-semibold text-slate-700 mb-2">
                 {{ $t('assessment.nameLabel') }}
               </label>
               <input
+                id="assessment-patient-name"
                 v-model="form.name"
                 type="text"
                 required
@@ -65,10 +65,11 @@
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">
+              <label for="assessment-patient-nik" class="block text-sm font-semibold text-slate-700 mb-2">
                 {{ $t('assessment.nikLabel') }}
               </label>
               <input
+                id="assessment-patient-nik"
                 v-model="form.nik"
                 type="text"
                 maxlength="16"
@@ -79,10 +80,11 @@
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">
+                <label for="assessment-patient-age" class="block text-sm font-semibold text-slate-700 mb-2">
                   {{ $t('assessment.ageLabel') }}
                 </label>
                 <input
+                  id="assessment-patient-age"
                   v-model.number="form.age"
                   type="number"
                   min="0"
@@ -93,10 +95,11 @@
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">
+                <label for="assessment-patient-gender" class="block text-sm font-semibold text-slate-700 mb-2">
                   {{ $t('assessment.genderLabel') }}
                 </label>
                 <select
+                  id="assessment-patient-gender"
                   v-model="form.gender"
                   class="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-teal-600 focus:outline-none"
                 >
@@ -116,6 +119,7 @@
               <button
                 type="button"
                 @click="form.mode = 'VERBAL'"
+                :aria-pressed="form.mode === 'VERBAL'"
                 class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer"
                 :class="form.mode === 'VERBAL' ? 'border-teal-600 bg-teal-50/70 text-teal-950 font-bold ring-2 ring-teal-500/20' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
               >
@@ -125,6 +129,7 @@
               <button
                 type="button"
                 @click="form.mode = 'NON_VERBAL'"
+                :aria-pressed="form.mode === 'NON_VERBAL'"
                 class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer"
                 :class="form.mode === 'NON_VERBAL' ? 'border-teal-600 bg-teal-50/70 text-teal-950 font-bold ring-2 ring-teal-500/20' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
               >
@@ -158,7 +163,7 @@ import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
 import { clinicalKeyReady, clinicalKeyVersion } from '@/offline/encryptedClinicalStorage';
 import { relawanOwner, startLocalAssessment } from '@/offline/assessmentWorkflow';
-import { loadRelawanAssessmentDrafts, type AssessmentDraft } from '@/composables/relawanAssessmentDrafts';
+import { loadRelawanAssessmentDrafts, serverAssessmentDrafts, type AssessmentDraft } from '@/composables/relawanAssessmentDrafts';
 import type { LocalPatient } from '@/offline/db';
 import type { ServerAssessment } from '@/offline/assessmentWorkflow';
 import { useI18n } from '@/i18n';
@@ -188,6 +193,11 @@ const patients = computed(() => {
   return [...byId.values()];
 });
 async function refreshDrafts() {
+  if (runtime.mode === 'ONLINE_SERVER') {
+    drafts.value = serverAssessmentDrafts(owner, props.inProgressAssessments, isEn.value ? 'en' : 'id');
+    localPatients.value = [];
+    return;
+  }
   if (!clinicalKeyReady(owner)) { drafts.value = []; localPatients.value = []; return; }
   rawLocalError.value = '';
   const generation = clinicalKeyVersion();
@@ -224,7 +234,7 @@ const form = ref({
 });
 
 watch(clinicalKeyVersion, () => {
-  if (!clinicalKeyReady(owner)) { drafts.value = []; localPatients.value = []; form.value = { patient_id: '', name: '', nik: '', age: undefined, gender: 'Perempuan', mode: 'VERBAL' }; }
+  if (!clinicalKeyReady(owner)) { drafts.value = runtime.mode === 'ONLINE_SERVER' ? serverAssessmentDrafts(owner, props.inProgressAssessments, isEn.value ? 'en' : 'id') : []; localPatients.value = []; form.value = { patient_id: '', name: '', nik: '', age: undefined, gender: 'Perempuan', mode: 'VERBAL' }; }
 }, { flush: 'sync' });
 
 async function startNew() {

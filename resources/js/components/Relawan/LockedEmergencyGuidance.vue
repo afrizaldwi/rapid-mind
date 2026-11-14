@@ -1,5 +1,5 @@
 <template>
-    <aside aria-labelledby="locked-emergency-title" class="mt-6 border-t border-slate-200 pt-5 text-sm text-slate-800">
+    <aside aria-labelledby="locked-emergency-title" class="mb-4 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
         <h2 id="locked-emergency-title" class="font-bold">{{ isEn ? 'Help without opening patient data' : 'Bantuan tanpa membuka data pasien' }}</h2>
         <button type="button" :aria-expanded="expanded" aria-controls="locked-emergency-panel"
             class="mt-3 min-h-11 w-full rounded-lg bg-red-800 px-4 py-3 font-bold text-white hover:bg-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800"

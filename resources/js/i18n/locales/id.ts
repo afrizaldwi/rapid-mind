@@ -1029,6 +1029,10 @@ export default {
         workspaceTitle: "Pusat Komando Tanggap Bencana",
         workspaceSubtitle: "Monitoring Terpadu Wilayah, Posko & Relawan",
         summary: {
+            otherRecommendations: "Rekomendasi T2 / T3",
+            t0Detail: "Laporan kedaruratan aktif",
+            t1Detail: "Distres tinggi",
+            monitoredDetail: "Posko aktif dalam pemantauan",
             headerTag: "Pusat Komando & Pemantauan Kebijakan",
             headerTitle: "Ringkasan Operasional Lapangan",
             headerSubtitle: "Agregasi laporan T0 dan rekomendasi sistem di seluruh posko penanggulangan bencana",

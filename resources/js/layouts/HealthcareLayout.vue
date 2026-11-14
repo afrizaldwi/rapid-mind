@@ -4,19 +4,24 @@
     </p>
     <div
         v-else
-        class="min-h-screen bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased"
+        class="rm-app min-h-screen bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased"
+        @keydown.esc="closeProfile"
     >
+        <a href="#healthcare-main" class="rm-skip-link">Langsung ke konten utama</a>
         <!-- Top Global Header (64px high, crisp white, minimal clinical workspace style) -->
         <header
-            class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0"
+            class="rm-workspace-header bg-white border-b border-slate-200/80 px-4 lg:px-6 py-2 flex items-center justify-between sticky top-0 z-30 shrink-0"
         >
             <!-- Left: Understated Brand & Context -->
             <div class="flex items-center space-x-3">
                 <!-- Mobile hamburger -->
                 <button
+                    ref="menuTrigger"
                     type="button"
                     @click="sidebarOpen = !sidebarOpen"
-                    class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                    class="rm-mobile-menu lg:hidden flex flex-col items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+                    :aria-expanded="sidebarOpen"
+                    aria-controls="healthcare-navigation"
                     :aria-label="$t('common.openNavigation', 'Buka navigasi')"
                 >
                     <svg
@@ -32,12 +37,13 @@
                             d="M4 6h16M4 12h16M4 18h16"
                         />
                     </svg>
+                    <span class="text-[11px]">Menu</span>
                 </button>
 
                 <!-- Brand Identifier -->
                 <Link
                     href="/healthcare/emergencies"
-                    class="flex items-center gap-2.5 group"
+                    class="rm-workspace-brand flex items-center gap-2.5 group"
                 >
                     <img
                         src="/logo.png?v=3"
@@ -83,9 +89,13 @@
                 <!-- User Profile Pill / Dropdown -->
                 <div class="relative">
                     <button
+                        ref="profileTrigger"
                         type="button"
                         @click="profileOpen = !profileOpen"
                         class="flex items-center space-x-2.5 p-1 rounded-lg hover:bg-slate-50 transition"
+                        :aria-expanded="profileOpen"
+                        aria-controls="healthcare-profile-menu"
+                        :aria-label="$t('common.profile', 'Menu akun')"
                     >
                         <div
                             class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0"
@@ -122,7 +132,8 @@
                     <!-- Dropdown Menu -->
                     <div
                         v-if="profileOpen"
-                        class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs"
+                        id="healthcare-profile-menu"
+                        class="rm-profile-menu absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs"
                         @click="profileOpen = false"
                     >
                         <div class="px-3.5 py-2 border-b border-slate-100">
@@ -183,17 +194,27 @@
             <!-- Mobile Backdrop -->
             <div
                 v-if="sidebarOpen"
-                @click="sidebarOpen = false"
+                @click="closeSidebar"
+                aria-hidden="true"
                 class="fixed inset-0 bg-slate-900/40 z-30 lg:hidden backdrop-blur-xs"
             ></div>
 
             <!-- Left Sidebar Navigation (240px wide, quiet white background, exact match to Admin) -->
             <aside
+                id="healthcare-navigation"
+                ref="drawer"
+                tabindex="-1"
+                :inert="compact && !sidebarOpen"
+                :aria-label="$t('common.openNavigation', 'Navigasi Healthcare')"
+                @keydown="drawerKeydown"
                 :class="[
-                    'fixed lg:static inset-y-0 left-0 z-40 w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
+                    'rm-drawer fixed lg:static inset-y-0 left-0 z-40 bg-white border-r border-slate-200/80 flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                 ]"
             >
+                <div class="rm-drawer-close lg:hidden">
+                    <button type="button" @click="closeSidebar"><span>{{ $t('common.closeNavigation', 'Tutup navigasi') }}</span><span aria-hidden="true">×</span></button>
+                </div>
                 <div class="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
                     <div>
                         <div
@@ -335,7 +356,7 @@
             </aside>
 
             <!-- Main Workspace Scrollable Body -->
-            <main class="flex-1 p-4 lg:p-6 overflow-y-auto space-y-5">
+            <main id="healthcare-main" tabindex="-1" class="rm-workspace-content flex-1 p-4 lg:p-6 overflow-y-auto space-y-5" :inert="compact && sidebarOpen">
                 <p v-if="page.props.clinicalScopeAvailable === false" role="status" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
                     {{ $t('healthcare.layout.clinicalScopeUnavailable', 'Akses kasus belum tersedia. Skema penugasan Faskes memerlukan persetujuan dan penerapan oleh pengelola.') }}
                 </p>
@@ -361,6 +382,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from "vue";
+import { useWorkspaceNavigation } from "@/composables/useWorkspaceNavigation";
 import { Link, usePage, router } from "@inertiajs/vue3";
 import { echo } from "@laravel/echo-vue";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher.vue";
@@ -393,8 +415,7 @@ const flashRealtimeWarning = computed(() =>
     ),
 );
 
-const sidebarOpen = ref(false);
-const profileOpen = ref(false);
+const { sidebarOpen, profileOpen, compact, drawer, menuTrigger, profileTrigger, closeSidebar, closeProfile, drawerKeydown } = useWorkspaceNavigation(window);
 
 const userInitials = computed(() => {
     const n = user.value?.name || "TM";
@@ -501,7 +522,7 @@ const connectionStatus = computed(() => {
         return {
             label: $t("relawan.reconnecting", "Menghubungkan Ulang"),
             textClass: "text-amber-800",
-            dotClass: "bg-amber-500 animate-pulse",
+            dotClass: "bg-amber-500",
             stale: true,
         };
     }

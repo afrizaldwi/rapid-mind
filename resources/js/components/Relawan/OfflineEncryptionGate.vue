@@ -1,6 +1,6 @@
 <template>
     <section
-        class="mx-auto my-6 w-full max-w-md rounded-xl bg-white p-6 text-slate-900 shadow-sm"
+        class="rm-app mx-auto my-6 w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 sm:p-6 text-slate-900"
         aria-labelledby="offline-key-title"
     >
         <h1 id="offline-key-title" class="text-lg font-bold">

@@ -455,7 +455,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, onMounted } from "vue";
 import { ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
@@ -464,11 +464,8 @@ import { localizeMessage } from "@/i18n/localizeMessage";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
     mergeAssessmentDraft,
-    readAssessmentDraft,
-    saveAssessmentDraft, saveObservationDraft, saveAssessmentMode,
 } from "@/offline/assessmentDraft";
 import {
-    loadAssessmentContext,
     relawanOwner,
 } from "@/offline/assessmentWorkflow";
 import type { LocalAssessment, LocalPatient } from "@/offline/db";
@@ -476,6 +473,7 @@ import T0Verification from "@/components/Relawan/T0Verification.vue";
 import { useSrqSpeech } from "@/composables/useSrqSpeech";
 import { useSrqResponses } from "@/composables/useSrqResponses";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import { useAssessmentPersistence } from "@/composables/useAssessmentPersistence";
 import SrqResponseControl from "@/components/Relawan/Assessment/SrqResponseControl.vue";
 import SrqSafetyDialog from "@/components/Relawan/Assessment/SrqSafetyDialog.vue";
 import NonVerbalObservationFields from "@/components/Relawan/Assessment/NonVerbalObservationFields.vue";
@@ -494,6 +492,8 @@ const answers = ref<SrqAnswers>(
     mergeAssessmentDraft("srq_answers", props.responses, {}),
 );
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext, readAssessmentDraft, saveAssessmentDraft, saveObservationDraft, saveAssessmentMode } = persistence;
 const { isEn, locale, t: $t } = useI18n();
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
@@ -523,6 +523,7 @@ const showEmergencyVerification = ref(false);
 const expandedGuidance = ref(new Set<number>());
 const sttDetailsOpen = ref(false);
 const scope = useClinicalTaskScope(() => {
+    persistence.invalidate();
     cleanupStt();
     reset();
     showEmergencyVerification.value = false;
@@ -536,7 +537,8 @@ const scope = useClinicalTaskScope(() => {
     rawSaveError.value = "";
     rawDraftWarning.value = "";
     rawMetadataError.value = "";
-});
+}, { serverOnly: persistence.online });
+onMounted(() => { if (persistence.online) void loadDraft(); });
 const { safety, safetyEvidence, answeredCount, setManualAnswer, confirmQ17, dismissSafety,
     applySpeechTranscript, reset } = useSrqResponses(answers, () => draftReady.value,
         persistDraft, () => cleanupStt());
@@ -655,9 +657,9 @@ async function persistDraft() {
             answers.value, current,
         );
         if (current()) rawDraftWarning.value = "";
-    } catch {
+    } catch (error) {
         if (!current()) return;
-        rawDraftWarning.value = {
+        rawDraftWarning.value = persistence.online && error instanceof Error ? error.message : {
             id: "Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.",
             en: "Local draft is not saved yet. Answers on this page remain intact; please try selecting an answer again.",
         };
@@ -723,9 +725,9 @@ async function saveAndNext() {
         if (metadataError.value) throw new Error(metadataError.value);
         if (draftWarning.value) throw new Error(draftWarning.value);
         runtime.navigate(`/relawan/assessment/${props.assessment.id}/risk`);
-    } catch {
+    } catch (error) {
         if (!current()) return;
-        rawSaveError.value = {
+        rawSaveError.value = persistence.online && error instanceof Error ? error.message : {
             id: "Jawaban belum tersimpan di perangkat ini. Coba lagi.",
             en: "Answers are not saved on this device yet. Please try again.",
         };

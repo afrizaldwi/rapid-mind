@@ -7,6 +7,43 @@ let observed: string | null | undefined;
 let storageFailed = false;
 const listeners = new Set<() => void>();
 const fixture = stagingEncryptionFixture;
+const backgroundLockMs = 5 * 60 * 1000;
+let backgroundSince: { wall: number; monotonic: number } | null = null;
+let backgroundTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearBackgroundDeadline(): void {
+    if (backgroundTimer !== null) clearTimeout(backgroundTimer);
+    backgroundTimer = null;
+    backgroundSince = null;
+}
+
+function expireBackgroundAccess(): void {
+    if (!backgroundSince) return;
+    const wallElapsed = Date.now() - backgroundSince.wall;
+    const elapsed = performance.now() - backgroundSince.monotonic;
+    // Check both clocks on resume and every access. Suspended browsers may
+    // delay timers or pause the monotonic clock while the device sleeps.
+    if (wallElapsed < 0 || elapsed < 0 || Math.max(wallElapsed, elapsed) >= backgroundLockMs) {
+        invalidateClinicalAccess();
+    }
+}
+
+function updateBackgroundDeadline(): void {
+    if (document.visibilityState === "hidden") {
+        if (backgroundSince) {
+            expireBackgroundAccess();
+            return;
+        }
+        backgroundSince = { wall: Date.now(), monotonic: performance.now() };
+        backgroundTimer = setTimeout(() => {
+            backgroundTimer = null;
+            invalidateClinicalAccess();
+        }, backgroundLockMs);
+        return;
+    }
+    expireBackgroundAccess();
+    clearBackgroundDeadline();
+}
 
 function token(): string | null {
     if (fixture()) return null;
@@ -21,6 +58,7 @@ function token(): string | null {
     return value;
 }
 function invalidate(): void {
+    clearBackgroundDeadline();
     generation++;
     for (const listener of listeners) {
         try { listener(); } catch { /* A UI/history failure must not prevent key invalidation. */ }
@@ -33,6 +71,7 @@ export function captureClinicalAccess(): {
     generation: number;
     token: string | null;
 } {
+    expireBackgroundAccess();
     let current: string | null;
     try { current = token(); } catch (error) { invalidate(); throw error; }
     if (observed === undefined) observed = current;
@@ -45,6 +84,7 @@ export function captureClinicalAccess(): {
 export function assertClinicalAccess(
     ticket: ReturnType<typeof captureClinicalAccess>,
 ): void {
+    expireBackgroundAccess();
     let current: string | null;
     try { current = token(); } catch (error) { invalidate(); throw error; }
     if (ticket.generation !== generation || ticket.token !== current) {
@@ -83,7 +123,5 @@ if (typeof window !== "undefined") {
     window.addEventListener("pageshow", () => {
         invalidate();
     });
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") invalidateClinicalAccess();
-    });
+    document.addEventListener("visibilitychange", updateBackgroundDeadline);
 }

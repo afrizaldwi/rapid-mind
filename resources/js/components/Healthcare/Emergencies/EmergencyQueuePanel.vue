@@ -1,11 +1,11 @@
 <template>
     <section
-        class="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden"
+        class="xl:col-span-4 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden"
     >
         <div class="p-4 border-b border-slate-100 space-y-3">
             <div class="flex items-center justify-between">
                 <h2
-                    class="text-xs font-bold uppercase tracking-wider text-slate-900"
+                    class="text-base font-semibold text-slate-900"
                 >
                     {{ $t('healthcare.queuePanel.title', 'Antrean Darurat') }}
                 </h2>
@@ -56,6 +56,7 @@
                 <button
                     type="button"
                     @click="emit('update:selectedFilter', 'ALL')"
+                    :aria-pressed="selectedFilter === 'ALL'"
                     :class="
                         selectedFilter === 'ALL'
                             ? 'bg-slate-900 text-white font-semibold'
@@ -68,6 +69,7 @@
                 <button
                     type="button"
                     @click="emit('update:selectedFilter', 'PENDING')"
+                    :aria-pressed="selectedFilter === 'PENDING'"
                     :class="
                         selectedFilter === 'PENDING'
                             ? 'bg-slate-900 text-white font-semibold'
@@ -80,6 +82,7 @@
                 <button
                     type="button"
                     @click="emit('update:selectedFilter', 'CONFIRMED')"
+                    :aria-pressed="selectedFilter === 'CONFIRMED'"
                     :class="
                         selectedFilter === 'CONFIRMED'
                             ? 'bg-slate-900 text-white font-semibold'

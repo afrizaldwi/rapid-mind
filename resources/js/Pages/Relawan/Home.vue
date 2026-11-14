@@ -1,34 +1,15 @@
 <template>
-    <RelawanLayout>
+    <RelawanLayout :identity-shelter="shelter?.name || userShelterName">
+        <template #greeting="{ statusKind, statusLabel, openStatus }">
+            <section class="home-identity">
+                <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                    <h2 class="text-2xl font-bold text-slate-900">{{ isEn ? 'Hello,' : 'Halo,' }} {{ userName }}</h2>
+                    <StatusIndicator :kind="statusKind" :label="statusLabel" @open="openStatus" />
+                </div>
+                <p class="mt-1 text-sm font-medium text-slate-600">{{ $t('relawan.roleBadge') }}</p>
+            </section>
+        </template>
         <div class="space-y-6">
-            <!-- Greeting & Posko Context -->
-            <div
-                class="bg-white rounded-xl p-5 shadow-xs border border-slate-200"
-            >
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p
-                            class="text-xs font-bold text-teal-700 uppercase tracking-wider"
-                        >
-                            {{ $t('relawan.roleBadge') }}
-                        </p>
-                        <h2 class="text-xl font-bold text-slate-900 mt-0.5">
-                            {{ userName }}
-                        </h2>
-                    </div>
-                </div>
-                <div
-                    class="mt-3 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60"
-                >
-                    <MapPin class="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                    <span>{{
-                        shelter?.name ||
-                        userShelterName ||
-                        $t('relawan.shelterNotAssigned')
-                    }}</span>
-                </div>
-            </div>
-
             <p
                 v-if="runtime.mode === 'OFFLINE_FIELD_MODE'"
                 class="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-900"
@@ -83,7 +64,7 @@
             <!-- Resume Incomplete Draft Banner -->
             <div
                 v-if="displayDraft"
-                class="bg-amber-50 border border-amber-300 rounded-xl p-5 shadow-xs space-y-3"
+                class="bg-amber-50 border border-amber-300 rounded-xl p-4 sm:p-5 space-y-3"
             >
                 <div class="flex items-center justify-between">
                     <span
@@ -111,7 +92,7 @@
                 </div>
                 <RelawanLink
                     :href="displayDraft?.resumeUrl || '/relawan/assessment'"
-                    class="inline-flex items-center justify-center w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-xs transition"
+                    class="inline-flex min-h-11 items-center justify-center w-full py-3 px-4 bg-amber-800 hover:bg-amber-900 text-white font-semibold text-sm rounded-lg transition-colors"
                 >
                     {{ displayDraft?.resumeLabel }} →
                 </RelawanLink>
@@ -128,9 +109,9 @@
                 <!-- PFA Guidebook Card (Hari 1-3) -->
                 <RelawanLink
                     href="/relawan/pfa"
-                    class="block bg-white hover:bg-teal-50/40 p-5 rounded-xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
+                    class="block bg-white hover:bg-teal-50/40 p-4 sm:p-5 rounded-lg border border-slate-200 transition-colors group"
                 >
-                    <div class="flex items-start justify-between">
+                    <div class="flex items-start justify-between gap-4">
                         <div class="space-y-1">
                             <span
                                 class="text-[11px] font-bold text-teal-800 uppercase tracking-wider block"
@@ -149,7 +130,7 @@
                             </p>
                         </div>
                         <BookOpen
-                            class="h-8 w-8 text-teal-600 group-hover:scale-110 transition"
+                            class="h-6 w-6 shrink-0 text-teal-700"
                             aria-hidden="true"
                         />
                     </div>
@@ -158,9 +139,9 @@
                 <!-- Structured SRQ-20 Screening Card (Hari 4-30) -->
                 <RelawanLink
                     href="/relawan/assessment"
-                    class="block bg-white hover:bg-teal-50/40 p-5 rounded-xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
+                    class="block bg-white hover:bg-teal-50/40 p-4 sm:p-5 rounded-lg border border-slate-200 transition-colors group"
                 >
-                    <div class="flex items-start justify-between">
+                    <div class="flex items-start justify-between gap-4">
                         <div class="space-y-1">
                             <span
                                 class="text-[11px] font-bold text-indigo-800 uppercase tracking-wider block"
@@ -179,7 +160,7 @@
                             </p>
                         </div>
                         <ClipboardList
-                            class="h-8 w-8 text-teal-600 group-hover:scale-110 transition"
+                            class="h-6 w-6 shrink-0 text-teal-700"
                             aria-hidden="true"
                         />
                     </div>
@@ -206,7 +187,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { BookOpen, ClipboardList, Info, MapPin, Siren } from "lucide-vue-next";
+import { BookOpen, ClipboardList, Info, Siren } from "lucide-vue-next";
+import StatusIndicator from "@/components/ui/StatusIndicator.vue";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
@@ -294,3 +276,13 @@ const displayDraft = computed(() => {
         : null;
 });
 </script>
+
+<style scoped>
+.home-identity { margin-inline: -.875rem; margin-bottom: 1rem; padding: 1.25rem .875rem; background: white; border-bottom: 1px solid #e2e8f0; }
+.home-identity h2 { overflow-wrap: anywhere; min-width: 0; }
+.home-identity :deep(.rm-status) { max-inline-size: 100%; }
+.home-identity :deep(.truncate) { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+@media (min-width: 640px) {
+    .home-identity { margin-inline: -1.5rem; padding-inline: 1.5rem; }
+}
+</style>

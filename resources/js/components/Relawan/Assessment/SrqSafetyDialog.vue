@@ -1,7 +1,7 @@
 <template>
     <div
         v-if="state"
-        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/80 p-4"
+        class="rm-app rm-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/80 p-4"
     >
         <section
             ref="panel"
@@ -11,7 +11,7 @@
             aria-describedby="srq-safety-description"
             tabindex="-1"
             @keydown="keydown"
-            class="max-h-[90dvh] w-full max-w-md space-y-4 overflow-y-auto rounded-xl bg-white p-5 text-base text-slate-900 shadow-xl"
+            class="rm-dialog w-full max-w-md space-y-4 overflow-y-auto bg-white p-5 text-base text-slate-900 shadow-xl"
         >
             <h2 id="srq-safety-title" class="text-xl font-bold">
                 {{ dialogTitle }}

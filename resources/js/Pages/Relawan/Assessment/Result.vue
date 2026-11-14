@@ -207,7 +207,6 @@ import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
-    loadAssessmentContext,
     exactAssessmentAnswers,
     relawanOwner,
     type ServerAssessment,
@@ -215,6 +214,7 @@ import {
 } from "@/offline/assessmentWorkflow";
 import { emergencyRepository } from "@/offline/emergencyRepository";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import { useAssessmentPersistence } from "@/composables/useAssessmentPersistence";
 import { normalizeTriage } from "@/offline/triageDisplay";
 import type { LocalPatient } from "@/offline/db";
 import { useI18n } from "@/i18n";
@@ -233,6 +233,8 @@ const props = defineProps<{
     } | null;
 }>();
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext } = persistence;
 const owner = relawanOwner();
 const localPatient = ref<LocalPatient | null>(null);
 const triageResult = ref<any>(null);
@@ -261,10 +263,12 @@ const existingEmergencyId = ref<string | null>(
     props.existingEmergency?.id ?? null,
 );
 const scope = useClinicalTaskScope(() => {
+    persistence.invalidate();
     localPatient.value = null;
     triageResult.value = null;
     showEmergencyVerification.value = false;
-});
+}, { serverOnly: persistence.online });
+onMounted(() => { if (persistence.online) void loadResult(); });
 const isT0Recommendation = computed(
     () => triageResult.value?.system_recommendation === "T0_SUSPECT",
 );
@@ -328,7 +332,7 @@ async function loadResult() {
             context.assessment.sync_state === "SYNCED" ? "SYNCED" : "LOCAL";
 
         if (isT0Recommendation.value && !existingEmergencyId.value) {
-            const localEmergency = (await emergencyRepository.list(owner)).find(
+            const localEmergency = (persistence.online ? [] : await emergencyRepository.list(owner)).find(
                 (item) => item.assessment_id === props.assessment.id,
             );
             if (!current()) return;

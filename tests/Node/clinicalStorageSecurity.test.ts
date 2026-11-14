@@ -64,6 +64,30 @@ test("patient snapshots, four SRQ states, observations and priority-1 manual T0 
     await assert.rejects(f.outbox.list(101));
 });
 
+test("server-linked T0 retains encrypted context without requeueing an online assessment snapshot", async (t) => {
+    const f = await unlocked(t);
+    await f.assessments.save(101, {
+        id: "server-assessment", patient_id: "patient-synthetic", mode: "NON_VERBAL",
+        status: "IN_PROGRESS", srq_answers: { 17: "UNCLEAR" },
+    });
+    const id = await f.emergencyWorkflow.createLocalEmergency(101, {
+        patientId: "patient-synthetic", assessmentId: "server-assessment",
+        redFlagType: "MEDICAL_CRISIS", serverKnownAssessment: true, serverAssessmentMode: "VERBAL",
+    });
+    const items = await f.outbox.list(101);
+    assert.equal(items.length, 1);
+    assert.equal(items[0].entity_id, id);
+    assert.equal(items[0].priority, 1);
+    assert.equal(items[0].payload.assessment_id, "server-assessment");
+    assert.equal(items[0].payload.assessment_mode, "VERBAL");
+    assert.equal((await f.assessments.get(101, "server-assessment")).mode, "NON_VERBAL");
+    assert.equal((await f.assessments.get(101, "server-assessment")).srq_answers[17], "UNCLEAR");
+    assert.equal(f.db.emergencies.rows.size, 0);
+    assert.equal(f.db.outbox.rows.size, 0);
+    f.storage.lockAllClinicalKeys();
+    await assert.rejects(f.storage.encryptedList(101, "emergencies"));
+});
+
 test("emergency persistence rolls back with its outbox on an injected index-write failure", async (t) => {
     const f = await unlocked(t);
     const before = await f.db.encryptedStaging.toArray();

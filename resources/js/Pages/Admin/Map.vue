@@ -282,6 +282,8 @@ function selectShelter(shelter: any) {
 
 onMounted(() => {
   if (!mapContainer.value) return;
+  const sheltersWithCoords = (props.shelters || []).filter((s: any) => s.longitude && s.latitude);
+  const initialPoint = sheltersWithCoords[0];
 
   const map = new maplibregl.Map({
     container: mapContainer.value,
@@ -305,7 +307,7 @@ onMounted(() => {
         },
       ],
     },
-    center: [110.42, -7.70],
+    center: initialPoint ? [Number(initialPoint.longitude), Number(initialPoint.latitude)] : [118, -2],
     zoom: 11,
   });
 
@@ -317,7 +319,6 @@ onMounted(() => {
     selectedShelterId.value = null;
   });
 
-  const sheltersWithCoords = (props.shelters || []).filter((s: any) => s.longitude && s.latitude);
 
   // Add clean circular markers for shelters (T0: Red, Normal: Teal)
   for (const s of sheltersWithCoords) {
@@ -424,7 +425,7 @@ onMounted(() => {
     for (const f of facilitiesWithCoords.value) {
       bounds.extend([Number(f.longitude), Number(f.latitude)]);
     }
-    map.fitBounds(bounds, { padding: 48, maxZoom: 13 });
+    map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 0 });
   }
 });
 

@@ -130,8 +130,11 @@ for (const event of ["pagehide", "hidden", "storage", "protocol"]) {
         const root = mounted.nodes((node) => node.tag === "div")[0];
         const invalidate = () => {
             if (event === "hidden") {
+                t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
                 f.browser.document.visibilityState = "hidden";
                 f.browser.document.dispatchEvent(new Event("visibilitychange"));
+                t.mock.timers.tick(5 * 60 * 1000);
+                t.mock.timers.reset();
             } else if (event === "storage") {
                 f.browser.dispatchEvent(Object.assign(new Event("storage"), {
                     key: "rapid-mind:clinical-access-v2",

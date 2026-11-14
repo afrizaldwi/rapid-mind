@@ -3,11 +3,11 @@ import { useRelawanRuntime } from "@/relawan/runtime";
 import { clinicalKeyVersion } from "@/offline/encryptedClinicalStorage";
 import { createClinicalTaskScope } from "@/lib/clinicalTaskScope";
 
-export function useClinicalTaskScope(onInvalidate: () => void) {
+export function useClinicalTaskScope(onInvalidate: () => void, options: { serverOnly?: boolean } = {}) {
     const runtime = useRelawanRuntime();
     const identity = () => {
         try {
-            return `${runtime.owner}:${runtime.path}:${clinicalKeyVersion()}`;
+            return `${runtime.owner}:${runtime.path}:${options.serverOnly ? "server" : clinicalKeyVersion()}`;
         } catch {
             return "unavailable";
         }

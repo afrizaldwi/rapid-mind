@@ -6,7 +6,7 @@
     <button
       type="button"
       @click="$emit('trigger')"
-      class="flex items-center space-x-1.5 sm:space-x-2 bg-red-800 hover:bg-red-900 active:scale-95 text-white px-3.5 py-2 lg:px-5 lg:py-3 rounded-full shadow-lg lg:shadow-xl border border-red-700/60 font-bold tracking-wide transition duration-150 min-h-[42px] lg:min-h-[50px] focus:outline-none focus:ring-4 focus:ring-red-500/30 cursor-pointer"
+      class="flex items-center space-x-1.5 sm:space-x-2 bg-red-800 hover:bg-red-900 text-white px-4 py-3 lg:px-5 rounded-full shadow-lg border border-red-700/60 font-bold transition-colors duration-150 min-h-[48px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800 cursor-pointer"
       :aria-label="$t('relawan.emergencyButtonLabel')"
     >
       <Siren class="h-4 w-4 lg:h-5 lg:w-5 shrink-0" aria-hidden="true" />

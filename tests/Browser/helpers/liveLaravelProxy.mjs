@@ -5,7 +5,7 @@ import { resolve, sep, extname } from "node:path";
 
 // New test profiles only: candidate assets are isolated, all permitted dynamic
 // responses come from the running Laravel/Nginx. Never synthesizes auth/receipts.
-export async function liveLaravelProxy(build, { published = false, healthcare = false } = {}) {
+export async function liveLaravelProxy(build, { published = false, healthcare = false, admin = false } = {}) {
     const origin = "http://localhost:8080";
     const log = [];
     const state = { offline: false, realtimeOffline: false };
@@ -40,6 +40,7 @@ export async function liveLaravelProxy(build, { published = false, healthcare = 
             url.pathname === "/login" || url.pathname === "/" || url.pathname.startsWith("/relawan/") ||
             (published && url.pathname.startsWith("/build/")) ||
             (healthcare && (url.pathname.startsWith("/healthcare/") || url.pathname === "/up")) ||
+            (admin && url.pathname.startsWith("/admin/")) ||
             ["/logo.png", "/pwa-192.png", "/pwa-512.png", "/favicon.ico", "/manifest.webmanifest"].includes(url.pathname));
         const write = req.method === "POST" && (
             ["/login", "/logout", "/relawan/sync/assessments", "/relawan/sync/emergencies"].includes(url.pathname) ||

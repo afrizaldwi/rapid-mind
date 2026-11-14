@@ -205,7 +205,7 @@ final class RelawanController extends Controller
         ]);
         $validated = NonVerbalObservations::normalize($validated);
 
-        DB::transaction(function () use ($assessment, $validated) {
+        $version = DB::transaction(function () use ($assessment, $validated) {
             $assessment = $this->editableAssessment($assessment->id);
             if (isset($validated['mode'])) {
                 $assessment->update(['mode' => AssessmentMode::from($validated['mode'])]);
@@ -223,9 +223,10 @@ final class RelawanController extends Controller
                     SrqAnswer::storage($resp['answer'])
                 );
             }
+            return app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
         });
 
-        return response()->json(['message' => 'Jawaban SRQ tersimpan di server.']);
+        return response()->json(['message' => 'Jawaban SRQ tersimpan di server.', 'server_version' => $version]);
     }
 
     public function assessmentRisk(string $assessmentId): InertiaResponse
@@ -254,7 +255,7 @@ final class RelawanController extends Controller
 
         $weights = ['R1' => 2, 'R2' => 2, 'R3' => 1, 'R4' => 2, 'R5' => 1];
 
-        DB::transaction(function () use ($assessment, $validated, $weights) {
+        $version = DB::transaction(function () use ($assessment, $validated, $weights) {
             $assessment = $this->editableAssessment($assessment->id);
             foreach ($validated['risks'] as $indicator => $answer) {
                 RiskResponse::updateOrCreate(
@@ -262,9 +263,10 @@ final class RelawanController extends Controller
                     ['answer' => $answer, 'weight' => $weights[$indicator]]
                 );
             }
+            return app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
         });
 
-        return response()->json(['message' => 'Faktor risiko tersimpan.']);
+        return response()->json(['message' => 'Faktor risiko tersimpan.', 'server_version' => $version]);
     }
 
     public function assessmentFunction(string $assessmentId): InertiaResponse
@@ -291,7 +293,7 @@ final class RelawanController extends Controller
             }]])->all(),
         ]);
 
-        DB::transaction(function () use ($assessment, $validated) {
+        $version = DB::transaction(function () use ($assessment, $validated) {
             $assessment = $this->editableAssessment($assessment->id);
             foreach ($validated['functions'] as $domain => $level) {
                 FunctionResponse::updateOrCreate(
@@ -299,9 +301,10 @@ final class RelawanController extends Controller
                     ['level' => $level]
                 );
             }
+            return app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
         });
 
-        return response()->json(['message' => 'Fungsi harian tersimpan.']);
+        return response()->json(['message' => 'Fungsi harian tersimpan.', 'server_version' => $version]);
     }
 
     public function assessmentReview(string $assessmentId): InertiaResponse

@@ -1,6 +1,6 @@
 <template>
     <div
-        class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 text-xs font-semibold shadow-2xs transition select-none"
+        class="rm-language inline-flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 text-xs font-semibold transition select-none"
         :class="compact ? 'text-[11px]' : 'text-xs'"
         role="group"
         :aria-label="$t('common.languageSwitcherAria', 'Pilih Bahasa / Switch Language')"
@@ -20,7 +20,7 @@
             <span v-if="!compact" aria-hidden="true" class="text-xs">🇮🇩</span>
             <span>ID</span>
         </button>
-        <span class="text-slate-300 mx-0.5" aria-hidden="true">|</span>
+        <span class="sr-only" aria-hidden="true">|</span>
         <button
             type="button"
             class="flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"

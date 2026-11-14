@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout @clinical-ready="loadIdentityContext">
+  <RelawanLayout @clinical-ready="loadIdentityContext" @clinical-lock="scope.invalidate">
     <div class="space-y-5">
       <div class="bg-white rounded-xl border border-slate-200 p-5">
         <h1 class="text-lg font-extrabold text-slate-900">{{ $t('assessment.identityConfirmTitle') }}</h1>
@@ -21,7 +21,9 @@
 import { computed, onMounted, ref } from 'vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
-import { loadAssessmentContext, relawanOwner, type ServerAssessment, type ServerPatient } from '@/offline/assessmentWorkflow';
+import { relawanOwner, type ServerAssessment, type ServerPatient } from '@/offline/assessmentWorkflow';
+import { useAssessmentPersistence } from '@/composables/useAssessmentPersistence';
+import { useClinicalTaskScope } from '@/composables/useClinicalTaskScope';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
 import { useI18n } from '@/i18n';
 import { localizeMessage } from '@/i18n/localizeMessage';
@@ -29,6 +31,8 @@ import { localizeMessage } from '@/i18n/localizeMessage';
 const { isEn, locale, t: $t } = useI18n();
 const props = defineProps<{ assessment: ServerAssessment; patient?: ServerPatient | null }>();
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext } = persistence;
 const owner = relawanOwner();
 const assessment = props.assessment;
 const localAssessment = ref<LocalAssessment | null>(null);
@@ -53,9 +57,11 @@ function formatGender(value?: string | null): string {
 }
 
 async function loadIdentityContext() {
+  const current = scope.capture();
   rawError.value = '';
   try {
     const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
+    if (!current()) return;
     localAssessment.value = context.assessment;
     patient.value = context.patient;
   } catch (e) {
@@ -65,4 +71,9 @@ async function loadIdentityContext() {
   }
 }
 onMounted(() => { void loadIdentityContext(); });
+const scope = useClinicalTaskScope(() => {
+  persistence.invalidate();
+  localAssessment.value = null;
+  patient.value = null;
+}, { serverOnly: persistence.online });
 </script>

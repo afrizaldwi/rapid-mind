@@ -96,7 +96,7 @@ test("ordinary manual states survive later STT results, including explicit clear
     }
 });
 
-test("mounted response controls render three primary buttons and a secondary clear action preserving all four internal states", async () => {
+test("mounted response controls offer Yes and No while preserving and clearing legacy unclear answers", async () => {
     const component = (
         await import(
             await vueModuleUrl(
@@ -128,12 +128,11 @@ test("mounted response controls render three primary buttons and a secondary cle
             fixture.nodes(
                 (node) => node.tag === "button" && "data-srq-clear" in node,
             );
-        assert.equal(primaryButtons().length, 3);
+        assert.equal(primaryButtons().length, 2);
         assert.equal(clearButtons().length, 0);
         for (const [index, value] of [
             true,
             false,
-            "UNCLEAR",
         ].entries()) {
             primaryButtons()[index].onClick();
             await fixture.flush();
@@ -146,6 +145,11 @@ test("mounted response controls render three primary buttons and a secondary cle
             );
             assert.equal(clearButtons().length, 1);
         }
+        answer.value = "UNCLEAR";
+        await fixture.flush();
+        assert.match(fixture.text(), /Respons Tidak Jelas/);
+        assert.equal(primaryButtons().filter((node) => node["aria-pressed"] === true).length, 0);
+        assert.equal(clearButtons().length, 1);
         clearButtons()[0].onClick();
         await fixture.flush();
         assert.equal(answer.value, "UNANSWERED");
@@ -156,7 +160,7 @@ test("mounted response controls render three primary buttons and a secondary cle
         );
         assert.equal(clearButtons().length, 0);
         assert.match(fixture.text(), /Belum dijawab/);
-        assert.deepEqual(emitted, [true, false, "UNCLEAR", "UNANSWERED"]);
+        assert.deepEqual(emitted, [true, false, "UNANSWERED"]);
     } finally {
         fixture.app.unmount();
     }

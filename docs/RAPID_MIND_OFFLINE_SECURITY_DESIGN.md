@@ -1,5 +1,68 @@
 # RAPID-MIND — Offline Clinical Data Security
 
+## Operation-specific online assessment and T0 access — 14 November 2026
+
+Owner-authorized server assessment pages and their server draft list can render
+with the local clinical key locked. Each stage reads the authorized Inertia
+payload and saves through the existing server endpoints. These operations do not
+hydrate clinical IndexedDB stores. Save receipts return the new canonical
+server_version from inside the write transaction. Subsequent queued writes send
+that exact base_version, retaining the existing owner and conflict checks.
+
+SRQ retains four internal states and explicit human confirmation of Q17. Partial
+risk/function answers remain in page memory until the full stage is valid for
+the existing endpoint. Failed or uncertain online saves retain page answers and
+show that server acceptance is unconfirmed. They never fall back to plaintext
+storage or claim an offline outbox exists. Logout and owner/path invalidation
+clear the online adapter and suppress stale continuations.
+
+T0 verification opens before local unlock. Authorized server patient choices
+may be used immediately. Explicit access to device patients and final encrypted
+T0 persistence request unlock when necessary. Unlock retains the verification
+form and does not submit it. A second explicit final Send action is required.
+Only then can the existing atomic encrypted emergency/priority-1 outbox write
+run, followed by delivery attempts.
+
+An online assessment supplies a page-scoped, memory-only context for that final
+encrypted operation. Existing local drafts retain their merge protection.
+Server-known assessments carry their online mode into the emergency payload;
+their snapshot is not queued as a new assessment write. Server patient/case
+authorization and mode validation remain enforced during emergency acceptance.
+Existing offline assessments keep their existing protected workflow.
+
+Checkpoint evidence is recorded in
+[the operation-specific unlock report](ui/online-assessment-t0-unlock-2026-11-14.md).
+Physical Android/iPhone acceptance remains pending.
+
+## Background lock decision — 14 November 2026
+
+The owner approved a five-minute continuous background grace period. Changing
+tabs or applications retains the in-memory clinical key for less than five
+minutes. Returning to the foreground before the deadline cancels that timer.
+At five minutes, the key is revoked and decrypted views are masked through the
+existing access-generation invalidation.
+
+Foreground restoration and clinical access also check elapsed wall and monotonic
+time. This prevents delayed background timers from extending access on resume.
+Backward clock movement fails closed. Repeated hidden events do not restart the
+deadline. No key or unlock credential is persisted for this grace period.
+
+Full-document pagehide/pageshow, logout, account/key changes, storage invalidation
+and service-worker protocol changes retain immediate revocation. Full reload or
+browser closure still requires an explicit unlock. Ciphertext is preserved.
+Historical immediate-visibility-lock descriptions below are superseded by this
+owner-approved decision. Native Android/iPhone background acceptance remains
+pending separate device verification.
+
+Verification for this checkpoint passed 290 Node tests, TypeScript, frontend
+build and diff checks. Repository/DOM regressions cover key revocation and stale
+navigation rejection at the deadline. An isolated native Chrome probe loaded
+the fence source with synthetic access tickets and fixture storage bypass.
+A short actual tab switch retained access. After 301.572 seconds hidden/frozen,
+returning to the tab rejected the old ticket. This probe verifies browser
+visibility and suspended-timer handling, while native mobile OS behavior and
+full browser encryption integration remain outside its scope.
+
 ## Current security handoff — 10 November 2026
 
 [P0-HANDOFF.md](../P0-HANDOFF.md) records P0 IMPLEMENTED YES, P0 CORE BROWSER

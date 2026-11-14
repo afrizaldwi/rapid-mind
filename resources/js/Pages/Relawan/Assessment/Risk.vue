@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout @clinical-ready="loadRiskContext">
+  <RelawanLayout @clinical-ready="loadRiskContext" @clinical-lock="scope.invalidate">
     <div class="flex-1 min-h-0 flex flex-col">
       <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-4">
         <div class="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200">
@@ -88,8 +88,10 @@ import { ref, computed, onMounted } from 'vue';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
-import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '@/offline/assessmentDraft';
-import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
+import { mergeAssessmentDraft } from '@/offline/assessmentDraft';
+import { relawanOwner } from '@/offline/assessmentWorkflow';
+import { useAssessmentPersistence } from '@/composables/useAssessmentPersistence';
+import { useClinicalTaskScope } from '@/composables/useClinicalTaskScope';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
 import { useI18n } from '@/i18n';
 import { localizeMessage } from '@/i18n/localizeMessage';
@@ -105,6 +107,8 @@ const props = defineProps<{
 
 const risks = ref<Record<string, boolean>>(mergeAssessmentDraft('risk_indicators', props.risks, {}));
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext, readAssessmentDraft, saveAssessmentDraft } = persistence;
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(props.patient);
@@ -115,6 +119,14 @@ const saveError = computed(() => localizeMessage(rawSaveError.value, locale.valu
 const draftWarning = computed(() => localizeMessage(rawDraftWarning.value, locale.value));
 const draftReady = ref(false);
 const editedKeys = new Set<string>();
+const scope = useClinicalTaskScope(() => {
+  persistence.invalidate();
+  risks.value = {};
+  localAssessment.value = null;
+  patient.value = null;
+  draftReady.value = false;
+  editedKeys.clear();
+}, { serverOnly: persistence.online });
 const answeredCount = computed(() => ['R1', 'R2', 'R3', 'R4', 'R5'].filter(code => typeof risks.value[code] === 'boolean').length);
 
 const localizedRiskItems = computed(() => [
@@ -182,22 +194,28 @@ function setRiskAnswer(code: string, value: boolean) {
 }
 
 async function persistDraft() {
+  const current = scope.capture();
   try {
     if (!localAssessment.value) throw new Error('Asesmen lokal belum siap.');
-    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'risk_indicators', risks.value);
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'risk_indicators', risks.value, current);
+    if (!current()) return;
     rawDraftWarning.value = '';
-  } catch {
-    rawDraftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
+  } catch (error) {
+    if (!current()) return;
+    rawDraftWarning.value = persistence.online && error instanceof Error ? error.message : 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
   }
 }
 
 async function loadRiskContext() {
+  const current = scope.capture();
   rawSaveError.value = '';
   try {
     const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
+    if (!current()) return;
     localAssessment.value = context.assessment;
     patient.value = context.patient;
     const restoredDraft = await readAssessmentDraft(owner, context.assessment.id, 'risk_indicators');
+    if (!current()) return;
     if (restoredDraft && typeof restoredDraft === 'object') {
       const merged: Record<string, boolean> = { ...risks.value };
       for (const [key, value] of Object.entries(restoredDraft as Record<string, boolean>)) {
@@ -212,14 +230,16 @@ async function loadRiskContext() {
 }
 
 async function saveAndNext() {
+  const current = scope.capture();
   if (answeredCount.value !== 5 || !localAssessment.value) return;
   isSaving.value = true;
   rawSaveError.value = '';
   try {
-    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'risk_indicators', risks.value);
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'risk_indicators', risks.value, current);
+    if (!current()) return;
     runtime.navigate(`/relawan/assessment/${props.assessment.id}/function`);
   } catch (error) {
-    rawSaveError.value = error instanceof Error ? error.message : 'Gagal menyimpan faktor risiko.';
+    if (current()) rawSaveError.value = error instanceof Error ? error.message : 'Gagal menyimpan faktor risiko.';
   } finally {
     isSaving.value = false;
   }

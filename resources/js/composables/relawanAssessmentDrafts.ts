@@ -31,6 +31,20 @@ const stageLabelsByLocale: Record<'id' | 'en', Record<string, string>> = {
   },
 };
 
+export function serverAssessmentDrafts(owner: number, assessments: ServerAssessment[] = [], locale: 'id' | 'en' = 'id'): AssessmentDraft[] {
+  const labels = stageLabelsByLocale[locale];
+  return assessments.filter(a => a.user_id === owner && a.status === 'IN_PROGRESS' && !!a.patient_id).map(a => {
+    const stage = a.resume_stage && Object.hasOwn(labels, a.resume_stage) ? a.resume_stage : 'srq';
+    return {
+      id: a.id, patientName: a.patient?.name || (locale === 'en' ? 'Survivor' : 'Penyintas'),
+      hasPatientName: !!a.patient?.name, nik: a.patient?.nik, mode: a.mode || 'VERBAL',
+      stage, stageLabel: labels[stage], updatedAt: a.updated_at || '',
+      resumeUrl: `/relawan/assessment/${a.id}/${stage}`,
+      resumeLabel: stage === 'review' ? labels.review : `${locale === 'en' ? 'Continue' : 'Lanjutkan'} ${labels[stage]}`,
+    };
+  }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
 export async function loadRelawanAssessmentDrafts(
   owner: number,
   serverAssessments: ServerAssessment[] = [],

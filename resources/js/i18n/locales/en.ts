@@ -1029,6 +1029,10 @@ export default {
         workspaceTitle: "Disaster Response Command Center",
         workspaceSubtitle: "Integrated Monitoring of Regions, Shelters & Volunteers",
         summary: {
+            otherRecommendations: "T2 / T3 recommendations",
+            t0Detail: "Active emergency reports",
+            t1Detail: "High distress",
+            monitoredDetail: "Active shelters monitored",
             headerTag: "Command Center & Policy Monitoring",
             headerTitle: "Field Operational Summary",
             headerSubtitle: "Aggregation of T0 reports and system recommendations across all disaster relief shelters",

@@ -1,7 +1,7 @@
 <template>
   <button type="button"
-    class="inline-flex max-w-[13rem] items-center text-left text-xs font-medium transition gap-1.5 hover:opacity-80 py-1"
-    :class="statusTextColor" :aria-label="$t('relawan.statusSheet.openStatusAria', 'Buka Status Data')" @click="$emit('open')">
+    class="rm-status inline-flex items-center text-left text-xs font-medium transition gap-1.5 rounded-lg px-1 py-2 hover:bg-slate-50"
+    :class="statusTextColor" :title="label" :aria-label="$t('relawan.statusSheet.openStatusAria', 'Buka Status Data') + ': ' + label" @click="$emit('open')">
     <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="dotStyle"></span>
     <span class="truncate">{{ label }}</span>
   </button>

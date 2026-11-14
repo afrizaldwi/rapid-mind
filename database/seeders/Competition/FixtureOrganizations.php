@@ -18,9 +18,10 @@ final class FixtureOrganizations
     public function create(array $credentials): array
     {
         $region = Region::create(['name' => FixtureDefinition::REGION]);
-        DB::update("UPDATE regions SET geometry = ST_Multi(ST_GeomFromText('POLYGON((110.30 -7.90,110.50 -7.90,110.50 -7.60,110.30 -7.60,110.30 -7.90))',4326)) WHERE id = ?", [$region->id]);
+        DB::update('UPDATE regions SET geometry = ST_Multi(ST_GeomFromText(?,4326)) WHERE id = ?', [FixtureDefinition::GEOMETRY, $region->id]);
         $facilities = $units = $posko = $users = [];
-        foreach (['a' => [-7.70, 110.40], 'b' => [-7.74, 110.44]] as $alias => [$lat, $lon]) {
+        foreach (['a', 'b'] as $alias) {
+            [$lat, $lon] = FixtureDefinition::facilityCoordinates($alias);
             $facilities[$alias] = HealthcareFacility::forceCreate([
                 'name' => '[SINTETIS KOMPETISI] Faskes '.strtoupper($alias),
                 'type' => 'Puskesmas', 'address' => 'Lokasi simulasi, bukan alamat layanan nyata.',
@@ -32,12 +33,13 @@ final class FixtureOrganizations
             ]);
         }
         foreach (range(1, 3) as $n) {
+            $point = FixtureDefinition::POSKO[$n];
             $posko[$n] = Shelter::create([
-                'region_id' => $region->id, 'name' => "[SINTETIS KOMPETISI] Posko $n",
-                'address' => "Lokasi simulasi Posko $n, bukan titik respons nyata.",
+                'region_id' => $region->id, 'name' => $point['name'],
+                'address' => FixtureDefinition::LOCATION_NOTE,
                 'primary_facility_id' => $facilities[FixtureDefinition::facility($n)]->id, 'is_active' => true,
             ]);
-            DB::update('UPDATE shelters SET location = ST_SetSRID(ST_MakePoint(?, ?),4326) WHERE id = ?', [110.38 + $n * 0.02, -7.68 - $n * 0.02, $posko[$n]->id]);
+            DB::update('UPDATE shelters SET location = ST_SetSRID(ST_MakePoint(?, ?),4326) WHERE id = ?', [$point['longitude'], $point['latitude'], $posko[$n]->id]);
         }
         foreach (FixtureDefinition::ACCOUNTS as $alias => $role) {
             $n = $role === 'RELAWAN' ? (int) substr($alias, -1) : null;

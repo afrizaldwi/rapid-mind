@@ -113,7 +113,11 @@
                         <Calculator class="h-4 w-4 shrink-0" aria-hidden="true" />
                         <h4>{{ isEn ? "Deterministic System Calculation" : "Kalkulasi Deterministik Sistem" }}</h4>
                     </div>
-                    <p class="text-xs text-teal-950 leading-relaxed" v-if="isEn">
+                    <p class="text-xs text-teal-950 leading-relaxed" v-if="persistence.online">
+                        {{ isEn ? 'Estimated total score:' : 'Total skor estimasi:' }} <strong>{{ totalScore }} / 37</strong>.
+                        {{ isEn ? 'The final system recommendation is calculated and saved by the server when you finalize.' : 'Rekomendasi sistem final dihitung dan disimpan oleh server saat asesmen diselesaikan.' }}
+                    </p>
+                    <p class="text-xs text-teal-950 leading-relaxed" v-else-if="isEn">
                         Estimated total score:
                         <strong>{{ totalScore }} / 37 points</strong>. System recommendation is calculated and saved on this device. Server synchronization runs separately.
                     </p>
@@ -169,15 +173,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Calculator } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
-    completeLocalAssessment,
     exactAssessmentAnswers,
-    loadAssessmentContext,
     relawanOwner,
     type ServerAssessment,
     type ServerPatient,
@@ -189,6 +191,7 @@ import { hasDefinitiveSrqAnswers, srqAnswerLabel } from "@/domain/srq/srqAnswer"
 
 import { getObservationLabel } from "@/domain/assessment/observationPresentation";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import { useAssessmentPersistence } from "@/composables/useAssessmentPersistence";
 import { useI18n } from "@/i18n";
 import { localizeMessage } from "@/i18n/localizeMessage";
 
@@ -212,6 +215,8 @@ const props = defineProps<{
     patient?: ServerPatient | null;
 }>();
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext, completeLocalAssessment } = persistence;
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const localPatient = ref<LocalPatient | null>(null);
@@ -220,7 +225,8 @@ const rawCompletionError = ref("");
 const completionError = computed(() =>
     localizeMessage(rawCompletionError.value, locale.value),
 );
-const scope = useClinicalTaskScope(() => { localAssessment.value = null; localPatient.value = null; isSubmitting.value = false; });
+const scope = useClinicalTaskScope(() => { persistence.invalidate(); localAssessment.value = null; localPatient.value = null; isSubmitting.value = false; }, { serverOnly: persistence.online });
+onMounted(() => { if (persistence.online) void loadReview(); });
 const unresolved = computed(() => localAssessment.value ? Array.from({ length: 20 }, (_, index) => {
     const number = index + 1;
     const answer = localAssessment.value!.srq_answers?.[number];

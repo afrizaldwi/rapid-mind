@@ -1,16 +1,16 @@
 <template>
   <AdminLayout>
     <div class="space-y-5">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 class="text-xl font-black text-slate-900">{{ title }}</h2>
+          <h1 class="rm-page-heading text-slate-900">{{ title }}</h1>
           <p class="text-xs text-slate-500 mt-1">{{ kind === 'posko' ? $t('admin.masterData.subtitlePosko', 'Kelola data dan status operasional Posko.') : $t('admin.masterData.subtitleFaskes', 'Kelola data dan status operasional Faskes.') }}</p>
         </div>
         <Link :href="base + '/create'" class="px-4 py-2 bg-teal-800 text-white font-bold text-xs rounded-xl">{{ kind === 'posko' ? $t('admin.masterData.addPosko', '+ Tambah Posko') : $t('admin.masterData.addFaskes', '+ Tambah Faskes') }}</Link>
       </div>
       <p v-if="message" class="rounded-xl bg-teal-50 text-teal-900 p-3 text-sm">{{ message }}</p>
       <div v-if="!items.length" class="bg-white rounded-2xl p-8 text-sm text-slate-600">{{ kind === 'posko' ? $t('admin.masterData.emptyPosko', 'Belum ada Posko. Tambahkan data untuk memulai penugasan.') : $t('admin.masterData.emptyFaskes', 'Belum ada Faskes. Tambahkan data untuk memulai penugasan.') }}</div>
-      <div v-else class="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+      <div v-else class="rm-table-region rm-panel">
         <table class="w-full text-left text-sm">
           <thead class="bg-slate-50 text-slate-600"><tr>
             <th class="p-4">{{ $t('admin.masterData.columns.name', 'Nama') }}</th><th class="p-4">{{ kind === 'posko' ? $t('admin.masterData.columns.region', 'Wilayah') : $t('admin.masterData.columns.type', 'Jenis') }}</th>

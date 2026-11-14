@@ -124,13 +124,13 @@ test("real Relawan layout synchronously masks clinical root and unmounts sensiti
     });
     const f = mountFixture(
         defineComponent({
-            setup: () => () => h(Layout, {}, { default: () => h(Sensitive) }),
+            setup: () => () => h(Layout, { clinicalAccessRequested: true }, { default: () => h(Sensitive) }),
         }),
     );
     try {
         await f.flush();
         assert.match(f.text(), /Data klinis sintetis rahasia/);
-        const root = f.nodes((node) => node.class?.includes("font-sans"))[0];
+        const root = f.nodes((node) => node.tag === "p" && node.text === "Data klinis sintetis rahasia")[0].parent;
         state.unlocked.value = false;
         state.key.value++;
         assert.equal(root.style.display, "none");
@@ -172,7 +172,7 @@ for (const invalid of ["INCONSISTENT", "LEGACY_BLOCKED", "INACCESSIBLE", "ACTIVA
                 setup: () => () =>
                     h(
                         Layout,
-                        {},
+                        { clinicalAccessRequested: true },
                         {
                             default: () =>
                                 h("p", {}, "Data klinis sintetis rahasia"),
@@ -183,9 +183,7 @@ for (const invalid of ["INCONSISTENT", "LEGACY_BLOCKED", "INACCESSIBLE", "ACTIVA
         try {
             await f.flush();
             assert.match(f.text(), /Data klinis sintetis rahasia/);
-            const root = f.nodes((node) =>
-                node.class?.includes("font-sans"),
-            )[0];
+            const root = f.nodes((node) => node.tag === "p" && node.text === "Data klinis sintetis rahasia")[0].parent;
             state.initialization = invalid;
             state.storageObserver.next(invalid);
             assert.equal(root.style.display, "none");
@@ -254,7 +252,7 @@ for (const initialization of [
                 setup: () => () =>
                     h(
                         Layout,
-                        {},
+                        { clinicalAccessRequested: true },
                         {
                             default: () =>
                                 h("p", {}, "Data klinis sintetis rahasia"),
@@ -322,7 +320,7 @@ for (const initialization of ["FRESH", "ENROLLMENT_PENDING"]) {
         const oldWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
         Object.defineProperty(globalThis, "window", { configurable: true, value: new EventTarget() });
         const Layout = (await import(await vueModuleUrl("resources/js/layouts/RelawanLayout.vue", overrides))).default;
-        const f = mountFixture(defineComponent({ setup: () => () => h(Layout, {}, { default: () => h("p", {}, "Data klinis sintetis rahasia") }) }));
+        const f = mountFixture(defineComponent({ setup: () => () => h(Layout, { clinicalAccessRequested: true }, { default: () => h("p", {}, "Data klinis sintetis rahasia") }) }));
         try {
             await f.flush();
             state.storageObserver.next(initialization);
@@ -360,11 +358,11 @@ for (const scenario of ["offline", "online", "storage-failure", "network-failure
         Object.defineProperty(globalThis, "window", { configurable: true, value: new EventTarget() });
         Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: scenario !== "offline" } });
         const Layout = (await import(await vueModuleUrl("resources/js/layouts/RelawanLayout.vue", overrides))).default;
-        const f = mountFixture(defineComponent({ setup: () => () => h(Layout, {}, { default: () => h("p", {}, "Sensitive workspace") }) }));
+        const f = mountFixture(defineComponent({ setup: () => () => h(Layout, { clinicalAccessRequested: true }, { default: () => h("p", {}, "Sensitive workspace") }) }));
         try {
             await f.flush();
             assert.doesNotMatch(f.text(), /Sensitive workspace/);
-            const exit = f.nodes(node => node.tag === "button" && f.text(node).trim() === "Keluar")[0];
+            const exit = f.nodes(node => node.tag === "button" && node['aria-label'] === "Logout Relawan")[0];
             assert.ok(exit, "logout must be accessible without unlocking");
             await exit.onClick();
             await f.flush();

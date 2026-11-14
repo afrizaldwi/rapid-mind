@@ -34,14 +34,16 @@
     </div>
     <div
         v-else-if="currentOwner"
-        class="h-dvh overflow-hidden bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
+        class="rm-app h-dvh overflow-hidden bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
     >
+        <a href="#relawan-main" class="rm-skip-link">Langsung ke konten utama</a>
         <OfflineReadinessNotice />
         <!-- Top Application Bar -->
         <header
-            class="shrink-0 z-30 bg-white border-b border-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-1.5 sm:gap-2 shadow-xs"
+            class="relawan-app-header shrink-0 z-30 bg-white border-b border-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2"
+            :class="{ 'relawan-identity-header': !!$slots.greeting }"
         >
-            <div class="flex min-w-0 flex-1 items-center space-x-2 sm:space-x-3">
+            <div class="flex min-w-0 basis-full sm:basis-auto sm:flex-1 items-center space-x-2 sm:space-x-3">
                 <img
                     src="/logo.png?v=3"
                     alt="RAPID-MIND Logo"
@@ -49,16 +51,19 @@
                 />
                 <div class="min-w-0">
                     <p
-                        class="truncate text-xs sm:text-sm text-slate-700 font-semibold leading-tight"
+                        class="break-words text-xs sm:text-sm text-slate-700 font-semibold leading-tight"
                     >
-                        {{ user?.shelter?.name || (isEn ? "Volunteer Shelter" : "Posko Relawan") }}
+                        {{ $slots.greeting ? shelterIdentity.name : user?.shelter?.name || (isEn ? "Volunteer Shelter" : "Posko Relawan") }}
                     </p>
+                    <p v-if="$slots.greeting && shelterIdentity.location" class="mt-0.5 text-xs text-slate-600 break-words">{{ shelterIdentity.location }}</p>
                 </div>
             </div>
 
-            <div class="flex shrink-0 items-center space-x-1 sm:space-x-2">
+            <div class="relawan-header-controls flex w-full sm:w-auto sm:max-w-[65%] items-center gap-2">
                 <LanguageSwitcher compact />
                 <StatusIndicator
+                    v-if="!$slots.greeting"
+                    class="relawan-header-status"
                     :kind="status.kind.value"
                     :label="compactStatusLabel"
                     @open="showStatusSheet = true"
@@ -77,14 +82,14 @@
 
         <!-- Main Content Area -->
         <main
-            class="flex-1 min-h-0 max-w-lg w-full mx-auto"
-            :class="hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'overflow-y-auto px-3.5 py-4 pb-20 lg:pb-6 sm:p-6'"
+            id="relawan-main" tabindex="-1" class="rm-field-content flex-1 min-h-0"
+            :class="[hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'rm-field-scroll overflow-y-auto px-3.5 py-4 sm:px-6 sm:pt-6', { 'relawan-identity-main': !!$slots.greeting }]"
         >
+            <slot name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
             <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
             <LockedEmergencyGuidance v-if="!clinicalViewAvailable && !requiresClinicalKey" />
             <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked" />
-            <button v-if="emergencyUnlockRequested && !clinicalViewAvailable" type="button" class="min-h-11 underline" @click="emergencyUnlockRequested = false">Kembali ke dashboard tanpa membuka data</button>
-            <div v-if="!requiresClinicalKey || clinicalViewAvailable" ref="clinicalViewRoot" :key="clinicalViewKey" :class="hasAssessmentActionBar ? 'flex min-h-0 flex-1 flex-col' : ''">
+            <p v-if="onlineAssessmentAvailable" role="status" class="m-3 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">{{ isEn ? 'Online assessment. Partial answers awaiting server save remain on this page. If the connection fails, stay here and retry.' : 'Asesmen online. Jawaban parsial yang belum tersimpan di server tetap berada di halaman ini. Jika koneksi terputus, tetap di halaman ini dan coba simpan kembali.' }}</p>
             <p
                 v-if="logoutError"
                 role="alert"
@@ -93,6 +98,7 @@
             >
                 {{ logoutError }}
             </p>
+            <div v-if="!requiresClinicalKey || clinicalViewAvailable" ref="clinicalViewRoot" :key="clinicalViewKey" :class="hasAssessmentActionBar ? 'flex min-h-0 flex-1 flex-col' : ''">
             <section
                 v-if="recoveryMessage"
                 role="status"
@@ -162,7 +168,7 @@
         <!-- Bottom Navigation Bar (4 items) -->
         <nav
             v-if="!isFocusedAssessment"
-            class="shrink-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-lg w-full mx-auto pb-[env(safe-area-inset-bottom)]"
+            class="rm-field-content shrink-0 z-30 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
         >
             <div class="grid grid-cols-4 h-16">
                 <RelawanLink
@@ -282,7 +288,7 @@ import {
     relawanSessionRecovery,
 } from "@/offline/sessionRecovery";
 
-const layoutProps = defineProps<{ clinicalAccessRequested?: boolean }>();
+const layoutProps = defineProps<{ clinicalAccessRequested?: boolean; identityShelter?: string | null }>();
 const emit = defineEmits<{
     "clinical-lock": [];
     "clinical-ready": [];
@@ -326,7 +332,9 @@ const clinicalUnlocked = computed(() =>
     currentOwner.value ? clinicalKeyReady(currentOwner.value) : false,
 );
 const clinicalViewKey = computed(
-    () => `${currentOwner.value}:${clinicalKeyVersion()}`,
+    () => onlineAssessmentAvailable.value || onlineAssessmentListAvailable.value
+        ? `${currentOwner.value}:server:${runtime.path}`
+        : `${currentOwner.value}:${clinicalKeyVersion()}`,
 );
 function maskClinicalView() {
     emit("clinical-lock");
@@ -385,8 +393,15 @@ watch(currentOwner, refreshOwnerStorageMode, {
     immediate: true,
     flush: "sync",
 });
-const emergencyUnlockRequested = ref(false);
-const requiresClinicalKey = computed(() => layoutProps.clinicalAccessRequested || emergencyUnlockRequested.value || (!/^\/relawan\/(home|pfa|assessment)\/?$/.test(runtime.path.split(/[?#]/)[0]) && !(runtime.mode === "ONLINE_SERVER" && /^\/relawan\/emergencies\//.test(runtime.path) && !!runtime.pageProps.emergency)));
+const onlineAssessmentAvailable = computed(() => {
+    const assessment = runtime.pageProps.assessment as { id?: string; user_id?: number; patient_id?: string } | undefined;
+    const match = runtime.path.split(/[?#]/)[0].match(/^\/relawan\/assessment\/([^/]+)\/(identity|srq|risk|function|review|result)$/);
+    return runtime.mode === "ONLINE_SERVER" && !!match && assessment?.id === match[1] &&
+        assessment?.user_id === currentOwner.value && !!assessment?.patient_id;
+});
+const onlineAssessmentListAvailable = computed(() => runtime.mode === "ONLINE_SERVER" &&
+    runtime.path.split(/[?#]/)[0] === "/relawan/assessment/drafts" && Array.isArray(runtime.pageProps.inProgressAssessments));
+const requiresClinicalKey = computed(() => layoutProps.clinicalAccessRequested || (!onlineAssessmentAvailable.value && !onlineAssessmentListAvailable.value && !/^\/relawan\/(home|pfa|assessment)\/?$/.test(runtime.path.split(/[?#]/)[0]) && !(runtime.mode === "ONLINE_SERVER" && /^\/relawan\/emergencies\//.test(runtime.path) && !!runtime.pageProps.emergency)));
 const clinicalViewAvailable = computed(
     () =>
         !!currentOwner.value &&
@@ -412,8 +427,8 @@ watch(
         if (available || !requiresClinicalKey.value) {
             clinicalViewRoot.value?.style.removeProperty("display");
             clinicalViewRoot.value?.removeAttribute("aria-hidden");
-            if (available) emit("clinical-ready");
-            if (!syntheticLegacyFixture() && runtime.mode === "ONLINE_SERVER")
+            if (available && !onlineAssessmentAvailable.value) emit("clinical-ready");
+            if (available && !syntheticLegacyFixture() && runtime.mode === "ONLINE_SERVER")
                 void rememberUnlockedRelawan(user.value).catch(() => {});
         }
     },
@@ -421,11 +436,16 @@ watch(
 );
 
 function onClinicalUnlocked() {
-    emergencyUnlockRequested.value = false;
     status.refresh();
     if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
         void syncManager.sync(currentOwner.value).catch(() => {});
 }
+const shelterIdentity = computed(() => {
+    const name = layoutProps.identityShelter || user.value?.shelter?.name || (isEn.value ? "Volunteer Shelter" : "Posko Relawan");
+    const parts = name.match(/^(.*?)\s+(Kel\.\s+.+)$/);
+    return { name: parts?.[1] || name, location: parts?.[2] || "" };
+});
+
 const compactStatusLabel = computed(() => {
     switch (status.kind.value) {
         case "local-failure":
@@ -597,7 +617,6 @@ const t0AssessmentContext = ref<T0AssessmentContext | null>(null);
 const showEmergencyModal = ref(false);
 let emergencyOpenCheck = 0;
 async function openEmergencyModal() {
-    if (!clinicalViewAvailable.value) { emergencyUnlockRequested.value = true; return; }
     emit("emergency-interrupt");
     const check = ++emergencyOpenCheck;
     const keyVersion = clinicalKeyVersion();
@@ -611,7 +630,7 @@ async function openEmergencyModal() {
     if (route) {
         if (serverAssessmentContext.value) {
             context = serverAssessmentContext.value;
-        } else {
+        } else if (clinicalViewAvailable.value) {
             try {
                 const assessment = await assessmentRepository.get(
                     owner,
@@ -648,15 +667,21 @@ watch([() => runtime.path, currentOwner], () => {
     showEmergencyModal.value = false;
     t0AssessmentContext.value = null;
 });
+let emergencyKeyWasReady = clinicalKeyReady(currentOwner.value ?? 0);
 watch(
     clinicalKeyVersion,
     () => {
+        const keyReady = !!currentOwner.value && clinicalKeyReady(currentOwner.value);
+        const unlocking = !emergencyKeyWasReady && keyReady;
+        emergencyKeyWasReady = keyReady;
         // Hide synchronously; Vue then unmounts the old view on its next render.
         if (requiresClinicalKey.value) maskClinicalView();
         refreshOwnerStorageMode(currentOwner.value);
         ++emergencyOpenCheck;
-        showEmergencyModal.value = false;
-        t0AssessmentContext.value = null;
+        if (!unlocking) {
+            showEmergencyModal.value = false;
+            t0AssessmentContext.value = null;
+        }
         activeLocalId.value = null;
         showStatusSheet.value = false;
     },
@@ -835,3 +860,20 @@ onUnmounted(() => {
     window.removeEventListener("rapid-mind:verified-login", onVerifiedLogin);
 });
 </script>
+
+<style scoped>
+.relawan-header-controls { min-width: 0; }
+.relawan-header-status { flex: 1; min-width: 0; max-inline-size: none; }
+.relawan-header-status :deep(.truncate) { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.relawan-header-controls > button:last-child { flex-shrink: 0; }
+.relawan-identity-header { flex-wrap: nowrap; padding: 1rem; gap: .75rem; }
+.relawan-identity-header > div:first-child { flex: 1; flex-basis: auto; }
+.relawan-identity-header .relawan-header-controls { width: auto; max-width: none; flex-shrink: 0; }
+.relawan-identity-header > div:first-child p:first-child { font-size: 1rem; font-weight: 700; color: #0f172a; }
+.relawan-identity-main { padding-top: 0; }
+@media (max-width: 359px) {
+    .relawan-identity-header { flex-wrap: wrap; }
+    .relawan-identity-header > div:first-child { flex-basis: 100%; }
+    .relawan-identity-header .relawan-header-controls { width: 100%; justify-content: space-between; }
+}
+</style>

@@ -1,7 +1,7 @@
 <template>
     <fieldset :disabled="disabled" class="mt-4">
         <legend class="sr-only">{{ legendText }}</legend>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
             <button
                 v-for="option in options"
                 :key="String(option.value)"
@@ -11,7 +11,6 @@
                 @click="$emit('select', option.value)"
                 class="min-h-[48px] sm:min-h-[52px] rounded-xl border-2 px-3 py-2.5 text-sm sm:text-base font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60 cursor-pointer transition"
                 :class="[
-                    option.value === 'UNCLEAR' ? 'col-span-2 sm:col-span-1' : '',
                     answer === option.value
                         ? 'border-teal-700 bg-teal-700 text-white'
                         : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
@@ -30,7 +29,7 @@
                 data-srq-clear
                 :aria-label="clearAriaLabel"
                 @click="$emit('select', 'UNANSWERED')"
-                class="inline-flex min-h-[36px] items-center rounded-md px-2 py-1 text-xs font-semibold text-slate-600 underline hover:bg-slate-100 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60 cursor-pointer"
+                class="inline-flex min-h-[44px] items-center rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 underline underline-offset-4 hover:bg-slate-100 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60 cursor-pointer"
             >
                 {{ clearLabel }}
             </button>
@@ -49,10 +48,9 @@ defineEmits<{ select: [answer: SrqAnswer] }>();
 
 const isEn = computed(() => locale.value === "en");
 
-const options = computed<{ value: Exclude<SrqAnswer, "UNANSWERED">; label: string }[]>(() => [
+const options = computed<{ value: boolean; label: string }[]>(() => [
     { value: true, label: isEn.value ? "Yes" : "Ya" },
     { value: false, label: isEn.value ? "No" : "Tidak" },
-    { value: "UNCLEAR", label: isEn.value ? "Unclear Response" : "Respons Tidak Jelas" },
 ]);
 
 const statusText = computed(() => {

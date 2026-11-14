@@ -59,8 +59,8 @@ final class FixtureCases
                             'assessment_id' => $data['id'],
                             'assessment_mode' => $data['mode'],
                             'red_flag_type' => 'MEDICAL_CRISIS',
-                            'latitude' => -7.72,
-                            'longitude' => 110.42,
+                            'latitude' => FixtureDefinition::POSKO[$posko]['latitude'],
+                            'longitude' => FixtureDefinition::POSKO[$posko]['longitude'],
                             'notes' => '[SIMULASI] Laporan darurat sintetis; tidak ada kontak atau pengerahan nyata.',
                         ])), $volunteer);
                         if ($n !== 7) {

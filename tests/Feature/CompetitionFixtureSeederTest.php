@@ -99,6 +99,9 @@ final class CompetitionFixtureSeederTest extends TestCase
             $this->assertSame($before[$table] + $added, DB::table($table)->count(), $table);
         }
         $region = Region::where('name', FixtureDefinition::REGION)->firstOrFail();
+        foreach (FixtureDefinition::POSKO as $point) {
+            $this->assertDatabaseHas('shelters', ['name' => $point['name'], 'region_id' => $region->id]);
+        }
         $this->assertTrue((bool) DB::selectOne('select ST_IsValid(geometry) as valid from regions where id=?', [$region->id])->valid);
         foreach ($region->shelters as $posko) {
             $this->assertTrue($posko->is_active);
@@ -404,6 +407,48 @@ final class CompetitionFixtureSeederTest extends TestCase
         $this->assertSame(0, AuditLog::where('action', 'COMPETITION_FIXTURE_COMPLETED')->count());
         $this->assertSame(0, User::whereIn('email', array_column(FixtureDefinition::IDENTITIES, 1))->count());
         $this->assertFileDoesNotExist(storage_path('app/private/competition-fixture/credentials.json'));
+    }
+
+    public function test_geography_update_preserves_clinical_data_accounts_and_reruns(): void
+    {
+        $this->fixture();
+        $marker = AuditLog::where('action', 'COMPETITION_FIXTURE_COMPLETED')->sole()->new_values;
+        DB::table('regions')->where('id', $marker['region_id'])->update(['name' => FixtureDefinition::LEGACY_REGION]);
+        foreach ($marker['shelter_ids'] as $n => $id) {
+            DB::table('shelters')->where('id', $id)->update(['name' => '[SINTETIS KOMPETISI] Posko '.$n]);
+        }
+        $before = $this->fingerprints();
+        app(\Database\Seeders\CompetitionKarhutlaGeographySeeder::class)->run();
+        $after = $this->fingerprints();
+        foreach ($before as $table => $hash) {
+            if (! in_array($table, ['regions', 'shelters', 'healthcare_facilities', 'emergency_events', 'audit_logs'], true)) {
+                $this->assertSame($hash, $after[$table], $table.' must remain byte-identical');
+            }
+        }
+        foreach (FixtureDefinition::POSKO as $n => $point) {
+            $row = DB::selectOne('SELECT name, ST_X(location) AS lon, ST_Y(location) AS lat FROM shelters WHERE id=?', [$marker['shelter_ids'][$n]]);
+            $this->assertSame($point['name'], $row->name);
+            $this->assertEquals($point['longitude'], $row->lon);
+            $this->assertEquals($point['latitude'], $row->lat);
+        }
+        $this->assertCount(6, \Database\Seeders\Competition\FixtureAccountRoster::read());
+        $this->assertSame(1, AuditLog::where('action', 'COMPETITION_GEOGRAPHY_UPDATED')->count());
+        app(\Database\Seeders\CompetitionKarhutlaGeographySeeder::class)->run();
+        $this->assertSame($after, $this->fingerprints());
+    }
+
+    public function test_geography_update_rolls_back_on_unexpected_case_assignment(): void
+    {
+        $this->fixture();
+        DB::table('emergency_events')->where('id', FixtureDefinition::id(7, 3))->update(['shelter_id' => null]);
+        $before = $this->fingerprints();
+        try {
+            app(\Database\Seeders\CompetitionKarhutlaGeographySeeder::class)->run();
+            $this->fail('Unexpected case ownership must reject the update.');
+        } catch (RuntimeException $error) {
+            $this->assertStringContainsString('ownership inconsistent', $error->getMessage());
+        }
+        $this->assertSame($before, $this->fingerprints());
     }
 
     private function fixture(): void

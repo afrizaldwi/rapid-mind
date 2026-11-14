@@ -1,6 +1,6 @@
 <template>
     <div
-        class="bg-white rounded-xl border border-slate-200/80 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100"
+        class="rm-clinical-summary grid grid-cols-2 md:grid-cols-4 gap-4 border-y border-slate-200 px-1 py-4"
     >
         <!-- Metric 1: ANTREAN AKTIF -->
         <div class="flex-1 min-w-[130px] sm:pr-4">

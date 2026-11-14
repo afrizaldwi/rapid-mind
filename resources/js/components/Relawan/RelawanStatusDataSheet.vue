@@ -1,8 +1,8 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50"
+  <div v-if="show" class="rm-app rm-overlay fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50"
     @click.self="$emit('close')">
-    <section role="dialog" aria-modal="true" aria-labelledby="status-data-title"
-      class="w-full max-w-lg rounded-t-3xl bg-white p-5 pb-8 shadow-2xl" @keydown.esc="$emit('close')">
+    <section ref="panel" role="dialog" aria-modal="true" aria-labelledby="status-data-title" tabindex="-1"
+      class="rm-dialog w-full max-w-lg overflow-y-auto bg-white p-4 sm:p-5 pb-8 shadow-xl" @keydown="keydown">
       <div class="mb-5 flex items-center justify-between">
         <h2 id="status-data-title" class="text-lg font-bold text-slate-900">
           {{ isEn ? 'Data Status' : 'Status Data' }}
@@ -79,6 +79,7 @@
 import { nextTick, ref, watch } from 'vue';
 import type { OperationalKind } from '@/composables/useRelawanOperationalStatus';
 import { useI18n } from '@/i18n';
+import { useDialogFocus } from '@/composables/useDialogFocus';
 
 const { isEn } = useI18n();
 const props = defineProps<{
@@ -95,7 +96,9 @@ const props = defineProps<{
   canRetry: boolean;
   actionError: string;
 }>();
-defineEmits<{ (e: 'close'): void; (e: 'retry'): void }>();
+const emit = defineEmits<{ (e: 'close'): void; (e: 'retry'): void }>();
+const panel = ref<HTMLElement | null>(null);
+const { keydown } = useDialogFocus(panel, () => props.show, () => emit('close'));
 const closeButton = ref<HTMLButtonElement | null>(null);
 watch(() => props.show, async show => {
   if (show) {

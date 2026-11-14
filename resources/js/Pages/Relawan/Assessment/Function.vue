@@ -1,5 +1,5 @@
 <template>
-  <RelawanLayout @clinical-ready="loadFunctionContext">
+  <RelawanLayout @clinical-ready="loadFunctionContext" @clinical-lock="scope.invalidate">
     <div class="flex-1 min-h-0 flex flex-col">
       <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-4">
         <div class="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200">
@@ -88,8 +88,10 @@ import { TriangleAlert } from 'lucide-vue-next';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { useRelawanRuntime } from '@/relawan/runtime';
-import { mergeAssessmentDraft, readAssessmentDraft, saveAssessmentDraft } from '@/offline/assessmentDraft';
-import { loadAssessmentContext, relawanOwner } from '@/offline/assessmentWorkflow';
+import { mergeAssessmentDraft } from '@/offline/assessmentDraft';
+import { relawanOwner } from '@/offline/assessmentWorkflow';
+import { useAssessmentPersistence } from '@/composables/useAssessmentPersistence';
+import { useClinicalTaskScope } from '@/composables/useClinicalTaskScope';
 import type { LocalAssessment, LocalPatient } from '@/offline/db';
 import { useI18n } from '@/i18n';
 import { localizeMessage } from '@/i18n/localizeMessage';
@@ -105,6 +107,8 @@ const props = defineProps<{
 
 const functions = ref<Record<string, number>>(mergeAssessmentDraft('function_domains', props.functions, {}));
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext, readAssessmentDraft, saveAssessmentDraft } = persistence;
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(props.patient);
@@ -115,6 +119,14 @@ const saveError = computed(() => localizeMessage(rawSaveError.value, locale.valu
 const draftWarning = computed(() => localizeMessage(rawDraftWarning.value, locale.value));
 const draftReady = ref(false);
 const editedKeys = new Set<string>();
+const scope = useClinicalTaskScope(() => {
+  persistence.invalidate();
+  functions.value = {};
+  localAssessment.value = null;
+  patient.value = null;
+  draftReady.value = false;
+  editedKeys.clear();
+}, { serverOnly: persistence.online });
 const answeredCount = computed(() => ['F1', 'F2', 'F3'].filter(code => [0, 1, 3].includes(functions.value[code])).length);
 
 const localizedDomains = computed(() => [
@@ -204,22 +216,28 @@ function setFunctionLevel(code: string, level: number) {
 }
 
 async function persistDraft() {
+  const current = scope.capture();
   try {
     if (!localAssessment.value) throw new Error('Asesmen lokal belum siap.');
-    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value);
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value, current);
+    if (!current()) return;
     rawDraftWarning.value = '';
-  } catch {
-    rawDraftWarning.value = 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
+  } catch (error) {
+    if (!current()) return;
+    rawDraftWarning.value = persistence.online && error instanceof Error ? error.message : 'Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.';
   }
 }
 
 async function loadFunctionContext() {
+  const current = scope.capture();
   rawSaveError.value = '';
   try {
     const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === 'OFFLINE_FIELD_MODE');
+    if (!current()) return;
     localAssessment.value = context.assessment;
     patient.value = context.patient;
     const restoredDraft = await readAssessmentDraft(owner, context.assessment.id, 'function_domains');
+    if (!current()) return;
     if (restoredDraft && typeof restoredDraft === 'object') {
       const merged: Record<string, number> = { ...functions.value };
       for (const [key, value] of Object.entries(restoredDraft as Record<string, number>)) {
@@ -234,14 +252,16 @@ async function loadFunctionContext() {
 }
 
 async function saveAndNext() {
+  const current = scope.capture();
   if (answeredCount.value !== 3 || !localAssessment.value) return;
   isSaving.value = true;
   rawSaveError.value = '';
   try {
-    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value);
+    await saveAssessmentDraft({ ...localAssessment.value, user_id: owner }, 'function_domains', functions.value, current);
+    if (!current()) return;
     runtime.navigate(`/relawan/assessment/${props.assessment.id}/review`);
   } catch (error) {
-    rawSaveError.value = error instanceof Error ? error.message : 'Gagal menyimpan fungsi harian.';
+    if (current()) rawSaveError.value = error instanceof Error ? error.message : 'Gagal menyimpan fungsi harian.';
   } finally {
     isSaving.value = false;
   }

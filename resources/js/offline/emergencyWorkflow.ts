@@ -5,6 +5,7 @@ import {
     localUuid,
     requireOwner,
     type LocalEmergency,
+    type LocalAssessment,
     type LocalPatient,
 } from "./db";
 import { emergencyRepository } from "./emergencyRepository";
@@ -31,11 +32,14 @@ export type EmergencyInput = {
     longitude?: number | null;
     shelterId?: number | null;
     notes?: string | null;
+    serverKnownAssessment?: boolean;
+    serverAssessmentMode?: LocalAssessment["mode"];
 };
 
 export async function buildEmergencySyncPayload(
     owner: number,
     emergency: LocalEmergency,
+    serverAssessmentMode?: LocalAssessment["mode"],
 ) {
     requireOwner(owner);
     if (emergency.owner_user_id !== owner)
@@ -56,7 +60,7 @@ export async function buildEmergencySyncPayload(
         id: emergency.id,
         patient: patient ? patientPayload(patient) : null,
         assessment_id: emergency.assessment_id ?? null,
-        ...(assessment ? { assessment_mode: assessment.mode } : {}),
+        ...(assessment ? { assessment_mode: serverAssessmentMode ?? assessment.mode } : {}),
         red_flag_type: emergency.red_flag_type,
         latitude: emergency.latitude ?? null,
         longitude: emergency.longitude ?? null,
@@ -125,7 +129,7 @@ export async function createLocalEmergency(
         updated_at: now,
         sync_state: "LOCAL_SAVED",
     };
-    const payload = await buildEmergencySyncPayload(owner, emergency);
+    const payload = await buildEmergencySyncPayload(owner, emergency, input.serverKnownAssessment ? input.serverAssessmentMode : undefined);
     if (await encryptedMode(owner)) {
         assertClinicalAccess(access);
         try {
@@ -137,7 +141,7 @@ export async function createLocalEmergency(
                 "Insiden darurat belum tersimpan di perangkat. Tetap dampingi penyintas dan coba lagi.",
             );
         }
-        preserveAssessmentContext(owner, emergency.assessment_id);
+        if (!input.serverKnownAssessment) preserveAssessmentContext(owner, emergency.assessment_id);
         return emergency.id;
     }
     // One IndexedDB transaction makes the emergency and its priority-1 outbox item durable together.
@@ -165,7 +169,7 @@ export async function createLocalEmergency(
             },
         ),
     );
-    preserveAssessmentContext(owner, emergency.assessment_id);
+    if (!input.serverKnownAssessment) preserveAssessmentContext(owner, emergency.assessment_id);
     return emergency.id;
 }
 

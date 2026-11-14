@@ -8,7 +8,24 @@ final class FixtureDefinition
 {
     public const VERSION = 'competition-v1';
 
-    public const REGION = '[SINTETIS KOMPETISI] Wilayah Simulasi';
+    public const LEGACY_REGION = '[SINTETIS KOMPETISI] Wilayah Simulasi';
+    public const REGION = '[SIMULASI KARHUTLA] Palangka Raya';
+    public const GEOGRAPHY_VERSION = 'palangka-raya-karhutla-v1';
+    // Historical public Posko Patdu coordinates; fictional cases, not live response locations.
+    public const POSKO = [
+        1 => ['name' => 'Posko Patdu Kel. Menteng', 'latitude' => -2.270258, 'longitude' => 113.89232],
+        2 => ['name' => 'Posko Patdu Kel. Palangka', 'latitude' => -2.23158, 'longitude' => 113.86185],
+        3 => ['name' => 'Posko Patdu Kel. Petuk Katimpun', 'latitude' => -2.14536, 'longitude' => 113.8443],
+    ];
+    // Illustrative demo envelope, never an official administrative boundary.
+    public const GEOMETRY = 'POLYGON((113.80 -2.31,113.96 -2.31,113.96 -2.10,113.80 -2.10,113.80 -2.31))';
+    public const LOCATION_NOTE = 'Simulasi karhutla Palangka Raya memakai rujukan posko historis; bukan informasi posko aktif atau titik layanan darurat saat ini.';
+
+    public static function facilityCoordinates(string $alias): array
+    {
+        $posko = self::POSKO[$alias === 'a' ? 1 : 3];
+        return [$posko['latitude'] + 0.002, $posko['longitude'] + 0.002];
+    }
 
     public const ACCOUNTS = [
         'admin' => 'ADMIN',

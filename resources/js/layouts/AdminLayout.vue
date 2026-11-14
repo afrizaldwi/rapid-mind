@@ -1,23 +1,28 @@
 <template>
-  <div class="min-h-screen bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased">
+  <div class="rm-app h-dvh overflow-hidden bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased" @keydown.esc="closeProfile">
+    <a href="#admin-main" class="rm-skip-link">Langsung ke konten utama</a>
     <!-- Top Global Header (64px high, crisp white, minimal enterprise style) -->
-    <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+    <header class="rm-workspace-header bg-white border-b border-slate-200/80 px-4 lg:px-6 py-2 flex items-center justify-between sticky top-0 z-30 shrink-0">
       <!-- Left: Understated Brand & Context -->
       <div class="flex items-center space-x-3">
         <!-- Mobile hamburger -->
         <button
+          ref="menuTrigger"
           type="button"
           @click="sidebarOpen = !sidebarOpen"
-          class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+          class="rm-mobile-menu lg:hidden flex flex-col items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          :aria-expanded="sidebarOpen"
+          aria-controls="admin-navigation"
           :aria-label="$t('common.openNavigation', 'Buka navigasi')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
+          <span class="text-[11px]">Menu</span>
         </button>
 
         <!-- Brand Identifier -->
-        <Link href="/admin/summary" class="flex items-center gap-2.5 group">
+        <Link href="/admin/summary" class="rm-workspace-brand flex items-center gap-2.5 group">
           <img src="/logo.png?v=3" alt="RAPID-MIND Logo" class="w-8 h-8 object-contain shrink-0" />
           <div>
             <div class="flex items-center gap-1.5">
@@ -51,9 +56,13 @@
         <!-- User Profile Pill / Dropdown -->
         <div class="relative">
           <button
+            ref="profileTrigger"
             type="button"
             @click="profileOpen = !profileOpen"
             class="flex items-center space-x-2.5 p-1 rounded-lg hover:bg-slate-50 transition"
+            :aria-expanded="profileOpen"
+            aria-controls="admin-profile-menu"
+            :aria-label="$t('common.profile', 'Menu akun')"
           >
             <div class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
               {{ userInitials }}
@@ -74,7 +83,8 @@
           <!-- Dropdown Menu -->
           <div
             v-if="profileOpen"
-            class="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs"
+            id="admin-profile-menu"
+            class="rm-profile-menu absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs"
             @click="profileOpen = false"
           >
             <div class="px-3.5 py-2 border-b border-slate-100">
@@ -100,22 +110,32 @@
     </header>
 
     <!-- Main Shell: Sidebar + Content -->
-    <div class="flex-1 flex overflow-hidden">
+    <div class="flex-1 min-h-0 flex overflow-hidden">
       <!-- Mobile Backdrop -->
       <div
         v-if="sidebarOpen"
-        @click="sidebarOpen = false"
+        @click="closeSidebar"
+        aria-hidden="true"
         class="fixed inset-0 bg-slate-900/40 z-30 lg:hidden backdrop-blur-xs"
       ></div>
 
       <!-- Left Sidebar Navigation (240px wide, quiet white background, enterprise grouped) -->
       <aside
+        id="admin-navigation"
+        ref="drawer"
+        tabindex="-1"
+        :inert="compact && !sidebarOpen"
+        :aria-label="$t('common.openNavigation', 'Navigasi Admin')"
+        @keydown="drawerKeydown"
         :class="[
-          'fixed lg:static inset-y-0 left-0 z-40 w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
+          'rm-drawer fixed lg:static inset-y-0 left-0 z-40 lg:z-20 bg-white border-r border-slate-200/80 flex flex-col shrink-0 min-h-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         ]"
       >
-        <div class="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+        <div class="rm-drawer-close lg:hidden">
+          <button type="button" @click="closeSidebar"><span>{{ $t('common.closeNavigation', 'Tutup navigasi') }}</span><span aria-hidden="true">×</span></button>
+        </div>
+        <div class="flex-1 min-h-0 px-3 py-4 space-y-6 overflow-y-auto overscroll-contain">
           <!-- Group 1: COMMAND CENTER -->
           <div>
             <div class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -239,7 +259,7 @@
       </aside>
 
       <!-- Main Scrollable Content Area -->
-      <main class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+      <main id="admin-main" tabindex="-1" class="rm-workspace-content flex-1 overflow-y-auto p-4 lg:p-6 space-y-6" :inert="compact && sidebarOpen">
         <slot />
       </main>
     </div>
@@ -251,11 +271,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher.vue';
 import { t as $t } from '@/i18n';
+import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation';
 
 const page = usePage();
 const user = computed(() => (page.props.auth as any)?.user);
-const sidebarOpen = ref(false);
-const profileOpen = ref(false);
+const { sidebarOpen, profileOpen, compact, drawer, menuTrigger, profileTrigger, closeSidebar, closeProfile, drawerKeydown } = useWorkspaceNavigation(window);
 
 // Canonical network connection status
 const isOnline = ref(typeof window !== 'undefined' ? window.navigator.onLine : true);

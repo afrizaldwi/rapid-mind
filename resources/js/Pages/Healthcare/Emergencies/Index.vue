@@ -4,11 +4,11 @@
             <!-- 1. Page Title & Operational Context (Section 7) -->
             <div>
                 <h1
-                    class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight"
+                    class="rm-page-heading text-slate-900"
                 >
                     {{ $t('healthcare.workspaceTitle', 'Pusat Triase & Kedaruratan Medis') }}
                 </h1>
-                <p class="text-xs text-slate-500 mt-1 font-normal">
+                <p class="rm-page-description text-sm font-normal">
                     {{ $t('healthcare.workspaceSubtitle', 'Antrean insiden T0 untuk verifikasi dan respons medis.') }}
                 </p>
             </div>
@@ -46,7 +46,7 @@
             </div>
 
             <!-- 3. Main Workspace: Two-Panel Clinical Hierarchy (Queue Left, Selected Case Right) -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-5 items-start">
                 <!-- LEFT PANEL: CASE QUEUE (~33% width / lg:col-span-4) -->
                 <EmergencyQueuePanel
                     :items="filteredQueue"
@@ -59,7 +59,7 @@
 
                 <!-- RIGHT PANEL: SELECTED CASE DETAIL WORKSPACE (~67% width / lg:col-span-8) -->
                 <main
-                    class="lg:col-span-8 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden min-h-[620px]"
+                    class="xl:col-span-8 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden min-h-0 xl:min-h-[620px]"
                 >
                     <template v-if="selectedItem">
                         <!-- 1. PATIENT HEADER (Section 13, 14, 24: Name, Identifier, ONE Primary CTA) -->

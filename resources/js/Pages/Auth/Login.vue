@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8">
-    <div class="w-full max-w-md space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+  <div class="rm-app min-h-screen bg-slate-900 flex flex-col justify-center items-center px-4 py-6 sm:px-6 lg:px-8">
+    <div class="w-full max-w-md space-y-6 bg-white p-5 sm:p-8 rounded-xl shadow-xl">
       <div class="flex justify-end">
         <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 text-xs font-semibold shadow-2xs select-none">
           <button

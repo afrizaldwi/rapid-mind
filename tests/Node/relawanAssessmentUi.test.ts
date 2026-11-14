@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ref, reactive } from "vue";
+import { ref, reactive, defineComponent, h } from "vue";
 import {
     vueModuleUrl,
     moduleStub,
@@ -40,17 +40,21 @@ const state = ((globalThis as any).__b31ui = {
     emergencyPending: null as any,
     events: 0,
     pending: null as any,
+    unlocked: true,
+    patientReads: 0,
 });
 state.context = async () => ({
     assessment: state.assessment,
     patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
 });
 const overrides = {
+    "@/components/Relawan/OfflineEncryptionGate.vue": moduleStub(`import {defineComponent,h} from '${vue}';
+        export default defineComponent({emits:['unlocked'],setup(_props,{emit}){return()=>h('button',{onClick(){const s=globalThis.__b31ui;s.unlocked=true;s.key.value++;emit('unlocked');}},'Buka kunci sintetis');}});`),
     "@/relawan/runtime": moduleStub(
         "export const useRelawanRuntime = () => globalThis.__b31ui.runtime;",
     ),
     "@/offline/encryptedClinicalStorage": moduleStub(
-        "export const clinicalKeyVersion = () => globalThis.__b31ui.key.value;",
+        "export const clinicalKeyVersion = () => globalThis.__b31ui.key.value; export const clinicalKeyReady = () => globalThis.__b31ui.unlocked;",
     ),
     "@/offline/assessmentWorkflow":
         moduleStub(`export const relawanOwner = () => 101;
@@ -78,7 +82,7 @@ const overrides = {
     ),
     "@/offline/patientRepository":
         moduleStub(`export const patientRepository = {
-        list: async () => [], get: async () => {if(globalThis.__b31ui.pending) await globalThis.__b31ui.pending; return {id:'patient-synthetic'};},
+        list: async () => {globalThis.__b31ui.patientReads++;return [];}, get: async () => {if(globalThis.__b31ui.pending) await globalThis.__b31ui.pending; return {id:'patient-synthetic'};},
         saveServerSnapshot: async () => {}};`),
     "@/offline/emergencyWorkflow": moduleStub(
         `export const createLocalEmergency = async (_owner,input) => {globalThis.__b31ui.emergencyCalls.push(input); if(globalThis.__b31ui.emergencyPending) await globalThis.__b31ui.emergencyPending; return 'emergency-synthetic';};`,
@@ -264,6 +268,40 @@ test("mounted review lists exact unresolved questions, hides definitive SRQ scor
     } finally {
         f.app.unmount();
         state.assessment.srq_answers = { 17: false };
+    }
+});
+
+test("locked T0 opens without decrypting patients and unlock at final save preserves verification without sending", async () => {
+    state.unlocked = false;
+    state.patientReads = 0;
+    state.emergencyCalls = [];
+    const show = ref(false);
+    const f = mountFixture(defineComponent({
+        setup: () => () => h(T0, { show: show.value }),
+    }));
+    try {
+        show.value = true;
+        await f.flush();
+        assert.match(f.text(), /Verifikasi T0 Darurat/);
+        assert.doesNotMatch(f.text(), /Buka kunci sintetis/);
+        assert.equal(state.patientReads, 0);
+        button(f, "Kegawatdaruratan Medis").onClick();
+        await f.flush();
+        await button(f, "KIRIM T0-SUSPECT").onClick();
+        await f.flush();
+        assert.match(f.text(), /Buka kunci sintetis/);
+        assert.equal(state.emergencyCalls.length, 0);
+        button(f, "Buka kunci sintetis").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 0);
+        assert.equal(button(f, "KIRIM T0-SUSPECT").disabled, false);
+        await button(f, "KIRIM T0-SUSPECT").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        assert.equal(state.emergencyCalls[0].redFlagType, "MEDICAL_CRISIS");
+    } finally {
+        state.unlocked = true;
+        f.app.unmount();
     }
 });
 

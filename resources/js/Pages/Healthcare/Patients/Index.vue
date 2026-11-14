@@ -4,10 +4,10 @@
             <!-- Page Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+                    <h1 class="rm-page-heading text-slate-900">
                         {{ $t('healthcare.patients.title', 'Rekam Medis Pasien') }}
                     </h1>
-                    <p class="text-xs text-slate-500 mt-1 font-normal">
+                    <p class="rm-page-description text-sm font-normal">
                         {{ $t('healthcare.patients.subtitle', 'Direktori rekam jejak skrining dan status tindak lanjut klinis penyintas bencana.') }}
                     </p>
                 </div>
@@ -22,6 +22,7 @@
                     <input
                         v-model="searchQuery"
                         type="search"
+                        :aria-label="$t('healthcare.patients.searchPlaceholder', 'Cari nama atau NIK...')"
                         :placeholder="$t('healthcare.patients.searchPlaceholder', 'Cari nama atau NIK...')"
                         class="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-700 focus:outline-none"
                     />
@@ -30,7 +31,7 @@
 
             <!-- Unified Table Surface -->
             <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
-                <div class="overflow-x-auto">
+                <div class="rm-table-region">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-50/60 text-slate-400 uppercase tracking-wider text-[10px] font-semibold border-b border-slate-100">
                             <tr>

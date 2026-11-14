@@ -3,10 +3,10 @@
     <div class="space-y-5 max-w-5xl">
       <!-- Page Header -->
       <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 class="rm-page-heading text-slate-900">
           {{ $t('healthcare.referrals.title', 'Pemantauan Rujukan') }}
         </h1>
-        <p class="text-xs text-slate-500 mt-1 font-normal">
+        <p class="rm-page-description text-sm font-normal">
           {{ $t('healthcare.referrals.subtitle', 'Keputusan rujukan klinis dan pekerjaan internal; status respons lapangan ditampilkan terpisah.') }}
         </p>
       </div>

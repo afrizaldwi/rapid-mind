@@ -26,6 +26,7 @@ export type ServerAssessment = Omit<
     non_verbal_reasons?: LocalAssessment["non_verbal_reasons"] | null;
     id: string;
     user_id: number;
+    resume_stage?: "srq" | "risk" | "function" | "review";
     patient_id?: string | null;
     patient?: ServerPatient | null;
     srq_responses?: Array<{

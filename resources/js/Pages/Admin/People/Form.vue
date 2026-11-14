@@ -1,24 +1,32 @@
 <template>
   <AdminLayout>
     <div class="max-w-2xl space-y-5">
-      <Link :href="base" class="text-teal-800 text-sm font-bold">{{ $t('admin.masterData.backToList', '← Kembali ke daftar') }}</Link>
-      <h2 class="text-xl font-black text-slate-900">{{ formHeading }}</h2>
-      <p v-if="message" class="rounded-xl bg-teal-50 text-teal-900 p-3 text-sm">{{ message }}</p>
-      <form class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4" @submit.prevent="submit">
-        <div><label class="block text-sm font-bold mb-1">{{ $t('admin.masterData.columns.name', 'Nama') }} *</label><input v-model="form.name" required class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.name" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.name, locale) }}</p></div>
-        <div><label class="block text-sm font-bold mb-1">{{ $t('admin.people.columns.email', 'Email') }} *</label><input v-model="form.email" type="email" required autocomplete="email" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.email" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.email, locale) }}</p></div>
+      <Link :href="base" class="inline-flex items-center text-teal-800 text-sm font-semibold">{{ $t('admin.masterData.backToList', '← Kembali ke daftar') }}</Link>
+      <h1 class="rm-page-heading text-slate-900">{{ formHeading }}</h1>
+      <p v-if="message" role="status" class="rounded-lg bg-teal-50 text-teal-900 p-3 text-sm">{{ message }}</p>
+      <form class="rm-panel p-4 sm:p-6 space-y-5" @submit.prevent="submit">
+        <div>
+          <label for="person-name" class="block text-sm font-semibold mb-2">{{ $t('admin.masterData.columns.name', 'Nama') }} *</label>
+          <input id="person-name" v-model="form.name" required :aria-invalid="!!form.errors.name" aria-describedby="person-name-error" class="w-full border border-slate-300 p-2.5 text-sm focus:border-teal-700" />
+          <p v-if="form.errors.name" id="person-name-error" role="alert" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.name, locale) }}</p>
+        </div>
+        <div>
+          <label for="person-email" class="block text-sm font-semibold mb-2">{{ $t('admin.people.columns.email', 'Email') }} *</label>
+          <input id="person-email" v-model="form.email" type="email" required autocomplete="email" :aria-invalid="!!form.errors.email" aria-describedby="person-email-error" class="w-full border border-slate-300 p-2.5 text-sm focus:border-teal-700" />
+          <p v-if="form.errors.email" id="person-email-error" role="alert" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.email, locale) }}</p>
+        </div>
         <div v-if="kind === 'relawan'">
           <label class="block text-sm font-bold mb-1" for="phone_number">{{ $t('admin.people.phoneNumberLabel', 'Nomor telepon *') }}</label>
           <input id="phone_number" v-model="form.phone_number" type="tel" required autocomplete="tel" placeholder="081234567890" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" />
           <p v-if="form.errors.phone_number" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.phone_number, locale) }}</p>
         </div>
         <template v-if="!user">
-          <div><label class="block text-sm font-bold mb-1">{{ $t('admin.accounts.passwordLabel', 'Kata sandi awal *') }}</label><input v-model="form.password" type="password" minlength="8" required autocomplete="new-password" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /><p v-if="form.errors.password" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.password, locale) }}</p></div>
-          <div><label class="block text-sm font-bold mb-1">{{ $t('admin.people.confirmPasswordLabel', 'Konfirmasi kata sandi *') }}</label><input v-model="form.password_confirmation" type="password" minlength="8" required autocomplete="new-password" class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none" /></div>
+          <div><label for="person-password" class="block text-sm font-semibold mb-2">{{ $t('admin.accounts.passwordLabel', 'Kata sandi awal *') }}</label><input id="person-password" v-model="form.password" type="password" minlength="8" required autocomplete="new-password" :aria-invalid="!!form.errors.password" aria-describedby="person-password-error" class="w-full border border-slate-300 p-2.5 text-sm focus:border-teal-700" /><p v-if="form.errors.password" id="person-password-error" role="alert" class="text-sm text-red-800 mt-1">{{ localizeMessage(form.errors.password, locale) }}</p></div>
+          <div><label for="person-password-confirmation" class="block text-sm font-semibold mb-2">{{ $t('admin.people.confirmPasswordLabel', 'Konfirmasi kata sandi *') }}</label><input id="person-password-confirmation" v-model="form.password_confirmation" type="password" minlength="8" required autocomplete="new-password" class="w-full border border-slate-300 p-2.5 text-sm focus:border-teal-700" /></div>
         </template>
         <div>
-          <label class="block text-sm font-bold mb-1">{{ kind === 'relawan' ? $t('admin.people.shelterAssignmentRequired', 'Posko penugasan *') : $t('admin.people.facilityAssignmentRequired', 'Faskes penugasan *') }}</label>
-          <select v-model="form.assignment_id" required class="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-teal-700 focus:outline-none">
+          <label for="person-assignment" class="block text-sm font-semibold mb-2">{{ kind === 'relawan' ? $t('admin.people.shelterAssignmentRequired', 'Posko penugasan *') : $t('admin.people.facilityAssignmentRequired', 'Faskes penugasan *') }}</label>
+          <select id="person-assignment" v-model="form.assignment_id" required :aria-invalid="!!assignmentError" aria-describedby="person-assignment-error" class="w-full border border-slate-300 p-2.5 text-sm focus:border-teal-700">
             <option :value="null" disabled>{{ kind === 'relawan' ? $t('admin.people.selectActiveShelter', 'Pilih Posko aktif') : $t('admin.people.selectActiveFacility', 'Pilih Faskes aktif') }}</option>
             <option v-if="currentInactiveAssignment" :value="currentInactiveAssignment.id">{{ $t('admin.people.inactiveAssignmentOption', { name: currentInactiveAssignment.name }, '{name} — Nonaktif (penugasan saat ini)') }}</option>
             <option v-for="a in assignments" :key="a.id" :value="a.id">{{ a.name }}</option>
@@ -28,7 +36,7 @@
             <Link :href="kind === 'relawan' ? '/admin/operations/posko' : '/admin/facilities/organizations'" class="underline">{{ kind === 'relawan' ? $t('admin.people.manageSheltersLink', 'Kelola Posko') : $t('admin.people.manageFacilitiesLink', 'Kelola Faskes') }}</Link>
             {{ $t('admin.people.firstSuffix', 'terlebih dahulu.') }}
           </p>
-          <p v-if="assignmentError" class="text-sm text-red-800 mt-1">{{ assignmentError }}</p>
+          <p v-if="assignmentError" id="person-assignment-error" role="alert" class="text-sm text-red-800 mt-1">{{ assignmentError }}</p>
           <p v-if="retainingInactiveAssignment" class="text-sm text-amber-700 mt-1">{{ $t('admin.people.retainingInactiveWarning', 'Penugasan nonaktif dapat dipertahankan selama akun tetap nonaktif. Pilih lokasi aktif sebelum mengaktifkan akun.') }}</p>
         </div>
         <label class="flex items-center gap-2 text-sm font-bold"><input v-model="form.is_active" type="checkbox" /> {{ $t('admin.people.accountActiveLabel', 'Akun aktif') }}</label>

@@ -246,6 +246,20 @@ try {
     await click("Buka data"); await textIncludes(patientName);
     pass("offline-recovery-unlock", "Explicit saved recovery code opens same key offline.");
     await screenshot("03-offline-synthetic-assessment");
+    phase = "responsive T0 review without creating an emergency";
+    const beforeEmergencyReview = clinical(await storage());
+    await click("T0 DARURAT");
+    await waitFor("!!document.querySelector('[role=dialog][aria-labelledby=t0-verification-title]')");
+    for (const width of [320, 390, 430, 768, 1440]) {
+        await cdp.call('Emulation.setDeviceMetricsOverride', { width, height: 800, deviceScaleFactor: 1, mobile: width < 768 });
+        await delay(200);
+        assert.equal(await cdp.evaluate("(()=>{const r=document.querySelector('[role=dialog]').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;})()"), true);
+        await screenshot(`03-t0-review-${width}`);
+    }
+    await cdp.evaluate("document.querySelector('[role=dialog] button[aria-label=Tutup]').click()");
+    await waitFor("!document.querySelector('[role=dialog][aria-labelledby=t0-verification-title]')");
+    assert.deepEqual(clinical(await storage()), beforeEmergencyReview);
+    pass("t0-review-responsive-no-write", "Review dialog fits five viewports; opening and cancelling creates no emergency or outbox operation.");
     phase = "online wrong passphrase with retained draft";
     server.state.offline = false;
     await cdp.call("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });

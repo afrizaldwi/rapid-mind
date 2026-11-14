@@ -22,7 +22,7 @@ final class FixtureAccountRoster
         }
         $m = $marker->first()->new_values;
         if (($m['fixture'] ?? null) !== FixtureDefinition::VERSION
-            || Region::find($m['region_id'] ?? null)?->name !== FixtureDefinition::REGION
+            || ! in_array(Region::find($m['region_id'] ?? null)?->name, [FixtureDefinition::REGION, FixtureDefinition::LEGACY_REGION], true)
             || count($m['user_ids'] ?? []) !== 6 || array_diff(array_keys($m['user_ids'] ?? []), array_keys(FixtureDefinition::ACCOUNTS))
             || count(array_unique($m['user_ids'])) !== 6
         ) {
@@ -37,7 +37,7 @@ final class FixtureAccountRoster
         foreach (range(1, 3) as $n) {
             $s = Shelter::find($m['shelter_ids'][$n] ?? null);
             if (
-                ! $s?->is_active || $s->name !== '[SINTETIS KOMPETISI] Posko ' . $n
+                ! $s?->is_active || ! in_array($s->name, [FixtureDefinition::POSKO[$n]['name'], '[SINTETIS KOMPETISI] Posko ' . $n], true)
                 || $s->region_id !== $m['region_id']
                 || $s->primary_facility_id !== $m['facility_ids'][FixtureDefinition::facility($n)]
             ) {
