@@ -1,5 +1,45 @@
 # RAPID-MIND — Offline Clinical Data Security
 
+## Preserve legacy storage while enabling new work — 15 November 2026
+
+An authenticated online Relawan with legacy plaintext, a version-1 wrapped key,
+or unfinished enrollment may initialize a separate physical IndexedDB database,
+`RapidMindDeviceOfflineDB`. The original `RapidMindOfflineDB` is preserved.
+This is a new-write isolation boundary, not a cryptographic migration or recovery.
+Existing healthy device storage stays in its original database unless the profile
+has already established the isolated database.
+
+Continuity selects the established database before reads on offline restart.
+New keys still require the existing exact-origin, authenticated server grant.
+Owner isolation, logout intent, key proofs, access fences, non-extractable
+AES-256-GCM keys, and atomic encrypted emergency/outbox writes remain required.
+Opening a separate database grants neither authentication nor decryption.
+Old clients retain their old database, so they cannot overwrite the new queue.
+
+The Relawan shell explicitly states that old drafts/queues remain stored and
+have not automatically been delivered. Old wrapped ciphertext still requires its
+original secret for recovery. Unknown or inconsistent data in the selected
+database continues to fail closed; there is no repeated automatic reset.
+See [preservation and browser evidence](checkpoints/legacy-storage-isolation-2026-11-15.md).
+
+## Explicit HTTPS demo enrollment — 15 November 2026
+
+The owner-reported ngrok T0 failure was caused by the localhost-only device
+enrollment policy. HTTPS demo enrollment now supports exact server-configured
+origins in `OFFLINE_ENCRYPTION_DEMO_ORIGINS` (comma-separated, default empty).
+`APP_ENV=local`, the existing localhost `APP_URL`, the enrollment opt-in,
+active Relawan role, matching web-session version and owner remain required.
+The direct Host must match the configured HTTPS origin; a foreign Origin,
+wildcard setting or spoofed forwarded host cannot authorize enrollment.
+
+The frontend requests same-origin authorization and accepts only a grant for
+its exact current origin and owner. New device activation metadata records
+`activation_origin`; HTTPS offline restoration requires that exact origin.
+The existing non-extractable AES-256-GCM key remains in IndexedDB. Localhost
+keys and ciphertext are not copied to ngrok; old or ambiguous storage is neither
+converted nor deleted. See
+[live ngrok T0 evidence](checkpoints/ngrok-t0-enrollment-2026-11-15.md).
+
 ## Offline refresh with a locked key
 
 A verified local Relawan session can reopen Home, PFA and the assessment start

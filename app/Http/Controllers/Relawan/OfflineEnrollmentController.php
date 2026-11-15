@@ -22,6 +22,7 @@ final class OfflineEnrollmentController extends Controller
             $request,
             $user,
             (int) $data['owner_user_id'],
+            (array) config('offline.demo_origins', []),
         );
 
         return response()->json($origin !== null ? [

@@ -45,6 +45,10 @@
             :class="[hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'rm-field-scroll overflow-y-auto px-3.5 py-4 sm:px-6 sm:pt-6', { 'relawan-identity-main': !!$slots.greeting }]"
         >
             <slot name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
+            <details v-if="isolatedClinicalStorage" class="my-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                <summary class="cursor-pointer font-medium">{{ isEn ? 'Previous device data preserved' : 'Data perangkat lama tetap disimpan' }}</summary>
+                <p class="mt-2">{{ isEn ? 'New work uses separate encrypted storage. Previous drafts and queues have not been deleted or automatically sent. Do not clear site data.' : 'Pekerjaan baru memakai penyimpanan terenkripsi terpisah. Draf dan antrean lama tidak dihapus dan belum otomatis terkirim. Jangan hapus data situs.' }}</p>
+            </details>
             <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
             <slot v-if="requiresClinicalKey && !clinicalViewAvailable" name="clinical-unlock-notice" />
             <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked">
@@ -178,6 +182,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { isolatedClinicalStorage } from "@/offline/db";
 import {
     BookOpen,
     ClipboardList,

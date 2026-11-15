@@ -30,6 +30,23 @@ const allowed = (id = 101, role = "RELAWAN", responseOrigin = origin) =>
         }),
     );
 
+test("HTTPS device activation requires a matching server grant and remains bound to its origin offline", async t => {
+    const demo = "https://synthetic.ngrok-free.dev";
+    const f = await localFixture(t, "production", demo);
+    assert.equal(await f.initialization.inspectClinicalInitialization(101), "ACTIVATION_DISABLED");
+    t.mock.method(globalThis, "fetch", async () => allowed(101, "RELAWAN", demo));
+    await f.deviceKeys.ensureDeviceClinicalAccess(101);
+    const mode = await f.db.ownerEncryptionModes.get(101);
+    assert.equal(mode.activation_origin, demo);
+    f.storage.lockAllClinicalKeys();
+    f.browser.navigator.onLine = false;
+    await f.deviceKeys.waitForDeviceClinicalAccess(101);
+    assert.equal(f.storage.clinicalKeyReady(101), true);
+    f.storage.lockAllClinicalKeys();
+    await f.db.ownerEncryptionModes.put({...mode, activation_origin: "https://other.ngrok-free.dev"});
+    await assert.rejects(f.deviceKeys.waitForDeviceClinicalAccess(101));
+});
+
 test("ordinary assets automatically initialize only after local server policy, then restore offline", async t => {
     const f = await localFixture(t);
     assert.equal(await f.initialization.inspectClinicalInitialization(101), "ACTIVATION_DISABLED");
@@ -94,7 +111,7 @@ for (const mode of ["production", "encrypted-acceptance", "staging-fixture"]) {
         await assert.rejects(
             f.deviceKeys.ensureDeviceClinicalAccess(101),
         );
-        assert.equal(request.mock.callCount(), 0);
+        assert.equal(request.mock.callCount(), 1);
         await assert.rejects(f.patients.save(101, { name: "Sintetis" }));
     });
 }
@@ -179,7 +196,7 @@ for (const browserOrigin of ["https://rapid-mind.invalid", "https://demo.ngrok-f
         const f = await localFixture(t, "production", browserOrigin);
         const request = t.mock.method(globalThis, "fetch", async () => allowed());
         assert.equal(await f.authorization.requestLocalEnrollmentAuthorization(101), false);
-        assert.equal(request.mock.callCount(), 0);
+        assert.equal(request.mock.callCount(), 1);
     });
 }
 

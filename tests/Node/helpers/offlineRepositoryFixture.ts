@@ -149,6 +149,10 @@ export async function offlineRepositoryFixture(
         new Map());
     const context: any = {
         db,
+        initializeClinicalDatabase: async () => {},
+        prepareClinicalDatabaseForLogin: async (owner: number) => { context.databaseSelections.push(owner); if (context.databasePreparationError) throw context.databasePreparationError; },
+        databaseSelections: [] as number[],
+        databasePreparationError: null as Error | null,
         requireOwner: (owner: number) => {
             if (!Number.isInteger(owner) || owner <= 0)
                 throw new Error("Invalid owner");
@@ -181,7 +185,7 @@ export async function offlineRepositoryFixture(
         );
     }
     const modules: Record<string, string> = {
-        "./db": stub(["db", "requireOwner", "localUuid", "nextOutboxId"]),
+        "./db": stub(["db", "requireOwner", "localUuid", "nextOutboxId", "initializeClinicalDatabase", "prepareClinicalDatabaseForLogin"]),
     };
     async function load(
         file: string,
@@ -390,6 +394,7 @@ export async function offlineRepositoryFixture(
         drafts: drafts.exports,
         queue: sync.exports.queueAssessmentSnapshot,
         db,
+        databasePreparation: context,
         cleanup: () => {
             storage.exports.lockAllClinicalKeys();
             registry.delete(identity);

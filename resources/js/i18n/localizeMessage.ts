@@ -1,6 +1,10 @@
 import type { SupportedLocale } from "./types";
 
 const PAIRS: ReadonlyArray<readonly [id: string, en: string]> = [
+    [
+        "Data perangkat lama tetap disimpan. Hubungkan internet dan buka Beranda untuk menyiapkan penyimpanan terenkripsi terpisah bagi pekerjaan baru. Antrean lama belum otomatis terkirim. Jangan hapus data situs.",
+        "Previous device data remains preserved. Connect to the internet and open Home to prepare separate encrypted storage for new work. The previous queue has not been automatically sent. Do not clear site data.",
+    ],
     // Bidirectional notices & client validation
     [
         "Jawaban manual atau tersimpan dipertahankan. Periksa respons yang belum jelas secara manual.",

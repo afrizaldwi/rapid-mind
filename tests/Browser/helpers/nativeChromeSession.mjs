@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 // Native CDP transport, with a new profile supplied by the isolated test runner.
 export async function nativeChromeSession({ executable, profile, proxyPort }) {
     await mkdir(profile, { recursive: true });
-    const child = spawn(executable, ["--headless=new", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-port=0", `--user-data-dir=${profile}`, `--proxy-server=http://127.0.0.1:${proxyPort}`, "--proxy-bypass-list=<-loopback>", "--force-webrtc-ip-handling-policy=disable_non_proxied_udp", "about:blank"], { stdio:"ignore", windowsHide:true });
+    const child = spawn(executable, ["--headless=new", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-port=0", `--user-data-dir=${profile}`, ...(proxyPort ? [`--proxy-server=http://127.0.0.1:${proxyPort}`, "--proxy-bypass-list=<-loopback>"] : []), "--force-webrtc-ip-handling-policy=disable_non_proxied_udp", "about:blank"], { stdio:"ignore", windowsHide:true });
     child.on("error",()=>{});
     let port;
     for(let i=0;i<100;i++) {
@@ -20,13 +20,18 @@ export async function nativeChromeSession({ executable, profile, proxyPort }) {
     await new Promise((resolve,reject)=>{ws.addEventListener('open',resolve,{once:true});ws.addEventListener('error',reject,{once:true});});
     let next=0;
     const pending=new Map();
-    const frames=[], requests=[], errors=[];
+    const frames=[], requests=[], errors=[], exceptionDescriptions=[];
     let socketId;
     ws.addEventListener('message',event=>{
         const message=JSON.parse(String(event.data));
         const item=pending.get(message.id);
         if(item) {pending.delete(message.id);clearTimeout(item.timer);message.error?item.reject(new Error('CDP command failed')):item.resolve(message.result);}
-        if(message.method==='Runtime.exceptionThrown')errors.push('Browser application exception');
+        if(message.method==='Runtime.exceptionThrown'){
+            errors.push('Browser application exception');
+            exceptionDescriptions.push(message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text);
+        }
+        if(message.method==='Runtime.consoleAPICalled' && message.params.type==='error')
+            exceptionDescriptions.push(message.params.args.map(arg=>arg.description ?? arg.value ?? '').join(' '));
         if(message.method==='Network.requestWillBeSent') {
             const request=message.params.request;
             requests.push({method:request.method,path:new URL(request.url).pathname,time:Date.now(),partial:request.headers['X-Inertia-Partial-Data']??null});
@@ -69,7 +74,7 @@ export async function nativeChromeSession({ executable, profile, proxyPort }) {
     }
     await call('Page.enable');await call('Runtime.enable');await call('Network.enable');
     await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
-    return {call,evaluate,wait,text,fill,click,goto,jsonRequest,frames,requests,errors,get socketId(){return socketId;},
+    return {call,evaluate,wait,text,fill,click,goto,jsonRequest,frames,requests,errors,exceptionDescriptions,get socketId(){return socketId;},
         async screenshot(path){assert.equal(await evaluate("!!document.querySelector('output')"),false);const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(path,Buffer.from(shot.data,'base64'));},
         async close(){try{await call('Browser.close');}catch{}ws.close();if(child.exitCode===null){await Promise.race([new Promise(resolve=>child.once('exit',resolve)),delay(3000)]);if(child.exitCode===null)child.kill();}}
     };

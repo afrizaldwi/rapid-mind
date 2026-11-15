@@ -7,7 +7,8 @@ import {
 import {
     acceptanceEncryptionFixture,
     localEnrollmentOrigin,
-    LOCAL_ENROLLMENT_ORIGIN,
+    deviceEnrollmentOrigin,
+    currentEnrollmentOrigin,
 } from "./offlineActivationEnvironment";
 
 // Eligibility is public policy metadata, not an activation credential. Grants
@@ -20,7 +21,10 @@ export function encryptedEnrollmentAllowed(
     mode?: OwnerEncryptionMode,
 ): boolean {
     if (acceptanceEncryptionFixture()) return true;
-    if (!localEnrollmentOrigin()) return false;
+    if (!deviceEnrollmentOrigin()) return false;
+    if (mode?.activation_origin && mode.activation_origin !== currentEnrollmentOrigin()) return false;
+    if (mode && !localEnrollmentOrigin())
+        return mode.activation === "LOCAL_DEVICE_V2" && mode.activation_origin === currentEnrollmentOrigin();
     return mode
         ? mode.activation === "LOCAL_DEVELOPMENT_V1" || mode.activation === "LOCAL_DEVICE_V2"
         : approvedOwners.has(owner);
@@ -36,8 +40,8 @@ export function localEnrollmentMetadata(): {
 // Public server policy from authenticated Inertia props, never a secret or login bypass.
 export async function acceptLocalEnrollmentBootstrap(owner: number, policy: unknown): Promise<void> {
     const grant = policy as { owner?: number; origin?: string; allowed?: boolean } | null;
-    if (!localEnrollmentOrigin() || grant?.allowed !== true || grant.owner !== owner ||
-        grant.origin !== LOCAL_ENROLLMENT_ORIGIN) return;
+    if (!deviceEnrollmentOrigin() || grant?.allowed !== true || grant.owner !== owner ||
+        grant.origin !== currentEnrollmentOrigin()) return;
     const ticket = captureClinicalAccess();
     const context = await db.relawanContinuity.get("active");
     assertClinicalAccess(ticket);
@@ -49,7 +53,7 @@ export async function requestLocalEnrollmentAuthorization(
 ): Promise<boolean> {
     requireOwner(owner);
     approvedOwners.delete(owner);
-    if (!localEnrollmentOrigin() || !navigator.onLine) return false;
+    if (!deviceEnrollmentOrigin() || !navigator.onLine) return false;
     const ticket = captureClinicalAccess();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8_000);
@@ -71,7 +75,7 @@ export async function requestLocalEnrollmentAuthorization(
         assertClinicalAccess(ticket);
         if (
             result.state !== "LOCAL_ENROLLMENT_ALLOWED" ||
-            result.origin !== LOCAL_ENROLLMENT_ORIGIN ||
+            result.origin !== currentEnrollmentOrigin() ||
             result.user?.id !== owner ||
             result.user?.role !== "RELAWAN"
         )
@@ -100,7 +104,7 @@ export async function requestLocalEnrollmentAuthorization(
 // Called before the layout's first storage inspection. Confirmed owners skip
 // this request entirely, including when the browser reports a stale online flag.
 export async function prepareLocalEnrollment(owner: number): Promise<void> {
-    if (!localEnrollmentOrigin()) return;
+    if (!deviceEnrollmentOrigin()) return;
     const mode = await db.ownerEncryptionModes.get(owner);
     if (mode?.mode !== "ENCRYPTED" && !approvedOwners.has(owner))
         await requestLocalEnrollmentAuthorization(owner);

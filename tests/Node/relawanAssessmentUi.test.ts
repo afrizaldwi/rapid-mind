@@ -42,13 +42,14 @@ const state = ((globalThis as any).__b31ui = {
     pending: null as any,
     unlocked: true,
     patientReads: 0,
+    restoreDuringWait: false,
 });
 state.context = async () => ({
     assessment: state.assessment,
     patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
 });
 const overrides = {
-    "@/offline/deviceKeyWorkflow": moduleStub("export const ensureDeviceClinicalAccess=async()=>{};export const waitForDeviceClinicalAccess=async()=>{if(!globalThis.__b31ui.unlocked)throw Error('Penyimpanan belum tersedia');};"),
+    "@/offline/deviceKeyWorkflow": moduleStub("export const ensureDeviceClinicalAccess=async()=>{};export const waitForDeviceClinicalAccess=async()=>{const s=globalThis.__b31ui;if(s.restoreDuringWait){s.unlocked=true;s.key.value++;}if(!s.unlocked)throw Error('Penyimpanan belum tersedia');};"),
     "@/offline/cacheRelawanPage": moduleStub("export const cacheRelawanPatients=async()=>{};"),
     "@/offline/assessmentHandoff": moduleStub("export const preserveOfflineAssessment=async()=>{};"),
     "@/components/Relawan/OfflineEncryptionGate.vue": moduleStub(`import {defineComponent,h} from '${vue}';
@@ -322,6 +323,23 @@ test("T0 reports unavailable storage without introducing an unlock step or sendi
         assert.equal(state.emergencyCalls.length, 1);
         assert.equal(state.emergencyCalls[0].redFlagType, "MEDICAL_CRISIS");
     } finally { state.unlocked = true; f.app.unmount(); }
+});
+
+test("T0 key restoration preserves verification and sends only on explicit final action", async () => {
+    state.unlocked = false;
+    state.restoreDuringWait = true;
+    state.emergencyCalls = [];
+    const f = mountFixture(T0, { show: true, patientId: "patient-synthetic", patientName: "Sintetis" });
+    try {
+        await f.flush();
+        button(f, "Gejala Psikosis").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 0);
+        await button(f, "KIRIM T0-SUSPECT").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        assert.equal(state.emergencyCalls[0].redFlagType, "PSYCHOSIS");
+    } finally { f.app.unmount(); state.restoreDuringWait = false; state.unlocked = true; }
 });
 
 test("mounted manual T0 remains independent of incomplete SRQ; invalidated pre-write async cannot create T0", async () => {

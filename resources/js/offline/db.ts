@@ -1,6 +1,8 @@
 import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
 import { allocateOutboxIdentity } from "./outboxIdentity";
 import Dexie, { type Table } from "dexie";
+import { shallowRef } from "vue";
+import { invalidateClinicalAccess, captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import type { SrqAnswers } from "../domain/srq/srqAnswer";
 import type { NonVerbalObservations } from "../domain/assessment/nonVerbalObservations";
 
@@ -133,6 +135,7 @@ export interface EncryptedStagingRecord {
     ciphertext: string;
 }
 export interface OwnerEncryptionMode {
+    activation_origin?: string;
     owner_user_id: number;
     mode: "ENCRYPTED" | "ENROLLMENT_PENDING";
     activation?: "LOCAL_DEVELOPMENT_V1" | "LOCAL_DEVICE_V2";
@@ -173,8 +176,8 @@ export class RapidMindDB extends Dexie {
     encryptedOutboxIndex!: Table<EncryptedOutboxIndex, number>;
     localSyncReceipts!: Table<LocalSyncReceipt, string>;
     outboxIdCounter!: Table<OutboxIdCounter, string>;
-    constructor() {
-        super("RapidMindOfflineDB");
+    constructor(name = "RapidMindOfflineDB") {
+        super(name);
         this.version(1).stores({
             patients: "id, nik, name, shelter_id",
             assessments: "id, patient_id, status, synced, updated_at",
@@ -265,7 +268,61 @@ export class RapidMindDB extends Dexie {
         }
     }
 }
-export const db = new RapidMindDB();
+export let db = new RapidMindDB();
+const deviceDatabaseName = "RapidMindDeviceOfflineDB";
+export const isolatedClinicalStorage = shallowRef(false);
+let selectingDatabase: Promise<void> | undefined;
+let preparingForLogin: Promise<void> | undefined;
+
+// A separate physical database prevents old clients and old keys from writing
+// into the new queue. Old clinical rows and keys are never modified or copied.
+export function initializeClinicalDatabase(): Promise<void> {
+    if (preparingForLogin) return preparingForLogin;
+    if (selectingDatabase) return selectingDatabase;
+    selectingDatabase = (async () => {
+        if (!isolatedClinicalStorage.value && await Dexie.exists(deviceDatabaseName)) {
+            invalidateClinicalAccess();
+            db.close();
+            db = new RapidMindDB(deviceDatabaseName);
+            isolatedClinicalStorage.value = true;
+        }
+    })().finally(() => { selectingDatabase = undefined; });
+    return selectingDatabase;
+}
+
+// Called only with the authenticated online identity, before recording its
+// continuity. Existing healthy device storage continues in its original lane.
+export async function prepareClinicalDatabaseForLogin(owner: number): Promise<void> {
+    requireOwner(owner);
+    await initializeClinicalDatabase();
+    if (preparingForLogin) return preparingForLogin;
+    const operation = (async () => {
+        if (isolatedClinicalStorage.value || stagingEncryptionFixture()) return;
+        const ticket = captureClinicalAccess();
+        const blocked = await db.transaction("r", [
+            db.patients, db.patientSnapshots, db.assessments, db.emergencies,
+            db.outbox, db.offlineKeys, db.ownerEncryptionModes,
+        ], async () => {
+            for (const table of [db.patients, db.patientSnapshots, db.assessments, db.emergencies, db.outbox])
+                if (await table.count()) return true;
+            return (await db.offlineKeys.get(owner))?.version === 1 ||
+                (await db.ownerEncryptionModes.get(owner))?.mode === "ENROLLMENT_PENDING";
+        });
+        assertClinicalAccess(ticket);
+        if (!blocked) return;
+        const next = new RapidMindDB(deviceDatabaseName);
+        await next.open();
+        try { assertClinicalAccess(ticket); }
+        catch (error) { next.close(); throw error; }
+        invalidateClinicalAccess();
+        db.close();
+        db = next;
+        isolatedClinicalStorage.value = true;
+    })();
+    preparingForLogin = operation;
+    try { await operation; }
+    finally { if (preparingForLogin === operation) preparingForLogin = undefined; }
+}
 // Call only inside a read-write transaction containing both ID tables, the counter and sync receipts.
 export async function nextOutboxId(): Promise<number> {
     const [plain, encrypted, counter, receipts] = await Promise.all([

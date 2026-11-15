@@ -13,15 +13,12 @@ final class LocalOfflineEnrollment
 {
     public const ORIGIN = 'http://localhost:8080';
 
-    public static function allowed(string $environment, string $applicationUrl, bool $optIn, Request $request, ?User $user, int $owner): bool
+    public static function allowed(string $environment, string $applicationUrl, bool $optIn, Request $request, ?User $user, int $owner, array $demoOrigins = []): bool
     {
         return $environment === 'local'
             && $applicationUrl === self::ORIGIN
             && $optIn
-            // Inspect the direct Host rather than trusting forwarded host data.
-            && $request->headers->get('host') === 'localhost:8080'
-            && ! $request->isSecure()
-            && ($request->header('Origin') === null || $request->header('Origin') === self::ORIGIN)
+            && self::requestOrigin($request, $demoOrigins) !== null
             && $user !== null
             && $request->hasSession()
             && $request->session()->get(ValidateWebSessionVersion::USER_ID) === $user->id
@@ -32,10 +29,22 @@ final class LocalOfflineEnrollment
             && $user->id === $owner;
     }
 
-    public static function resolvedOrigin(string $environment, string $applicationUrl, bool $optIn, Request $request, ?User $user, int $owner): ?string
+    private static function requestOrigin(Request $request, array $demoOrigins): ?string
     {
-        return self::allowed($environment, $applicationUrl, $optIn, $request, $user, $owner)
-            ? self::ORIGIN
+        $directHost = $request->headers->get('host');
+        $origin = $request->getSchemeAndHttpHost();
+        $local = $directHost === 'localhost:8080' && !$request->isSecure() && $origin === self::ORIGIN;
+        $demo = str_starts_with($origin, 'https://') && in_array($origin, $demoOrigins, true)
+            && $directHost === parse_url($origin, PHP_URL_HOST)
+            && !parse_url($origin, PHP_URL_USER) && !parse_url($origin, PHP_URL_PASS);
+        return ($local || $demo) && ($request->header('Origin') === null || $request->header('Origin') === $origin)
+            ? $origin : null;
+    }
+
+    public static function resolvedOrigin(string $environment, string $applicationUrl, bool $optIn, Request $request, ?User $user, int $owner, array $demoOrigins = []): ?string
+    {
+        return self::allowed($environment, $applicationUrl, $optIn, $request, $user, $owner, $demoOrigins)
+            ? self::requestOrigin($request, $demoOrigins)
             : null;
     }
 }

@@ -4,6 +4,12 @@ export function localEnrollmentOrigin(): boolean {
     if (typeof window === "undefined" || !window.location) return false;
     return window.location.origin === LOCAL_ENROLLMENT_ORIGIN;
 }
+export function deviceEnrollmentOrigin(): boolean {
+    return localEnrollmentOrigin() || (typeof window !== "undefined" && window.location?.protocol === "https:");
+}
+export function currentEnrollmentOrigin(): string {
+    return typeof window === "undefined" ? "" : window.location.origin;
+}
 function isolatedOrigin(): boolean {
     return (
         typeof window !== "undefined" &&

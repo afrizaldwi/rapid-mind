@@ -54,11 +54,16 @@ class HandleInertiaRequests extends Middleware
             ],
             'offlineEnrollment' => fn () => $request->user()?->role === UserRole::RELAWAN ? [
                 'owner' => $request->user()->id,
-                'origin' => \App\Support\LocalOfflineEnrollment::ORIGIN,
+                'origin' => \App\Support\LocalOfflineEnrollment::resolvedOrigin(
+                    (string) app()->environment(), (string) config('app.url'),
+                    (bool) config('offline.local_enrollment', false), $request,
+                    $request->user(), (int) $request->user()->id, (array) config('offline.demo_origins', []),
+                ),
                 'allowed' => \App\Support\LocalOfflineEnrollment::allowed(
                     (string) app()->environment(), (string) config('app.url'),
                     (bool) config('offline.local_enrollment', false), $request,
                     $request->user(), (int) $request->user()->id,
+                    (array) config('offline.demo_origins', []),
                 ),
             ] : null,
             'clinicalScopeAvailable' => \App\Domain\Healthcare\HealthcareCaseAccess::available(),

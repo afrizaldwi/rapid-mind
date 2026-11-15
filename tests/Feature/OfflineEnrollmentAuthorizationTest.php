@@ -25,9 +25,10 @@ final class OfflineEnrollmentAuthorizationTest extends TestCase
             'opt_in' => true,
             'headers' => [],
             'wrong_owner' => false,
+            'demo_origins' => [],
         ], $changes);
         $this->app->detectEnvironment(fn () => $case['environment']);
-        config(['app.url' => $case['url'], 'offline.local_enrollment' => $case['opt_in']]);
+        config(['app.url' => $case['url'], 'offline.local_enrollment' => $case['opt_in'], 'offline.demo_origins' => $case['demo_origins']]);
         $user = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
         $response = $this->actingAs($user)->withHeaders($case['headers'])->getJson(
             $case['request_origin'].'/relawan/offline-enrollment-status?owner_user_id='.
@@ -35,7 +36,7 @@ final class OfflineEnrollmentAuthorizationTest extends TestCase
         );
         $response->assertStatus($allowed ? 200 : 403)->assertExactJson($allowed ? [
             'state' => 'LOCAL_ENROLLMENT_ALLOWED',
-            'origin' => LocalOfflineEnrollment::ORIGIN,
+            'origin' => $case['request_origin'],
             'user' => ['id' => $user->id, 'role' => 'RELAWAN'],
         ] : ['state' => 'ENROLLMENT_DISABLED']);
         self::assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
@@ -56,6 +57,15 @@ final class OfflineEnrollmentAuthorizationTest extends TestCase
             'custom origin cannot override denial' => [['headers' => ['Origin' => 'https://foreign.invalid', 'X-Client-Origin' => LocalOfflineEnrollment::ORIGIN]], false],
             'forwarded localhost cannot authorize remote Host' => [['request_origin' => 'http://foreign.invalid', 'headers' => ['X-Forwarded-Host' => 'localhost:8080']], false],
             'different owner' => [['wrong_owner' => true], false],
+            'explicit HTTPS demo' => [['request_origin' => 'https://synthetic.ngrok-free.dev', 'demo_origins' => ['https://synthetic.ngrok-free.dev']], true],
+            'demo remains disabled in production' => [['environment' => 'production', 'request_origin' => 'https://synthetic.ngrok-free.dev', 'demo_origins' => ['https://synthetic.ngrok-free.dev']], false],
+            'demo remains opt in' => [['opt_in' => false, 'request_origin' => 'https://synthetic.ngrok-free.dev', 'demo_origins' => ['https://synthetic.ngrok-free.dev']], false],
+            'demo requires matching owner' => [['wrong_owner' => true, 'request_origin' => 'https://synthetic.ngrok-free.dev', 'demo_origins' => ['https://synthetic.ngrok-free.dev']], false],
+            'other tunnel remains denied' => [['request_origin' => 'https://other.ngrok-free.dev', 'demo_origins' => ['https://synthetic.ngrok-free.dev']], false],
+            'no wildcard demo grants' => [['request_origin' => 'https://synthetic.ngrok-free.dev', 'demo_origins' => ['https://*.ngrok-free.dev']], false],
+            'demo must use HTTPS' => [['request_origin' => 'http://synthetic.ngrok-free.dev', 'demo_origins' => ['http://synthetic.ngrok-free.dev']], false],
+            'demo rejects foreign Origin' => [['request_origin' => 'https://synthetic.ngrok-free.dev', 'demo_origins' => ['https://synthetic.ngrok-free.dev'], 'headers' => ['Origin' => 'https://foreign.invalid']], false],
+            'forwarded demo cannot authorize foreign direct Host' => [['request_origin' => 'https://foreign.invalid', 'demo_origins' => ['https://synthetic.ngrok-free.dev'], 'headers' => ['X-Forwarded-Host' => 'synthetic.ngrok-free.dev']], false],
         ];
     }
 }

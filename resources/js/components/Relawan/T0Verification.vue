@@ -257,7 +257,7 @@ import { useRelawanRuntime } from "@/relawan/runtime";
 import { createLocalEmergency } from "@/offline/emergencyWorkflow";
 import { syncManager } from "@/offline/syncManager";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
-import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
+import { clinicalKeyReady, clinicalKeyVersion } from "@/offline/encryptedClinicalStorage";
 import { cacheRelawanPatients } from "@/offline/cacheRelawanPage";
 import { waitForDeviceClinicalAccess } from "@/offline/deviceKeyWorkflow";
 import LockedEmergencyGuidance from "@/components/Relawan/LockedEmergencyGuidance.vue";
@@ -292,8 +292,15 @@ const scope = useClinicalTaskScope(() => {
     notes.value = "";
     coordinates.value = null;
     selectedRedFlag.value = "";
-});
+}, { serverOnly: true });
 const owner = relawanOwner();
+let keyWasReady = clinicalKeyReady(owner);
+watch(clinicalKeyVersion, () => {
+    const ready = clinicalKeyReady(owner);
+    const restoring = !keyWasReady && ready;
+    keyWasReady = ready;
+    if (!restoring) scope.invalidate();
+}, { flush: "sync" });
 const runtime = useRelawanRuntime();
 const onlineAssessmentContext = inject(onlineAssessmentContextKey, undefined);
 const chosenPatientId = ref("");
