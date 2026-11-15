@@ -190,7 +190,7 @@ final class RelawanController extends Controller
 
         $validated = $request->validate([
             ...NonVerbalObservations::rules(),
-            'responses' => ['required', 'array', 'size:20'],
+            'responses' => ['present', 'array', 'max:20'],
             'responses.*' => ['required', 'array:question_number,answer'],
             'responses.*.question_number' => ['required', 'integer', 'between:1,20', 'distinct:strict'],
             'responses.*.answer' => ['required', SrqAnswer::rule()],

@@ -160,56 +160,45 @@ export class WebSpeechClient {
         this.hadInterim = false;
         this.hadError = false;
 
+        this.listen(Ctor, true);
+    }
+
+    private listen(Ctor: BrowserSpeechRecognitionConstructor, retryEmpty: boolean): void {
         const rec = new Ctor();
+        const segmentOffset = this.finalSegments.length;
+        let heardSpeech = false;
         rec.lang = "id-ID";
-        rec.continuous = false;
+        rec.continuous = true;
         rec.interimResults = true;
         rec.maxAlternatives = 1;
         this.recognition = rec;
 
         rec.onstart = () => {
-            if (this.isStale(rec)) return;
+            if (this.isStale(rec) || this.stopping) return;
             this.onEvent({ type: "START" });
         };
 
         rec.onresult = (event: BrowserSpeechRecognitionEvent) => {
             if (this.isStale(rec)) return;
             let interimText = "";
-            let newFinalAdded = false;
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const res = event.results[i];
                 const text = res?.[0]?.transcript?.trim() ?? "";
                 if (!text) continue;
+                heardSpeech = true;
                 if (res.isFinal) {
-                    this.finalSegments.push(text);
-                    newFinalAdded = true;
+                    this.finalSegments[segmentOffset + i] = text;
                 } else {
                     interimText = interimText ? `${interimText} ${text}` : text;
                 }
             }
 
-            if (interimText) {
-                this.hadInterim = true;
-                const combinedPreview = [
-                    ...this.finalSegments,
-                    interimText,
-                ].join(" ");
-                this.onEvent({
-                    type: "INTERIM",
-                    transcript: combinedPreview.trim(),
-                });
-            }
-
-            if (newFinalAdded) {
-                const finalTranscript = this.finalSegments.join(" ").trim();
-                if (finalTranscript) {
-                    this.onEvent({
-                        type: "FINAL",
-                        transcript: finalTranscript,
-                    });
-                }
-            }
+            if (interimText) this.hadInterim = true;
+            this.onEvent({
+                type: "INTERIM",
+                transcript: [...this.finalSegments, interimText].join(" ").trim(),
+            });
         };
 
         rec.onerror = (event: BrowserSpeechRecognitionErrorEvent) => {
@@ -217,6 +206,7 @@ export class WebSpeechClient {
             if (event.error === "aborted" && (this.cancelled || this.stopping)) {
                 return;
             }
+            if (event.error === "no-speech" && (heardSpeech || retryEmpty || this.stopping)) return;
             this.hadError = true;
             const mapped = mapWebSpeechError(event.error || "unknown");
             this.onEvent({
@@ -228,10 +218,21 @@ export class WebSpeechClient {
         };
 
         rec.onend = () => {
-            if (this.recognition === rec) {
-                this.recognition = null;
+            if (this.isStale(rec)) return;
+            this.recognition = null;
+            if (this.hadError) return;
+            if (!this.stopping && (heardSpeech || retryEmpty) && !document.hidden) {
+                this.listen(Ctor, heardSpeech);
+                return;
             }
-            if (this.disposed || this.cancelled || this.hadError) return;
+            const transcript = this.finalSegments.join(" ").trim();
+            if (!this.stopping) {
+                const code = "listening-ended";
+                this.onEvent({ type: "ERROR", code, message: "Sesi suara terputus. Tekan Mulai Rekam untuk mencoba lagi.", suggestOfflineFallback: false });
+                return;
+            }
+            if (transcript) this.onEvent({ type: "FINAL", transcript });
+            if (this.disposed || this.cancelled) return;
             this.onEvent({
                 type: "END",
                 hadFinal: this.finalSegments.length > 0,
@@ -260,6 +261,7 @@ export class WebSpeechClient {
             this.recognition.stop();
         } catch {
             this.abortCurrent();
+            this.onEvent({ type: "ERROR", code: "stop-failed", message: "Rekaman tidak dapat diselesaikan. Coba rekam ulang.", suggestOfflineFallback: false });
         }
     }
 

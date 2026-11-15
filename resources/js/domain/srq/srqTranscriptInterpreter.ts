@@ -113,8 +113,38 @@ export function interpretSrqTranscript(
         }
     }
 
+    // A short final utterance may omit "saya". Require the entire utterance to
+    // match one existing self-report rule. Keep Q17 on its explicit safety path.
+    if (clauses.length === 1 && !normalizedTranscript.includes("?") && !evidence.size) {
+        const phrase = clauses[0];
+        const selfReport = `saya ${phrase}`;
+        const candidates: SrqSpeechAnswerUpdate[] = [];
+        for (const rule of srqSpeechRules) {
+            if (rule.number === 17) continue;
+            for (const [answer, patterns] of [[true, rule.positivePatterns], [false, rule.negativePatterns]] as const) {
+                if (patterns.some(pattern => selfReport.match(pattern)?.[0] === selfReport)) {
+                    candidates.push({ questionNumber: rule.number, answer });
+                }
+            }
+        }
+        if (candidates.length === 1) record(candidates[0].questionNumber, candidates[0].answer, phrase);
+    }
+
     for (let index = 0; index < clauses.length; index += 1) {
         const clause = clauses[index];
+        // Speech engines often join the question and response without punctuation.
+        const direct = clause.match(/^(.+?)[,\s]+(ya|tidak)$/);
+        if (direct) {
+            const question = direct[1];
+            const recognized = srqSpeechRules.filter(rule =>
+                canonicalQuestionClauses.get(rule.number) === question ||
+                rule.questionPatterns.some(pattern => question.match(pattern)?.[0] === question),
+            );
+            if (recognized.length === 1) {
+                record(recognized[0].number, direct[2] === "ya", clause);
+                continue;
+            }
+        }
         const anchoredRules = srqSpeechRules.filter(
             (rule) =>
                 matchesAny(clause, rule.questionPatterns) ||
@@ -202,6 +232,7 @@ export function selectSrqSpeechAnswerUpdates(
         const canUpdate =
             !manualOverrides.has(match.questionNumber) &&
             (currentAnswers[match.questionNumber] === undefined ||
+                currentAnswers[match.questionNumber] === "UNANSWERED" ||
                 (typeof currentAnswers[match.questionNumber] === "boolean" &&
                     sttOwnedAnswers.has(match.questionNumber)));
         if (canUpdate)

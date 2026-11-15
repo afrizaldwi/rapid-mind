@@ -48,6 +48,7 @@ state.context = async () => ({
     patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
 });
 const overrides = {
+    "@/offline/assessmentHandoff": moduleStub("export const preserveOfflineAssessment=async()=>{};"),
     "@/components/Relawan/OfflineEncryptionGate.vue": moduleStub(`import {defineComponent,h} from '${vue}';
         export default defineComponent({emits:['unlocked'],setup(_props,{emit}){return()=>h('button',{onClick(){const s=globalThis.__b31ui;s.unlocked=true;s.key.value++;emit('unlocked');}},'Buka kunci sintetis');}});`),
     "@/relawan/runtime": moduleStub(

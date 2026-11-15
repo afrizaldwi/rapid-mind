@@ -126,7 +126,6 @@ async function createPipelineWithOptions(
 }
 
 async function createPipeline(selectedBackend: WhisperBackend) {
-    await ensureOfflineWasmRuntime();
     const preferLocalOnly = !self.navigator.onLine;
     try {
         return await createPipelineWithOptions(selectedBackend, preferLocalOnly);
@@ -153,13 +152,14 @@ async function warmupPipeline(
 }
 
 async function prepare(requestedBackend?: WhisperBackend): Promise<void> {
+    if (preparing) return preparing;
     if (transcriber && backend) {
         emit({ type: "READY", backend });
         return;
     }
-    if (preparing) return preparing;
 
     preparing = (async () => {
+        await ensureOfflineWasmRuntime();
         if (requestedBackend !== "wasm" && "gpu" in navigator) {
             try {
                 transcriber = await createPipeline("webgpu");

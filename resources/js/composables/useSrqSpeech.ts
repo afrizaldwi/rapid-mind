@@ -26,6 +26,16 @@ function webSpeechErrorMessage(
     fallback: string,
 ): LocalizedMessage {
     switch (code) {
+        case "listening-ended":
+            return {
+                id: "Sesi suara terputus. Tekan Mulai Rekam untuk mencoba lagi.",
+                en: "Listening was interrupted. Select Start Recording to try again.",
+            };
+        case "stop-failed":
+            return {
+                id: "Rekaman tidak dapat diselesaikan. Coba rekam ulang.",
+                en: "Recording could not finish. Please record again.",
+            };
         case "not-allowed":
             return {
                 id: "Izin mikrofon ditolak. Izinkan mikrofon di pengaturan browser atau gunakan jawaban manual.",
@@ -82,6 +92,7 @@ function webSpeechErrorMessage(
 export function useSrqSpeech(
     enabled: () => boolean,
     onTranscript: (text: string) => void | Promise<void>,
+    owner?: number,
 ) {
     const { isEn } = useI18n();
     const resolveMessage = (msg: LocalizedMessage) =>
@@ -90,9 +101,13 @@ export function useSrqSpeech(
     const sttMode = ref<SttMode>("offline");
     const webSpeechSupported = ref<boolean>(isWebSpeechSupported());
     const onlineConsentGranted = ref(false);
+    const consentKey = owner && Number.isSafeInteger(owner) && owner > 0
+        ? `rapid_mind_stt_online_consent_v1:${owner}`
+        : null;
     const sttFallbackSuggested = ref(false);
 
     const sttStatus = ref<WhisperStatus>("idle");
+    const awaitingMicrophone = ref(false);
     const sttBackend = ref<WhisperBackend | null>(null);
     const sttProgress = ref<number | null>(null);
     const rawSttMessage = ref<LocalizedMessage>(OFFLINE_IDLE_MESSAGE);
@@ -103,6 +118,7 @@ export function useSrqSpeech(
 
     let whisperClient: WhisperClient | null = null;
     let offlineBackendReady: WhisperBackend | null = null;
+    let offlinePreparing = false;
     let webSpeechClient: WebSpeechClient | null = null;
     let audioCapture: LocalAudioCapture | null = null;
     let sttSession = 0;
@@ -115,7 +131,7 @@ export function useSrqSpeech(
     );
 
     const sttButtonDisabled = computed(() => {
-        if (!enabled()) return true;
+        if (!enabled() || awaitingMicrophone.value) return true;
         if (["preparing", "processing"].includes(sttStatus.value)) return true;
         if (sttMode.value === "online") {
             return !webSpeechSupported.value || !onlineConsentGranted.value;
@@ -124,6 +140,8 @@ export function useSrqSpeech(
     });
 
     const sttButtonLabel = computed(() => {
+        if (awaitingMicrophone.value)
+            return isEn.value ? "Opening microphone…" : "Membuka mikrofon…";
         if (sttMode.value === "online") {
             if (!webSpeechSupported.value) {
                 return isEn.value
@@ -245,6 +263,7 @@ export function useSrqSpeech(
                           };
                 break;
             case "READY":
+                offlinePreparing = false;
                 offlineBackendReady = event.backend;
                 sttBackend.value = event.backend;
                 sttProgress.value = 100;
@@ -297,6 +316,7 @@ export function useSrqSpeech(
                 break;
             case "ERROR":
                 if (event.stage === "prepare") {
+                    offlinePreparing = false;
                     offlineBackendReady = null;
                 }
                 if (sttMode.value !== "offline") return;
@@ -366,8 +386,7 @@ export function useSrqSpeech(
             case "ERROR":
                 interimTranscript.value = "";
                 sttFallbackSuggested.value = event.suggestOfflineFallback;
-                sttStatus.value =
-                    event.code === "not-supported" ? "error" : "ready";
+                sttStatus.value = "error";
                 rawSttMessage.value = webSpeechErrorMessage(
                     event.code,
                     event.message,
@@ -378,6 +397,7 @@ export function useSrqSpeech(
 
     function stopActiveCaptureOnly() {
         sttSession += 1;
+        awaitingMicrophone.value = false;
         audioCapture?.cancel();
         audioCapture = null;
         whisperClient?.cancel?.();
@@ -386,12 +406,17 @@ export function useSrqSpeech(
     }
 
     function selectSttMode(mode: SttMode) {
-        if (!enabled()) return;
+        if (!enabled() || mode === sttMode.value) return;
         stopActiveCaptureOnly();
         sttInterpretationNotice.value = "";
         sttMode.value = mode;
 
         if (mode === "online") {
+            if (consentKey) {
+                try {
+                    onlineConsentGranted.value ||= window.localStorage.getItem(consentKey) === "accepted";
+                } catch { /* Browser storage may be unavailable. */ }
+            }
             webSpeechSupported.value = isWebSpeechSupported();
             if (!webSpeechSupported.value) {
                 sttStatus.value = "error";
@@ -429,6 +454,14 @@ export function useSrqSpeech(
                 id: "Model siap. Rekam satu ujaran pendek untuk transkripsi Bahasa Indonesia.",
                 en: "Model ready. Record a short utterance for Indonesian speech transcription.",
             };
+        } else if (offlinePreparing) {
+            sttStatus.value = "preparing";
+            sttProgress.value = null;
+            sttBackend.value = null;
+            rawSttMessage.value = {
+                id: "Persiapan model di perangkat masih berlangsung.",
+                en: "Model preparation is still in progress on this device.",
+            };
         } else {
             sttStatus.value = "idle";
             rawSttMessage.value = OFFLINE_IDLE_MESSAGE;
@@ -448,6 +481,11 @@ export function useSrqSpeech(
             return;
         }
         onlineConsentGranted.value = true;
+        if (consentKey) {
+            try {
+                window.localStorage.setItem(consentKey, "accepted");
+            } catch { /* Consent applies to this session when storage is unavailable. */ }
+        }
         sttFallbackSuggested.value = false;
         if (sttMode.value === "online") {
             sttStatus.value = "ready";
@@ -480,6 +518,7 @@ export function useSrqSpeech(
             whisperClient = client;
         }
         sttStatus.value = "preparing";
+        offlinePreparing = true;
         sttProgress.value = null;
         rawSttMessage.value = navigator.onLine
             ? {
@@ -497,6 +536,7 @@ export function useSrqSpeech(
         const session = sttSession;
         const capture = new LocalAudioCapture();
         audioCapture = capture;
+        awaitingMicrophone.value = true;
         interimTranscript.value = "";
         transcriptSnippet.value = "";
         sttInterpretationNotice.value = "";
@@ -537,6 +577,8 @@ export function useSrqSpeech(
                     en: "Microphone could not start. Manual answers remain available.",
                 };
             }
+        } finally {
+            if (session === sttSession) awaitingMicrophone.value = false;
         }
     }
 
@@ -640,7 +682,7 @@ export function useSrqSpeech(
     }
 
     function handleSttAction() {
-        if (!enabled()) return;
+        if (sttButtonDisabled.value) return;
         if (sttMode.value === "online") {
             if (!webSpeechSupported.value || !onlineConsentGranted.value)
                 return;
@@ -665,11 +707,13 @@ export function useSrqSpeech(
 
     function cleanupStt() {
         sttSession += 1;
+        awaitingMicrophone.value = false;
         audioCapture?.cancel();
         audioCapture = null;
         whisperClient?.dispose();
         whisperClient = null;
         offlineBackendReady = null;
+        offlinePreparing = false;
         webSpeechClient?.dispose();
         webSpeechClient = null;
         sttMode.value = "offline";

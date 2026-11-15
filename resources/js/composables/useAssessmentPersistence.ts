@@ -1,4 +1,6 @@
-import { onUnmounted, provide } from "vue";
+import { inject, onUnmounted, provide } from "vue";
+import { offlineHandoffKey } from "@/relawan/offlineHandoff";
+import { preserveOfflineAssessment } from "@/offline/assessmentHandoff";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import * as workflow from "@/offline/assessmentWorkflow";
 import * as drafts from "@/offline/assessmentDraft";
@@ -19,6 +21,7 @@ export function useAssessmentPersistence(server: workflow.ServerAssessment, pati
     let active = true;
     let snapshot: LocalAssessment | null = null;
     let pending = Promise.resolve();
+    const handoff = inject(offlineHandoffKey, null);
     function invalidate() { active = false; snapshot = null; }
     onUnmounted(invalidate);
     provide(onlineAssessmentContextKey, () => {
@@ -73,9 +76,9 @@ export function useAssessmentPersistence(server: workflow.ServerAssessment, pati
     function srqPayload() {
         if (!snapshot) throw new Error("Asesmen belum siap.");
         return {
-            responses: Array.from({ length: 20 }, (_, index) => ({
-                question_number: index + 1,
-                answer: snapshot!.srq_answers?.[index + 1] ?? "UNANSWERED",
+            responses: Object.entries(snapshot.srq_answers ?? {}).map(([number, answer]) => ({
+                question_number: Number(number),
+                answer,
             })),
             mode: snapshot.mode,
             non_verbal_reasons: snapshot.non_verbal_reasons ?? [],
@@ -148,5 +151,18 @@ export function useAssessmentPersistence(server: workflow.ServerAssessment, pati
         if (!result.result) throw new Error("Hasil server belum tersedia. Buka hasil asesmen kembali.");
         return result.result;
     };
-    return { online, invalidate, loadAssessmentContext, readAssessmentDraft, saveAssessmentDraft, saveAssessmentMode, saveObservationDraft, completeLocalAssessment };
+    async function continueOffline(target: string, isCurrent: () => boolean) {
+        await pending.catch(() => {});
+        assertCurrent();
+        if (!isCurrent() || !snapshot || !handoff) throw new Error("Perpindahan offline belum tersedia.");
+        const sourcePatient = patient ?? server.patient;
+        if (!sourcePatient) throw new Error("Data penyintas belum tersedia.");
+        await preserveOfflineAssessment(owner, snapshot, {
+            ...sourcePatient, owner_user_id: owner, sync_state: "SYNCED",
+        }, isCurrent);
+        assertCurrent();
+        if (!isCurrent()) throw new Error("Akses asesmen berubah.");
+        await handoff(owner, target);
+    }
+    return { online, invalidate, loadAssessmentContext, readAssessmentDraft, saveAssessmentDraft, saveAssessmentMode, saveObservationDraft, completeLocalAssessment, continueOffline };
 }

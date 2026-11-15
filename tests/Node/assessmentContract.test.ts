@@ -333,7 +333,7 @@ test("canonical metadata omission preserves local context; explicit [] clears it
     );
 });
 
-test("restored UNCLEAR and UNANSWERED remain protected from STT replacement", () => {
+test("restored unclear responses stay protected and unanswered responses can be filled by STT", () => {
     const interpretation = interpretSrqTranscript("Saya merasa tidak bahagia.");
     for (const state of ["UNCLEAR", "UNANSWERED"] as const) {
         const q = interpretation.matches[0]?.questionNumber;
@@ -344,8 +344,8 @@ test("restored UNCLEAR and UNANSWERED remain protected from STT replacement", ()
             new Set([q]),
             new Set(),
         );
-        assert.equal(selected.accepted.length, 0);
-        assert.deepEqual(selected.protectedQuestionNumbers, [q]);
+        assert.equal(selected.accepted.length, state === "UNANSWERED" ? 1 : 0);
+        assert.deepEqual(selected.protectedQuestionNumbers, state === "UNANSWERED" ? [] : [q]);
     }
 });
 

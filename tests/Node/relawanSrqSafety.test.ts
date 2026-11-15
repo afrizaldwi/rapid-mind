@@ -79,6 +79,20 @@ test("STT Q17 requires confirmation; canceled candidate and protected manual sta
     assert.equal(answers.value[1], undefined);
 });
 
+test("a final transcript automatically fills new and restored unanswered items and preserves manual answers", () => {
+    const answers = ref<any>({ 1: "UNANSWERED", 2: "UNANSWERED", 4: false, 17: "UNANSWERED" });
+    let saves = 0;
+    const state = responses.useSrqResponses(answers, () => true, async () => { saves++; }, () => {});
+    state.setManualAnswer(2, "UNANSWERED");
+    state.applySpeechTranscript("Saya sering sakit kepala. Saya kehilangan nafsu makan. Saya sulit tidur. Saya merasa takut.");
+    assert.equal(answers.value[3], true);
+    assert.deepEqual(answers.value, { 1: true, 2: "UNANSWERED", 3: true, 4: false, 17: "UNANSWERED" });
+    assert.equal(saves, 2);
+    state.applySpeechTranscript("Saya ingin mengakhiri hidup.");
+    assert.equal(answers.value[17], "UNANSWERED");
+    assert.equal(state.safety.value, "CONFIRM");
+});
+
 test("ordinary manual states survive later STT results, including explicit clearing", () => {
     for (const value of [true, false, "UNCLEAR", "UNANSWERED"]) {
         const answers = ref<any>({});
@@ -208,6 +222,11 @@ test("audio permission and worker callbacks arriving after interruption are disc
         state.handleSttAction();
         clients[0].callback({ type: "READY", backend: "wasm" });
         state.handleSttAction();
+        assert.equal(state.sttButtonDisabled.value, true);
+        state.handleSttAction();
+        state.selectSttMode("offline");
+        assert.equal(captures.length, 1, "repeated taps request microphone access only once");
+        assert.equal(captures[0].canceled, false);
         state.cleanupStt();
         resolveStart();
         await fixture.flush();
@@ -313,6 +332,12 @@ test("dual-mode STT enforces Online privacy consent, ignores interim transcripts
         assert.equal(state.sttMode.value, "offline");
         state.handleSttAction();
         assert.equal(whisperClients.length, 1);
+        state.selectSttMode("offline");
+        assert.equal(state.sttStatus.value, "preparing");
+        state.selectSttMode("online");
+        state.declineOnlineConsent();
+        assert.equal(state.sttStatus.value, "preparing", "return to the in-flight preparation");
+        assert.equal(state.sttButtonDisabled.value, true);
         whisperClients[0].callback({ type: "READY", backend: "webgpu" });
         assert.equal(state.sttStatus.value, "ready");
 
@@ -354,6 +379,9 @@ test("dual-mode STT enforces Online privacy consent, ignores interim transcripts
         state.handleSttAction();
         assert.equal(webSpeechClients.length, 1);
         assert.equal(state.sttStatus.value, "recording");
+        state.selectSttMode("online");
+        assert.equal(state.sttStatus.value, "recording");
+        assert.ok(!webSpeechClients[0].aborted);
         webSpeechClients[0].callback({
             type: "INTERIM",
             transcript: "Saya sering sakit kepala dan ingin mengakhiri hidup.",

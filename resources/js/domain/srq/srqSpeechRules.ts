@@ -51,6 +51,7 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
                 String.raw`\b${self} (?:sulit|susah|tidak bisa) tidur\b`,
             ),
             new RegExp(String.raw`\b${self} sering terbangun\b`),
+            new RegExp(String.raw`\b${self} (?:insomnia|melek terus|kebangun bangun)\b`),
         ],
         negativePatterns: [
             new RegExp(String.raw`\b${self} tidak (?:sulit|susah) tidur\b`),

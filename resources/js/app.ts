@@ -2,7 +2,12 @@ import "../css/app.css";
 
 import { router, createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
-import { createApp, h, type DefineComponent } from "vue";
+import { createApp, defineAsyncComponent, h, provide, shallowRef, type DefineComponent } from "vue";
+import { offlineHandoffKey } from "./relawan/offlineHandoff";
+import { resolveRelawanContinuity } from "./offline/relawanContinuity";
+import { clinicalKeyReady } from "./offline/encryptedClinicalStorage";
+
+const OfflineRelawanShell = defineAsyncComponent(() => import("./relawan/OfflineRelawanShell.vue"));
 import { configureEcho } from "@laravel/echo-vue";
 import { lockRelawanContinuity, type VerifiedRelawan } from "./offline/relawanContinuity";
 import { i18nPlugin } from "./i18n";
@@ -74,7 +79,20 @@ if (clinicalPath && !window.crypto?.subtle) {
             void lockRelawanContinuity().catch(() => {});
         }
         createApp({
-            render: () => h(App, props),
+            setup() {
+                const offlineOwner = shallowRef<number | null>(null);
+                provide(offlineHandoffKey, async (owner, path) => {
+                    const continuity = await resolveRelawanContinuity();
+                    if (continuity.state !== "ELIGIBLE" || continuity.context.owner_user_id !== owner ||
+                        !clinicalKeyReady(owner) || !/^\/relawan\/assessment\/[a-f0-9-]+\/risk$/.test(path))
+                        throw new Error("Akses offline belum tersedia untuk akun ini.");
+                    window.history.pushState(null, "", path);
+                    offlineOwner.value = owner;
+                });
+                return () => offlineOwner.value
+                    ? h(OfflineRelawanShell, { owner: offlineOwner.value })
+                    : h(App, props);
+            },
         })
             .use(plugin)
             .use(i18nPlugin)

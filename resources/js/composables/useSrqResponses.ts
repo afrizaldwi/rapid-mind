@@ -86,10 +86,16 @@ export function useSrqResponses(
                     : "REVIEW";
         }
         if (ordinary.length) void save();
+        if (ordinary.length && !protectedQuestionNumbers.length && !safety.value) {
+            const numbers = ordinary.map(update => update.questionNumber).join(", ");
+            return isEn.value ? `Voice filled SRQ item(s) ${numbers}. Review the answers.` : `Suara mengisi SRQ nomor ${numbers}. Periksa kembali jawabannya.`;
+        }
+        if (!ordinary.length && !protectedQuestionNumbers.length && !safety.value)
+            return isEn.value ? "No clear match. Repeat a complete answer or select it manually." : "Belum ada jawaban yang cocok. Ucapkan jawaban lengkap atau pilih secara manual.";
         return protectedQuestionNumbers.length
             ? (isEn.value
-                  ? "Manual or saved answers remain preserved. Check unclear responses manually."
-                  : "Jawaban manual atau tersimpan dipertahankan. Periksa respons yang belum jelas secara manual.")
+                  ? `Speech matched SRQ ${protectedQuestionNumbers.join(", ")}. Review the existing responses and change them manually if needed.`
+                  : `Suara cocok dengan SRQ nomor ${protectedQuestionNumbers.join(", ")}. Periksa jawaban yang sudah tersimpan dan ubah secara manual bila perlu.`)
             : (isEn.value
                   ? "Voice results reviewed. Clarify any unclear responses; Q17 Yes requires volunteer confirmation."
                   : "Hasil suara telah ditinjau. Klarifikasi jawaban yang belum jelas; Q17 Ya memerlukan konfirmasi relawan.");

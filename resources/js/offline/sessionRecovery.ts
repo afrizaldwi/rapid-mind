@@ -21,6 +21,10 @@ let probe: Promise<void> | null = null;
 
 async function checkServerSession(): Promise<void> {
     const owner = activeOwner;
+    if (!navigator.onLine) {
+        relawanSessionRecovery.state = "SERVER_UNAVAILABLE";
+        return;
+    }
     if (!owner || probe) return probe ?? Promise.resolve();
 
     probe = (async () => {

@@ -242,6 +242,23 @@ final class AssessmentResponseContractTest extends TestCase
         $this->assertSame(0, EmergencyEvent::count());
     }
 
+    public function test_saving_partial_srq_keeps_untouched_items_absent_and_explicit_clears_stored(): void
+    {
+        $data = $this->payload();
+        $data['srq_answers'] = [2 => false];
+        $this->postJson('/relawan/sync/assessments', $data)->assertCreated();
+        $url = "/relawan/assessment/{$data['id']}";
+        $this->postVersionedAssessment("$url/srq", ['responses' => []])->assertOk();
+        $this->postVersionedAssessment("$url/srq", ['responses' => [
+            ['question_number' => 1, 'answer' => 'UNANSWERED'],
+        ]])->assertOk();
+        $rows = SrqResponse::where('assessment_id', $data['id'])->get()->keyBy('question_number');
+        $this->assertCount(2, $rows);
+        $this->assertSame('UNANSWERED', $rows[1]->answer_state);
+        $this->assertFalse($rows[2]->answer);
+        $this->postVersionedAssessment("$url/complete")->assertUnprocessable();
+    }
+
     public function test_legacy_srq_accepts_states_but_all_legacy_writes_reject_completed_assessments(): void
     {
         $data = $this->payload();

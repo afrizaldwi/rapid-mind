@@ -32,6 +32,10 @@
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-3 sm:space-y-4">
+                <section v-if="offlineUnlockRequested" ref="offlineUnlockPanel" class="space-y-3">
+                    <p role="status" class="text-sm text-slate-700">{{ isEn ? 'Unlock device encryption to save these answers and continue offline.' : 'Buka kunci enkripsi perangkat untuk menyimpan jawaban ini dan melanjutkan offline.' }}</p>
+                    <OfflineEncryptionGate :owner="owner" @unlocked="saveAndNext" />
+                </section>
                 <section aria-labelledby="interview-mode-title" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
                         <div class="flex items-center justify-between gap-3 px-3 py-1 sm:px-4">
                             <h3 id="interview-mode-title" class="text-sm font-semibold text-slate-900">
@@ -463,6 +467,8 @@ import { useSrqSpeech } from "@/composables/useSrqSpeech";
 import { useSrqResponses } from "@/composables/useSrqResponses";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
 import { useAssessmentPersistence } from "@/composables/useAssessmentPersistence";
+import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
+import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
 import SrqResponseControl from "@/components/Relawan/Assessment/SrqResponseControl.vue";
 import SrqSafetyDialog from "@/components/Relawan/Assessment/SrqSafetyDialog.vue";
 import NonVerbalObservationFields from "@/components/Relawan/Assessment/NonVerbalObservationFields.vue";
@@ -505,6 +511,8 @@ const localizedSttInterpretationNotice = computed(() =>
     localizeMessage(sttInterpretationNotice.value, locale.value),
 );
 const draftReady = ref(false);
+const offlineUnlockRequested = ref(false);
+const offlineUnlockPanel = ref<HTMLElement | null>(null);
 const isVerbal = ref(props.assessment?.mode !== "NON_VERBAL");
 const observations = ref<NonVerbalObservations>({});
 const metadataPending = ref(0);
@@ -555,6 +563,7 @@ const {
 } = useSrqSpeech(
     () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
     text => { const notice = applySpeechTranscript(text); if (notice) sttInterpretationNotice.value = notice; },
+    owner,
 );
 function interruptAssessment() {
     cleanupStt();
@@ -708,6 +717,16 @@ async function saveAndNext() {
     try {
         await persistDraft();
         if (!current()) return;
+        if (persistence.online && !navigator.onLine) {
+            if (!clinicalKeyReady(owner)) {
+                offlineUnlockRequested.value = true;
+                await nextTick();
+                offlineUnlockPanel.value?.scrollIntoView({ block: "start" });
+                return;
+            }
+            await persistence.continueOffline(`/relawan/assessment/${props.assessment.id}/risk`, current);
+            return;
+        }
         if (metadataError.value) throw new Error(metadataError.value);
         if (draftWarning.value) throw new Error(draftWarning.value);
         runtime.navigate(`/relawan/assessment/${props.assessment.id}/risk`);

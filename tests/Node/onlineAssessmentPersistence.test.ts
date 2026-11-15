@@ -11,6 +11,7 @@ const state: any = {
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: true } });
 const contract = await vueModuleUrl("resources/js/offline/assessmentContract.ts");
 const source = await import(await vueModuleUrl("resources/js/composables/useAssessmentPersistence.ts", {
+    "@/offline/assessmentHandoff": moduleStub("export const preserveOfflineAssessment=async()=>{};"),
     "@/relawan/runtime": moduleStub("export const useRelawanRuntime=()=>globalThis.__onlineAssessment.runtime;"),
     "@/offline/assessmentWorkflow": moduleStub(`
         export {exactAssessmentAnswers} from '${contract}';
@@ -58,9 +59,9 @@ test("online context and draft reads leave encrypted device records untouched", 
 
 test("online SRQ sends all four states without turning unresolved answers into No", async (t) => {
     const f = fixture(t); await f.load();
-    await f.store.saveAssessmentDraft({ id: "synthetic", user_id: 101 }, "srq_answers", { 1: true, 2: false, 3: "UNCLEAR" });
+    await f.store.saveAssessmentDraft({ id: "synthetic", user_id: 101 }, "srq_answers", { 1: true, 2: false, 3: "UNCLEAR", 4: "UNANSWERED" });
     assert.deepEqual(state.requests[0].payload.responses.slice(0, 4).map((r: any) => r.answer), [true, false, "UNCLEAR", "UNANSWERED"]);
-    assert.equal(state.requests[0].payload.responses.length, 20);
+    assert.equal(state.requests[0].payload.responses.length, 4);
     assert.equal(state.requests[0].payload.base_version, "version-0");
     assert.equal(state.localCalls, 0);
 });
