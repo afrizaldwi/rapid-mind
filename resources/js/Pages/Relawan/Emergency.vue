@@ -35,7 +35,7 @@
                     <p class="text-xs text-red-200 mt-1">
                         {{ $t('relawan.emergencyPage.indicator') }}
                         <strong class="text-white">{{
-                            formatRedFlag(emergency.red_flag_type)
+                            (emergency.red_flag_types ?? [emergency.red_flag_type]).map(formatRedFlag).join(' · ')
                         }}</strong>
                     </p>
                 </div>

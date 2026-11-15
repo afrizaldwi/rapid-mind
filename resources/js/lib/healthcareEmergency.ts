@@ -410,6 +410,7 @@ export function normalizeQueueItem(
         hasSrqResponses: Boolean(assessment?.srqResponses.length),
         hasRiskResponses: Boolean(assessment?.riskResponses.length),
         hasFunctionResponses: Boolean(assessment?.functionResponses.length),
+        redFlagTypes: (raw.red_flag_types ?? [redFlag]) as string[],
         redFlagType: redFlag,
         redFlagLabel,
         clinicalSummary,
@@ -590,11 +591,11 @@ export function getDetectedRedFlags(
     const list: Array<{ key: string; title: string; evidence: string }> = [];
 
     if (
-        item.redFlagType === "SUICIDAL_IDEATION" ||
+        (item.redFlagTypes ?? [item.redFlagType]).includes("SUICIDAL_IDEATION") ||
         getSrqAnswer(item, 17) === true
     ) {
         let evidence =
-            item.redFlagType === "SUICIDAL_IDEATION"
+            (item.redFlagTypes ?? [item.redFlagType]).includes("SUICIDAL_IDEATION")
                 ? isEn
                     ? "Recorded Red Flag type: Suicidal Ideation / Risk."
                     : "Jenis Red Flag tercatat: Ideasi / Risiko Bunuh Diri."
@@ -619,7 +620,7 @@ export function getDetectedRedFlags(
         });
     }
 
-    if (item.redFlagType === "PSYCHOSIS") {
+    if ((item.redFlagTypes ?? [item.redFlagType]).includes("PSYCHOSIS")) {
         list.push({
             key: "PSYCHOSIS",
             title: isEn ? "Acute psychotic symptoms" : "Gejala psikotik akut",
@@ -629,7 +630,7 @@ export function getDetectedRedFlags(
         });
     }
 
-    if (item.redFlagType === "SEVERE_AGITATION") {
+    if ((item.redFlagTypes ?? [item.redFlagType]).includes("SEVERE_AGITATION")) {
         list.push({
             key: "SEVERE_AGITATION",
             title: isEn
@@ -641,7 +642,7 @@ export function getDetectedRedFlags(
         });
     }
 
-    if (item.redFlagType === "MEDICAL_CRISIS") {
+    if ((item.redFlagTypes ?? [item.redFlagType]).includes("MEDICAL_CRISIS")) {
         list.push({
             key: "MEDICAL_CRISIS",
             title: isEn ? "Acute medical crisis" : "Krisis medis akut",

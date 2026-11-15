@@ -1,9 +1,9 @@
 <template>
   <HealthcareLayout>
-    <div class="space-y-5 max-w-5xl">
+    <div class="hc-page space-y-5 w-full">
       <!-- Page Header -->
       <div>
-        <h1 class="rm-page-heading text-slate-900">
+        <h1 class="hc-page-title rm-page-heading text-slate-900">
           {{ $t('healthcare.referrals.title', 'Pemantauan Rujukan') }}
         </h1>
         <p class="rm-page-description text-sm font-normal">
@@ -22,7 +22,7 @@
         </button>
       </div>
 
-      <label class="block text-xs">{{ $t('healthcare.referrals.filterLabel', 'Tampilkan rujukan') }}
+      <label class="hc-filter block text-xs">{{ $t('healthcare.referrals.filterLabel', 'Tampilkan rujukan') }}
         <select v-model="filter" class="ml-2 rounded-lg border border-slate-300 p-2">
           <option value="ALL">{{ $t('common.all', 'Semua') }}</option>
           <option value="ACTIVE">{{ $t('common.active', 'Aktif') }}</option>
@@ -32,7 +32,7 @@
       </label>
       <p v-if="!operationsAvailable" role="status" class="text-xs text-amber-800">{{ $t('healthcare.referrals.dispatchUnavailableCompat', 'Skema Dispatch belum siap. Alur kompatibilitas rujukan tetap tersedia.') }}</p>
       <!-- Referrals surface -->
-      <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+      <div class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
         <div v-if="visibleReferrals.length > 0" class="divide-y divide-slate-100">
           <div
             v-for="r in visibleReferrals"
@@ -123,7 +123,7 @@
 
       <!-- Complete Referral Modal -->
       <div v-if="terminalAction" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4" role="presentation">
-        <div role="dialog" aria-modal="true" aria-labelledby="complete-title" class="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg border border-slate-200 space-y-3">
+        <div role="dialog" aria-modal="true" aria-labelledby="complete-title" class="hc-panel w-full max-w-sm rounded-xl bg-white p-5 shadow-lg border border-slate-200 space-y-3">
           <h3 id="complete-title" class="text-sm font-bold text-slate-900">
             {{ $t('healthcare.referrals.completeModalTitle', 'Selesaikan Rujukan Medis?') }}
           </h3>

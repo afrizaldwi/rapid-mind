@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class EmergencyEvent extends Model {
     use HasFactory, HasUuids;
     use \App\Models\Concerns\RoutesClinicalCase;
-    protected $fillable = ['patient_id', 'assessment_id', 'user_id', 'red_flag_type', 'status', 'latitude', 'longitude', 'shelter_id', 'notes'];
+    protected $fillable = ['patient_id', 'assessment_id', 'user_id', 'red_flag_type', 'red_flag_types', 'status', 'latitude', 'longitude', 'shelter_id', 'notes'];
     protected function casts(): array {
         return [
+            'red_flag_types' => 'array',
             'red_flag_type' => \App\Enums\RedFlagType::class,
             'status' => \App\Enums\EmergencyStatus::class,
             'latitude' => 'decimal:8',

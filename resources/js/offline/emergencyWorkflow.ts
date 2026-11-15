@@ -28,6 +28,7 @@ export type EmergencyInput = {
     patientId?: string | null;
     assessmentId?: string | null;
     redFlagType: string;
+    redFlagTypes?: string[];
     latitude?: number | null;
     longitude?: number | null;
     shelterId?: number | null;
@@ -62,6 +63,7 @@ export async function buildEmergencySyncPayload(
         assessment_id: emergency.assessment_id ?? null,
         ...(assessment ? { assessment_mode: serverAssessmentMode ?? assessment.mode } : {}),
         red_flag_type: emergency.red_flag_type,
+        red_flag_types: emergency.red_flag_types ?? [emergency.red_flag_type],
         latitude: emergency.latitude ?? null,
         longitude: emergency.longitude ?? null,
         notes: emergency.notes ?? null,
@@ -85,7 +87,8 @@ export async function createLocalEmergency(
 ) {
     requireOwner(owner);
     const access = captureClinicalAccess();
-    if (!redFlags.has(input.redFlagType))
+    const selected = input.redFlagTypes ?? [input.redFlagType];
+    if (selected[0] !== input.redFlagType || new Set(selected).size !== selected.length || selected.some(flag => !redFlags.has(flag)))
         throw new Error("Pilih indikator Red Flag yang valid.");
     const notes = input.notes?.trim() || null;
     if (notes && notes.length > 1000)
@@ -120,6 +123,7 @@ export async function createLocalEmergency(
         patient_name: patient?.name,
         assessment_id: assessment?.id ?? null,
         red_flag_type: input.redFlagType,
+        red_flag_types: selected,
         status: "PENDING",
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,

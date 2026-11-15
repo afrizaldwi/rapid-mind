@@ -1,24 +1,24 @@
 <template>
     <div
         v-if="show"
-        class="rm-app rm-overlay fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 flex justify-center items-end sm:items-center"
+        class="rm-app fixed inset-0 z-50 bg-slate-50 flex justify-center"
     >
         <div ref="dialogPanel" role="dialog" aria-modal="true" aria-labelledby="t0-verification-title" tabindex="-1" @keydown="keydown"
-            class="rm-dialog bg-white w-full max-w-lg shadow-xl border border-red-200 overflow-hidden flex flex-col"
+            class="t0-page bg-white w-full overflow-hidden flex flex-col"
         >
             <!-- Header -->
             <div
-                class="bg-red-800 text-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3"
+                class="t0-header flex items-center justify-between gap-3"
             >
                 <div class="flex items-center space-x-3">
-                    <Siren class="h-6 w-6" aria-hidden="true" />
+                    <Siren class="size-11 shrink-0 rounded-xl bg-red-50 p-2.5 text-red-800" :stroke-width="1.6" aria-hidden="true" />
                     <div>
                         <h2 id="t0-verification-title"
-                            class="text-lg font-extrabold tracking-wide uppercase"
+                            class="text-xl sm:text-2xl font-semibold tracking-tight"
                         >
                             {{ isEn ? "Verify T0 Emergency" : "Verifikasi T0 Darurat" }}
                         </h2>
-                        <p class="text-xs text-red-200">
+                        <p class="text-sm text-slate-600">
                             {{ isEn ? "Emergency report for the authorized Healthcare team" : "Laporan darurat untuk tim Healthcare berwenang" }}
                         </p>
                     </div>
@@ -27,7 +27,7 @@
                     type="button"
                     :disabled="isSubmitting"
                     @click="$emit('close')"
-                    class="text-red-200 hover:text-white p-1 rounded-lg cursor-pointer"
+                    class="grid size-11 place-items-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"
                     :aria-label="isEn ? 'Close' : 'Tutup'"
                 >
                     <X class="h-4 w-4" aria-hidden="true" />
@@ -35,14 +35,15 @@
             </div>
 
             <!-- Scrollable Form Body -->
-            <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 min-h-0 text-slate-900">
+            <div class="t0-body overflow-y-auto flex-1 min-h-0 text-slate-900">
+                <div class="t0-content">
                 <LockedEmergencyGuidance />
                 <!-- Gate 1: Penyintas -->
                 <div class="space-y-3">
                     <label
-                        class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
+                        class="block text-lg font-semibold tracking-tight text-slate-900"
                     >
-                        {{ isEn ? "1. Survivor Identity" : "1. Identitas Penyintas" }}
+                        {{ isEn ? "Survivor identity" : "Identitas penyintas" }}
                     </label>
                     <div
                         class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
@@ -141,48 +142,32 @@
                 </div>
 
                 <!-- Gate 2: Alasan Red Flag -->
-                <div class="space-y-3">
-                    <label
-                        class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
-                    >
-                        {{ isEn ? "2. Primary Red Flag Indicator *" : "2. Indikator Red Flag Utama *" }}
-                    </label>
-                    <div class="grid grid-cols-1 gap-2.5">
-                        <button
-                            v-for="rf in redFlagOptions"
-                            :key="rf.type"
-                            type="button"
-                            @click="selectRedFlag(rf.type)"
-                            class="text-left p-3.5 rounded-xl border text-sm font-medium transition cursor-pointer"
-                            :class="
-                                selectedRedFlag === rf.type
-                                    ? 'border-red-600 bg-red-50 text-red-950 font-bold ring-2 ring-red-500/20'
-                                    : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                            "
-                        >
-                            <div class="flex items-center justify-between">
-                                <span>{{ rf.title }}</span>
-                                <span
-                                    v-if="selectedRedFlag === rf.type"
-                                    class="text-red-700 font-bold text-base"
-                                    >✓</span
-                                >
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1 font-normal">
-                                {{ rf.desc }}
-                            </p>
+                <fieldset class="min-w-0" :disabled="isSubmitting">
+                    <legend class="text-lg font-semibold tracking-tight">{{ isEn ? 'Primary red flags' : 'Indikator red flag utama' }}</legend>
+                    <div class="mt-1 mb-3 flex flex-wrap justify-between gap-2 text-sm text-slate-600">
+                        <p>{{ isEn ? 'Select all that apply. Choose at least one.' : 'Pilih semua yang sesuai, minimal satu.' }}</p>
+                        <span aria-live="polite" class="font-semibold tabular-nums">{{ selectedFlags.length }} {{ isEn ? 'selected' : 'dipilih' }}</span>
+                    </div>
+                    <div class="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 divide-y divide-slate-200">
+                        <button v-for="rf in redFlagOptions" :key="rf.type" type="button"
+                            :aria-pressed="selectedFlags.includes(rf.type)" @click="selectRedFlag(rf.type)"
+                            class="t0-option">
+                            <span aria-hidden="true" class="t0-check">{{ selectedFlags.includes(rf.type) ? '✓' : '' }}</span>
+                            <span><strong class="block font-semibold">{{ rf.title }}</strong>
+                                <span class="mt-1 block text-sm text-slate-600">{{ rf.desc }}</span>
+                            </span>
                         </button>
                     </div>
-                </div>
+                </fieldset>
 
                 <!-- Gate 3: Catatan & Lokasi -->
                 <div class="space-y-3">
-                    <label
-                        class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
+                    <label for="t0-notes"
+                        class="block text-lg font-semibold tracking-tight text-slate-900"
                     >
-                        {{ isEn ? "3. Field Notes & Pickup Location" : "3. Catatan Lapangan & Lokasi Penjemputan" }}
+                        {{ isEn ? "Field notes & pickup location" : "Catatan & lokasi penjemputan" }}
                     </label>
-                    <textarea
+                    <textarea id="t0-notes" maxlength="1000"
                         v-model="notes"
                         rows="2"
                         :placeholder="isEn ? 'Example: survivor name if known, physical danger signs, specific tent location, or current condition...' : 'Contoh: nama penyintas jika diketahui, tanda bahaya fisik, lokasi tenda spesifik, atau kondisi penyintas saat ini...'"
@@ -210,6 +195,7 @@
                         </button>
                     </div>
                 </div>
+                </div>
             </div>
 
             <div
@@ -222,21 +208,21 @@
 
             <!-- Action Footer -->
             <div
-                class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row gap-3"
+                class="t0-footer flex items-center gap-3"
             >
                 <button
                     type="button"
                     :disabled="isSubmitting"
                     @click="$emit('close')"
-                    class="sm:flex-1 py-3 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-100 transition cursor-pointer"
+                    class="py-3 px-4 rounded-full text-slate-700 font-semibold text-sm hover:bg-slate-100 transition cursor-pointer"
                 >
                     {{ isEn ? "Cancel" : "Batalkan" }}
                 </button>
                 <button
                     type="button"
-                    :disabled="!selectedRedFlag || isSubmitting"
+                    :disabled="!selectedFlags.length || isSubmitting"
                     @click="submitEmergency"
-                    class="sm:flex-2 py-3.5 px-6 rounded-xl bg-red-800 hover:bg-red-900 text-white font-extrabold text-sm tracking-wide shadow-md transition disabled:opacity-50 cursor-pointer"
+                    class="flex-1 sm:flex-none py-3 px-5 rounded-full bg-red-800 hover:bg-red-900 text-white font-extrabold text-sm tracking-wide transition disabled:opacity-50 cursor-pointer"
                 >
                     <span v-if="isSubmitting">{{ isEn ? "Saving T0-Suspect…" : "Menyimpan T0-Suspect…" }}</span>
                     <span v-else>{{ isEn ? "SEND T0-SUSPECT REPORT" : "KIRIM T0-SUSPECT" }}</span>
@@ -291,7 +277,7 @@ const scope = useClinicalTaskScope(() => {
     chosenPatientId.value = "";
     notes.value = "";
     coordinates.value = null;
-    selectedRedFlag.value = "";
+    selectedFlags.value = [];
 }, { serverOnly: true });
 const owner = relawanOwner();
 let keyWasReady = clinicalKeyReady(owner);
@@ -356,7 +342,7 @@ const filteredPatients = computed(() => {
         patient.name.toLocaleLowerCase().includes(query),
     );
 });
-const selectedRedFlag = ref("");
+const selectedFlags = ref<string[]>([]);
 const notes = ref("");
 const isSubmitting = ref(false);
 const rawSubmissionError = ref<{ id: string; detail?: string } | string>("");
@@ -431,10 +417,10 @@ watch(
         const check = ++patientLoadCheck;
         if (!show) { scope.invalidate(); return; }
         const current = scope.capture();
-        selectedRedFlag.value =
+        selectedFlags.value =
             props.suggestedRedFlag === "SUICIDAL_IDEATION"
-                ? props.suggestedRedFlag
-                : "";
+                ? [props.suggestedRedFlag]
+                : [];
         notes.value = "";
         isSubmitting.value = false;
         chosenPatientId.value = "";
@@ -490,16 +476,19 @@ function clearPatientSelection() {
 }
 
 function selectRedFlag(type: string) {
-    selectedRedFlag.value = type;
+    if (isSubmitting.value) return;
+    selectedFlags.value = selectedFlags.value.includes(type)
+        ? selectedFlags.value.filter(flag => flag !== type)
+        : [...selectedFlags.value, type];
     rawSubmissionError.value = "";
 }
 
 async function submitEmergency() {
-    if (!props.show || isSubmitting.value || !selectedRedFlag.value) return;
+    if (!props.show || isSubmitting.value || !selectedFlags.value.length) return;
     const current = scope.capture();
     const input = {
         patientId: effectivePatientId.value || null, assessmentId: props.assessmentId,
-        redFlagType: selectedRedFlag.value, shelterId: runtime.shelterId, notes: notes.value,
+        redFlagType: selectedFlags.value[0], redFlagTypes: [...selectedFlags.value], shelterId: runtime.shelterId, notes: notes.value,
         latitude: coordinates.value?.lat ?? null, longitude: coordinates.value?.lng ?? null,
         serverKnownAssessment: false,
         serverAssessmentMode: undefined as "VERBAL" | "NON_VERBAL" | undefined,
@@ -547,3 +536,21 @@ async function submitEmergency() {
     emit("close");
 }
 </script>
+
+<style scoped>
+.t0-page { height: 100%; height: 100dvh; }
+.t0-header,.t0-footer { flex: none; padding: .8rem max(1rem,calc((100% - 48rem)/2)); background: white; }
+.t0-header { border-top: .25rem solid #991b1b; box-shadow: inset 0 -1px #e2e8f0; }
+.t0-body { background: #f5f7f8; overscroll-behavior: contain; }
+.t0-content { width: min(100%,50rem); margin-inline: auto; padding: 1rem; display: grid; gap: 1.5rem; }
+.t0-content > div.space-y-3 { padding: 1rem; border-radius: 1rem; background: white; box-shadow: 0 2px 12px #33415508; }
+.t0-option { width: 100%; display: flex; align-items: flex-start; gap: .85rem; text-align: start; padding: .95rem 1rem; }
+.t0-option:hover { background: #f8fafc; }
+.t0-option[aria-pressed=true] { background: #fff4f3; color: #78171b; }
+.t0-check { margin-top: .15em; width: 1.25rem; height: 1.25rem; flex: none; border: 1.5px solid #64748b; border-radius: .35rem; display: grid; place-items: center; line-height: 1; }
+[aria-pressed=true] > .t0-check { background: #991b1b; border-color: #991b1b; color: white; }
+.t0-option:focus-visible { outline: 2px solid #0f766e; outline-offset: -3px; }
+.t0-footer { justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-bottom: max(.8rem,env(safe-area-inset-bottom)); }
+@media(min-width: 48rem) { .t0-content { padding-block: 1.75rem; gap: 1.75rem; } }
+@media(prefers-reduced-motion: no-preference) { .t0-check { transition: transform .16s cubic-bezier(.2,.8,.2,1); } .t0-option:active .t0-check { transform: scale(.94); } }
+</style>

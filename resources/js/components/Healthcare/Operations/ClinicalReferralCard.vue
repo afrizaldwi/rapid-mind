@@ -1,7 +1,7 @@
 <template>
     <fieldset :disabled="referral.can_manage === false"
         data-healthcare-draft
-        class="rounded-lg border border-slate-200 bg-white p-3 space-y-2 text-xs"
+        class="hc-panel rounded-lg border border-slate-200 bg-white p-3 space-y-2 text-xs"
         :aria-label="$t('healthcare.operations.clinicalReferralAria', 'Rujukan klinis')"
     >
         <p v-if="referral.can_manage === false" class="text-slate-600" role="status">

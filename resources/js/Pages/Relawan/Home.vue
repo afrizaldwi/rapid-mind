@@ -13,7 +13,7 @@
                         <p class="mt-0.5 text-sm leading-snug text-slate-600">{{ $t('relawan.roleBadge') }}</p>
                     </div>
                 </div>
-                <div class="home-assignment grid items-center gap-x-2 border-t border-slate-200 bg-slate-50 py-1 ps-4 pe-2 sm:ps-5 sm:pe-3">
+                <div class="home-assignment border-t border-slate-200 bg-slate-50 py-1 ps-4 pe-2 sm:ps-5 sm:pe-3">
                     <p class="flex min-w-0 items-start gap-2 py-1.5 text-sm font-medium leading-snug text-slate-700">
                         <MapPin class="mt-0.5 size-4 shrink-0 text-teal-700" aria-hidden="true" />
                         <span class="min-w-0 [overflow-wrap:anywhere]">
@@ -21,9 +21,16 @@
                             {{ shelter?.name || userShelterName || (isEn ? 'Shelter information unavailable' : 'Informasi posko belum tersedia') }}
                         </span>
                     </p>
-                    <StatusIndicator class="home-status" :kind="statusKind" :label="statusLabel" @open="openStatus" />
                 </div>
             </section>
+            <button type="button" @click="openStatus"
+                class="mb-4 flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-sm text-slate-600 hover:bg-white focus-visible:outline-2 focus-visible:outline-teal-700">
+                <span class="font-medium">{{ isEn ? 'Data status' : 'Status Data' }}</span>
+                <span class="flex min-w-0 items-center gap-2">
+                    <span class="text-right" :class="statusKind === 'local-failure' ? 'text-red-800' : ['failed', 'unqueued', 'reauthentication-required'].includes(statusKind) ? 'text-amber-800' : ''">{{ statusLabel }}</span>
+                    <ChevronRight class="size-4 shrink-0" aria-hidden="true" />
+                </span>
+            </button>
         </template>
         <div class="space-y-6">
             <p
@@ -196,9 +203,9 @@
 </template>
 
 <script setup lang="ts">
+import { ChevronRight } from "lucide-vue-next";
 import { computed } from "vue";
 import { BookOpen, ClipboardList, ContactRound, Info, MapPin, Siren } from "lucide-vue-next";
-import StatusIndicator from "@/components/ui/StatusIndicator.vue";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
@@ -286,30 +293,3 @@ const displayDraft = computed(() => {
         : null;
 });
 </script>
-
-<style scoped>
-.home-assignment {
-    grid-template-columns: minmax(0, 1fr) fit-content(44%);
-}
-.home-assignment .home-status {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    padding-inline: .5rem;
-}
-.home-status:hover, .home-status:focus-visible {
-    background: white;
-}
-.home-status::after {
-    content: '';
-    inline-size: .375rem;
-    block-size: .375rem;
-    flex-shrink: 0;
-    border-block-start: 1.5px solid currentColor;
-    border-inline-end: 1.5px solid currentColor;
-    transform: rotate(45deg);
-}
-.home-status :deep(.truncate) {
-    white-space: normal;
-    overflow-wrap: anywhere;
-}
-</style>

@@ -65,6 +65,21 @@ final class RelawanSyncContractTest extends TestCase
         ], $changes);
     }
 
+    public function test_multiple_red_flags_survive_replay_and_conflicting_changes_are_rejected(): void
+    {
+        $flags = ['PSYCHOSIS', 'MEDICAL_CRISIS'];
+        $payload = $this->emergency(['red_flag_types' => $flags]);
+        $send = fn (array $data) => $this->postJson('/relawan/sync/emergencies', $data);
+        foreach ([[], ['PSYCHOSIS', 'UNKNOWN'], ['PSYCHOSIS', 'PSYCHOSIS'], ['MEDICAL_CRISIS']] as $invalid) {
+            $send(array_replace($payload, ['red_flag_types' => $invalid]))->assertUnprocessable();
+        }
+        $send($payload)->assertCreated()->assertJsonPath('emergency.red_flag_types', $flags);
+        $send(array_replace($payload, ['red_flag_type' => 'MEDICAL_CRISIS', 'red_flag_types' => array_reverse($flags)]))
+            ->assertOk()->assertJsonPath('replayed', true);
+        $send(array_replace($payload, ['red_flag_types' => ['PSYCHOSIS']]))->assertConflict();
+        $this->assertSame($flags, EmergencyEvent::findOrFail($payload['id'])->red_flag_types);
+    }
+
     public function test_completed_assessment_uses_stable_ids_canonical_triage_and_exact_replay(): void
     {
         $payload = $this->assessment();

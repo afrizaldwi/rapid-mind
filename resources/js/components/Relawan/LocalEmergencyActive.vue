@@ -1,96 +1,62 @@
 <template>
-    <div v-if="emergency" class="space-y-5 pb-20">
-        <div class="rounded-xl bg-red-800 p-6 text-white shadow-xl">
-            <div class="flex items-center gap-2 text-xs font-bold uppercase">
-                <Siren class="h-4 w-4" aria-hidden="true" />
-                <p>{{ isEn ? "T0-Suspect Incident" : "Insiden T0-Suspect" }}</p>
-            </div>
-            <h2 class="mt-2 text-2xl font-black">
-                {{ emergency.patient_name || (isEn ? "Unidentified Survivor" : "Penyintas Tanpa Nama") }}
-            </h2>
-            <p class="mt-1 text-sm">{{ reason }}</p>
-        </div>
-
-        <div
-            class="space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm"
-        >
-            <div class="flex justify-between gap-3">
-                <span>{{ isEn ? "Report status" : "Status laporan" }}</span><strong>T0-Suspect</strong>
-            </div>
-            <div class="flex justify-between gap-3">
-                <span>{{ isEn ? "Transmission" : "Transmisi" }}</span><strong>{{ delivery.label }}</strong>
-            </div>
-        </div>
-
-        <div
-            class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
-        >
-            <strong>{{ isEn ? "✓ Saved on device." : "✓ Tersimpan di perangkat." }}</strong>
-            <p class="mt-1">{{ delivery.detail }}</p>
-            <p class="mt-1">{{ delivery.realtime }}</p>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
-            <p>
-                <strong>{{ isEn ? "Time:" : "Waktu:" }}</strong>
-                {{ new Date(emergency.created_at).toLocaleString(isEn ? "en-US" : "id-ID") }}
+    <article v-if="emergency" class="incident mx-auto grid w-full max-w-4xl gap-4 text-slate-900 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] md:items-start">
+        <header class="space-y-3 px-1 pt-1 md:px-4 md:pt-5">
+            <p class="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-900">
+                <Siren class="size-5" aria-hidden="true" />
+                {{ isEn ? "T0-Suspect Incident" : "Insiden T0-Suspect" }}
             </p>
-            <p>
-                <strong>{{ isEn ? "Location:" : "Lokasi:" }}</strong>
-                {{
-                    emergency.latitude != null && emergency.longitude != null
-                        ? `${emergency.latitude}, ${emergency.longitude}`
-                        : (isEn ? "GPS unavailable" : "GPS tidak tersedia")
-                }}
-            </p>
-            <p v-if="emergency.notes">
-                <strong>{{ isEn ? "Notes:" : "Catatan:" }}</strong> {{ emergency.notes }}
-            </p>
-        </div>
+            <h1 class="break-words text-[clamp(1.6rem,5vw,2.4rem)] font-semibold leading-tight tracking-tight">{{ emergency.patient_name || (isEn ? "Unidentified survivor" : "Penyintas tanpa nama") }}</h1>
+            <ul class="list-disc space-y-1 pl-5 text-sm leading-relaxed text-slate-700 marker:text-red-800">
+                <li v-for="flag in reason" :key="flag">{{ flag }}</li>
+            </ul>
+        </header>
 
-        <p
-            v-if="retryError"
-            role="alert"
-            class="text-sm font-semibold text-red-800"
-        >
-            {{ retryError }}
-        </p>
-        <button
-            v-if="emergency.sync_state !== 'SYNCED'"
-            type="button"
-            class="w-full rounded-xl bg-teal-700 p-3 font-bold text-white"
-            @click="retry"
-        >
-            {{ isEn ? "Retry synchronization" : "Coba sinkronkan kembali" }}
-        </button>
-        <a
-            v-else
-            :href="`/relawan/emergencies/${emergency.id}`"
-            class="block rounded-xl bg-teal-700 p-3 text-center font-bold text-white"
-            >{{ isEn ? "View T0 report details" : "Lihat detail laporan T0" }}</a
-        >
-        <a
-            :href="smsHref"
-            class="block rounded-xl bg-slate-800 p-3 text-center font-bold text-white"
-            >{{ isEn ? "Open backup SMS app" : "Buka aplikasi SMS cadangan" }}</a
-        >
-        <p class="text-center text-xs text-slate-600">
-            {{ smsGuidance }}
-        </p>
-        <button
-            v-if="emergency.sync_state === 'SYNCED'"
-            type="button"
-            class="w-full p-2 text-sm font-semibold text-slate-700"
-            @click="$emit('close')"
-        >
-            {{ isEn ? "Back to previous page" : "Kembali ke halaman sebelumnya" }}
-        </button>
-    </div>
+        <div class="incident-sheet grid gap-4 rounded-3xl bg-white p-4 sm:p-6">
+            <section aria-labelledby="incident-delivery">
+                <h2 id="incident-delivery" class="mb-2 text-sm font-medium text-slate-600">{{ isEn ? "Report delivery" : "Pengiriman laporan" }}</h2>
+                <div class="rounded-2xl px-4 py-4" :class="delivery.accepted ? 'bg-teal-50 text-teal-950' : 'bg-amber-50 text-amber-950'">
+                    <p role="status" class="text-lg font-semibold tracking-tight">{{ delivery.label }}</p>
+                    <p class="mt-1 text-sm leading-relaxed">{{ delivery.detail }}</p>
+                </div>
+                <p class="mt-3 text-sm leading-relaxed text-slate-700">{{ delivery.realtime }}</p>
+                <div class="mt-4 grid gap-2 text-sm">
+                    <p v-if="retryError" role="alert" class="font-semibold text-red-800">{{ retryError }}</p>
+                    <button v-if="!delivery.accepted" type="button" class="incident-primary" @click="retry">{{ isEn ? "Retry synchronization" : "Coba sinkronkan kembali" }}</button>
+                    <a v-else :href="`/relawan/emergencies/${emergency.id}`" class="incident-primary">{{ isEn ? "View T0 report details" : "Lihat detail laporan T0" }}</a>
+                </div>
+            </section>
+
+            <dl class="grid gap-3 border-t border-slate-200 pt-4 text-sm">
+                <div>
+                    <dt class="flex items-center gap-2 text-slate-600"><Clock class="size-4" aria-hidden="true" />{{ isEn ? "Time" : "Waktu" }}</dt>
+                    <dd class="mt-1 font-medium tabular-nums">{{ new Date(emergency.created_at).toLocaleString(isEn ? "en-US" : "id-ID") }}</dd>
+                </div>
+                <div>
+                    <dt class="flex items-center gap-2 text-slate-600"><MapPin class="size-4" aria-hidden="true" />{{ isEn ? "Location" : "Lokasi" }}</dt>
+                    <dd class="mt-1 break-words font-medium tabular-nums">{{ emergency.latitude != null && emergency.longitude != null ? `${emergency.latitude}, ${emergency.longitude}` : (isEn ? "GPS unavailable" : "GPS tidak tersedia") }}</dd>
+                </div>
+                <div v-if="emergency.notes">
+                    <dt class="text-slate-600">{{ isEn ? "Notes" : "Catatan" }}</dt>
+                    <dd class="mt-1 whitespace-pre-line break-words">{{ emergency.notes }}</dd>
+                </div>
+            </dl>
+
+            <div class="grid gap-2 border-t border-slate-200 pt-3 text-sm">
+                <a :href="smsHref" class="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-center font-semibold hover:bg-slate-50">
+                    <MessageSquare class="size-4 shrink-0" aria-hidden="true" />{{ isEn ? "Open backup SMS app" : "Buka aplikasi SMS cadangan" }}
+                </a>
+                <p class="text-xs leading-relaxed text-slate-600">{{ smsGuidance }}</p>
+                <button v-if="delivery.accepted" type="button" class="min-h-11 justify-self-start rounded text-sm font-medium text-teal-800 hover:underline" @click="$emit('close')">
+                    {{ isEn ? "Back to previous page" : "Kembali ke halaman sebelumnya" }}
+                </button>
+            </div>
+        </div>
+    </article>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { Siren } from "lucide-vue-next";
+import { Clock, MapPin, MessageSquare, Siren } from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
 import { db, type LocalEmergency } from "@/offline/db";
 import { emergencyRepository } from "@/offline/emergencyRepository";
@@ -149,7 +115,11 @@ const smsHref = computed(() => getEmergencySmsHref(locale.value));
 const smsGuidance = computed(() => getEmergencySmsGuidance(locale.value));
 
 const reason = computed(() => {
-    const code = emergency.value?.red_flag_type ?? "";
+    const codes = emergency.value?.red_flag_types ?? [emergency.value?.red_flag_type ?? ""];
+    return codes.map(labelForFlag);
+});
+
+function labelForFlag(code: string) {
     if (isEn.value) {
         return (
             {
@@ -168,7 +138,7 @@ const reason = computed(() => {
             MEDICAL_CRISIS: "Kegawatdaruratan medis",
         }[code] ?? "Indikator Red Flag"
     );
-});
+}
 
 async function retry() {
     retryErrorFailed.value = false;
@@ -179,3 +149,29 @@ async function retry() {
     }
 }
 </script>
+
+<style scoped>
+.incident-primary {
+    display: grid;
+    min-height: 2.75rem;
+    place-items: center;
+    padding: .625rem 1rem;
+    border-radius: 2rem;
+    background: #0f766e;
+    color: white;
+    text-align: center;
+    font-weight: 600;
+}
+.incident-sheet {
+    box-shadow: 0 0 0 4px rgb(203 213 225 / .3), 0 10px 36px rgb(51 65 85 / .06);
+}
+.incident :is(a, button):focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 3px;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .incident-primary { transition: transform 160ms cubic-bezier(.2,.8,.2,1); }
+    .incident-primary:active { transform: scale(.985); }
+}
+.incident-primary:hover { background: #115e59; }
+</style>

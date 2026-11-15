@@ -36,7 +36,7 @@
                 <section aria-labelledby="interview-mode-title" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
                         <div class="flex items-center justify-between gap-3 px-3 py-1 sm:px-4">
                             <h3 id="interview-mode-title" class="text-sm font-semibold text-slate-900">
-                                {{ isEn ? 'Interview mode' : 'Mode wawancara' }}
+                                {{ isVerbal ? (isEn ? 'Voice transcription' : 'Transkripsi suara') : (isEn ? 'Interview mode' : 'Mode wawancara') }}
                             </h3>
                             <button
                                 type="button"
@@ -59,7 +59,6 @@
                             v-if="isVerbal"
                             class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-slate-200 px-3 py-2 sm:px-4"
                         >
-                            <h4 class="text-sm font-semibold text-slate-800">{{ isEn ? 'Voice transcription' : 'Transkripsi suara' }}</h4>
                             <div
                                 role="group"
                                 :aria-label="isEn ? 'STT mode options' : 'Pilihan mode STT'"
@@ -96,28 +95,7 @@
                                     Online
                                 </button>
                             </div>
-                        </div>
-                        <div v-if="isVerbal" class="flex flex-wrap items-center gap-2 px-3 pb-2 text-xs sm:px-4">
-                            <label :for="sttMode === 'online' ? 'srq-spoken-language' : undefined" class="font-semibold text-slate-700">
-                                {{ isEn ? "Spoken language" : "Bahasa ucapan" }}
-                            </label>
-                            <select
-                                v-if="sttMode === 'online'"
-                                id="srq-spoken-language"
-                                data-stt-language
-                                :value="spokenLanguage"
-                                :disabled="!draftReady || !!safety"
-                                @change="selectSpeechLanguage(($event.target as HTMLSelectElement).value as 'id-ID' | 'en-US')"
-                                class="min-h-11 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:opacity-60"
-                                aria-describedby="srq-spoken-language-status"
-                            >
-                                <option value="id-ID">{{ isEn ? "Indonesian (id-ID)" : "Bahasa Indonesia (id-ID)" }}</option>
-                                <option value="en-US">{{ isEn ? "English (en-US)" : "Bahasa Inggris (en-US)" }}</option>
-                            </select>
-                            <span id="srq-spoken-language-status" role="status" class="text-slate-600">
-                                {{ sttMode === 'online' ? 'Online' : 'Offline' }} · {{ spokenLanguageLabel }}
-                                <template v-if="sttMode === 'offline'">{{ isEn ? ' · Indonesian only' : ' · Hanya Bahasa Indonesia' }}</template>
-                            </span>
+                            <span class="text-xs text-slate-600">{{ spokenLanguageLabel }}</span>
                         </div>
                         <div v-if="isVerbal && sttStatus !== 'preparing' && sttStatus !== 'processing'" class="flex flex-wrap gap-2 px-3 pb-3 sm:px-4">
                             <button
@@ -151,31 +129,16 @@
                         </div>
                     <div
                         v-if="isVerbal"
-                        class="border-t border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 sm:px-4"
+                        class="border-t border-slate-200 px-3 py-1 text-xs text-slate-700 sm:px-4"
                     >
                         <div
                             class="flex items-center justify-between gap-2"
                         >
                             <div role="status" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                                <span class="font-semibold text-slate-800">{{
+                                <span class="font-medium text-slate-600">{{
                                     sttStatusLabel
                                 }}</span>
-                                <span
-                                    v-if="sttMode === 'offline' && sttBackend"
-                                    class="text-xs font-medium text-slate-600"
-                                >
-                                    {{
-                                        sttBackend === "webgpu"
-                                            ? "WebGPU"
-                                            : "WASM"
-                                    }}
-                                </span>
-                                <span
-                                    v-else-if="sttMode === 'online'"
-                                    class="text-xs font-medium text-slate-600"
-                                >
-                                    Web Speech
-                                </span>
+
                             </div>
 
                             <button
@@ -310,8 +273,48 @@
                         <div
                             id="srq-stt-technical-details"
                             v-show="sttDetailsOpen"
-                            class="mt-1 space-y-1 border-t border-slate-200 pb-2 pt-2 text-sm leading-relaxed"
+                            class="mt-1 space-y-3 border-t border-slate-200 pb-2 pt-3 text-sm leading-relaxed"
                         >
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <label :for="sttMode === 'online' ? 'srq-spoken-language' : undefined" class="font-semibold text-slate-700">
+                                {{ isEn ? "Spoken language" : "Bahasa ucapan" }}
+                            </label>
+                            <select
+                                v-if="sttMode === 'online'"
+                                id="srq-spoken-language"
+                                data-stt-language
+                                :value="spokenLanguage"
+                                :disabled="!draftReady || !!safety"
+                                @change="selectSpeechLanguage(($event.target as HTMLSelectElement).value as 'id-ID' | 'en-US')"
+                                class="min-h-11 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:opacity-60"
+                                aria-describedby="srq-spoken-language-status"
+                            >
+                                <option value="id-ID">{{ isEn ? "Indonesian (id-ID)" : "Bahasa Indonesia (id-ID)" }}</option>
+                                <option value="en-US">{{ isEn ? "English (en-US)" : "Bahasa Inggris (en-US)" }}</option>
+                            </select>
+                            <span id="srq-spoken-language-status" role="status" class="text-slate-600">
+                                {{ sttMode === 'online' ? 'Online' : 'Offline' }} · {{ spokenLanguageLabel }}
+                                <template v-if="sttMode === 'offline'">{{ isEn ? ' · Indonesian only' : ' · Hanya Bahasa Indonesia' }}</template>
+                            </span>
+                        </div>
+                            <p class="flex items-center gap-2 text-xs text-slate-600">
+                                <span
+                                    v-if="sttMode === 'offline' && sttBackend"
+                                    class="text-xs font-medium text-slate-600"
+                                >
+                                    {{
+                                        sttBackend === "webgpu"
+                                            ? "WebGPU"
+                                            : "WASM"
+                                    }}
+                                </span>
+                                <span
+                                    v-else-if="sttMode === 'online'"
+                                    class="text-xs font-medium text-slate-600"
+                                >
+                                    Web Speech
+                                </span>
+                            </p>
                             <p v-if="sttMessage && sttStatus !== 'error'" class="text-slate-600">
                                 {{ sttMessage }}
                             </p>

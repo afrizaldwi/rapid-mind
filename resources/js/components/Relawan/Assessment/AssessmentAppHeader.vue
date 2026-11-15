@@ -4,7 +4,7 @@
         <div class="flex min-w-0 flex-1 flex-col items-start sm:flex-row sm:items-center sm:gap-4">
             <p class="min-w-0 break-words text-xs font-semibold leading-snug text-slate-700 sm:text-sm">{{ shelter }}</p>
             <StatusIndicator
-                v-if="!(onlineServer && online && kind === 'unavailable')"
+                v-if="(!hideRoutineStatus || needsAttention) && !(onlineServer && online && kind === 'unavailable')"
                 :kind="kind"
                 :label="onlineServer && !online && kind === 'unavailable' ? 'Offline' : label"
                 @open="$emit('status')"
@@ -18,15 +18,16 @@
     <p v-if="onlineServer && !online" role="alert" class="shrink-0 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">{{ isEn ? 'Connection lost. Check unsaved answers and keep this page open.' : 'Koneksi terputus. Periksa jawaban yang belum tersimpan dan jangan tutup halaman ini.' }}</p>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { LogOut } from 'lucide-vue-next';
 import StatusIndicator from '@/components/ui/StatusIndicator.vue';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher.vue';
 import { useI18n } from '@/i18n';
 import type { OperationalKind } from '@/composables/useRelawanOperationalStatus';
-defineProps<{ shelter: string; kind: OperationalKind; label: string; onlineServer?: boolean }>();
+const props = defineProps<{ shelter: string; kind: OperationalKind; label: string; onlineServer?: boolean; hideRoutineStatus?: boolean }>();
 defineEmits<{ status: []; logout: [] }>();
 const { isEn } = useI18n();
+const needsAttention = computed(() => ['local-failure', 'failed', 'unqueued', 'reauthentication-required'].includes(props.kind));
 const online = ref(typeof navigator !== 'undefined' && navigator.onLine);
 const updateConnection = () => { online.value = navigator.onLine; };
 onMounted(() => { window.addEventListener('online', updateConnection); window.addEventListener('offline', updateConnection); });

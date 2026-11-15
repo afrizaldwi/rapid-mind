@@ -4,7 +4,7 @@
     </p>
     <div
         v-else
-        class="rm-app min-h-screen bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased"
+        class="rm-app hc-workspace h-dvh overflow-hidden bg-[#F7F8FA] flex flex-col text-slate-900 font-sans antialiased"
         @keydown.esc="closeProfile"
     >
         <a href="#healthcare-main" class="rm-skip-link">Langsung ke konten utama</a>
@@ -171,7 +171,7 @@
         <div
             v-if="connectionStatus.stale"
             role="status"
-            class="border-b border-slate-200 bg-slate-100 px-4 py-2 text-center text-xs font-medium text-slate-700"
+            class="shrink-0 border-b border-slate-200 bg-slate-100 px-4 py-2 text-center text-xs font-medium text-slate-700"
         >
             {{ $t('healthcare.layout.staleWarning', 'Pembaruan otomatis sementara tidak tersedia. Data di layar mungkin tidak terbaru.') }}
             <span v-if="lastRefreshedLabel">
@@ -183,14 +183,14 @@
         <div
             v-if="flashRealtimeWarning"
             role="alert"
-            class="border-b border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-2 text-xs text-amber-900"
+            class="shrink-0 border-b border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-2 text-xs text-amber-900"
         >
             <span class="font-bold shrink-0">{{ $t('healthcare.layout.syncWarningPrefix', '⚠ Peringatan sinkronisasi:') }}</span>
             <span>{{ flashRealtimeWarning }}</span>
         </div>
 
         <!-- Main Shell: Sidebar + Content -->
-        <div class="flex-1 flex overflow-hidden">
+        <div class="flex min-h-0 flex-1 overflow-hidden">
             <!-- Mobile Backdrop -->
             <div
                 v-if="sidebarOpen"
@@ -208,14 +208,14 @@
                 :aria-label="$t('common.openNavigation', 'Navigasi Healthcare')"
                 @keydown="drawerKeydown"
                 :class="[
-                    'rm-drawer fixed lg:static inset-y-0 left-0 z-40 bg-white border-r border-slate-200/80 flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
+                    'rm-drawer fixed lg:static inset-y-0 left-0 z-40 bg-white border-r border-slate-200/80 flex min-h-0 flex-col shrink-0 transition-transform duration-200 ease-in-out lg:translate-x-0',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                 ]"
             >
                 <div class="rm-drawer-close lg:hidden">
                     <button type="button" @click="closeSidebar"><span>{{ $t('common.closeNavigation', 'Tutup navigasi') }}</span><span aria-hidden="true">×</span></button>
                 </div>
-                <div class="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-6">
                     <div>
                         <div
                             class="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider"
@@ -356,7 +356,7 @@
             </aside>
 
             <!-- Main Workspace Scrollable Body -->
-            <main id="healthcare-main" tabindex="-1" class="rm-workspace-content flex-1 p-4 lg:p-6 overflow-y-auto space-y-5" :inert="compact && sidebarOpen">
+            <main id="healthcare-main" tabindex="-1" scroll-region class="hc-content rm-workspace-content min-h-0 flex-1 p-4 lg:p-6 overflow-y-auto space-y-5" :inert="compact && sidebarOpen">
                 <p v-if="page.props.clinicalScopeAvailable === false" role="status" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
                     {{ $t('healthcare.layout.clinicalScopeUnavailable', 'Akses kasus belum tersedia. Skema penugasan Faskes memerlukan persetujuan dan penerapan oleh pengelola.') }}
                 </p>
@@ -381,6 +381,7 @@
 </template>
 
 <script setup lang="ts">
+import "@/../css/healthcare.css";
 import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { useWorkspaceNavigation } from "@/composables/useWorkspaceNavigation";
 import { Link, usePage, router } from "@inertiajs/vue3";

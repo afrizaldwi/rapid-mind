@@ -38,17 +38,13 @@
     >
         <a href="#relawan-main" class="rm-skip-link">Langsung ke konten utama</a>
         <OfflineReadinessNotice compact />
-        <AssessmentAppHeader :shelter="layoutProps.identityShelter || runtime.shelterName || (isEn ? 'Volunteer Shelter' : 'Posko Relawan')" :kind="status.kind.value" :label="compactStatusLabel" :online-server="runtime.mode === 'ONLINE_SERVER'" @status="showStatusSheet = true" @logout="logout" />
+        <AssessmentAppHeader hide-routine-status :shelter="layoutProps.identityShelter || runtime.shelterName || (isEn ? 'Volunteer Shelter' : 'Posko Relawan')" :kind="status.kind.value" :label="compactStatusLabel" :online-server="runtime.mode === 'ONLINE_SERVER'" @status="showStatusSheet = true" @logout="logout" />
         <!-- Main Content Area -->
         <main
             id="relawan-main" tabindex="-1" class="rm-field-content flex-1 min-h-0"
-            :class="[hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'rm-field-scroll overflow-y-auto px-3.5 py-4 sm:px-6 sm:pt-6', { 'relawan-identity-main': !!$slots.greeting }]"
+            :class="[hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'rm-field-scroll overflow-y-auto px-3.5 py-4 sm:px-6 sm:pt-6', { 'relawan-identity-main': !!$slots.greeting && !showLocalIncident }]"
         >
-            <slot name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
-            <details v-if="isolatedClinicalStorage" class="my-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                <summary class="cursor-pointer font-medium">{{ isEn ? 'Previous device data preserved' : 'Data perangkat lama tetap disimpan' }}</summary>
-                <p class="mt-2">{{ isEn ? 'New work uses separate encrypted storage. Previous drafts and queues have not been deleted or automatically sent. Do not clear site data.' : 'Pekerjaan baru memakai penyimpanan terenkripsi terpisah. Draf dan antrean lama tidak dihapus dan belum otomatis terkirim. Jangan hapus data situs.' }}</p>
-            </details>
+            <slot v-if="!showLocalIncident" name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
             <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
             <slot v-if="requiresClinicalKey && !clinicalViewAvailable" name="clinical-unlock-notice" />
             <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked">
@@ -81,11 +77,7 @@
                 </button>
             </section>
             <LocalEmergencyActive
-                v-if="
-                    runtime.mode === 'ONLINE_SERVER' &&
-                    activeLocalId &&
-                    currentOwner
-                "
+                v-if="showLocalIncident && activeLocalId && currentOwner"
                 :key="String(currentOwner) + activeLocalId"
                 :owner="currentOwner"
                 :id="activeLocalId"
@@ -97,7 +89,8 @@
 
         <!-- Persistent Floating Red Flag Button -->
         <T0Button
-            :focused="isFocusedAssessment"
+            :class="{ 'incident-emergency-action': showLocalIncident }"
+            :focused="isFocusedAssessment && !showLocalIncident"
             :has-bottom-nav="!isFocusedAssessment"
             @trigger="openEmergencyModal"
         />
@@ -182,7 +175,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { isolatedClinicalStorage } from "@/offline/db";
 import {
     BookOpen,
     ClipboardList,
@@ -436,7 +428,9 @@ const isFocusedAssessment = computed(
             runtime.path.split("?")[0],
         ),
 );
+const showLocalIncident = computed(() => runtime.mode === "ONLINE_SERVER" && !!activeLocalId.value && !!currentOwner.value);
 const hasAssessmentActionBar = computed(() =>
+    !showLocalIncident.value &&
     /^\/relawan\/assessment\/[^/]+\/(srq|risk|function|review)\/?$/.test(
         runtime.path.split("?")[0],
     ),
@@ -797,4 +791,16 @@ onUnmounted(() => {
 
 <style scoped>
 .relawan-identity-main { padding-top: 0; }
+</style>
+
+<style scoped>
+.incident-emergency-action {
+    position: static;
+    flex: none;
+    display: flex;
+    justify-content: flex-end;
+    padding: .375rem 1rem max(.375rem, env(safe-area-inset-bottom));
+    background: white;
+    border-top: 1px solid #e2e8f0;
+}
 </style>

@@ -24,6 +24,7 @@ export async function cacheRelawanEmergency(owner: number, input: unknown): Prom
         typeof event.red_flag_type !== "string" || typeof event.created_at !== "string") return;
     await encryptedMutate<LocalEmergency>(owner, "emergencies", event.id, existing => existing ?? {
         id: event.id!, owner_user_id: owner, patient_name: event.patient?.name,
+        red_flag_types: event.red_flag_types ?? [event.red_flag_type!],
         red_flag_type: event.red_flag_type!, notes: event.notes, status: "PENDING",
         created_at: event.created_at!, updated_at: event.updated_at ?? event.created_at!,
         sync_state: "SYNCED", routing_status: event.routing_status,

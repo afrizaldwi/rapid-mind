@@ -1,0 +1,132 @@
+.hc-workspace {
+    --hc-edge: #dce5e8;
+    --hc-surface: #ffffff;
+    background: #f2f6f7;
+}
+.hc-workspace .rm-workspace-header {
+    background: var(--hc-surface);
+    border-color: var(--hc-edge);
+    min-height: 4.5rem;
+}
+.hc-workspace .rm-workspace-brand { gap: .75rem; }
+.hc-workspace .rm-drawer {
+    border-color: var(--hc-edge);
+    background: #fbfdfd;
+}
+.hc-workspace .rm-drawer a {
+    border-radius: .75rem;
+    padding-inline: .875rem;
+    font-weight: 500;
+}
+.hc-workspace .rm-drawer a.text-teal-800 {
+    background: #e3f3ef;
+    color: #115e59;
+    font-weight: 650;
+}
+.hc-content { scrollbar-gutter: stable; }
+.hc-page { max-width: 82rem; margin-inline: auto; }
+.hc-workspace .hc-page-title {
+    font-size: clamp(1.35rem, 1.7vw, 1.85rem);
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -.035em;
+    text-wrap: balance;
+}
+.hc-workspace .hc-content h2 { letter-spacing: -.015em; }
+.hc-workspace .hc-content :is(h2, h3).uppercase {
+    text-transform: none;
+    letter-spacing: -.01em;
+    font-size: .9375rem;
+}
+.hc-workspace .hc-panel {
+    border: 1px solid var(--hc-edge);
+    border-radius: 1rem;
+    background: var(--hc-surface);
+    box-shadow: 0 0 0 3px rgb(220 229 232 / .22), 0 6px 22px rgb(30 64 70 / .025);
+}
+.hc-metrics { margin-block: 1.5rem; }
+.hc-metric {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: span 2;
+    row-gap: .625rem;
+    min-width: 0;
+    padding: 1rem 1.125rem;
+    background: #fff;
+    border: 1px solid var(--hc-edge);
+    border-radius: .875rem;
+}
+.hc-metric > :first-child {
+    display: flex;
+    align-items: center;
+    min-height: 1.5rem;
+}
+.hc-metric .text-2xl { font-size: 1.875rem; line-height: 1.15; font-weight: 650; }
+.hc-case-header { background: #f8fbfb; }
+.hc-workspace .hc-tabs {
+    gap: .375rem;
+    overflow-x: auto;
+    padding: .375rem;
+    border: 1px solid var(--hc-edge);
+    border-radius: .875rem;
+    background: #eaf0f2;
+}
+.hc-workspace .hc-tabs button {
+    flex-shrink: 0;
+    margin: 0;
+    padding: .625rem .875rem;
+    border: 0;
+    border-radius: .625rem;
+}
+.hc-workspace .hc-tabs button.text-teal-800 {
+    background: white;
+    box-shadow: 0 1px 4px rgb(30 64 70 / .08);
+}
+.hc-workspace .hc-content table { font-size: .875rem; }
+.hc-workspace .hc-content thead {
+    background: #f4f8f8;
+    color: #475569;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.hc-workspace .hc-content td { padding-block: 1rem; }
+.hc-workspace .hc-content tbody tr:hover { background: #f3faf8; }
+.hc-workspace .hc-content :is(button, a).bg-slate-900 { background: #0f766e; }
+.hc-workspace .hc-content :is(button, a).bg-slate-900:hover { background: #115e59; }
+.hc-workspace .hc-content :is(button, a).bg-rose-600 { background: #991b1b; }
+.hc-workspace .hc-content :is(button, a).bg-rose-600:hover { background: #7f1d1d; }
+.hc-workspace .hc-record-link {
+    background: #e6f4f0;
+    color: #115e59;
+    padding-inline: .875rem;
+}
+.hc-workspace .hc-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+    color: #475569;
+}
+.hc-workspace .hc-content :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+    border-color: #cbd8dc;
+    border-radius: .625rem;
+    background-color: #fff;
+}
+.hc-workspace .hc-content :is(button, a[href]) { font-weight: 600; }
+.hc-workspace .hc-content :is(button, a[href]):focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 3px;
+}
+@media (min-width: 1024px) {
+    .hc-workspace .hc-content { padding: 1.75rem 2rem 2.5rem; }
+    .hc-workspace .rm-drawer { inline-size: 15.5rem; }
+}
+@media (max-width: 639px) {
+    .hc-workspace .hc-content { padding: 1rem; }
+    .hc-workspace .hc-panel { border-radius: .875rem; }
+    .hc-metric { padding: .875rem; }
+    .hc-workspace .hc-case-header > :first-child > :first-child { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .hc-workspace :is(button, a[href]) { transition: background-color 160ms cubic-bezier(.2,.8,.2,1), color 160ms cubic-bezier(.2,.8,.2,1); }
+}

@@ -1,10 +1,10 @@
 <template>
     <HealthcareLayout>
-        <div class="space-y-5 max-w-5xl">
+        <div class="hc-page space-y-5 w-full">
             <!-- Page Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 class="rm-page-heading text-slate-900">
+                    <h1 class="hc-page-title rm-page-heading text-slate-900">
                         {{ $t('healthcare.patients.title', 'Rekam Medis Pasien') }}
                     </h1>
                     <p class="rm-page-description text-sm font-normal">
@@ -24,13 +24,13 @@
                         type="search"
                         :aria-label="$t('healthcare.patients.searchPlaceholder', 'Cari nama atau NIK...')"
                         :placeholder="$t('healthcare.patients.searchPlaceholder', 'Cari nama atau NIK...')"
-                        class="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-700 focus:outline-none"
+                        class="hc-panel w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-700 focus:outline-none"
                     />
                 </div>
             </div>
 
             <!-- Unified Table Surface -->
-            <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+            <div class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="rm-table-region">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-50/60 text-slate-400 uppercase tracking-wider text-[10px] font-semibold border-b border-slate-100">
@@ -82,7 +82,7 @@
                                 <td class="py-3 px-4 text-right">
                                     <Link
                                         :href="`/healthcare/patients/${p.id}`"
-                                        class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition inline-block"
+                                        class="hc-record-link px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition inline-block"
                                     >
                                         {{ $t('healthcare.patients.viewRecord', 'Detail Pasien') }}
                                     </Link>

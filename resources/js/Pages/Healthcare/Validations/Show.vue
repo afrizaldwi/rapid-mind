@@ -1,6 +1,6 @@
 <template>
     <HealthcareLayout>
-        <div class="max-w-4xl space-y-5">
+        <div class="hc-page w-full space-y-5">
             <!-- Back Navigation -->
             <div>
                 <Link
@@ -26,7 +26,7 @@
 
             <!-- 1. Patient & System Recommendation Surface (Unified) -->
             <div
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
             >
                 <div
                     class="flex flex-col sm:flex-row sm:items-start justify-between gap-3"
@@ -64,8 +64,7 @@
                                 }}
                             </span>
                         </div>
-                        <h1
-                            class="text-xl font-bold text-slate-900 tracking-tight"
+                        <h1 class="hc-page-title text-xl font-bold text-slate-900 tracking-tight"
                         >
                             {{
                                 assessment.patient?.name ||
@@ -185,7 +184,7 @@
 
             <!-- 2. Detailed Assessment Evidence (Unified Surface with 3 Columns) -->
             <div
-                class="bg-white rounded-xl border border-slate-200/80 overflow-hidden"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden"
             >
                 <div class="px-5 py-3 border-b border-slate-100">
                     <h2
@@ -295,7 +294,7 @@
 
             <!-- 3. Riwayat Asesmen Sebelumnya -->
             <div
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-2.5"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-2.5"
             >
                 <h3
                     class="text-xs font-bold text-slate-900 uppercase tracking-wider"
@@ -449,7 +448,7 @@
             <!-- 5. Form Validasi Klinis (Jika belum divalidasi) -->
             <div
                 v-else
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
             >
                 <div class="border-b border-slate-100 pb-2.5">
                     <h3 class="font-bold text-slate-900 text-sm">
@@ -481,7 +480,7 @@
                         <select
                             id="clinical_result"
                             v-model="form.clinical_result"
-                            class="w-full sm:w-64 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full sm:w-64 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                             required
                         >
                             <option disabled value="">
@@ -517,7 +516,7 @@
                             v-model="form.diagnosis_notes"
                             rows="2"
                             :placeholder="$t('healthcare.validationShow.diagnosisFieldPlaceholder', 'Catatan hasil evaluasi atau diagnosis...')"
-                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                         <p
                             v-if="form.errors.diagnosis_notes"
@@ -539,7 +538,7 @@
                             v-model="form.intervention_plan"
                             rows="2"
                             :placeholder="$t('healthcare.validationShow.interventionFieldPlaceholder', 'Rencana konseling, evaluasi lanjutan, atau terapi...')"
-                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                         <p
                             v-if="form.errors.intervention_plan"
@@ -575,7 +574,7 @@
                             id="facility_id"
                             v-model="form.facility_id"
                             required
-                            class="w-full sm:w-80 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full sm:w-80 rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         >
                             <option :value="null" disabled>
                                 {{ $t('healthcare.emergencyShow.selectActiveFacility', 'Pilih Fasilitas Kesehatan Aktif') }}

@@ -1,10 +1,9 @@
 <template>
     <HealthcareLayout>
-        <div class="space-y-4">
+        <div class="hc-page space-y-4">
             <!-- 1. Page Title & Operational Context (Section 7) -->
             <div>
-                <h1
-                    class="rm-page-heading text-slate-900"
+                <h1 class="hc-page-title rm-page-heading text-slate-900"
                 >
                     {{ $t('healthcare.workspaceTitle', 'Pusat Triase & Kedaruratan Medis') }}
                 </h1>
@@ -59,7 +58,7 @@
 
                 <!-- RIGHT PANEL: SELECTED CASE DETAIL WORKSPACE (~67% width / lg:col-span-8) -->
                 <main
-                    class="xl:col-span-8 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden min-h-0 xl:min-h-[620px]"
+                    class="hc-panel xl:col-span-8 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden min-h-0 xl:min-h-[620px]"
                 >
                     <template v-if="selectedItem">
                         <!-- 1. PATIENT HEADER (Section 13, 14, 24: Name, Identifier, ONE Primary CTA) -->
@@ -70,9 +69,9 @@
                             @open-actions="activeTab = 'actions'"
                         />
 
-                        <!-- 3. NAVIGATION TABS (Section 17: Text + thin bottom indicator, NO pills) -->
+                        <!-- Case workspace tabs -->
                         <nav
-                            class="flex items-center gap-6 overflow-x-auto border-b border-slate-100 px-5 text-xs"
+                            class="hc-tabs flex items-center gap-6 overflow-x-auto border-b border-slate-100 px-5 text-xs"
                         >
                             <button
                                 type="button"

@@ -1,6 +1,6 @@
 <template>
     <div
-        class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        class="hc-case-header p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
     >
         <div class="space-y-1">
             <div class="flex items-center gap-2.5">

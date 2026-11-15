@@ -1,63 +1,71 @@
 <template>
   <RelawanLayout @clinical-ready="loadRiskContext" @clinical-lock="scope.invalidate">
     <div class="flex-1 min-h-0 flex flex-col">
-      <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-4">
-        <div class="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200">
-          <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
-            {{ isEn ? 'Part A: Risk Factors' : 'Bagian A: Faktor Risiko' }}
+      <div class="shrink-0 border-b border-slate-200 bg-white px-3.5 py-2 sm:px-6">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="min-w-0 truncate text-sm font-bold text-slate-900">{{ patient?.name || (isEn ? 'Survivor' : 'Penyintas') }}</h2>
+          <span class="shrink-0 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-800" role="status">
+            {{ isEn ? `${answeredCount}/5 Answered` : `${answeredCount}/5 Terjawab` }}
           </span>
-          <h2 class="text-base sm:text-lg font-extrabold text-slate-900 mt-1">
-            {{ isEn ? 'Background Vulnerability Assessment' : 'Penilaian Kerentanan Latar Belakang' }}
-          </h2>
-          <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-            {{ patient?.name }} • {{ isEn ? 'Select Yes or No for each condition based on observation or survivor account.' : 'Pilih Ya atau Tidak untuk setiap kondisi berdasarkan observasi atau cerita penyintas.' }}
-          </p>
         </div>
+        <progress :value="answeredCount" max="5" :aria-label="isEn ? 'Risk factors answered' : 'Faktor risiko terjawab'" class="risk-progress mt-1.5 block h-1.5 w-full overflow-hidden rounded-full"></progress>
+      </div>
+
+      <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-3 sm:space-y-4">
+        <header class="px-0.5 pb-1">
+          <h1 class="text-lg font-bold tracking-tight text-slate-900">{{ isEn ? 'Risk factors' : 'Faktor risiko' }}</h1>
+          <p class="mt-1 text-sm leading-relaxed text-slate-600">
+            {{ isEn ? 'Select Yes or No for each condition based on observation or survivor account.' : 'Pilih Ya atau Tidak untuk setiap kondisi berdasarkan observasi atau cerita penyintas.' }}
+          </p>
+          <p class="mt-1 text-xs text-slate-500">{{ isEn ? 'Background Vulnerability Assessment' : 'Penilaian Kerentanan Latar Belakang' }}</p>
+        </header>
 
         <div class="space-y-3">
-          <div v-for="item in localizedRiskItems" :key="item.code" class="p-4 sm:p-5 rounded-xl border-2 transition"
-            :class="risks[item.code] === true ? 'bg-amber-50/70 border-amber-500 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'">
+          <div v-for="item in localizedRiskItems" :key="item.code" class="rounded-xl border bg-white p-4 transition-colors sm:p-5"
+            :class="risks[item.code] === true ? 'border-teal-400' : 'border-slate-200'">
             <div class="space-y-1">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold text-amber-900 uppercase">
-                  {{ item.code }} • {{ item.category }}
-                </span>
-                <span class="shrink-0 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-start gap-2">
+                  <span class="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ item.code }}</span>
+                  <span class="pt-0.5 text-xs leading-relaxed text-slate-600">{{ item.category }}</span>
+                </div>
+                <span class="shrink-0 pt-0.5 text-xs font-medium tabular-nums text-slate-500">
                   +{{ item.weight }} {{ isEn ? 'Points' : 'Poin' }}
                 </span>
               </div>
-              <h3 class="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+              <h3 class="pt-1 text-base font-bold leading-snug text-slate-900">
                 {{ item.title }}
               </h3>
-              <p class="text-xs text-slate-600 leading-relaxed">
+              <p class="text-sm text-slate-600 leading-relaxed">
                 {{ item.description }}
               </p>
-              <div class="grid grid-cols-2 gap-2.5 sm:gap-3 mt-3.5">
-                <button type="button" :disabled="!draftReady" @click="setRiskAnswer(item.code, true)"
-                  class="min-h-[48px] sm:min-h-[54px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
-                  :class="risks[item.code] === true
-                    ? 'border-amber-700 bg-amber-600 text-white shadow-md'
-                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
-                  <span v-if="risks[item.code] === true">✓</span>
-                  <span>{{ isEn ? 'YES' : 'YA' }}</span>
-                </button>
-                <button type="button" :disabled="!draftReady" @click="setRiskAnswer(item.code, false)"
-                  class="min-h-[48px] sm:min-h-[54px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
-                  :class="risks[item.code] === false
-                    ? 'border-slate-700 bg-slate-700 text-white shadow-md'
-                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'">
-                  <span v-if="risks[item.code] === false">✓</span>
-                  <span>{{ isEn ? 'NO' : 'TIDAK' }}</span>
-                </button>
-              </div>
+              <fieldset class="mt-4" :disabled="!draftReady">
+                <legend class="sr-only">{{ isEn ? 'Answer for' : 'Jawaban untuk' }} {{ item.code }} {{ item.title }}</legend>
+                <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+                  <button type="button" :aria-pressed="risks[item.code] === true" @click="setRiskAnswer(item.code, true)"
+                    class="min-h-[48px] rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60 cursor-pointer sm:min-h-[52px] sm:text-base"
+                    :class="risks[item.code] === true
+                      ? 'border-teal-700 bg-teal-700 text-white'
+                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'">
+                    <span>{{ isEn ? 'Yes' : 'Ya' }}</span>
+                  </button>
+                  <button type="button" :aria-pressed="risks[item.code] === false" @click="setRiskAnswer(item.code, false)"
+                    class="min-h-[48px] rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60 cursor-pointer sm:min-h-[52px] sm:text-base"
+                    :class="risks[item.code] === false
+                      ? 'border-teal-700 bg-teal-700 text-white'
+                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'">
+                    <span>{{ isEn ? 'No' : 'Tidak' }}</span>
+                  </button>
+                </div>
+              </fieldset>
             </div>
           </div>
         </div>
 
         <!-- Current Risk Subtotal Indicator -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold">
+        <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm font-medium">
           <span class="text-slate-600">{{ isEn ? 'Risk Score Subtotal:' : 'Subtotal Skor Risiko:' }}</span>
-          <span class="text-sm text-amber-800 bg-amber-100 px-3 py-1 rounded-lg">
+          <span class="font-semibold tabular-nums text-teal-800">
             {{ riskScore }} / 8 {{ isEn ? 'Points' : 'Poin' }}
           </span>
         </div>
@@ -72,7 +80,7 @@
             ← {{ isEn ? 'Back' : 'Kembali' }}
           </RelawanLink>
           <button type="button" @click="saveAndNext" :disabled="isSaving || !draftReady || answeredCount !== 5"
-            class="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-xs sm:text-sm shadow-md transition disabled:opacity-60 cursor-pointer">
+            class="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs sm:text-sm transition disabled:opacity-60 cursor-pointer">
             {{ isEn ? `Next: Daily Function (${answeredCount}/5) →` : `Lanjut: Fungsi Harian (${answeredCount}/5) →` }}
           </button>
         </div>
@@ -247,3 +255,16 @@ async function saveAndNext() {
 
 onMounted(() => { void loadRiskContext(); });
 </script>
+
+
+<style scoped>
+.risk-progress {
+  appearance: none;
+  border: 0;
+  background: #f1f5f9;
+  color: #0d9488;
+}
+.risk-progress::-webkit-progress-bar { background: #f1f5f9; }
+.risk-progress::-webkit-progress-value { background: #0d9488; border-radius: 999px; }
+.risk-progress::-moz-progress-bar { background: #0d9488; border-radius: 999px; }
+</style>

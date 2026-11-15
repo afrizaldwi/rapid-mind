@@ -1,6 +1,6 @@
 <template>
     <HealthcareLayout>
-        <fieldset :disabled="emergency.can_manage === false" class="space-y-5 max-w-4xl">
+        <fieldset :disabled="emergency.can_manage === false" class="hc-page space-y-5 w-full">
             <p v-if="emergency.can_manage === false" role="status" class="text-slate-600">{{ $t('healthcare.actions.readOnlyNotice', 'Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.') }}</p>
             <!-- Back Link & Incident Header -->
             <div class="flex items-center justify-between">
@@ -58,7 +58,7 @@
 
             <!-- Main Patient & Case Summary (Single Unified Clinical Surface) -->
             <div
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
             >
                 <div
                     class="flex flex-col sm:flex-row sm:items-start justify-between gap-3"
@@ -71,7 +71,7 @@
                                 class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"
                             ></span>
                             <span>{{
-                                formatRedFlag(emergency.red_flag_type)
+                                (emergency.red_flag_types ?? [emergency.red_flag_type]).map(formatRedFlag).join(' · ')
                             }}</span>
                         </div>
                         <h2
@@ -233,7 +233,7 @@
             <!-- Action Step 2: Secondary Tele-Verification -->
             <div
                 v-if="emergency.status === 'ACKNOWLEDGED'"
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
             >
                 <div class="border-b border-slate-100 pb-3">
                     <h3 class="font-bold text-slate-900 text-sm">
@@ -343,7 +343,7 @@
                             v-model="verificationForm.notes"
                             rows="2"
                             :placeholder="$t('healthcare.emergencyShow.verificationNotesPlaceholder', 'Catatan observasi atau konfirmasi kondisi penyintas...')"
-                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                     </div>
 
@@ -360,7 +360,7 @@
             <!-- Action Step 3: Clinical Decision Gate -->
             <div
                 v-if="emergency.status === 'REVIEWING'"
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
             >
                 <div class="border-b border-slate-100 pb-3">
                     <h3 class="font-bold text-slate-900 text-sm">
@@ -494,7 +494,7 @@
                             v-model="decisionForm.notes"
                             rows="2"
                             :placeholder="$t('healthcare.emergencyShow.justificationPlaceholder', 'Alasan klinis penegakan diagnosis atau dasar penurunan kategori...')"
-                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                     </div>
 
@@ -511,7 +511,7 @@
             <!-- Action Step 4: Medical Referral -->
             <div
                 v-if="['CONFIRMED', 'RESOLVED'].includes(emergency.status)"
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-4"
             >
                 <div class="border-b border-slate-100 pb-3">
                     <h3 class="font-bold text-slate-900 text-sm">
@@ -549,7 +549,7 @@
                         <select
                             v-model="referralForm.facility_id"
                             required
-                            class="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         >
                             <option :value="null" disabled>
                                 {{ $t('healthcare.emergencyShow.selectActiveFacility', 'Pilih Fasilitas Kesehatan Aktif') }}
@@ -573,7 +573,7 @@
                             v-model="referralForm.notes"
                             rows="2"
                             :placeholder="$t('healthcare.emergencyShow.referralNotesPlaceholder', 'Catatan alasan rujukan atau instruksi khusus...')"
-                            class="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
+                            class="hc-panel w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-teal-700 focus:outline-none"
                         ></textarea>
                     </div>
                     <button
@@ -597,7 +597,7 @@
                 :units="responseUnits || []"
             />
             <OperationsTimeline :operations="emergency.operations" />
-            <details class="rounded-xl border border-slate-200 bg-white p-4">
+            <details class="hc-panel rounded-xl border border-slate-200 bg-white p-4">
                 <summary
                     class="min-h-11 cursor-pointer rounded-lg py-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-teal-700"
                 >
@@ -612,7 +612,7 @@
                     emergency.verifications &&
                     emergency.verifications.length > 0
                 "
-                class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-3"
+                class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-3"
             >
                 <h3
                     class="font-bold text-slate-900 text-xs uppercase tracking-wider"

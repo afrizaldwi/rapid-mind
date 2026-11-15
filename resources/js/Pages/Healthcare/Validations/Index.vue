@@ -1,9 +1,9 @@
 <template>
     <HealthcareLayout>
-        <div class="space-y-6 max-w-5xl">
+        <div class="hc-page space-y-6 w-full">
             <!-- Page Header -->
             <div>
-                <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+                <h1 class="hc-page-title text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
                     {{ $t('healthcare.validations.title', 'Validasi Asesmen') }}
                 </h1>
                 <p class="text-xs text-slate-500 mt-1 font-normal">
@@ -13,7 +13,7 @@
 
             <!-- Section 1: Perlu Divalidasi (Pending Queue) -->
             <section class="space-y-2.5">
-                <div class="flex items-center justify-between">
+                <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                             {{ $t('healthcare.validations.pendingTitle', 'Perlu Divalidasi') }}
@@ -22,13 +22,13 @@
                             {{ $t('healthcare.validations.pendingHint', 'Kasus T1 diprioritaskan lebih dulu berdasarkan urgensi klinis.') }}
                         </p>
                     </div>
-                    <span class="text-xs font-semibold text-slate-500">
+                    <span class="shrink-0 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
                         {{ pendingAssessments.length }} {{ $t('healthcare.validations.cases', 'kasus') }}
                     </span>
                 </div>
 
                 <!-- Unified Surface List -->
-                <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+                <div class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                     <div
                         v-if="pendingAssessments.length > 0"
                         class="divide-y divide-slate-100"
@@ -39,7 +39,7 @@
                             class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition"
                         >
                             <div class="space-y-1">
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span class="font-bold text-slate-900 text-xs">
                                         {{ a.patient?.name || $t('healthcare.validations.unrecordedPatient', 'Pasien tidak tercatat') }}
                                     </span>
@@ -93,7 +93,7 @@
 
             <!-- Section 2: Selesai Divalidasi (Completed History) -->
             <section class="space-y-2.5">
-                <div class="flex items-center justify-between">
+                <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                             {{ $t('healthcare.validations.completedTitle', 'Selesai Divalidasi') }}
@@ -102,13 +102,13 @@
                             {{ $t('healthcare.validations.completedSubtitle', 'Asesmen yang telah melalui validasi klinis tenaga medis.') }}
                         </p>
                     </div>
-                    <span class="text-xs font-semibold text-slate-500">
+                    <span class="shrink-0 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
                         {{ completedAssessments.length }} {{ $t('healthcare.validations.cases', 'kasus') }}
                     </span>
                 </div>
 
                 <!-- Unified Surface List -->
-                <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+                <div class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                     <div
                         v-if="completedAssessments.length > 0"
                         class="divide-y divide-slate-100"
@@ -119,7 +119,7 @@
                             class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition"
                         >
                             <div class="space-y-1">
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span class="font-semibold text-slate-900 text-xs">
                                         {{ a.patient?.name || $t('healthcare.validations.unrecordedPatient', 'Pasien tidak tercatat') }}
                                     </span>

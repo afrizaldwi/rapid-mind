@@ -56,6 +56,12 @@
                     {{ $t('healthcare.overview.screeningSummary', 'Ringkasan Hasil Skrining') }}
                 </h3>
             </div>
+            <p v-if="!item.assessmentContext.finalized" role="status" class="mt-3 rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
+                {{ item.assessmentContext.statusLabel }}
+                <span v-if="!item.assessmentContext.hasAssessment" class="mt-1 block">
+                    {{ $t('healthcare.assessmentContext.followUpNotice', 'Konteks asesmen dapat menyusul setelah pengiriman darurat. Pengakuan dan penanganan darurat tetap tersedia.') }}
+                </span>
+            </p>
             <div
                 class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 pt-3 pb-1 text-xs"
             >

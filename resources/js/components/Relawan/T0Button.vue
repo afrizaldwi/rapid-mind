@@ -1,6 +1,6 @@
 <template>
   <div
-    class="fixed right-3.5 lg:!right-6 lg:!bottom-6 z-40"
+    class="fixed right-3.5 lg:right-6 z-40"
     :style="{ bottom: resolvedBottom }"
   >
     <button
@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Siren } from 'lucide-vue-next';
 import { useI18n } from '@/i18n';
 
@@ -38,31 +38,49 @@ const resolvedBottom = computed(() => {
     : 'calc(env(safe-area-inset-bottom) + 0.5rem)';
 });
 let actionBarObserver: ResizeObserver | null = null;
+let contentObserver: MutationObserver | null = null;
+let observedBar: HTMLElement | null = null;
+let mounted = false;
 
-watch(() => props.focused, async focused => {
-  actionBarObserver?.disconnect();
-  actionBarObserver = null;
-  if (!focused) return;
-
-  await nextTick();
+function updatePosition() {
   if (!props.focused) return;
-
   const actionBar = document.querySelector<HTMLElement>('[data-assessment-action-bar]');
-  if (!actionBar) {
-    focusedBottom.value = 'calc(env(safe-area-inset-bottom) + 0.5rem)';
-    return;
+  if (actionBar !== observedBar) {
+    actionBarObserver?.disconnect();
+    observedBar = actionBar;
+    if (actionBar && typeof ResizeObserver !== 'undefined') {
+      actionBarObserver = new ResizeObserver(updatePosition);
+      actionBarObserver.observe(actionBar);
+    }
   }
+  // Use the footer's actual top edge, including safe area and wrapped errors.
+  focusedBottom.value = actionBar
+    ? `${Math.max(0, Math.ceil(window.innerHeight - actionBar.getBoundingClientRect().top)) + 12}px`
+    : 'calc(env(safe-area-inset-bottom) + 4.15rem)';
+}
 
-  const updatePosition = () => {
-    focusedBottom.value = String(Math.ceil(actionBar.getBoundingClientRect().height) + 6) + 'px';
-  };
+function stopObserving() {
+  actionBarObserver?.disconnect();
+  contentObserver?.disconnect();
+  actionBarObserver = null;
+  contentObserver = null;
+  observedBar = null;
+  window.removeEventListener('resize', updatePosition);
+}
+
+async function observeFooter() {
+  stopObserving();
+  if (!mounted || !props.focused) return;
+  await nextTick();
+  if (!mounted || !props.focused) return;
   updatePosition();
+  // The clinical view can mount or replace its footer after key restoration.
+  contentObserver = new MutationObserver(updatePosition);
+  contentObserver.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('resize', updatePosition);
+}
 
-  if (typeof ResizeObserver !== 'undefined') {
-    actionBarObserver = new ResizeObserver(updatePosition);
-    actionBarObserver.observe(actionBar);
-  }
-}, { immediate: true, flush: 'post' });
-
-onBeforeUnmount(() => actionBarObserver?.disconnect());
+watch(() => props.focused, observeFooter, { flush: 'post' });
+onMounted(() => { mounted = true; void observeFooter(); });
+onBeforeUnmount(() => { mounted = false; stopObserving(); });
 </script>

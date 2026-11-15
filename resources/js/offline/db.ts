@@ -52,6 +52,7 @@ export interface LocalEmergency {
     patient_name?: string;
     assessment_id?: string | null;
     red_flag_type: string;
+    red_flag_types?: string[];
     status: string;
     latitude?: number | null;
     longitude?: number | null;

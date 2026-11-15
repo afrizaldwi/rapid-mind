@@ -2,7 +2,7 @@
     <dialog
         ref="dialog"
         :aria-labelledby="titleId"
-        class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-xl border border-slate-200 bg-white p-5 text-xs shadow-xl backdrop:bg-slate-900/40"
+        class="hc-panel m-auto w-[calc(100%-2rem)] max-w-sm rounded-xl border border-slate-200 bg-white p-5 text-xs shadow-xl backdrop:bg-slate-900/40"
         @cancel.prevent="emit('cancel')"
     >
         <h3 :id="titleId" class="mb-3 font-bold text-slate-900">{{ title }}</h3>

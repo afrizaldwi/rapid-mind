@@ -1,6 +1,6 @@
 <template>
     <section
-        class="xl:col-span-4 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden"
+        class="hc-panel xl:col-span-4 bg-white rounded-xl border border-slate-200/80 flex flex-col overflow-hidden"
     >
         <div class="p-4 border-b border-slate-100 space-y-3">
             <div class="flex items-center justify-between">
@@ -38,7 +38,7 @@
                     type="text"
                     :aria-label="$t('healthcare.queuePanel.searchLabel', 'Cari antrean darurat')"
                     :placeholder="$t('healthcare.queuePanel.searchPlaceholder', 'Cari nama, NIK, ID RM...')"
-                    class="w-full pl-8 pr-7 py-1.5 bg-slate-50/70 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus:border-teal-600 focus:bg-white transition"
+                    class="hc-panel w-full pl-8 pr-7 py-1.5 bg-slate-50/70 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus:border-teal-600 focus:bg-white transition"
                 />
                 <button
                     v-if="searchQuery"

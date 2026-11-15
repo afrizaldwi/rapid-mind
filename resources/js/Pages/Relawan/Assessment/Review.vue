@@ -66,9 +66,9 @@
                 <!-- Subtotal Breakdown -->
                 <div class="grid grid-cols-3 gap-2 sm:gap-3 text-center">
                     <div
-                        class="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs min-w-0"
+                        class="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs min-w-0 grid row-span-3 grid-rows-subgrid gap-y-0"
                     >
-                        <p class="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase truncate">
+                        <p class="flex items-center justify-center text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase leading-tight">
                             SRQ-20
                         </p>
                         <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5 sm:mt-1">
@@ -78,9 +78,9 @@
                     </div>
 
                     <div
-                        class="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs min-w-0"
+                        class="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs min-w-0 grid row-span-3 grid-rows-subgrid gap-y-0"
                     >
-                        <p class="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase leading-tight">
+                        <p class="flex items-center justify-center text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase leading-tight">
                             {{ isEn ? "Risk Factors" : "Faktor Risiko" }}
                         </p>
                         <p class="text-lg sm:text-xl font-extrabold text-amber-800 mt-0.5 sm:mt-1">
@@ -90,9 +90,9 @@
                     </div>
 
                     <div
-                        class="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs min-w-0"
+                        class="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs min-w-0 grid row-span-3 grid-rows-subgrid gap-y-0"
                     >
-                        <p class="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase leading-tight">
+                        <p class="flex items-center justify-center text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase leading-tight">
                             {{ isEn ? "Daily Function" : "Fungsi Harian" }}
                         </p>
                         <p class="text-lg sm:text-xl font-extrabold text-teal-800 mt-0.5 sm:mt-1">

@@ -72,6 +72,7 @@ final class EmergencySynchronizer
                 'assessment_id' => $assessment?->id,
                 'user_id' => $user->id,
                 'red_flag_type' => RedFlagType::from($data['red_flag_type']),
+                'red_flag_types' => $data['red_flag_types'] ?? [$data['red_flag_type']],
                 'status' => EmergencyStatus::PENDING,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
@@ -117,7 +118,8 @@ final class EmergencySynchronizer
         if (
             $event->user_id !== $user->id
             || $event->assessment_id !== ($data['assessment_id'] ?? null)
-            || $event->red_flag_type->value !== $data['red_flag_type']
+            || array_diff($event->red_flag_types ?? [$event->red_flag_type->value], $data['red_flag_types'] ?? [$data['red_flag_type']])
+            || array_diff($data['red_flag_types'] ?? [$data['red_flag_type']], $event->red_flag_types ?? [$event->red_flag_type->value])
             || $event->notes !== ($data['notes'] ?? null)
         ) return false;
         $patientId = $data['patient']['id'] ?? null;
@@ -142,6 +144,7 @@ final class EmergencySynchronizer
             'assessment_id' => $event->assessment_id,
             'routing_status' => $event->routing_status ?? 'UNRESOLVED',
             'red_flag_type' => $event->red_flag_type->value,
+            'red_flag_types' => $event->red_flag_types ?? [$event->red_flag_type->value],
             'latitude' => $event->latitude === null ? null : (float) $event->latitude,
             'longitude' => $event->longitude === null ? null : (float) $event->longitude,
             'shelter_id' => $event->shelter_id,

@@ -1,6 +1,6 @@
 <template>
     <HealthcareLayout>
-        <div class="space-y-5 max-w-4xl">
+        <div class="hc-page space-y-5 w-full">
             <!-- Back Navigation -->
             <div>
                 <Link
@@ -15,11 +15,11 @@
             </div>
 
             <!-- Patient Header Surface (Single Unified Surface) -->
-            <div class="bg-white rounded-xl border border-slate-200/80 p-5 space-y-3">
+            <div class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5 space-y-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ $t('healthcare.patientShow.recordHeader', 'Rekam Pasien') }}</span>
                 </div>
-                <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+                <h1 class="hc-page-title text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
                     {{ patient.name }}
                 </h1>
                 <div class="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
@@ -34,7 +34,7 @@
             </div>
 
             <!-- Navigation Tabs (Clean text with bottom border indicator) -->
-            <nav class="flex items-center space-x-6 border-b border-slate-200 px-1 text-xs" :aria-label="$t('healthcare.patientShow.sectionsAria', 'Bagian rekam pasien')">
+            <nav class="hc-tabs flex items-center space-x-6 border-b border-slate-200 px-1 text-xs" :aria-label="$t('healthcare.patientShow.sectionsAria', 'Bagian rekam pasien')">
                 <button
                     v-for="tab in tabs"
                     :key="tab.key"
@@ -52,7 +52,7 @@
             </nav>
 
             <!-- TAB 1: RINGKASAN KLINIS (Unified 4-column strip) -->
-            <div v-if="activeTab === 'summary'" class="bg-white rounded-xl border border-slate-200/80 p-5">
+            <div v-if="activeTab === 'summary'" class="hc-panel bg-white rounded-xl border border-slate-200/80 p-5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 text-xs">
                     <!-- Col 1: Status Aktif T0 -->
                     <div class="space-y-1">
@@ -61,7 +61,7 @@
                             {{ activeEmergency ? emergencyStatus(activeEmergency.status) : $t('healthcare.patientShow.summary.noActiveT0', 'Tidak ada T0 aktif') }}
                         </p>
                         <p v-if="activeEmergency" class="text-[11px] text-rose-600 font-semibold">
-                            {{ redFlagLabel(activeEmergency.red_flag_type) }}
+                            {{ (activeEmergency.red_flag_types ?? [activeEmergency.red_flag_type]).map(redFlagLabel).join(' · ') }}
                         </p>
                     </div>
 
@@ -103,7 +103,7 @@
             </div>
 
             <!-- TAB 2: RIWAYAT ASESMEN -->
-            <div v-else-if="activeTab === 'assessments'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+            <div v-else-if="activeTab === 'assessments'" class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         {{ $t('healthcare.patientShow.assessmentsTitle', 'Riwayat Asesmen') }}
@@ -172,7 +172,7 @@
             </div>
 
             <!-- TAB 3: RIWAYAT KEDARURATAN (EMERGENCIES) -->
-            <div v-else-if="activeTab === 'emergencies'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+            <div v-else-if="activeTab === 'emergencies'" class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         {{ $t('healthcare.patientShow.emergenciesTitle', 'Riwayat Kedaruratan T0') }}
@@ -192,7 +192,7 @@
                             <div class="flex items-center gap-2 text-xs">
                                 <span class="inline-flex items-center gap-1.5 font-bold text-rose-700">
                                     <span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>
-                                    {{ redFlagLabel(emergency.red_flag_type) }}
+                                    {{ (emergency.red_flag_types ?? [emergency.red_flag_type]).map(redFlagLabel).join(' · ') }}
                                 </span>
                                 <span class="text-slate-300">·</span>
                                 <span class="font-medium text-slate-600">
@@ -231,7 +231,7 @@
             </div>
 
             <!-- TAB 4: RIWAYAT VALIDASI KLINIS -->
-            <div v-else-if="activeTab === 'validations'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+            <div v-else-if="activeTab === 'validations'" class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         {{ $t('healthcare.patientShow.validationsTitle', 'Riwayat Validasi Klinis') }}
@@ -285,7 +285,7 @@
             </div>
 
             <!-- TAB 5: RIWAYAT RUJUKAN -->
-            <div v-else-if="activeTab === 'referrals'" class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+            <div v-else-if="activeTab === 'referrals'" class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         {{ $t('healthcare.patientShow.referralsTitle', 'Riwayat Rujukan Medis') }}
@@ -349,7 +349,7 @@
                 </div>
             </div>
             <div v-if="activeTab === 'emergencies'" class="space-y-4">
-                <div v-for="emergency in patient.emergency_events || []" :key="emergency.id" class="rounded-xl border border-slate-200 bg-white p-4">
+                <div v-for="emergency in patient.emergency_events || []" :key="emergency.id" class="hc-panel rounded-xl border border-slate-200 bg-white p-4">
                     <p class="text-xs text-slate-500 mb-3">{{ $t('healthcare.patientShow.incidentPrefix', 'Insiden') }} {{ emergency.id }}</p>
                     <OperationsTimeline :operations="emergency.operations" />
                 </div>
