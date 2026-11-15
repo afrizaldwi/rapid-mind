@@ -2,7 +2,9 @@ import type {
     ClinicalStore,
     EncryptedStagingRecord,
     WrappedOfflineKey,
+    OfflineKeyRecord,
 } from "./db";
+import { offlineKeyMetadata } from "./offlineKeyMetadata.ts";
 
 const VERSION = 1 as const;
 const ITERATIONS = 600_000;
@@ -184,15 +186,15 @@ export class OfflineKeySession {
         this.generation++;
     }
 
-    async bindPersistedKey(record: WrappedOfflineKey): Promise<void> {
+    async bindPersistedKey(record: OfflineKeyRecord): Promise<void> {
         await this.assertMatches(record);
         this.available(record.owner_user_id);
-        this.persistedKey = JSON.stringify(record);
+        this.persistedKey = offlineKeyMetadata(record);
     }
 
-    assertPersistedKey(record: WrappedOfflineKey): void {
+    assertPersistedKey(record: OfflineKeyRecord): void {
         this.available(record.owner_user_id);
-        if (!this.persistedKey || this.persistedKey !== JSON.stringify(record))
+        if (!this.persistedKey || this.persistedKey !== offlineKeyMetadata(record))
             throw new Error("Offline key metadata changed; unlock again");
     }
 
@@ -223,9 +225,9 @@ export class OfflineKeySession {
         };
     }
 
-    async assertMatches(record: WrappedOfflineKey): Promise<void> {
+    async assertMatches(record: OfflineKeyRecord): Promise<void> {
         const key = this.available(record.owner_user_id);
-        if (record.version !== VERSION || !record.verification)
+        if (![1, 2].includes(record.version) || !record.verification)
             throw new Error("Offline key proof unavailable");
         const iv = decoded(record.verification.iv);
         if (iv.length !== 12) throw new Error("Invalid offline key proof");

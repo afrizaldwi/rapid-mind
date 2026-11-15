@@ -121,13 +121,20 @@ watch(
         let active = true;
         emergency.value = null;
         const subscription: Subscription = liveQuery(async () => {
+            await db.encryptedStaging.get(`emergencies:${owner}:${id}`);
+            await db.localSyncReceipts.get(`${owner}:EMERGENCY:${id}`);
             return (await emergencyRepository.get(owner, id)) ?? null;
         }).subscribe(async (record) => {
-            emergency.value = record;
+            if (!active || props.owner !== owner || props.id !== id) return;
+            if (record) { emergency.value = record; return; }
             if (!record) {
                 const receipt = await db.localSyncReceipts.get(`${owner}:EMERGENCY:${id}`).catch(() => undefined);
-                if (active && props.owner === owner && props.id === id && receipt?.canonical_id === id)
-                    emit("close");
+                if (!active || props.owner !== owner || props.id !== id) return;
+                const previous = emergency.value;
+                emergency.value = receipt?.owner_user_id === owner && receipt.canonical_id === id &&
+                    previous?.owner_user_id === owner && previous.id === id
+                    ? { ...previous, sync_state: "SYNCED", last_error: undefined }
+                    : null;
             }
         });
         onCleanup(() => { active = false; subscription.unsubscribe(); });

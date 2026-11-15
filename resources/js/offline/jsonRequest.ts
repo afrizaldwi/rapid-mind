@@ -23,11 +23,7 @@ export async function jsonRequest(
 ): Promise<Response> {
     if (!url.startsWith("/") || url.startsWith("//"))
         throw new Error("Only same-origin paths are allowed");
-    const token = (
-        document.querySelector(
-            'meta[name="csrf-token"]',
-        ) as HTMLMetaElement | null
-    )?.content;
+    const token = currentCsrfToken();
     if (!token) throw new MissingCsrfTokenError();
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
         throw new Error("Invalid request timeout");
@@ -74,3 +70,4 @@ export async function jsonRequest(
         clearTimeout(timer);
     }
 }
+import { currentCsrfToken } from "./csrfToken.ts";

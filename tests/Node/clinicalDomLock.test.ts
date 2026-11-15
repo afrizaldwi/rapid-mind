@@ -23,7 +23,9 @@ const placeholder = moduleStub(
     `import {defineComponent,h} from '${vue}'; export default defineComponent({setup:()=>()=>h('span')});`,
 );
 const overrides: Record<string, string> = {};
-overrides["@/offline/localEnrollmentAuthorization"] = moduleStub("export const prepareLocalEnrollment = async () => {};");
+overrides["@/offline/deviceKeyWorkflow"] = moduleStub("export const ensureDeviceClinicalAccess=async()=>{};export const waitForDeviceClinicalAccess=async()=>{};");
+overrides["@/offline/cacheRelawanPage"] = moduleStub("export const cacheRelawanPatients=async()=>{};export const cacheRelawanEmergency=async()=>{};");
+overrides["@/offline/localEnrollmentAuthorization"] = moduleStub("export const acceptLocalEnrollmentBootstrap = async () => {};");
 for (const name of [
     "StatusIndicator",
     "T0Button",

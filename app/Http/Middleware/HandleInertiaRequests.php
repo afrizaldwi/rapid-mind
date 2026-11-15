@@ -52,6 +52,15 @@ class HandleInertiaRequests extends Middleware
                     'facility' => $request->user()->facility ? ['id' => $request->user()->facility->id, 'name' => $request->user()->facility->name] : null,
                 ] : null,
             ],
+            'offlineEnrollment' => fn () => $request->user()?->role === UserRole::RELAWAN ? [
+                'owner' => $request->user()->id,
+                'origin' => \App\Support\LocalOfflineEnrollment::ORIGIN,
+                'allowed' => \App\Support\LocalOfflineEnrollment::allowed(
+                    (string) app()->environment(), (string) config('app.url'),
+                    (bool) config('offline.local_enrollment', false), $request,
+                    $request->user(), (int) $request->user()->id,
+                ),
+            ] : null,
             'clinicalScopeAvailable' => \App\Domain\Healthcare\HealthcareCaseAccess::available(),
             'healthcareChannel' => \App\Domain\Healthcare\HealthcareCaseAccess::available()
                 && \App\Domain\Healthcare\HealthcareCaseAccess::facility($request->user()) !== null

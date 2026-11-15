@@ -5,6 +5,10 @@ import {
     type EncryptedStagingRecord,
 } from "./db";
 import type { OfflineKeySession } from "./offlineCrypto";
+import Dexie from "dexie";
+import { restoreDeviceKey } from "./deviceOfflineKey";
+import { localLogoutPending } from "./localLogoutIntent";
+import { clearCsrfToken } from "./csrfToken";
 import { shallowRef } from "vue";
 import { captureClinicalAccess, assertClinicalAccess, invalidateClinicalAccess, onClinicalInvalidation } from "./clinicalAccessFence";
 import { encryptedEnrollmentEnabled, syntheticLegacyFixture, keyIdentity } from "./clinicalStorageInitialization";
@@ -39,7 +43,7 @@ export function announceSyntheticModeActivation(owner: number): void {
 export async function installClinicalKey(
     session: OfflineKeySession,
 ): Promise<void> {
-    if (!session.unlocked) throw new Error("Kunci data offline terkunci.");
+    if (!session.unlocked || localLogoutPending()) throw new Error("Akses lokal dihentikan.");
     const ticket = captureClinicalAccess();
     const epoch = accessEpoch;
     const persisted = await db.offlineKeys.get(session.owner);
@@ -48,6 +52,10 @@ export async function installClinicalKey(
     const latest = await db.offlineKeys.get(session.owner);
     session.assertPersistedKey(latest ?? persisted);
     if (!latest) throw new Error("Kunci data offline berubah.");
+    if (latest.version === 2) {
+        const proof = await restoreDeviceKey(latest);
+        proof.lock();
+    }
     if (!session.unlocked || epoch !== accessEpoch)
         throw new Error("Akses data offline berubah saat membuka kunci.");
     for (const [owner, previous] of activeSessions) {
@@ -71,6 +79,7 @@ export async function installClinicalKey(
 }
 
 function clearKeys(): void {
+    clearCsrfToken();
     accessEpoch++;
     for (const session of activeSessions.values()) session.lock();
     activeSessions.clear();
@@ -91,8 +100,10 @@ export function clinicalKeyReady(owner: number): boolean {
 export async function encryptedMode(owner: number): Promise<boolean> {
     const mode = await db.ownerEncryptionModes.get(requireOwner(owner));
     if (syntheticLegacyFixture()) return mode?.mode === "ENCRYPTED";
+    const device = (await db.offlineKeys.get(owner))?.version === 2;
     if (!encryptedEnrollmentEnabled(owner, mode) || mode?.mode !== "ENCRYPTED" ||
-        !Number.isFinite(Date.parse(mode.confirmed_at ?? "")) || !mode.key_identity || !mode.recovery_revision) {
+        !Number.isFinite(Date.parse(mode.confirmed_at ?? "")) || !mode.key_identity ||
+        (!device && !mode.recovery_revision)) {
         if (activeSessions.size) lockAllClinicalKeys();
         throw new Error("Penyimpanan klinis belum diinisialisasi atau diblokir. Data tetap tersimpan.");
     }
@@ -100,6 +111,7 @@ export async function encryptedMode(owner: number): Promise<boolean> {
 }
 
 export async function assertStorageMode(owner: number, expected: "LEGACY" | "ENCRYPTED"): Promise<void> {
+    if (localLogoutPending()) { lockAllClinicalKeys(); throw new Error("Akses lokal dihentikan."); }
     const encrypted = await encryptedMode(owner);
     if ((encrypted ? "ENCRYPTED" : "LEGACY") !== expected)
         throw new Error("Mode penyimpanan berubah. Muat ulang data lokal.");
@@ -112,7 +124,10 @@ export async function assertStorageMode(owner: number, expected: "LEGACY" | "ENC
             throw new Error("Buka kunci data offline Relawan ini.");
         }
         assertClinicalAccess(ticket);
-        try { session.assertPersistedKey(wrapped); }
+        try {
+            session.assertPersistedKey(wrapped);
+            if (wrapped.version === 2) await Dexie.waitFor(restoreDeviceKey(wrapped).then(proof => proof.lock()));
+        }
         catch (error) { lockAllClinicalKeys(); throw error; }
         if (!syntheticLegacyFixture()) {
             const mode = await db.ownerEncryptionModes.get(owner);

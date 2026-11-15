@@ -30,58 +30,22 @@ const allowed = (id = 101, role = "RELAWAN", responseOrigin = origin) =>
         }),
     );
 
-test("ordinary built assets require authenticated local policy; enrolled owner unlocks offline without fetch", async (t) => {
+test("ordinary assets automatically initialize only after local server policy, then restore offline", async t => {
     const f = await localFixture(t);
-    assert.equal(
-        await f.initialization.inspectClinicalInitialization(101),
-        "ACTIVATION_DISABLED",
-    );
+    assert.equal(await f.initialization.inspectClinicalInitialization(101), "ACTIVATION_DISABLED");
     let requests = 0;
-    t.mock.method(globalThis, "fetch", async (url, options) => {
-        requests++;
-        assert.match(
-            String(url),
-            /^\/relawan\/offline-enrollment-status\?owner_user_id=101$/,
-        );
-        assert.equal(options.credentials, "same-origin");
-        assert.equal(options.cache, "no-store");
-        return allowed();
-    });
-    await f.authorization.prepareLocalEnrollment(101);
-    assert.equal(f.authorization.encryptedEnrollmentAllowed(101), true);
-    assert.equal(
-        await f.initialization.inspectClinicalInitialization(101),
-        "FRESH",
-    );
-    const recovery = await f.enrollment.beginClinicalEnrollment(
-        101,
-        passphrase,
-        passphrase,
-    );
-    assert.equal(
-        (await f.db.ownerEncryptionModes.get(101)).activation,
-        "LOCAL_DEVELOPMENT_V1",
-    );
-    await f.enrollment.confirmClinicalRecovery(101);
-    await f.patients.save(101, {
-        id: "local-synthetic",
-        name: "Penyintas Sintetis",
-    });
+    t.mock.method(globalThis, "fetch", async () => { requests++; return allowed(); });
+    await f.deviceKeys.ensureDeviceClinicalAccess(101);
+    assert.equal((await f.db.ownerEncryptionModes.get(101)).activation, "LOCAL_DEVICE_V2");
+    assert.equal((await f.db.offlineKeys.get(101)).version, 2);
+    await f.patients.save(101, { id: "local-synthetic", name: "Penyintas Sintetis" });
     f.storage.lockAllClinicalKeys();
     f.browser.navigator.onLine = false;
     const before = requests;
-    await f.authorization.prepareLocalEnrollment(101);
+    await f.deviceKeys.ensureDeviceClinicalAccess(101);
     assert.equal(requests, before);
-    await f.enrollment.unlockClinicalOwner(101, passphrase, "passphrase");
-    assert.equal(requests, before);
-    assert.equal(
-        (await f.patients.get(101, "local-synthetic")).name,
-        "Penyintas Sintetis",
-    );
+    assert.equal((await f.patients.get(101, "local-synthetic")).name, "Penyintas Sintetis");
     assert.equal(f.db.patients.rows.size, 0);
-    f.storage.lockAllClinicalKeys();
-    await f.enrollment.unlockClinicalOwner(101, recovery, "recovery");
-    assert.equal(requests, before);
 });
 
 for (const reason of [
@@ -107,7 +71,7 @@ for (const reason of [
             );
         });
         await assert.rejects(
-            f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase),
+            f.deviceKeys.ensureDeviceClinicalAccess(101),
         );
         assert.equal(f.db.offlineKeys.rows.size, 0);
         assert.equal(f.db.ownerEncryptionModes.rows.size, 0);
@@ -128,37 +92,26 @@ for (const mode of ["production", "encrypted-acceptance", "staging-fixture"]) {
             "ACTIVATION_DISABLED",
         );
         await assert.rejects(
-            f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase),
+            f.deviceKeys.ensureDeviceClinicalAccess(101),
         );
         assert.equal(request.mock.callCount(), 0);
         await assert.rejects(f.patients.save(101, { name: "Sintetis" }));
     });
 }
 
-test("local authorization preserves legacy quarantine and interrupted same-DEK enrollment", async (t) => {
+test("local device initialization preserves legacy plaintext and passphrase quarantine", async t => {
     const f = await localFixture(t);
     t.mock.method(globalThis, "fetch", async () => allowed());
     await f.db.patients.put({ id: "legacy", name: "Dummy legacy" });
-    await assert.rejects(
-        f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase),
-    );
-    assert.equal(
-        await f.initialization.inspectClinicalInitialization(101),
-        "LEGACY_BLOCKED",
-    );
+    await assert.rejects(f.deviceKeys.ensureDeviceClinicalAccess(101));
+    assert.equal(await f.initialization.inspectClinicalInitialization(101), "LEGACY_BLOCKED");
     assert.equal(f.db.patients.rows.size, 1);
-    // Explicit removal affects only this in-memory synthetic fixture.
-    await f.db.patients.delete("legacy");
+    await f.db.patients.delete("legacy"); // Only the isolated in-memory fixture.
     await f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase);
     const before = await f.db.offlineKeys.get(101);
-    f.storage.lockAllClinicalKeys();
-    await f.enrollment.continueClinicalEnrollment(101, passphrase);
-    assert.deepEqual(
-        (await f.db.offlineKeys.get(101)).verification,
-        before.verification,
-    );
-    await f.enrollment.confirmClinicalRecovery(101);
-    assert.equal(f.storage.clinicalKeyReady(101), true);
+    await assert.rejects(f.deviceKeys.ensureDeviceClinicalAccess(101));
+    assert.equal(await f.initialization.inspectClinicalInitialization(101), "LEGACY_BLOCKED");
+    assert.deepEqual(await f.db.offlineKeys.get(101), before);
 });
 
 for (const mode of ["encrypted-acceptance", "staging-fixture"]) {
@@ -172,7 +125,7 @@ for (const mode of ["encrypted-acceptance", "staging-fixture"]) {
         assert.equal(f.environment.acceptanceEncryptionFixture(), false);
         assert.equal(f.environment.stagingEncryptionFixture(), false);
         await assert.rejects(
-            f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase),
+            f.deviceKeys.ensureDeviceClinicalAccess(101),
         );
         assert.equal(request.mock.callCount(), 1);
         assert.equal(f.db.offlineKeys.rows.size, 0);
@@ -189,7 +142,7 @@ test("127.0.0.1:8080 is not the approved local enrollment origin or an isolated 
         throw new Error("No local authorization request expected");
     });
     await assert.rejects(
-        f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase),
+        f.deviceKeys.ensureDeviceClinicalAccess(101),
     );
     assert.equal(
         await f.initialization.inspectClinicalInitialization(101),
@@ -197,24 +150,12 @@ test("127.0.0.1:8080 is not the approved local enrollment origin or an isolated 
     );
 });
 
-test("server denial at recovery confirmation preserves the pending key and permits an authorized retry", async (t) => {
+test("authenticated bootstrap policy removes the additional enrollment round trip", async t => {
     const f = await localFixture(t);
-    let enabled = true;
-    t.mock.method(globalThis, "fetch", async () =>
-        enabled ? allowed() : new Response("{}", { status: 403 }),
-    );
-    await f.enrollment.beginClinicalEnrollment(101, passphrase, passphrase);
-    const key = await f.db.offlineKeys.get(101);
-    enabled = false;
-    await assert.rejects(f.enrollment.confirmClinicalRecovery(101));
-    assert.equal(
-        (await f.db.ownerEncryptionModes.get(101)).mode,
-        "ENROLLMENT_PENDING",
-    );
-    assert.deepEqual(await f.db.offlineKeys.get(101), key);
-    assert.equal(f.storage.clinicalKeyReady(101), false);
-    enabled = true;
-    await f.enrollment.confirmClinicalRecovery(101);
+    await f.authorization.acceptLocalEnrollmentBootstrap(101, { allowed: true, owner: 101, origin });
+    const fetch = t.mock.method(globalThis, "fetch", async () => { throw Error("No startup round trip expected"); });
+    await f.deviceKeys.ensureDeviceClinicalAccess(101);
+    assert.equal(fetch.mock.callCount(), 0);
     assert.equal(f.storage.clinicalKeyReady(101), true);
 });
 

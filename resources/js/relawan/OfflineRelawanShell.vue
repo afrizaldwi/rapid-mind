@@ -10,12 +10,7 @@
             </div>
         </header>
         <main class="mx-auto grid max-w-md gap-3 px-4 py-4">
-            <section v-if="!unlockRequested" class="rounded-xl border border-slate-200 bg-white p-4" aria-labelledby="locked-mode-title">
-                <h1 id="locked-mode-title" class="text-lg font-bold">{{ isEn ? 'Limited mode' : 'Mode terbatas' }}</h1>
-                <p class="mt-1 text-sm text-slate-600">{{ isEn ? 'Clinical data on this device is locked.' : 'Data klinis di perangkat ini terkunci.' }}</p>
-                <button type="button" class="mt-4 min-h-11 w-full rounded-lg bg-teal-700 px-3 py-2 font-semibold text-white" @click="unlockRequested = true">{{ isEn ? 'Open offline data / resume work' : 'Buka data offline / lanjutkan pekerjaan' }}</button>
-            </section>
-            <OfflineEncryptionGate v-else :owner="owner" class="my-0!" />
+            <OfflineEncryptionGate :owner="owner" class="my-0!" />
             <button ref="emergencyTrigger" type="button" class="min-h-11 w-full rounded-lg border border-red-800 bg-white px-3 py-2 font-semibold text-red-800" @click="showEmergencyGuide = true">{{ isEn ? 'T0 EMERGENCY' : 'T0 DARURAT' }}</button>
             <button type="button" class="min-h-11 justify-self-center rounded-lg px-3 text-sm text-slate-600 underline underline-offset-4" @click="signOut">{{ isEn ? 'Sign out on this device' : 'Keluar akun di perangkat ini' }}</button>
         </main>
@@ -38,15 +33,16 @@
                     ? isEn
                         ? "Checking device access…"
                         : "Memeriksa akses perangkat…"
-                    : isEn
-                      ? "Page unavailable"
-                      : "Halaman belum tersedia"
+                    : view.status === "DENIED"
+                      ? "Akses lokal dikunci"
+                      : isEn ? "Page unavailable" : "Halaman belum tersedia"
             }}
         </h1>
         <p v-if="view.status !== 'LOADING'" class="mt-3">
             {{
-                isEn
-                    ? "Access or storage for this page is unavailable. Local data remains preserved."
+                view.status === "DENIED"
+                    ? "Masuk kembali saat terhubung ke internet. Data lokal tetap dipertahankan."
+                    : isEn ? "Access or storage for this page is unavailable. Local data remains preserved."
                     : "Akses atau penyimpanan halaman ini belum tersedia. Data lokal tetap dipertahankan."
             }}
         </p>
@@ -77,6 +73,8 @@ import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vu
 import { relawanRuntimeKey } from "./runtime";
 import { createOfflineNavigation } from "./offlineNavigation";
 import { lockRelawanContinuity } from "@/offline/relawanContinuity";
+import { ensureDeviceClinicalAccess } from "@/offline/deviceKeyWorkflow";
+import { syncManager } from "@/offline/syncManager";
 import { lockAllClinicalKeys } from "@/offline/encryptedClinicalStorage";
 import { startRelawanSessionRecovery } from "@/offline/sessionRecovery";
 import { useDialogFocus } from "@/composables/useDialogFocus";
@@ -84,7 +82,6 @@ import { useDialogFocus } from "@/composables/useDialogFocus";
 const { isEn } = useI18n();
 
 const props = defineProps<{ owner: number }>();
-const unlockRequested = ref(false);
 const showEmergencyGuide = ref(false);
 const guidanceDialog = ref<HTMLElement | null>(null);
 const emergencyTrigger = ref<HTMLButtonElement | null>(null);
@@ -108,17 +105,15 @@ const navigation = createOfflineNavigation(props.owner, () => {
 });
 const { runtime, view } = navigation;
 provide(relawanRuntimeKey, runtime);
-let recoveryStarted = false;
+let stopRecovery: (() => void) | undefined;
 watch(view, (current) => {
     if (current.status !== "LOCKED") showEmergencyGuide.value = false;
-    if (current.status === "LOCKED") unlockRequested.value = false;
-    if (current.status === "READY" && !recoveryStarted) {
-        recoveryStarted = true;
-        startRelawanSessionRecovery(props.owner);
+    if (current.status === "READY" && !stopRecovery) {
+        stopRecovery = startRelawanSessionRecovery(props.owner, () => syncManager.resumeSession(props.owner));
     }
 });
 onMounted(() => {
-    void navigation.start();
+    void ensureDeviceClinicalAccess(props.owner).catch(() => {}).then(() => navigation.start());
 });
-onUnmounted(navigation.stop);
+onUnmounted(() => { stopRecovery?.(); navigation.stop(); });
 </script>

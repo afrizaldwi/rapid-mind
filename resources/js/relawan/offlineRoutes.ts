@@ -83,7 +83,7 @@ export async function resolveOfflineRoute(
             return { unavailable: "Insiden ini belum tersedia di perangkat." };
         return {
             component: (await import("@/Pages/Relawan/Emergency.vue")).default,
-            props: { localEmergency: emergency },
+            props: { localEmergencyId: emergency.id },
         };
     }
     return {

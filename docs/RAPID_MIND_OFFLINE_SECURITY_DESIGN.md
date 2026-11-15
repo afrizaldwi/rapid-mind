@@ -380,3 +380,27 @@ Final evidence:47 focused Node tests, TypeScript/build PASS;15 published Chrome�
 ## Owner-authorized demo rebuild and passphrase guidance — 13 November 2026
 
 Owner explicitly authorized backup then truncate/rebuild of localhost demo data and identified browser storage. Chrome profile Daffa was exported privately before reset; PostgreSQL backup was restored into an isolated verification database. Existing user IDs were not reused (new users46–51), preventing old owner ciphertext/outbox from matching new accounts. No cryptographic migration or weakening was added. New enrollment UI explains a personal phrase of several unrelated words, minimum20 characters, spaces allowed, no mandatory special symbols; unlock preserves existing compatibility. There is no shared/default offline phrase. See [backup hashes, changed files, scoped reset, seeded synthetic histories, verification and limits](checkpoints/demo-rebuild-simple-passphrase-2026-11-13.md). This reset authorization does not apply to unidentified devices or later real-user data.
+
+
+## Supersession — 15 November 2026: device-managed Relawan encryption
+
+The owner approved removing all additional offline authentication input for
+Relawan, including T0. A random non-extractable AES-256-GCM CryptoKey is persisted
+in IndexedDB and restored automatically for eligible local owner continuity.
+Normal online login and explicit logout remain. Backgrounding does not revoke
+field access. This replaces passphrase enrollment, recovery confirmation and
+background-timeout unlock requirements described historically below/above.
+
+Assessments now save through encrypted repositories before background delivery.
+Connectivity changes do not initiate navigation; session/CSRF recovery stays in
+place. T0 still requires human verification/final send and atomically saves its
+encrypted incident and priority-1 outbox. Receipt is separate from Healthcare action.
+
+Schema v9 and worker protocol v3 leave old stores intact. Existing passphrase data
+requires the separately scoped clean start agreed by the owner; it is never
+silently converted or deleted. PostgreSQL reset/reseeding and production activation
+are outside this checkpoint. Browser-profile access is trusted; hardware-backed
+protection and recovery after browser storage loss are not claimed.
+
+See [implementation and verification](checkpoints/device-managed-relawan-2026-11-15.md).
+Historical PASS results remain historical, not evidence for this implementation.

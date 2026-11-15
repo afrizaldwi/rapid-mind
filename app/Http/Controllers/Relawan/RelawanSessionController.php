@@ -39,10 +39,11 @@ final class RelawanSessionController extends Controller
 
         return response()->json([
             'state' => 'AUTHENTICATED',
+            'csrf_token' => $request->session()->token(),
             'user' => [
                 'id' => $user->id,
                 'role' => UserRole::RELAWAN->value,
             ],
-        ]);
+        ])->header('Cache-Control', 'private, no-store, max-age=0');
     }
 }

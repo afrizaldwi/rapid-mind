@@ -6,6 +6,9 @@ import { createApp, defineAsyncComponent, h, provide, shallowRef, type DefineCom
 import { offlineHandoffKey } from "./relawan/offlineHandoff";
 import { resolveRelawanContinuity } from "./offline/relawanContinuity";
 import { clinicalKeyReady } from "./offline/encryptedClinicalStorage";
+import { captureClinicalAccess, assertClinicalAccess } from "./offline/clinicalAccessFence";
+import { resolveOfflineRoute } from "./relawan/offlineRoutes";
+import { offlineRelawanUrl } from "./relawan/offlineLink";
 
 const OfflineRelawanShell = defineAsyncComponent(() => import("./relawan/OfflineRelawanShell.vue"));
 import { configureEcho } from "@laravel/echo-vue";
@@ -81,12 +84,20 @@ if (clinicalPath && !window.crypto?.subtle) {
         createApp({
             setup() {
                 const offlineOwner = shallowRef<number | null>(null);
+                let navigation = 0;
                 provide(offlineHandoffKey, async (owner, path) => {
+                    const sequence = ++navigation;
+                    const access = captureClinicalAccess();
+                    const url = offlineRelawanUrl(path, window.location.href);
                     const continuity = await resolveRelawanContinuity();
                     if (continuity.state !== "ELIGIBLE" || continuity.context.owner_user_id !== owner ||
-                        !clinicalKeyReady(owner) || !/^\/relawan\/assessment\/[a-f0-9-]+\/risk$/.test(path))
+                        !clinicalKeyReady(owner) || !url)
                         throw new Error("Akses offline belum tersedia untuk akun ini.");
-                    window.history.pushState(null, "", path);
+                    const page = await resolveOfflineRoute(owner, url.pathname);
+                    assertClinicalAccess(access);
+                    if (sequence !== navigation || "unavailable" in page)
+                        throw new Error("Halaman ini belum tersedia di perangkat.");
+                    window.history.pushState(null, "", url.pathname + url.search + url.hash);
                     offlineOwner.value = owner;
                 });
                 return () => offlineOwner.value

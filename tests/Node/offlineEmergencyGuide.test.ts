@@ -11,8 +11,10 @@ test('locked offline shell opens and closes T0 guidance without unlock or clinic
     const state = ((globalThis as any).__offlineGuide = { view: ref({ status: 'LOCKED' }), writes: 0 });
     const vue = import.meta.resolve('vue');
     const component = (await import(await vueModuleUrl('resources/js/relawan/OfflineRelawanShell.vue', {
+        '@/offline/deviceKeyWorkflow': moduleStub('export const ensureDeviceClinicalAccess=async()=>{};'),
+        '@/offline/syncManager': moduleStub('export const syncManager={resumeSession(){}};'),
         '@/i18n': moduleStub(`import {ref} from '${vue}'; export const useI18n=()=>({isEn:ref(false)});`),
-        '@/components/Relawan/OfflineEncryptionGate.vue': moduleStub(`import {defineComponent,h} from '${vue}'; export default defineComponent({setup:()=>()=>h('p','Unlock sintetis')});`),
+        '@/components/Relawan/OfflineEncryptionGate.vue': moduleStub(`import {defineComponent,h} from '${vue}'; export default defineComponent({setup:()=>()=>h('p','Persiapan sintetis')});`),
         './runtime': moduleStub('export const relawanRuntimeKey=Symbol();'),
         './offlineNavigation': moduleStub('export const createOfflineNavigation=()=>({view:globalThis.__offlineGuide.view,runtime:{owner:101,mode:"OFFLINE_FIELD_MODE",navigate(path){globalThis.__offlineGuide.path=path}},start(){},stop(){}});'),
         '@/offline/relawanContinuity': moduleStub('export const lockRelawanContinuity=()=>{globalThis.__offlineGuide.writes++;};'),
@@ -22,17 +24,17 @@ test('locked offline shell opens and closes T0 guidance without unlock or clinic
     const f = mountFixture(component, { owner: 101 });
     t.after(() => { f.app.unmount(); (globalThis as any).window = previousWindow; (globalThis as any).document = previousDocument; });
     const button = (label: string) => f.nodes(n => n.tag === 'button' && f.text(n).includes(label))[0];
-    assert.doesNotMatch(f.text(), /Panduan bantuan darurat|Unlock sintetis/);
+    assert.doesNotMatch(f.text(), /Panduan bantuan darurat/);
+    assert.match(f.text(), /Persiapan sintetis/);
     button('T0 DARURAT').onClick(); await f.flush();
     button('Panduan bantuan darurat').onClick(); await f.flush();
     assert.match(f.text(), /Tidak ada permintaan yang dikirim/);
-    assert.doesNotMatch(f.text(), /Unlock sintetis/);
+    assert.match(f.text(), /Persiapan sintetis/);
     assert.equal(f.nodes(n => n.tag === 'input' || n.tag === 'form').length, 0);
     assert.equal(state.writes, 0);
     f.nodes(n => n.role === 'dialog')[0].onKeydown({ key: 'Escape', preventDefault() {} }); await f.flush();
     assert.equal(f.nodes(n => n.role === 'dialog').length, 0);
-    button('Buka data offline').onClick(); await f.flush();
-    assert.match(f.text(), /Unlock sintetis/);
+    assert.match(f.text(), /Persiapan sintetis/);
     assert.doesNotMatch(f.text(), /Mode terbatas|lanjutkan pekerjaan/);
     button('T0 DARURAT').onClick(); await f.flush();
     assert.match(f.text(), /Panduan bantuan darurat/);

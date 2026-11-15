@@ -37,11 +37,6 @@
             <!-- Scrollable Form Body -->
             <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 min-h-0 text-slate-900">
                 <LockedEmergencyGuidance />
-                <section v-if="unlockRequested" class="space-y-3">
-                    <p role="status" class="text-sm text-slate-700">{{ isEn ? 'Unlock is needed to read device records or save the encrypted T0 report. Nothing has been sent. After unlocking, review the form and press Send again.' : 'Buka kunci diperlukan untuk membaca data perangkat atau menyimpan laporan T0 terenkripsi. Belum ada laporan yang dikirim. Setelah membuka kunci, tinjau formulir lalu tekan Kirim kembali.' }}</p>
-                    <OfflineEncryptionGate :owner="owner" @unlocked="onClinicalUnlocked" />
-                </section>
-                <button v-if="!clinicalKeyReady(owner) && !unlockRequested" type="button" class="min-h-11 text-sm font-semibold text-teal-800 underline" @click="unlockRequested = true">{{ isEn ? 'Open encrypted device patient list' : 'Buka daftar pasien terenkripsi di perangkat' }}</button>
                 <!-- Gate 1: Penyintas -->
                 <div class="space-y-3">
                     <label
@@ -263,7 +258,8 @@ import { createLocalEmergency } from "@/offline/emergencyWorkflow";
 import { syncManager } from "@/offline/syncManager";
 import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
 import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
-import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
+import { cacheRelawanPatients } from "@/offline/cacheRelawanPage";
+import { waitForDeviceClinicalAccess } from "@/offline/deviceKeyWorkflow";
 import LockedEmergencyGuidance from "@/components/Relawan/LockedEmergencyGuidance.vue";
 import { useDialogFocus } from "@/composables/useDialogFocus";
 import { useI18n } from "@/i18n";
@@ -285,10 +281,8 @@ const emit = defineEmits<{
 }>();
 
 const dialogPanel = ref<HTMLElement | null>(null);
-const unlockRequested = ref(false);
 const { keydown } = useDialogFocus(dialogPanel, () => props.show, () => { if (!isSubmitting.value) emit("close"); });
 const scope = useClinicalTaskScope(() => {
-    if (unlockRequested.value && clinicalKeyReady(owner) && runtime.owner === owner) return;
     if (dialogPanel.value) dialogPanel.value.style.display = "none";
     ++patientLoadCheck;
     availablePatients.value = [];
@@ -429,7 +423,6 @@ watch(
     (show) => {
         const check = ++patientLoadCheck;
         if (!show) { scope.invalidate(); return; }
-        unlockRequested.value = false;
         const current = scope.capture();
         selectedRedFlag.value =
             props.suggestedRedFlag === "SUICIDAL_IDEATION"
@@ -463,8 +456,10 @@ watch(
                     return (await response.json()) as ServerPatientOption[];
                 })
                 .then((patients) => {
-                    if (current() && props.show && check === patientLoadCheck && Array.isArray(patients))
+                    if (current() && props.show && check === patientLoadCheck && Array.isArray(patients)) {
                         fetchedPatients.value = patients;
+                        void cacheRelawanPatients(owner, patients).catch(() => {});
+                    }
                 })
                 .catch(() => {
                     // Local patients and existing page snapshots remain usable.
@@ -494,10 +489,6 @@ function selectRedFlag(type: string) {
 
 async function submitEmergency() {
     if (!props.show || isSubmitting.value || !selectedRedFlag.value) return;
-    if (!clinicalKeyReady(owner)) {
-        unlockRequested.value = true;
-        return;
-    }
     const current = scope.capture();
     const input = {
         patientId: effectivePatientId.value || null, assessmentId: props.assessmentId,
@@ -510,6 +501,8 @@ async function submitEmergency() {
     isSubmitting.value = true;
     let id: string;
     try {
+        await waitForDeviceClinicalAccess(owner);
+        if (!current() || !props.show) return;
         const context = input.assessmentId ? onlineAssessmentContext?.() : null;
         if (context && context.assessment.id === input.assessmentId &&
             context.assessment.user_id === owner && context.patient.id === input.patientId) {
@@ -543,17 +536,7 @@ async function submitEmergency() {
             detail: { owner, id },
         }),
     );
-    if (runtime.mode === "ONLINE_SERVER") void syncManager.sync(owner);
+    void syncManager.sync(owner).catch(() => {});
     emit("close");
-}
-async function onClinicalUnlocked() {
-    unlockRequested.value = false;
-    const current = scope.capture();
-    try {
-        const patients = await patientRepository.list(owner);
-        if (current() && props.show) availablePatients.value = patients;
-    } catch {
-        if (current() && props.show) availablePatients.value = [];
-    }
 }
 </script>

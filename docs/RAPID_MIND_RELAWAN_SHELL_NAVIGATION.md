@@ -1717,3 +1717,27 @@ Cover:
 The design must preserve the principle:
 
 > T0 is an emergency event and bypasses normal T1/T2/T3 scoring, but it is still a T0-Suspect until Healthcare performs secondary/clinical validation.
+
+
+## Supersession — 15 November 2026: device-managed Relawan encryption
+
+The owner approved removing all additional offline authentication input for
+Relawan, including T0. A random non-extractable AES-256-GCM CryptoKey is persisted
+in IndexedDB and restored automatically for eligible local owner continuity.
+Normal online login and explicit logout remain. Backgrounding does not revoke
+field access. This replaces passphrase enrollment, recovery confirmation and
+background-timeout unlock requirements described historically below/above.
+
+Assessments now save through encrypted repositories before background delivery.
+Connectivity changes do not initiate navigation; session/CSRF recovery stays in
+place. T0 still requires human verification/final send and atomically saves its
+encrypted incident and priority-1 outbox. Receipt is separate from Healthcare action.
+
+Schema v9 and worker protocol v3 leave old stores intact. Existing passphrase data
+requires the separately scoped clean start agreed by the owner; it is never
+silently converted or deleted. PostgreSQL reset/reseeding and production activation
+are outside this checkpoint. Browser-profile access is trusted; hardware-backed
+protection and recovery after browser storage loss are not claimed.
+
+See [implementation and verification](checkpoints/device-managed-relawan-2026-11-15.md).
+Historical PASS results remain historical, not evidence for this implementation.

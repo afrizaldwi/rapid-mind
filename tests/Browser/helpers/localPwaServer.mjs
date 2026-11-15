@@ -11,7 +11,7 @@ export const ownerId = 910001;
 // This is a closed HTTP proxy, not an upstream proxy. It NEVER forwards traffic.
 // Chromium (including its worker) sees the exact enrollment origin; the owner's
 // localhost:8080 server is never contacted. Authentication responses are synthetic.
-export async function localPwaServer(build) {
+export async function localPwaServer(build, { deviceManaged = false } = {}) {
     const state = {
         offline: false,
         hang: false,
@@ -19,6 +19,11 @@ export async function localPwaServer(build) {
         owner: ownerId,
         session: "AUTHENTICATED",
         denyEnrollment: false,
+        csrf: "c1-synthetic",
+        dropNextEmergencyResponse: false,
+        emergencyRouting: "UNRESOLVED",
+        acceptedAssessments: new Map(),
+        acceptedEmergencies: new Map(),
     };
     const log = [];
     const css = new Set();
@@ -43,6 +48,9 @@ export async function localPwaServer(build) {
                   : "Relawan/Home",
             props: {
                 errors: {},
+                ...(deviceManaged ? { offlineEnrollment: {
+                    owner: state.owner, origin, allowed: !state.denyEnrollment && state.session === "AUTHENTICATED",
+                } } : {}),
                 auth: {
                     user: login
                         ? null
@@ -96,16 +104,45 @@ export async function localPwaServer(build) {
                 response.writeHead(403).end();
                 return;
             }
+            if (state.offline) {
+                entry.outcome = "offline";
+                request.socket.destroy();
+                return;
+            }
+            if (deviceManaged && request.method === "POST" &&
+                ["/relawan/sync/assessments", "/relawan/sync/emergencies"].includes(url.pathname)) {
+                const json = (status, value) => response.writeHead(status, {
+                    "Content-Type": "application/json", "Cache-Control": "private, no-store",
+                }).end(JSON.stringify(value));
+                if (state.session !== "AUTHENTICATED") { json(401, {}); return; }
+                if (request.headers["x-csrf-token"] !== state.csrf) { json(419, {}); return; }
+                let body = "";
+                for await (const chunk of request) {
+                    body += chunk;
+                    if (body.length > 65536) throw Error("Synthetic payload too large");
+                }
+                const payload = JSON.parse(body);
+                const emergency = url.pathname.endsWith("emergencies");
+                const store = emergency ? state.acceptedEmergencies : state.acceptedAssessments;
+                const { base_version: _base, patient, ...fields } = payload;
+                const canonical = emergency
+                    ? { ...fields, status: "PENDING", routing_status: state.emergencyRouting }
+                    : { ...fields, patient, server_version: "b".repeat(64), routing_status: "UNRESOLVED" };
+                store.set(`${state.owner}:${payload.id}`, canonical);
+                entry.outcome = "synthetic-accepted";
+                if (emergency && state.dropNextEmergencyResponse) {
+                    state.dropNextEmergencyResponse = false;
+                    request.socket.destroy();
+                    return;
+                }
+                json(200, emergency ? { emergency: canonical, realtime_delivered: false } : { assessment: canonical });
+                return;
+            }
             if (!["GET", "HEAD"].includes(request.method)) {
                 entry.outcome = "blocked-mutation";
                 response
                     .writeHead(403, { "Cache-Control": "no-store" })
                     .end("C1 blocks all server mutations");
-                return;
-            }
-            if (state.offline) {
-                entry.outcome = "offline";
-                request.socket.destroy();
                 return;
             }
             if (state.hang && url.pathname === assessmentPath) {
@@ -149,6 +186,8 @@ export async function localPwaServer(build) {
                                 : state.session,
                             origin,
                             user: { id: state.owner, role: "RELAWAN" },
+                            ...(deviceManaged && !enrollment && state.session === "AUTHENTICATED"
+                                ? { csrf_token: state.csrf } : {}),
                         }),
                     );
                 return;

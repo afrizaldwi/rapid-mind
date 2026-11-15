@@ -198,7 +198,7 @@ export async function offlineRepositoryFixture(
             JSON.stringify(options.mode ?? "staging-fixture"),
         );
         if (
-            ["/clinicalAccessFence.ts", "/clinicalKeyEnrollment.ts", "/localEnrollmentAuthorization.ts", "/offlineActivationEnvironment.ts"].some(
+            ["/clinicalAccessFence.ts", "/clinicalKeyEnrollment.ts", "/localEnrollmentAuthorization.ts", "/offlineActivationEnvironment.ts", "/localLogoutIntent.ts"].some(
                 (name) => file.endsWith(name),
             )
         )
@@ -242,6 +242,7 @@ export async function offlineRepositoryFixture(
             setItem(key: string, value: string) {
                 this.values.set(key, value);
             },
+            removeItem(key: string) { this.values.delete(key); },
         },
         document: Object.assign(new EventTarget(), {
             visibilityState: "visible",
@@ -255,6 +256,8 @@ export async function offlineRepositoryFixture(
     modules["./offlineActivationEnvironment"] = environment.url;
     const fence = await load("resources/js/offline/clinicalAccessFence.ts");
     modules["./clinicalAccessFence"] = fence.url;
+    const logoutIntent = await load("resources/js/offline/localLogoutIntent.ts");
+    modules["./localLogoutIntent"] = logoutIntent.url;
     const authorization = await load("resources/js/offline/localEnrollmentAuthorization.ts");
     modules["./localEnrollmentAuthorization"] = authorization.url;
     const initialization = await load(
@@ -339,6 +342,7 @@ export async function offlineRepositoryFixture(
     const manager = await load("resources/js/offline/syncManager.ts", {
         "./jsonRequest": stub(["jsonRequest", "MissingCsrfTokenError"]),
         "./relawanContinuity": stub(["resolveRelawanContinuity"]),
+        "./sessionRecovery": moduleUrl("export const recoverRelawanSession = async () => false;"),
     });
     if (options.initialize !== false)
         await context.patientRepository.saveServerSnapshot(101, {
@@ -353,6 +357,7 @@ export async function offlineRepositoryFixture(
         "resources/js/offline/relawanContinuity.ts",
     );
     modules["./relawanContinuity"] = continuityModule.url;
+    const deviceKeys = await load("resources/js/offline/deviceKeyWorkflow.ts");
     const emergencies = await load(
         "resources/js/offline/emergencyRepository.ts",
     );
@@ -372,6 +377,7 @@ export async function offlineRepositoryFixture(
         storage: storage.exports,
         initialization: initialization.exports,
         enrollment: enrollment.exports,
+        deviceKeys: deviceKeys.exports,
         continuity: continuityModule.exports,
         emergencyWorkflow: emergencyWorkflow.exports,
         encryptedOutbox: encryptedOutbox.exports,

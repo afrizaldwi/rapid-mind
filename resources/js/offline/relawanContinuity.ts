@@ -1,5 +1,6 @@
 import { db, requireOwner, type RelawanContinuity } from "./db";
 import { lockAllClinicalKeys } from "./encryptedClinicalStorage";
+import { localLogoutPending, recordLocalLogoutIntent, clearLocalLogoutIntent } from "./localLogoutIntent";
 
 export interface VerifiedRelawan {
     id: number;
@@ -34,7 +35,8 @@ export async function recordVerifiedRelawan(
     explicitLogin = false,
 ): Promise<boolean> {
     if (!valid(user)) return false;
-    return await db.transaction("rw", db.relawanContinuity, async () => {
+    if (!explicitLogin && localLogoutPending()) return false;
+    const recorded = await db.transaction("rw", db.relawanContinuity, async () => {
         const existing = await db.relawanContinuity.get("active");
         if (existing?.logout_pending && !explicitLogin) return false;
         if (existing && existing.owner_user_id !== user.id) lockAllClinicalKeys();
@@ -52,12 +54,14 @@ export async function recordVerifiedRelawan(
         await db.relawanContinuity.put(context);
         return true;
     });
+    if (recorded && explicitLogin) clearLocalLogoutIntent();
+    return recorded;
 }
 
 export async function lockRelawanContinuity(
     user?: VerifiedRelawan,
 ): Promise<void> {
-    lockAllClinicalKeys();
+    try { recordLocalLogoutIntent(); } finally { lockAllClinicalKeys(); }
     await db.transaction("rw", db.relawanContinuity, async () => {
         const existing = await db.relawanContinuity.get("active");
         if (existing) {
@@ -83,6 +87,7 @@ export async function lockRelawanContinuity(
 
 export async function resolveRelawanContinuity(): Promise<ContinuityResult> {
     try {
+        if (localLogoutPending()) return { state: "LOGGED_OUT_LOCALLY" };
         const context = await db.relawanContinuity.get("active");
         if (!context) return { state: "NO_VERIFIED_RELAWAN" };
         if (context.logout_pending) return { state: "LOGGED_OUT_LOCALLY" };

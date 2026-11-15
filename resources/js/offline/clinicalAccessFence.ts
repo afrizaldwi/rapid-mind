@@ -7,45 +7,10 @@ let observed: string | null | undefined;
 let storageFailed = false;
 const listeners = new Set<() => void>();
 const fixture = stagingEncryptionFixture;
-const backgroundLockMs = 5 * 60 * 1000;
-let backgroundSince: { wall: number; monotonic: number } | null = null;
-let backgroundTimer: ReturnType<typeof setTimeout> | null = null;
-
-function clearBackgroundDeadline(): void {
-    if (backgroundTimer !== null) clearTimeout(backgroundTimer);
-    backgroundTimer = null;
-    backgroundSince = null;
-}
-
-function expireBackgroundAccess(): void {
-    if (!backgroundSince) return;
-    const wallElapsed = Date.now() - backgroundSince.wall;
-    const elapsed = performance.now() - backgroundSince.monotonic;
-    // Check both clocks on resume and every access. Suspended browsers may
-    // delay timers or pause the monotonic clock while the device sleeps.
-    if (wallElapsed < 0 || elapsed < 0 || Math.max(wallElapsed, elapsed) >= backgroundLockMs) {
-        invalidateClinicalAccess();
-    }
-}
-
-function updateBackgroundDeadline(): void {
-    if (document.visibilityState === "hidden") {
-        if (backgroundSince) {
-            expireBackgroundAccess();
-            return;
-        }
-        backgroundSince = { wall: Date.now(), monotonic: performance.now() };
-        backgroundTimer = setTimeout(() => {
-            backgroundTimer = null;
-            invalidateClinicalAccess();
-        }, backgroundLockMs);
-        return;
-    }
-    expireBackgroundAccess();
-    clearBackgroundDeadline();
-}
+let pageActive = true;
 
 function token(): string | null {
+    if (!pageActive) throw new Error("Halaman tidak aktif.");
     if (fixture()) return null;
     if (storageFailed) throw new Error("Penyimpanan akses tidak tersedia. Muat ulang setelah diperbaiki.");
     if (typeof window === "undefined")
@@ -58,7 +23,6 @@ function token(): string | null {
     return value;
 }
 function invalidate(): void {
-    clearBackgroundDeadline();
     generation++;
     for (const listener of listeners) {
         try { listener(); } catch { /* A UI/history failure must not prevent key invalidation. */ }
@@ -71,7 +35,6 @@ export function captureClinicalAccess(): {
     generation: number;
     token: string | null;
 } {
-    expireBackgroundAccess();
     let current: string | null;
     try { current = token(); } catch (error) { invalidate(); throw error; }
     if (observed === undefined) observed = current;
@@ -84,7 +47,6 @@ export function captureClinicalAccess(): {
 export function assertClinicalAccess(
     ticket: ReturnType<typeof captureClinicalAccess>,
 ): void {
-    expireBackgroundAccess();
     let current: string | null;
     try { current = token(); } catch (error) { invalidate(); throw error; }
     if (ticket.generation !== generation || ticket.token !== current) {
@@ -107,9 +69,14 @@ export function invalidateClinicalAccess(): void {
 }
 if (typeof window !== "undefined") {
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-        navigator.serviceWorker.addEventListener("controllerchange", invalidateClinicalAccess);
+        let hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (hadController) invalidateClinicalAccess();
+            hadController = true;
+        });
         navigator.serviceWorker.addEventListener("message", event => {
-            if (event.data?.type === "RAPID_MIND_STORAGE_PROTOCOL") invalidateClinicalAccess();
+            if (event.data?.type === "RAPID_MIND_STORAGE_PROTOCOL" && event.data.version !== 3)
+                invalidateClinicalAccess();
         });
     }
     window.addEventListener("storage", (event) => {
@@ -118,10 +85,10 @@ if (typeof window !== "undefined") {
             invalidate();
         }
     });
-    // BFCache and suspended tabs must never briefly restore a clinical DOM.
-    window.addEventListener("pagehide", invalidateClinicalAccess);
+    // Retire this document's operations without revoking other active tabs.
+    // Backgrounding alone does not interrupt the retained field session.
+    window.addEventListener("pagehide", () => { pageActive = false; invalidate(); });
     window.addEventListener("pageshow", () => {
-        invalidate();
+        if (!pageActive) { pageActive = true; invalidate(); }
     });
-    document.addEventListener("visibilitychange", updateBackgroundDeadline);
 }

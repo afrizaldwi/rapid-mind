@@ -47,7 +47,9 @@
             <slot name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
             <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
             <slot v-if="requiresClinicalKey && !clinicalViewAvailable" name="clinical-unlock-notice" />
-            <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked" />
+            <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked">
+                <template #actions><button type="button" aria-label="Logout Relawan" class="mt-3 min-h-11 text-sm font-semibold text-teal-800" @click="logout">Keluar akun</button></template>
+            </OfflineEncryptionGate>
             <p
                 v-if="logoutError"
                 role="alert"
@@ -106,7 +108,7 @@
         />
 
         <RelawanStatusDataSheet
-            :server-assessment="onlineAssessmentAvailable"
+            :server-assessment="false"
             :show="showStatusSheet"
             :owner="currentOwner"
             :kind="status.kind.value"
@@ -210,7 +212,9 @@ import {
     syntheticLegacyFixture,
     type InitializationState,
 } from "@/offline/clinicalStorageInitialization";
-import { prepareLocalEnrollment } from "@/offline/localEnrollmentAuthorization";
+import { acceptLocalEnrollmentBootstrap } from "@/offline/localEnrollmentAuthorization";
+import { ensureDeviceClinicalAccess, waitForDeviceClinicalAccess } from "@/offline/deviceKeyWorkflow";
+import { cacheRelawanPatients, cacheRelawanEmergency } from "@/offline/cacheRelawanPage";
 import { rememberUnlockedRelawan } from "@/offline/offlineOwnerProfile";
 import { isolatedEncryptionFixture } from "@/offline/offlineKeyWorkflow";
 import { syncManager } from "@/offline/syncManager";
@@ -271,11 +275,7 @@ const encryptionGateKey = computed(
 const clinicalUnlocked = computed(() =>
     currentOwner.value ? clinicalKeyReady(currentOwner.value) : false,
 );
-const clinicalViewKey = computed(
-    () => onlineAssessmentAvailable.value || onlineAssessmentListAvailable.value
-        ? `${currentOwner.value}:server:${runtime.path}`
-        : `${currentOwner.value}:${clinicalKeyVersion()}`,
-);
+const clinicalViewKey = computed(() => `${currentOwner.value}:${clinicalKeyVersion()}`);
 function maskClinicalView() {
     emit("clinical-lock");
     if (clinicalViewRoot.value) {
@@ -321,7 +321,8 @@ function refreshOwnerStorageMode(owner: number | null) {
             .catch(() => apply("INACCESSIBLE"));
         return;
     }
-    void prepareLocalEnrollment(owner).then(() => {
+    void acceptLocalEnrollmentBootstrap(owner, runtime.pageProps.offlineEnrollment)
+        .then(() => ensureDeviceClinicalAccess(owner)).then(() => {
         if (check !== storageModeCheck || owner !== currentOwner.value) return;
         storageModeSubscription = liveQuery(() => inspectClinicalInitialization(owner)).subscribe({
             next: apply,
@@ -341,7 +342,7 @@ const onlineAssessmentAvailable = computed(() => {
 });
 const onlineAssessmentListAvailable = computed(() => runtime.mode === "ONLINE_SERVER" &&
     runtime.path.split(/[?#]/)[0] === "/relawan/assessment/drafts" && Array.isArray(runtime.pageProps.inProgressAssessments));
-const requiresClinicalKey = computed(() => layoutProps.clinicalAccessRequested || (!onlineAssessmentAvailable.value && !onlineAssessmentListAvailable.value && !/^\/relawan\/(home|pfa|assessment)\/?$/.test(runtime.path.split(/[?#]/)[0]) && !(runtime.mode === "ONLINE_SERVER" && /^\/relawan\/emergencies\//.test(runtime.path) && !!runtime.pageProps.emergency)));
+const requiresClinicalKey = computed(() => layoutProps.clinicalAccessRequested || !/^\/relawan\/(home|pfa|assessment)\/?$/.test(runtime.path.split(/[?#]/)[0]));
 const clinicalViewAvailable = computed(
     () =>
         !!currentOwner.value &&
@@ -352,7 +353,7 @@ const clinicalViewAvailable = computed(
 );
 const status = useRelawanOperationalStatus(
     computed(() => (clinicalViewAvailable.value ? currentOwner.value : null)),
-    computed(() => runtime.mode === "ONLINE_SERVER"),
+    computed(() => true),
 );
 watch(
     clinicalViewAvailable,
@@ -367,9 +368,12 @@ watch(
         if (available || !requiresClinicalKey.value) {
             clinicalViewRoot.value?.style.removeProperty("display");
             clinicalViewRoot.value?.removeAttribute("aria-hidden");
-            if (available && !onlineAssessmentAvailable.value) emit("clinical-ready");
+            if (available) emit("clinical-ready");
             if (available && !syntheticLegacyFixture() && runtime.mode === "ONLINE_SERVER")
-                void rememberUnlockedRelawan(user.value).catch(() => {});
+                void rememberUnlockedRelawan(user.value).then(async () => {
+                    await cacheRelawanPatients(runtime.owner, runtime.pageProps.patients);
+                    await cacheRelawanEmergency(runtime.owner, runtime.pageProps.emergency);
+                }).catch(() => {});
         }
     },
     { immediate: true, flush: "post" },
@@ -461,14 +465,6 @@ const recoveryMessage = computed(() => {
                     : "Memeriksa ketersediaan server tanpa mengirim data lokal.",
                 login: false,
             };
-        case "RESTORING_ONLINE_RUNTIME":
-            return {
-                title: isEn.value ? "Recovering session…" : "Memulihkan sesi…",
-                detail: isEn.value
-                    ? "Reopening server application before starting synchronization."
-                    : "Membuka kembali aplikasi server sebelum sinkronisasi dimulai.",
-                login: false,
-            };
         case "REAUTHENTICATION_REQUIRED":
             return {
                 title: isEn.value
@@ -550,12 +546,14 @@ let emergencyOpenCheck = 0;
 async function openEmergencyModal() {
     emit("emergency-interrupt");
     const check = ++emergencyOpenCheck;
-    const keyVersion = clinicalKeyVersion();
     const path = runtime.path;
     const owner = currentOwner.value;
     t0AssessmentContext.value = null;
     if (!owner) return;
-
+    // Startup is automatic; an emergency never starts enrollment or requests a secret.
+    await waitForDeviceClinicalAccess(owner).catch(() => {});
+    if (owner !== currentOwner.value || path !== runtime.path || check !== emergencyOpenCheck) return;
+    const keyVersion = clinicalKeyVersion();
     const route = assessmentRoute.value;
     let context: T0AssessmentContext | null = null;
     if (route) {
@@ -608,8 +606,8 @@ watch(
         // Hide synchronously; Vue then unmounts the old view on its next render.
         if (requiresClinicalKey.value) maskClinicalView();
         refreshOwnerStorageMode(currentOwner.value);
-        ++emergencyOpenCheck;
         if (!unlocking) {
+            ++emergencyOpenCheck;
             showEmergencyModal.value = false;
             t0AssessmentContext.value = null;
             showStatusSheet.value = false;

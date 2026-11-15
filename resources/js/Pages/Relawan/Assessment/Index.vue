@@ -179,12 +179,10 @@ import type { LocalPatient } from '@/offline/db';
 import type { ServerAssessment } from '@/offline/assessmentWorkflow';
 import { useI18n } from '@/i18n';
 import { localizeMessage } from '@/i18n/localizeMessage';
-import { jsonRequest } from '@/offline/jsonRequest';
-import { assessmentSyncPayload } from '@/offline/assessmentContract';
-import { assessmentRepository } from '@/offline/assessmentRepository';
+import { ensureDeviceClinicalAccess } from '@/offline/deviceKeyWorkflow';
+import { syncManager } from '@/offline/syncManager';
 import { patientRepository } from '@/offline/patientRepository';
 import { queueAssessmentSnapshot } from '@/offline/assessmentSync';
-import type { LocalAssessment } from '@/offline/db';
 
 const { isEn, locale, t: $t } = useI18n();
 const props = defineProps<{
@@ -209,11 +207,6 @@ const patients = computed(() => {
   return [...byId.values()];
 });
 async function refreshDrafts() {
-  if (runtime.mode === 'ONLINE_SERVER') {
-    drafts.value = serverAssessmentDrafts(owner, props.inProgressAssessments, isEn.value ? 'en' : 'id');
-    localPatients.value = [];
-    return;
-  }
   if (!clinicalKeyReady(owner)) { drafts.value = []; localPatients.value = []; return; }
   rawLocalError.value = '';
   const generation = clinicalKeyVersion();
@@ -253,75 +246,29 @@ watch(clinicalKeyVersion, () => {
   if (!clinicalKeyReady(owner)) { drafts.value = runtime.mode === 'ONLINE_SERVER' ? serverAssessmentDrafts(owner, props.inProgressAssessments, isEn.value ? 'en' : 'id') : []; localPatients.value = []; form.value = { patient_id: '', name: '', nik: '', age: undefined, gender: 'Perempuan', mode: 'VERBAL' }; }
 }, { flush: 'sync' });
 
-let pendingStart: { assessment: LocalAssessment; patient: LocalPatient } | null = null;
 let startActive = true;
 const startPath = runtime.path;
 const startCurrent = () => startActive && runtime.owner === owner && runtime.path === startPath;
-onUnmounted(() => { startActive = false; pendingStart = null; });
+onUnmounted(() => { startActive = false; });
 async function startNew() {
-  if (!startCurrent()) return;
-  if (loading.value) return;
-  const online = runtime.mode === 'ONLINE_SERVER' && navigator.onLine;
-  if ((!online || pendingStart) && !clinicalKeyReady(owner)) { needsClinicalKey.value = true; return; }
+  if (!startCurrent() || loading.value) return;
   loading.value = true;
   rawLocalError.value = '';
   try {
-    if (pendingStart) {
-      await patientRepository.saveServerSnapshot(owner, pendingStart.patient);
-      await assessmentRepository.save(owner, pendingStart.assessment);
-      await queueAssessmentSnapshot(owner, pendingStart.assessment.id);
-      const id = pendingStart.assessment.id;
-      pendingStart = null;
-      if (startCurrent()) runtime.navigate(`/relawan/assessment/${id}/identity`);
-      return;
-    }
+    await ensureDeviceClinicalAccess(owner);
+    if (!startCurrent()) return;
     const selected = patients.value.find(p => p.id === form.value.patient_id);
     const patient = selected
       ? { id: selected.id, name: selected.name, nik: selected.nik, age: selected.age, gender: selected.gender, shelter_id: selected.shelter_id, serverKnown: selected.sync_state === 'SYNCED' }
       : { name: form.value.name.trim(), nik: form.value.nik || undefined, age: form.value.age, gender: form.value.gender, shelter_id: runtime.shelterId ?? undefined };
-    if (!patient.name) {
-      throw new Error('Nama penyintas harus diisi.');
-    }
-    if (online) {
-      const now = new Date().toISOString();
-      const draft = {
-        patient: { ...patient, id: patient.id || crypto.randomUUID(), owner_user_id: owner, sync_state: 'LOCAL_SAVED' as const },
-        assessment: { id: crypto.randomUUID(), patient_id: '', owner_user_id: owner, status: 'IN_PROGRESS' as const,
-          mode: form.value.mode as 'VERBAL' | 'NON_VERBAL', started_at: now, updated_at: now, sync_state: 'LOCAL_SAVED' as const },
-      };
-      draft.assessment.patient_id = draft.patient.id;
-      try {
-        const response = await jsonRequest('/relawan/sync/assessments', assessmentSyncPayload(draft.assessment, draft.patient));
-        if (!startCurrent()) return;
-        if (!response.ok) throw new Error('Penerimaan server belum terkonfirmasi.');
-        const body = await response.json();
-        if (body.assessment?.id !== draft.assessment.id) throw new Error('Bukti penerimaan server tidak sesuai.');
-        runtime.navigate(`/relawan/assessment/${draft.assessment.id}/identity`);
-      } catch {
-        if (!startCurrent()) return;
-        pendingStart = draft;
-        if (clinicalKeyReady(owner)) {
-          await patientRepository.saveServerSnapshot(owner, draft.patient);
-          await assessmentRepository.save(owner, draft.assessment);
-          await queueAssessmentSnapshot(owner, draft.assessment.id);
-          pendingStart = null;
-          if (startCurrent()) runtime.navigate(`/relawan/assessment/${draft.assessment.id}/identity`);
-        } else {
-          needsClinicalKey.value = true;
-          rawLocalError.value = 'Pengiriman belum terkonfirmasi. Identitas masih ada di halaman ini dan belum tersimpan di perangkat. Buka kunci, lalu tekan Mulai kembali untuk menyimpan terenkripsi. Jangan tutup halaman ini.';
-        }
-      }
-      return;
-    }
+    if (!patient.name) throw new Error('Nama penyintas harus diisi.');
     const id = await startLocalAssessment(owner, patient, form.value.mode as 'VERBAL' | 'NON_VERBAL');
+    await queueAssessmentSnapshot(owner, id);
+    if (!startCurrent()) return;
+    void syncManager.sync(owner).catch(() => {});
     runtime.navigate(`/relawan/assessment/${id}/identity`);
   } catch (error) {
-    rawLocalError.value = error instanceof Error
-      ? error.message
-      : {
-          id: 'Asesmen belum tersimpan pada perangkat ini.',
-          en: 'Assessment could not be saved on this device yet.',
-        };
+    if (startCurrent()) rawLocalError.value = error instanceof Error ? error.message : 'Asesmen belum tersimpan pada perangkat ini.';
   } finally {
     loading.value = false;
   }

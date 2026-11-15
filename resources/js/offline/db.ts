@@ -107,6 +107,15 @@ export interface WrappedOfflineKey {
     };
     created_at: string;
 }
+export interface DeviceOfflineKey {
+    owner_user_id: number;
+    version: 2;
+    key_id: string;
+    crypto_key: CryptoKey;
+    verification: { iv: string; ciphertext: string };
+    created_at: string;
+}
+export type OfflineKeyRecord = WrappedOfflineKey | DeviceOfflineKey;
 export type ClinicalStore =
     | "patients"
     | "patientSnapshots"
@@ -126,7 +135,7 @@ export interface EncryptedStagingRecord {
 export interface OwnerEncryptionMode {
     owner_user_id: number;
     mode: "ENCRYPTED" | "ENROLLMENT_PENDING";
-    activation?: "LOCAL_DEVELOPMENT_V1";
+    activation?: "LOCAL_DEVELOPMENT_V1" | "LOCAL_DEVICE_V2";
     key_identity?: string;
     recovery_revision?: string;
     confirmed_at?: string;
@@ -158,7 +167,7 @@ export class RapidMindDB extends Dexie {
     emergencies!: Table<LocalEmergency, string>;
     outbox!: Table<OutboxItem, number>;
     relawanContinuity!: Table<RelawanContinuity, string>;
-    offlineKeys!: Table<WrappedOfflineKey, number>;
+    offlineKeys!: Table<OfflineKeyRecord, number>;
     encryptedStaging!: Table<EncryptedStagingRecord, string>;
     ownerEncryptionModes!: Table<OwnerEncryptionMode, number>;
     encryptedOutboxIndex!: Table<EncryptedOutboxIndex, number>;
@@ -244,6 +253,8 @@ export class RapidMindDB extends Dexie {
         });
         // No data conversion or deletion. Old versioned clients must reopen.
         this.version(8).stores({ ownerEncryptionModes: "owner_user_id" });
+        // Device keys are a new protocol. No legacy key/data conversion or deletion.
+        this.version(9).stores({ offlineKeys: "owner_user_id" });
         if (!stagingEncryptionFixture()) {
             for (const name of ["patients", "patientSnapshots", "assessments", "emergencies", "outbox"]) {
                 const reject = () => { throw new Error("Penulisan klinis plaintext dinonaktifkan."); };

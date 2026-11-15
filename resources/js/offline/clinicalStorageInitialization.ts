@@ -1,7 +1,8 @@
-import { db, requireOwner, type WrappedOfflineKey } from "./db";
+import { db, requireOwner, type OfflineKeyRecord } from "./db";
+import { offlineKeyMetadata } from "./offlineKeyMetadata";
 
 import { encryptedEnrollmentAllowed } from "./localEnrollmentAuthorization";
-import { stagingEncryptionFixture } from "./offlineActivationEnvironment";
+import { stagingEncryptionFixture, acceptanceEncryptionFixture } from "./offlineActivationEnvironment";
 export { encryptedEnrollmentAllowed as encryptedEnrollmentEnabled } from "./localEnrollmentAuthorization";
 
 export function syntheticLegacyFixture(): boolean { return stagingEncryptionFixture(); }
@@ -20,7 +21,8 @@ export type InitializationState =
     | "INCONSISTENT"
     | "INACCESSIBLE"
     | "ACTIVATION_DISABLED";
-export function keyIdentity(key: WrappedOfflineKey): string {
+export function keyIdentity(key: OfflineKeyRecord): string {
+    if (key.version === 2) return offlineKeyMetadata(key);
     if (
         key.version !== 1 ||
         !key.verification ||
@@ -67,6 +69,7 @@ export async function inspectClinicalInitialization(
                         : "ACTIVATION_DISABLED";
                 }
                 if (!key || !mode) return "INCONSISTENT";
+                if (key.version === 1 && !acceptanceEncryptionFixture()) return "LEGACY_BLOCKED";
                 try {
                     if (mode.key_identity !== keyIdentity(key))
                         return "INCONSISTENT";
@@ -74,8 +77,8 @@ export async function inspectClinicalInitialization(
                     return "INCONSISTENT";
                 }
                 if (
-                    typeof mode.recovery_revision !== "string" ||
-                    !mode.recovery_revision
+                    key.version === 1 && (typeof mode.recovery_revision !== "string" ||
+                    !mode.recovery_revision)
                 )
                     return "INCONSISTENT";
                 if (mode.mode === "ENROLLMENT_PENDING")
@@ -85,7 +88,7 @@ export async function inspectClinicalInitialization(
                 if (
                     mode.mode !== "ENCRYPTED" ||
                     !Number.isFinite(Date.parse(mode.confirmed_at ?? "")) ||
-                    !mode.recovery_revision
+                    (key.version === 1 && !mode.recovery_revision)
                 )
                     return "INCONSISTENT";
                 return encryptedEnrollmentAllowed(owner, mode)

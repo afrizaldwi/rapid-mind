@@ -1,3 +1,4 @@
+import { recoverRelawanSession } from "./sessionRecovery";
 import { captureClinicalAccess, assertClinicalAccess, onClinicalInvalidation } from "./clinicalAccessFence";
 import {
     requireOwner,
@@ -41,6 +42,7 @@ class SyncManager {
     private listeners = new Set<(state: SyncExecutionState) => void>();
     private retryTimer: ReturnType<typeof setTimeout> | undefined;
     private retryGeneration = 0;
+    private lastSessionRecoveryAttempt: string | null = null;
 
     constructor() {
         onClinicalInvalidation(() => this.cancelRetry());
@@ -59,12 +61,33 @@ class SyncManager {
         this.cancelRetry();
         const previous = this.owner;
         this.owner = requireOwner(owner);
-        if (previous !== this.owner) this.sessionState = "READY";
+        if (previous !== this.owner) { this.sessionState = "READY"; this.lastSessionRecoveryAttempt = null; }
         const lease = ++this.ownerLease;
         if (this.isSyncing && this.owner !== previous)
             this.syncRequested = true;
         this.notify();
         return lease;
+    }
+    public resumeSession(owner: number): void {
+        if (this.owner !== owner) return;
+        this.sessionState = "READY";
+        this.notify();
+        void this.sync(owner).catch(() => {});
+    }
+    private recoverSession(owner: number, snapshot: OutboxItem): void {
+        const attempt = `${owner}:${snapshot.id}:${snapshot.revision}`;
+        if (this.lastSessionRecoveryAttempt === attempt) {
+            this.sessionState = "REAUTHENTICATION_REQUIRED";
+            this.notify();
+            return;
+        }
+        this.lastSessionRecoveryAttempt = attempt;
+        const lease = this.ownerLease;
+        void recoverRelawanSession(owner).then(ready => {
+            if (this.owner !== owner || this.ownerLease !== lease) return;
+            if (ready) this.resumeSession(owner);
+            else { this.sessionState = "REAUTHENTICATION_REQUIRED"; this.notify(); }
+        });
     }
     public clearOwner(lease: number) {
         if (lease !== this.ownerLease) return;
@@ -312,12 +335,7 @@ class SyncManager {
                                     this.syncRequested = false;
                                     this.notify();
                                     stopCurrentPass = true;
-                                    window.setTimeout(() => {
-                                        if (this.owner === active)
-                                            window.location.assign(
-                                                "/relawan/home",
-                                            );
-                                    }, 0);
+                                    this.recoverSession(active, snapshot);
                                 } else if (
                                     item.type === "EMERGENCY" &&
                                     retryable
@@ -383,10 +401,7 @@ class SyncManager {
                                 this.syncRequested = false;
                                 this.notify();
                                 stopCurrentPass = true;
-                                window.setTimeout(() => {
-                                    if (this.owner === active)
-                                        window.location.assign("/relawan/home");
-                                }, 0);
+                                this.recoverSession(active, snapshot);
                             } else if (item.type === "EMERGENCY") {
                                 stopCurrentPass = true;
                             }
@@ -394,7 +409,7 @@ class SyncManager {
                         if (stopCurrentPass) break;
                     }
                     if (stopCurrentPass) {
-                        this.syncRequested = false;
+                        if (this.sessionState !== "READY") this.syncRequested = false;
                         break;
                     }
                 } while (this.syncRequested && this.owner === requestedOwner);

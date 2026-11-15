@@ -166,6 +166,8 @@ export async function offlineNavigationFixture(t: any) {
     overrides["@/components/Relawan/OfflineEncryptionGate.vue"] = moduleStub(
         `import {defineComponent,h} from '${vue}'; export default defineComponent({setup:()=>()=>h('p',{},'OFFLINE LOCKED')});`,
     );
+    overrides["@/offline/deviceKeyWorkflow"] = moduleStub("export const ensureDeviceClinicalAccess=async()=>{};");
+    overrides["@/offline/syncManager"] = moduleStub("export const syncManager={resumeSession(){}};");
     const shellModule = await loadVueSource(
         "resources/js/relawan/OfflineRelawanShell.vue",
         overrides,

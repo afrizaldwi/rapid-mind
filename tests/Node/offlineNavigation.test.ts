@@ -137,7 +137,7 @@ test("query strings, question anchors and Back/Forward keep URLs and resolved pr
     );
 });
 
-for (const event of ["pagehide", "hidden", "storage", "protocol"]) {
+for (const event of ["storage", "protocol"]) {
     test(`${event} invalidation masks the shell synchronously, drops props and rejects pending navigation`, async (t) => {
         const f = await seeded(t);
         const mounted = mountFixture(
@@ -196,8 +196,8 @@ for (const event of ["pagehide", "hidden", "storage", "protocol"]) {
         await settle();
         await mounted.flush();
         assert.equal(n.view.value.status, "LOCKED");
-        assert.match(mounted.text(), /Mode terbatas/);
-        assert.doesNotMatch(mounted.text(), /OFFLINE LOCKED/);
+        assert.doesNotMatch(mounted.text(), /Mode terbatas/);
+        assert.match(mounted.text(), /OFFLINE LOCKED/);
         assert.doesNotMatch(mounted.text(), /STALE CLINICAL CONTENT/);
         if (event === "pagehide") {
             n.stop();

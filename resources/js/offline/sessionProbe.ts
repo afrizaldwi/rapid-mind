@@ -1,6 +1,7 @@
 export type SessionStatusPayload = {
     state?: string;
     user?: { id?: unknown; role?: unknown };
+    csrf_token?: unknown;
 };
 
 // The deadline includes body consumption, even when headers arrive promptly.

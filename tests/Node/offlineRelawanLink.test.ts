@@ -65,7 +65,7 @@ test("real RelawanLink delegates ordinary offline clicks to same-document runtim
     assert.equal(f.historyStates.length, 1);
 });
 
-test("online RelawanLink and runtime keep the existing Inertia navigation and reload behavior", async t => {
+test("online RelawanLink uses the shared runtime while server navigation remains available", async t => {
     const { state, runtime, Link } = await linkModules();
     let online: any;
     const mounted = mountFixture(defineComponent({ setup() {
@@ -73,8 +73,11 @@ test("online RelawanLink and runtime keep the existing Inertia navigation and re
         return () => h(Link, { href: "/relawan/assessment" });
     } }));
     t.after(() => mounted.app.unmount());
-    assert.equal(mounted.nodes(node => node.tag === "a").length, 0);
-    assert.equal(mounted.nodes(node => node.tag === "inertia-link")[0].href, "/relawan/assessment");
+    assert.equal(mounted.nodes(node => node.tag === "a")[0].href, "/relawan/assessment");
+    assert.equal(mounted.nodes(node => node.tag === "inertia-link").length, 0);
+    const previous = (globalThis as any).window;
+    (globalThis as any).window = { location: new URL("http://localhost:8080/relawan/home") };
+    t.after(() => { (globalThis as any).window = previous; });
     online.navigate("/relawan/assessment");
     online.reload(["assessment"]);
     assert.equal(online.mode, "ONLINE_SERVER");

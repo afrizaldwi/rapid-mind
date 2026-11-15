@@ -22,7 +22,7 @@ export function encryptedEnrollmentAllowed(
     if (acceptanceEncryptionFixture()) return true;
     if (!localEnrollmentOrigin()) return false;
     return mode
-        ? mode.activation === "LOCAL_DEVELOPMENT_V1"
+        ? mode.activation === "LOCAL_DEVELOPMENT_V1" || mode.activation === "LOCAL_DEVICE_V2"
         : approvedOwners.has(owner);
 }
 export function localEnrollmentMetadata(): {
@@ -31,6 +31,18 @@ export function localEnrollmentMetadata(): {
     return acceptanceEncryptionFixture()
         ? {}
         : { activation: "LOCAL_DEVELOPMENT_V1" };
+}
+
+// Public server policy from authenticated Inertia props, never a secret or login bypass.
+export async function acceptLocalEnrollmentBootstrap(owner: number, policy: unknown): Promise<void> {
+    const grant = policy as { owner?: number; origin?: string; allowed?: boolean } | null;
+    if (!localEnrollmentOrigin() || grant?.allowed !== true || grant.owner !== owner ||
+        grant.origin !== LOCAL_ENROLLMENT_ORIGIN) return;
+    const ticket = captureClinicalAccess();
+    const context = await db.relawanContinuity.get("active");
+    assertClinicalAccess(ticket);
+    if (context?.owner_user_id === owner && context.role === "RELAWAN" && !context.logout_pending)
+        approvedOwners.add(owner);
 }
 export async function requestLocalEnrollmentAuthorization(
     owner: number,
@@ -90,6 +102,6 @@ export async function requestLocalEnrollmentAuthorization(
 export async function prepareLocalEnrollment(owner: number): Promise<void> {
     if (!localEnrollmentOrigin()) return;
     const mode = await db.ownerEncryptionModes.get(owner);
-    if (mode?.mode !== "ENCRYPTED")
+    if (mode?.mode !== "ENCRYPTED" && !approvedOwners.has(owner))
         await requestLocalEnrollmentAuthorization(owner);
 }

@@ -22,7 +22,7 @@ self.addEventListener("activate", (event) => {
     event.waitUntil((async () => {
         await self.clients.claim();
         for (const client of await self.clients.matchAll({ type: "window" }))
-            client.postMessage({ type: "RAPID_MIND_STORAGE_PROTOCOL", version: 2 });
+            client.postMessage({ type: "RAPID_MIND_STORAGE_PROTOCOL", version: 3 });
     })());
 });
 

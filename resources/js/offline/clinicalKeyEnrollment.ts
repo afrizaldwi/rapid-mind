@@ -146,7 +146,7 @@ export async function continueClinicalEnrollment(
     if ((await inspectClinicalInitialization(owner)) !== "ENROLLMENT_PENDING")
         throw new Error("Pendaftaran tertunda tidak tersedia.");
     const before = await db.offlineKeys.get(owner);
-    if (!before) throw new Error("Kunci perangkat tidak tersedia.");
+    if (!before || before.version !== 1) throw new Error("Kunci lama tidak tersedia.");
     const replacement = await replaceRecoveryWrapper(before, passphrase);
     const revision = crypto.randomUUID();
     try {
@@ -230,7 +230,7 @@ export async function unlockClinicalOwner(
             "Inisialisasi perangkat tidak sesuai. Data tetap tersimpan.",
         );
     const before = await db.offlineKeys.get(owner);
-    if (!before) throw new Error("Kunci perangkat tidak tersedia.");
+    if (!before || before.version !== 1) throw new Error("Kunci lama tidak tersedia.");
     const session = await unlockOfflineKey(before, secret, purpose);
     try {
         await session.bindPersistedKey(before);

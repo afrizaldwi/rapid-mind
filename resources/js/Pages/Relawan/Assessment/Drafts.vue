@@ -6,7 +6,7 @@
           {{ isEn ? 'Unfinished Assessments' : 'Asesmen Belum Selesai' }}
         </h1>
         <p class="mt-1 text-xs leading-relaxed text-slate-600">
-          {{ online ? (isEn ? 'Server assessments can be resumed from the last saved stage.' : 'Asesmen server dapat dilanjutkan dari tahap terakhir yang tersimpan.') : (isEn ? 'Assessments saved on this device can be resumed from the last stage.' : 'Asesmen yang tersimpan di perangkat ini dapat dilanjutkan dari tahap terakhir.') }}
+          {{ isEn ? 'Assessments saved on this device can be resumed from the last stage.' : 'Asesmen yang tersimpan di perangkat ini dapat dilanjutkan dari tahap terakhir.' }}
         </p>
       </header>
 
@@ -23,7 +23,7 @@
 
       <section v-else-if="drafts.length" class="space-y-3" :aria-label="isEn ? 'Unfinished assessments list' : 'Daftar asesmen belum selesai'">
         <p class="text-xs font-semibold text-slate-600">
-          {{ drafts.length }} {{ online ? (isEn ? 'assessments on server' : 'asesmen di server') : (isEn ? 'assessments saved on this device' : 'asesmen tersimpan di perangkat ini') }}
+          {{ drafts.length }} {{ isEn ? 'assessments saved on this device' : 'asesmen tersimpan di perangkat ini' }}
         </p>
         <ul class="rounded-2xl bg-slate-200/70 p-1">
           <li
@@ -61,14 +61,13 @@ import { computed, onMounted, ref } from 'vue';
 import RelawanLink from '@/relawan/RelawanLink.vue';
 import RelawanLayout from '@/layouts/RelawanLayout.vue';
 import { relawanOwner, type ServerAssessment } from '@/offline/assessmentWorkflow';
-import { loadRelawanAssessmentDrafts, serverAssessmentDrafts, type AssessmentDraft } from '@/composables/relawanAssessmentDrafts';
-import { useRelawanRuntime } from '@/relawan/runtime';
+import { loadRelawanAssessmentDrafts, type AssessmentDraft } from '@/composables/relawanAssessmentDrafts';
+import { ensureDeviceClinicalAccess } from '@/offline/deviceKeyWorkflow';
 import { useI18n } from '@/i18n';
 
 const { isEn } = useI18n();
 const props = defineProps<{ inProgressAssessments?: ServerAssessment[] }>();
 const owner = relawanOwner();
-const online = useRelawanRuntime().mode === 'ONLINE_SERVER';
 const drafts = ref<AssessmentDraft[]>([]);
 const loading = ref(true);
 const readFailed = ref(false);
@@ -111,12 +110,8 @@ async function loadDrafts() {
   loading.value = true;
   readFailed.value = false;
   errorCode.value = null;
-  if (online) {
-    drafts.value = serverAssessmentDrafts(owner, props.inProgressAssessments, isEn.value ? 'en' : 'id');
-    loading.value = false;
-    return;
-  }
   try {
+    await ensureDeviceClinicalAccess(owner);
     const loaded = await loadRelawanAssessmentDrafts(owner, props.inProgressAssessments);
     drafts.value = loaded.drafts;
     if (loaded.hydrationFailed) errorCode.value = 'hydration';

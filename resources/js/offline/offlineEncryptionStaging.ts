@@ -44,7 +44,7 @@ export async function unlockOwnerKey(
 ) {
     requireOwner(owner);
     const record = await db.offlineKeys.get(owner);
-    if (!record) throw new Error("Offline key is not initialized");
+    if (!record || record.version !== 1) throw new Error("Legacy offline key is not initialized");
     const session = await unlockOfflineKey(record, secret, purpose);
     try {
         let current = record;

@@ -48,6 +48,8 @@ state.context = async () => ({
     patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
 });
 const overrides = {
+    "@/offline/deviceKeyWorkflow": moduleStub("export const ensureDeviceClinicalAccess=async()=>{};export const waitForDeviceClinicalAccess=async()=>{if(!globalThis.__b31ui.unlocked)throw Error('Penyimpanan belum tersedia');};"),
+    "@/offline/cacheRelawanPage": moduleStub("export const cacheRelawanPatients=async()=>{};"),
     "@/offline/assessmentHandoff": moduleStub("export const preserveOfflineAssessment=async()=>{};"),
     "@/components/Relawan/OfflineEncryptionGate.vue": moduleStub(`import {defineComponent,h} from '${vue}';
         export default defineComponent({emits:['unlocked'],setup(_props,{emit}){return()=>h('button',{onClick(){const s=globalThis.__b31ui;s.unlocked=true;s.key.value++;emit('unlocked');}},'Buka kunci sintetis');}});`),
@@ -211,6 +213,7 @@ test("delayed SRQ context cannot rehydrate after lock or owner switch", async ()
         patient: null,
     });
     try {
+        await f.flush();
         state.layouts.at(-1)("clinical-lock");
         state.runtime.owner = 202;
         resolve({
@@ -301,38 +304,24 @@ for (const online of [true, false]) test(`T0 assistance guide opens with locked 
     }
 });
 
-test("locked T0 opens without decrypting patients and unlock at final save preserves verification without sending", async () => {
+test("T0 reports unavailable storage without introducing an unlock step or sending", async () => {
     state.unlocked = false;
     state.patientReads = 0;
     state.emergencyCalls = [];
     const show = ref(false);
-    const f = mountFixture(defineComponent({
-        setup: () => () => h(T0, { show: show.value }),
-    }));
+    const f = mountFixture(defineComponent({ setup: () => () => h(T0, { show: show.value }) }));
     try {
-        show.value = true;
-        await f.flush();
-        assert.match(f.text(), /Verifikasi T0 Darurat/);
-        assert.doesNotMatch(f.text(), /Buka kunci sintetis/);
-        assert.equal(state.patientReads, 0);
-        button(f, "Kegawatdaruratan Medis").onClick();
-        await f.flush();
-        await button(f, "KIRIM T0-SUSPECT").onClick();
-        await f.flush();
-        assert.match(f.text(), /Buka kunci sintetis/);
+        show.value = true; await f.flush();
+        button(f, "Kegawatdaruratan Medis").onClick(); await f.flush();
+        await button(f, "KIRIM T0-SUSPECT").onClick(); await f.flush();
+        assert.match(f.text(), /T0 BELUM TERSIMPAN/);
+        assert.doesNotMatch(f.text(), /Buka kunci sintetis|frasa sandi/i);
         assert.equal(state.emergencyCalls.length, 0);
-        button(f, "Buka kunci sintetis").onClick();
-        await f.flush();
-        assert.equal(state.emergencyCalls.length, 0);
-        assert.equal(button(f, "KIRIM T0-SUSPECT").disabled, false);
-        await button(f, "KIRIM T0-SUSPECT").onClick();
-        await f.flush();
+        state.unlocked = true;
+        await button(f, "KIRIM T0-SUSPECT").onClick(); await f.flush();
         assert.equal(state.emergencyCalls.length, 1);
         assert.equal(state.emergencyCalls[0].redFlagType, "MEDICAL_CRISIS");
-    } finally {
-        state.unlocked = true;
-        f.app.unmount();
-    }
+    } finally { state.unlocked = true; f.app.unmount(); }
 });
 
 test("mounted manual T0 remains independent of incomplete SRQ; invalidated pre-write async cannot create T0", async () => {
