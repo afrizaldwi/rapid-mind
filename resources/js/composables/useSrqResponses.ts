@@ -1,3 +1,4 @@
+import type { SpeechLanguage } from "@/stt/speechLanguage";
 import { computed, ref, type Ref } from "vue";
 import type { SrqAnswer, SrqAnswers } from "@/domain/srq/srqAnswer";
 import {
@@ -53,9 +54,9 @@ export function useSrqResponses(
         safety.value = null;
         safetyEvidence.value = "";
     }
-    function applySpeechTranscript(transcript: string) {
+    function applySpeechTranscript(transcript: string, language: SpeechLanguage = "id-ID") {
         if (!enabled() || safety.value) return;
-        const interpretation = interpretSrqTranscript(transcript);
+        const interpretation = interpretSrqTranscript(transcript, language);
         const { accepted, protectedQuestionNumbers } =
             selectSrqSpeechAnswerUpdates(
                 interpretation,
@@ -69,9 +70,10 @@ export function useSrqResponses(
                 match.status === "matched" &&
                 match.answer === true,
         );
-        // Never put an apparent affirmative Q17 into the persisted answer map.
+        // Never persist an apparent Q17 YES, or a Q17 NO mixed with safety uncertainty.
         const ordinary = accepted.filter(
-            (update) => !(update.questionNumber === 17 && update.answer),
+            (update) => update.questionNumber !== 17 ||
+                (!update.answer && !interpretation.requiresSafetyReview),
         );
         for (const update of ordinary) {
             answers.value[update.questionNumber] = update.answer;
@@ -81,24 +83,35 @@ export function useSrqResponses(
             interrupt();
             safetyEvidence.value = transcript;
             safety.value =
-                q17Yes && !protectedQuestionNumbers.includes(17)
+                q17Yes && !interpretation.requiresSafetyReview && !protectedQuestionNumbers.includes(17)
                     ? "CONFIRM"
                     : "REVIEW";
         }
         if (ordinary.length) void save();
-        if (ordinary.length && !protectedQuestionNumbers.length && !safety.value) {
+        const notices: string[] = [];
+        if (ordinary.length) {
             const numbers = ordinary.map(update => update.questionNumber).join(", ");
-            return isEn.value ? `Voice filled SRQ item(s) ${numbers}. Review the answers.` : `Suara mengisi SRQ nomor ${numbers}. Periksa kembali jawabannya.`;
+            notices.push(isEn.value ? `Voice filled SRQ item(s) ${numbers}. Review the answers.` : `Suara mengisi SRQ nomor ${numbers}. Periksa kembali jawabannya.`);
         }
+        if (protectedQuestionNumbers.length) {
+            const numbers = protectedQuestionNumbers.join(", ");
+            notices.push(isEn.value
+                ? `Speech matched SRQ ${numbers}. Existing responses were preserved; change them manually if needed.`
+                : `Suara cocok dengan SRQ nomor ${numbers}. Jawaban yang sudah tersimpan dipertahankan; ubah secara manual bila perlu.`);
+        }
+        if (safety.value === "CONFIRM") notices.push(isEn.value
+            ? "Q17 Yes needs explicit volunteer confirmation before saving."
+            : "Q17 Ya memerlukan konfirmasi eksplisit relawan sebelum disimpan.");
+        else if (safety.value) notices.push(isEn.value
+            ? "Q17 needs volunteer review. The speech is uncertain; no affirmative Q17 answer was saved."
+            : "Q17 perlu ditinjau relawan. Ucapan belum pasti; jawaban Q17 Ya tidak disimpan.");
+        else if (interpretation.unresolved.length || interpretation.matches.some(match => match.status === "conflicting"))
+            notices.push(isEn.value
+                ? "Some speech remains unclear or contradictory. Clarify it or select the answer manually."
+                : "Sebagian ucapan belum jelas atau bertentangan. Klarifikasi atau pilih jawaban secara manual.");
         if (!ordinary.length && !protectedQuestionNumbers.length && !safety.value)
-            return isEn.value ? "No clear match. Repeat a complete answer or select it manually." : "Belum ada jawaban yang cocok. Ucapkan jawaban lengkap atau pilih secara manual.";
-        return protectedQuestionNumbers.length
-            ? (isEn.value
-                  ? `Speech matched SRQ ${protectedQuestionNumbers.join(", ")}. Review the existing responses and change them manually if needed.`
-                  : `Suara cocok dengan SRQ nomor ${protectedQuestionNumbers.join(", ")}. Periksa jawaban yang sudah tersimpan dan ubah secara manual bila perlu.`)
-            : (isEn.value
-                  ? "Voice results reviewed. Clarify any unclear responses; Q17 Yes requires volunteer confirmation."
-                  : "Hasil suara telah ditinjau. Klarifikasi jawaban yang belum jelas; Q17 Ya memerlukan konfirmasi relawan.");
+            notices.unshift(isEn.value ? "No clear match. Repeat a complete answer or select it manually." : "Belum ada jawaban yang cocok. Ucapkan jawaban lengkap atau pilih secara manual.");
+        return notices.join(" ");
     }
     return {
         safety,

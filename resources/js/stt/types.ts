@@ -1,6 +1,10 @@
+import type { WhisperModelSource } from "./whisperModelCache";
+
 export type SttMode = "offline" | "online";
 
 export type WhisperBackend = "webgpu" | "wasm";
+
+export type WhisperPreparationStage = "worker_start" | "runtime_assets" | "pipeline" | "model_assets" | "warmup";
 
 export type WhisperStatus =
     | "idle"
@@ -17,10 +21,13 @@ export type WhisperWorkerRequest =
     | { type: "DISPOSE" };
 
 export type WhisperWorkerEvent =
+    | { type: "PREPARATION_STAGE" | "PREPARATION_HEARTBEAT" | "PREPARATION_SLOW";
+        stage: WhisperPreparationStage; backend?: WhisperBackend; elapsedMs: number }
     | {
           type: "MODEL_PROGRESS";
           backend: WhisperBackend;
           file?: string;
+          source?: WhisperModelSource;
           progress?: number;
       }
     | { type: "READY"; backend: WhisperBackend }
@@ -30,6 +37,9 @@ export type WhisperWorkerEvent =
     | {
           type: "ERROR";
           stage: "prepare" | "transcribe";
+          preparationStage?: WhisperPreparationStage;
+          fatal?: boolean;
+          code?: string;
           message: string;
       }
     | { type: "DISPOSED" };

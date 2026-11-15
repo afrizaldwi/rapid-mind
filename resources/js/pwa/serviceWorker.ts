@@ -8,6 +8,7 @@ import {
 import { registerRoute } from "workbox-routing";
 import { CacheFirst, NetworkOnly } from "workbox-strategies";
 import { fetchRelawanNavigation } from "./offlineNavigation";
+import { WHISPER_RUNTIME_REPAIR_HEADER } from "../stt/whisperRuntimeCache";
 import { cacheableAsset } from "./assetCachePolicy";
 
 declare const self: ServiceWorkerGlobalScope & {
@@ -75,13 +76,15 @@ registerRoute(
 
 // The ONNX runtime is emitted as same-origin Vite assets. Cache these large,
 // stable hashed files on first use without raising the global precache limit.
+const runtimeCache = new CacheFirst({ cacheName: "rapid-mind-onnx-runtime-v1", plugins: [assetPlugin] });
+const runtimeRefresh = new NetworkOnly({ plugins: [assetPlugin] });
 registerRoute(
     ({ url }) =>
         url.origin === self.location.origin &&
         /\/build\/assets\/ort-wasm-simd-threaded\.jsep(?:-[^/]+)?\.(?:mjs|wasm)$/.test(
             url.pathname,
         ),
-    new CacheFirst({ cacheName: "rapid-mind-onnx-runtime-v1", plugins: [assetPlugin] }),
+    options => (options.request.headers.get(WHISPER_RUNTIME_REPAIR_HEADER) === "1" ? runtimeRefresh : runtimeCache).handle(options),
 );
 
 // Navigation requests strictly scoped to /relawan/

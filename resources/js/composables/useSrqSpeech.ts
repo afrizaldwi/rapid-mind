@@ -1,5 +1,8 @@
-import { ref, computed, onUnmounted } from "vue";
+import type { WhisperModelSource } from "@/stt/whisperModelCache";
+import { isSpeechLanguage, type SpeechLanguage } from "@/stt/speechLanguage";
+import { ref, computed, onUnmounted, watch } from "vue";
 import { LocalAudioCapture } from "@/stt/audioCapture";
+import { whisperPreparationMessage, whisperPreparationFailure } from "@/stt/whisperPreparationPresentation";
 import { WhisperClient } from "@/stt/whisperClient";
 import {
     WebSpeechClient,
@@ -9,6 +12,7 @@ import {
 import type {
     SttMode,
     WhisperBackend,
+    WhisperPreparationStage,
     WhisperStatus,
     WhisperWorkerEvent,
 } from "@/stt/types";
@@ -24,6 +28,7 @@ const OFFLINE_IDLE_MESSAGE: LocalizedMessage = {
 function webSpeechErrorMessage(
     code: string,
     fallback: string,
+    language: SpeechLanguage,
 ): LocalizedMessage {
     switch (code) {
         case "listening-ended":
@@ -43,18 +48,18 @@ function webSpeechErrorMessage(
             };
         case "service-not-allowed":
             return {
-                id: "Layanan pengenalan suara browser tidak diizinkan pada perangkat ini. Gunakan STT Offline atau jawaban manual.",
-                en: "Browser speech recognition service is not allowed on this device. Use Offline STT or manual answers.",
+                id: "Layanan pengenalan suara browser tidak diizinkan pada perangkat ini. Gunakan STT Offline (Bahasa Indonesia) atau jawaban manual.",
+                en: "Browser speech recognition service is not allowed on this device. Use Offline STT (Indonesian only) or manual answers.",
             };
         case "network":
             return {
-                id: "Layanan pengenalan suara online gagal terhubung. Anda dapat beralih ke STT Offline atau mengisi jawaban manual.",
-                en: "Online speech recognition service failed to connect. You can switch to Offline STT or fill answers manually.",
+                id: "Layanan pengenalan suara online gagal terhubung. Anda dapat beralih ke STT Offline (Bahasa Indonesia) atau mengisi jawaban manual.",
+                en: "Online speech recognition service failed to connect. You can switch to Offline STT (Indonesian only) or fill answers manually.",
             };
         case "language-not-supported":
             return {
-                id: "Bahasa Indonesia (id-ID) tidak didukung oleh layanan pengenalan suara browser ini. Gunakan STT Offline.",
-                en: "Indonesian (id-ID) is not supported by this browser's speech recognition service. Use Offline STT.",
+                id: `Bahasa ${language} tidak didukung layanan pengenalan suara browser ini. Pilih bahasa lain atau gunakan jawaban manual.`,
+                en: `The selected language (${language}) is not supported by this browser's speech recognition service. Choose another language or use manual answers.`,
             };
         case "audio-capture":
             return {
@@ -68,30 +73,30 @@ function webSpeechErrorMessage(
             };
         case "unsupported":
             return {
-                id: "Browser ini tidak mendukung Web Speech API. Gunakan STT Offline atau pilih jawaban secara manual.",
-                en: "This browser does not support the Web Speech API. Use Offline STT or select answers manually.",
+                id: "Browser ini tidak mendukung Web Speech API. Gunakan STT Offline (Bahasa Indonesia) atau pilih jawaban secara manual.",
+                en: "This browser does not support the Web Speech API. Use Offline STT (Indonesian only) or select answers manually.",
             };
         case "not-supported":
             return {
-                id: "Browser ini tidak mendukung Web Speech API. Gunakan STT Offline.",
-                en: "This browser does not support the Web Speech API. Use Offline STT.",
+                id: "Browser ini tidak mendukung Web Speech API. Gunakan STT Offline (Bahasa Indonesia).",
+                en: "This browser does not support the Web Speech API. Use Offline STT (Indonesian only).",
             };
         default:
             return fallback
                 ? {
                       id: fallback,
-                      en: "Online speech recognition could not complete transcription. Use Offline STT or manual answers.",
+                      en: "Online speech recognition could not complete transcription. Use Offline STT (Indonesian only) or manual answers.",
                   }
                 : {
-                      id: "Pengenalan suara online tidak dapat menyelesaikan transkripsi. Gunakan STT Offline atau jawaban manual.",
-                      en: "Online speech recognition could not complete transcription. Use Offline STT or manual answers.",
+                      id: "Pengenalan suara online tidak dapat menyelesaikan transkripsi. Gunakan STT Offline (Bahasa Indonesia) atau jawaban manual.",
+                      en: "Online speech recognition could not complete transcription. Use Offline STT (Indonesian only) or manual answers.",
                   };
     }
 }
 
 export function useSrqSpeech(
     enabled: () => boolean,
-    onTranscript: (text: string) => void | Promise<void>,
+    onTranscript: (text: string, language: SpeechLanguage) => void | Promise<void>,
     owner?: number,
 ) {
     const { isEn } = useI18n();
@@ -99,6 +104,12 @@ export function useSrqSpeech(
         typeof msg === "string" ? msg : isEn.value ? msg.en : msg.id;
 
     const sttMode = ref<SttMode>("offline");
+    const onlineLanguage = ref<SpeechLanguage>(isEn.value ? "en-US" : "id-ID");
+    let languageOverridden = false;
+    const spokenLanguage = computed<SpeechLanguage>(() => sttMode.value === "offline" ? "id-ID" : onlineLanguage.value);
+    const spokenLanguageLabel = computed(() => spokenLanguage.value === "en-US"
+        ? (isEn.value ? "English (en-US)" : "Bahasa Inggris (en-US)")
+        : (isEn.value ? "Indonesian (id-ID)" : "Bahasa Indonesia (id-ID)"));
     const webSpeechSupported = ref<boolean>(isWebSpeechSupported());
     const onlineConsentGranted = ref(false);
     const consentKey = owner && Number.isSafeInteger(owner) && owner > 0
@@ -110,6 +121,11 @@ export function useSrqSpeech(
     const awaitingMicrophone = ref(false);
     const sttBackend = ref<WhisperBackend | null>(null);
     const sttProgress = ref<number | null>(null);
+    const sttPreparationStage = ref<WhisperPreparationStage | null>(null);
+    const sttPreparationElapsed = ref(0);
+    const sttModelSource = ref<WhisperModelSource>("unknown");
+    const sttPreparationSlow = ref(false);
+    let offlinePreparationError: LocalizedMessage | null = null;
     const rawSttMessage = ref<LocalizedMessage>(OFFLINE_IDLE_MESSAGE);
     const sttMessage = computed(() => resolveMessage(rawSttMessage.value));
     const interimTranscript = ref("");
@@ -122,6 +138,12 @@ export function useSrqSpeech(
     let webSpeechClient: WebSpeechClient | null = null;
     let audioCapture: LocalAudioCapture | null = null;
     let sttSession = 0;
+
+    // Follow locale only until an explicit override; never retarget an active mic.
+    watch([isEn, sttStatus], () => {
+        if (languageOverridden || awaitingMicrophone.value || ["recording", "processing", "error"].includes(sttStatus.value)) return;
+        onlineLanguage.value = isEn.value ? "en-US" : "id-ID";
+    }, { flush: "sync" });
 
     const onlineConsentRequired = computed(
         () =>
@@ -185,8 +207,8 @@ export function useSrqSpeech(
                 return isEn.value ? "Retry Preparing" : "Coba Siapkan Lagi";
             default:
                 return isEn.value
-                    ? "Prepare Offline STT"
-                    : "Siapkan STT Offline";
+                    ? "Prepare Offline STT (Indonesian only)"
+                    : "Siapkan STT Offline (Bahasa Indonesia)";
         }
     });
 
@@ -245,24 +267,32 @@ export function useSrqSpeech(
 
     function handleWorkerEvent(event: WhisperWorkerEvent) {
         switch (event.type) {
+            case "PREPARATION_STAGE":
+            case "PREPARATION_HEARTBEAT":
+            case "PREPARATION_SLOW":
+                if (!offlinePreparing) return;
+                sttPreparationStage.value = event.stage;
+                sttPreparationElapsed.value = event.elapsedMs;
+                if (event.type === "PREPARATION_STAGE") sttPreparationSlow.value = false;
+                if (event.type === "PREPARATION_SLOW") sttPreparationSlow.value = true;
+                if (event.backend) sttBackend.value = event.backend;
+                if (sttMode.value === "offline")
+                    rawSttMessage.value = whisperPreparationMessage(event.stage, sttPreparationSlow.value, sttModelSource.value);
+                break;
             case "MODEL_PROGRESS":
+                if (!offlinePreparing) return;
+                sttBackend.value = event.backend;
+                sttModelSource.value = event.source ?? "unknown";
+                if (typeof event.progress === "number") sttProgress.value = event.progress;
                 if (sttMode.value !== "offline") return;
                 sttStatus.value = "preparing";
-                sttBackend.value = event.backend;
-                if (typeof event.progress === "number")
-                    sttProgress.value = event.progress;
-                rawSttMessage.value =
-                    event.backend === "webgpu"
-                        ? {
-                              id: "Mencoba menyiapkan Whisper dengan WebGPU.",
-                              en: "Trying to prepare Whisper with WebGPU.",
-                          }
-                        : {
-                              id: "Menyiapkan Whisper dengan WASM / CPU.",
-                              en: "Preparing Whisper with WASM / CPU.",
-                          };
+                rawSttMessage.value = whisperPreparationMessage(sttPreparationStage.value ?? "model_assets", sttPreparationSlow.value, sttModelSource.value);
                 break;
             case "READY":
+                if (!offlinePreparing) return;
+                sttPreparationStage.value = null;
+                sttPreparationSlow.value = false;
+                offlinePreparationError = null;
                 offlinePreparing = false;
                 offlineBackendReady = event.backend;
                 sttBackend.value = event.backend;
@@ -306,7 +336,7 @@ export function useSrqSpeech(
                         id: "Transkripsi selesai dan diperiksa dengan aturan SRQ konservatif.",
                         en: "Transcription completed and checked against conservative SRQ rules.",
                     };
-                    void onTranscript(event.transcript);
+                    void onTranscript(event.transcript, "id-ID");
                 } else {
                     rawSttMessage.value = {
                         id: "Tidak ada ucapan yang dikenali. Coba rekam lagi di tempat yang lebih tenang.",
@@ -315,30 +345,31 @@ export function useSrqSpeech(
                 }
                 break;
             case "ERROR":
-                if (event.stage === "prepare") {
+                if (event.stage === "prepare" || event.fatal) {
                     offlinePreparing = false;
                     offlineBackendReady = null;
+                    whisperClient?.dispose();
+                    whisperClient = null;
+                    offlinePreparationError = event.stage === "transcribe" ? {
+                        id: "Worker Whisper terhenti. Siapkan ulang STT atau gunakan jawaban manual. Cache model dipertahankan.",
+                        en: "The Whisper worker stopped. Prepare STT again or use manual answers. Model caches are retained.",
+                    } : whisperPreparationFailure(event.preparationStage ?? sttPreparationStage.value ?? "worker_start", event.code);
+                    if (sttMode.value === "offline") {
+                        sttStatus.value = "error";
+                        rawSttMessage.value = offlinePreparationError;
+                    }
+                } else if (sttMode.value === "offline") {
+                    sttStatus.value = offlineBackendReady ? "ready" : "error";
+                    rawSttMessage.value = {
+                        id: "Transkripsi gagal. Coba rekam ulang; jawaban manual tetap dapat digunakan.",
+                        en: "Transcription failed. Try recording again; manual answers remain available.",
+                    };
                 }
-                if (sttMode.value !== "offline") return;
-                sttStatus.value =
-                    event.stage === "transcribe" && sttBackend.value
-                        ? "ready"
-                        : "error";
-                rawSttMessage.value =
-                    event.stage === "prepare"
-                        ? {
-                              id: "Whisper tidak dapat disiapkan di perangkat ini. Jawaban manual tetap dapat digunakan.",
-                              en: "Whisper could not be prepared on this device. Manual answers remain available.",
-                          }
-                        : {
-                              id: "Transkripsi gagal. Coba rekam ulang; jawaban manual tetap dapat digunakan.",
-                              en: "Transcription failed. Try recording again; manual answers remain available.",
-                          };
                 break;
         }
     }
 
-    function handleWebSpeechEvent(event: WebSpeechEvent, session: number) {
+    function handleWebSpeechEvent(event: WebSpeechEvent, session: number, language: SpeechLanguage) {
         if (!enabled() || sttSession !== session || sttMode.value !== "online")
             return;
         switch (event.type) {
@@ -346,8 +377,8 @@ export function useSrqSpeech(
                 sttStatus.value = "recording";
                 sttFallbackSuggested.value = false;
                 rawSttMessage.value = {
-                    id: "Mikrofon aktif (STT Online id-ID). Ucapkan satu jawaban, lalu tekan Selesai.",
-                    en: "Microphone active (Online STT id-ID). Speak one answer, then press Stop.",
+                    id: `Mikrofon aktif (STT Online ${language}). Ucapkan satu jawaban, lalu tekan Selesai.`,
+                    en: `Microphone active (Online STT ${language}). Speak one answer, then press Stop.`,
                 };
                 break;
             case "INTERIM":
@@ -363,7 +394,7 @@ export function useSrqSpeech(
                         id: "Transkripsi Online final selesai dan diperiksa dengan aturan SRQ konservatif.",
                         en: "Final Online transcription finished and checked against conservative SRQ rules.",
                     };
-                    void onTranscript(event.transcript);
+                    void onTranscript(event.transcript, language);
                 }
                 break;
             case "END":
@@ -385,11 +416,13 @@ export function useSrqSpeech(
                 break;
             case "ERROR":
                 interimTranscript.value = "";
-                sttFallbackSuggested.value = event.suggestOfflineFallback;
+                stopActiveCaptureOnly();
+                sttFallbackSuggested.value = language === "id-ID" && event.suggestOfflineFallback;
                 sttStatus.value = "error";
                 rawSttMessage.value = webSpeechErrorMessage(
                     event.code,
                     event.message,
+                    language,
                 );
                 break;
         }
@@ -405,10 +438,29 @@ export function useSrqSpeech(
         interimTranscript.value = "";
     }
 
+    function selectSpeechLanguage(language: SpeechLanguage) {
+        if (!enabled() || sttMode.value !== "online" || !isSpeechLanguage(language)) return;
+        languageOverridden = true;
+        if (language === onlineLanguage.value) return;
+        stopActiveCaptureOnly();
+        webSpeechClient?.dispose();
+        webSpeechClient = null;
+        onlineLanguage.value = language;
+        transcriptSnippet.value = "";
+        sttInterpretationNotice.value = "";
+        sttFallbackSuggested.value = false;
+        sttStatus.value = webSpeechSupported.value && onlineConsentGranted.value ? "ready" : "idle";
+        rawSttMessage.value = {
+            id: `Bahasa ucapan dipilih: ${language}. Tekan Mulai Rekam untuk sesi baru.`,
+            en: `Spoken language selected: ${language}. Select Start Recording for a new session.`,
+        };
+    }
+
     function selectSttMode(mode: SttMode) {
         if (!enabled() || mode === sttMode.value) return;
         stopActiveCaptureOnly();
         sttInterpretationNotice.value = "";
+        transcriptSnippet.value = "";
         sttMode.value = mode;
 
         if (mode === "online") {
@@ -420,10 +472,10 @@ export function useSrqSpeech(
             webSpeechSupported.value = isWebSpeechSupported();
             if (!webSpeechSupported.value) {
                 sttStatus.value = "error";
-                sttFallbackSuggested.value = true;
+                sttFallbackSuggested.value = spokenLanguage.value === "id-ID";
                 rawSttMessage.value = {
-                    id: "Browser ini tidak mendukung Web Speech API (SpeechRecognition). Gunakan mode STT Offline atau tombol jawaban manual.",
-                    en: "This browser does not support Web Speech API (SpeechRecognition). Use Offline STT mode or manual answer buttons.",
+                    id: "Browser ini tidak mendukung Web Speech API (SpeechRecognition). Gunakan mode STT Offline (Bahasa Indonesia) atau tombol jawaban manual.",
+                    en: "This browser does not support Web Speech API (SpeechRecognition). Use Offline STT (Indonesian only) mode or manual answer buttons.",
                 };
                 return;
             }
@@ -456,12 +508,10 @@ export function useSrqSpeech(
             };
         } else if (offlinePreparing) {
             sttStatus.value = "preparing";
-            sttProgress.value = null;
-            sttBackend.value = null;
-            rawSttMessage.value = {
-                id: "Persiapan model di perangkat masih berlangsung.",
-                en: "Model preparation is still in progress on this device.",
-            };
+            rawSttMessage.value = whisperPreparationMessage(sttPreparationStage.value ?? "worker_start", sttPreparationSlow.value, sttModelSource.value);
+        } else if (offlinePreparationError) {
+            sttStatus.value = "error";
+            rawSttMessage.value = offlinePreparationError;
         } else {
             sttStatus.value = "idle";
             rawSttMessage.value = OFFLINE_IDLE_MESSAGE;
@@ -473,10 +523,10 @@ export function useSrqSpeech(
         webSpeechSupported.value = isWebSpeechSupported();
         if (!webSpeechSupported.value) {
             sttStatus.value = "error";
-            sttFallbackSuggested.value = true;
+            sttFallbackSuggested.value = spokenLanguage.value === "id-ID";
             rawSttMessage.value = {
-                id: "Browser ini tidak mendukung Web Speech API. Gunakan mode STT Offline.",
-                en: "This browser does not support the Web Speech API. Use Offline STT mode.",
+                id: "Browser ini tidak mendukung Web Speech API. Gunakan mode STT Offline (Bahasa Indonesia).",
+                en: "This browser does not support the Web Speech API. Use Offline STT (Indonesian only) mode.",
             };
             return;
         }
@@ -505,31 +555,33 @@ export function useSrqSpeech(
     }
 
     function prepareStt() {
+        if (offlinePreparing) return;
         if (whisperClient && sttStatus.value === "error") {
             whisperClient.dispose();
             whisperClient = null;
             offlineBackendReady = null;
         }
-        if (!whisperClient) {
-            const client = new WhisperClient((event) => {
-                if (enabled() && whisperClient === client)
-                    handleWorkerEvent(event);
-            });
-            whisperClient = client;
-        }
         sttStatus.value = "preparing";
         offlinePreparing = true;
+        offlinePreparationError = null;
         sttProgress.value = null;
-        rawSttMessage.value = navigator.onLine
-            ? {
-                  id: "Mengunduh atau membuka model yang sudah tersimpan di cache perangkat.",
-                  en: "Downloading or loading cached model stored on this device.",
-              }
-            : {
-                  id: "Mencoba membuka model yang sebelumnya sudah disiapkan di perangkat.",
-                  en: "Attempting to open the previously prepared model on this device.",
-              };
-        whisperClient.prepare();
+        sttPreparationStage.value = "worker_start";
+        sttPreparationElapsed.value = 0;
+        sttModelSource.value = "unknown";
+        sttPreparationSlow.value = false;
+        rawSttMessage.value = whisperPreparationMessage("worker_start");
+        try {
+            if (!whisperClient) {
+                const client = new WhisperClient((event) => {
+                    if (enabled() && whisperClient === client) handleWorkerEvent(event);
+                });
+                whisperClient = client;
+            }
+            whisperClient.prepare();
+        } catch {
+            handleWorkerEvent({ type: "ERROR", stage: "prepare", fatal: true, code: "worker_start_failed",
+                message: "Whisper worker tidak dapat dimulai." });
+        }
     }
 
     async function startOfflineRecording() {
@@ -619,10 +671,10 @@ export function useSrqSpeech(
         webSpeechSupported.value = isWebSpeechSupported();
         if (!webSpeechSupported.value) {
             sttStatus.value = "error";
-            sttFallbackSuggested.value = true;
+            sttFallbackSuggested.value = spokenLanguage.value === "id-ID";
             rawSttMessage.value = {
-                id: "Browser ini tidak mendukung Web Speech API. Gunakan mode STT Offline.",
-                en: "This browser does not support the Web Speech API. Use Offline STT mode.",
+                id: "Browser ini tidak mendukung Web Speech API. Gunakan mode STT Offline (Bahasa Indonesia).",
+                en: "This browser does not support the Web Speech API. Use Offline STT (Indonesian only) mode.",
             };
             return;
         }
@@ -640,13 +692,14 @@ export function useSrqSpeech(
         sttInterpretationNotice.value = "";
         sttFallbackSuggested.value = false;
         webSpeechClient?.dispose();
+        const language = onlineLanguage.value;
         webSpeechClient = new WebSpeechClient((event) => {
-            handleWebSpeechEvent(event, session);
-        });
+            handleWebSpeechEvent(event, session, language);
+        }, language);
         sttStatus.value = "recording";
         rawSttMessage.value = {
-            id: "Memulai pengenalan suara Online (id-ID)…",
-            en: "Starting Online speech recognition (id-ID)…",
+            id: `Memulai pengenalan suara Online (${language})…`,
+            en: `Starting Online speech recognition (${language})…`,
         };
         webSpeechClient.start();
     }
@@ -662,6 +715,21 @@ export function useSrqSpeech(
     }
 
     function cancelRecording() {
+        if (sttMode.value === "offline" && offlinePreparing) {
+            whisperClient?.dispose();
+            whisperClient = null;
+            offlinePreparing = false;
+            offlineBackendReady = null;
+            offlinePreparationError = null;
+            sttPreparationStage.value = null;
+            sttProgress.value = null;
+            sttStatus.value = "idle";
+            rawSttMessage.value = {
+                id: "Persiapan STT dibatalkan. Cache model dipertahankan; jawaban manual tetap tersedia.",
+                en: "STT preparation canceled. Model caches are retained; manual answers remain available.",
+            };
+            return;
+        }
         stopActiveCaptureOnly();
         if (sttMode.value === "online") {
             sttStatus.value =
@@ -714,9 +782,16 @@ export function useSrqSpeech(
         whisperClient = null;
         offlineBackendReady = null;
         offlinePreparing = false;
+        offlinePreparationError = null;
+        sttPreparationStage.value = null;
+        sttPreparationElapsed.value = 0;
+        sttModelSource.value = "unknown";
+        sttPreparationSlow.value = false;
         webSpeechClient?.dispose();
         webSpeechClient = null;
         sttMode.value = "offline";
+        languageOverridden = false;
+        onlineLanguage.value = isEn.value ? "en-US" : "id-ID";
         onlineConsentGranted.value = false;
         sttFallbackSuggested.value = false;
         sttStatus.value = "idle";
@@ -731,6 +806,10 @@ export function useSrqSpeech(
     onUnmounted(cleanupStt);
     return {
         sttMode,
+        onlineLanguage: computed(() => onlineLanguage.value),
+        spokenLanguage,
+        spokenLanguageLabel,
+        selectSpeechLanguage,
         webSpeechSupported,
         onlineConsentRequired,
         onlineConsentGranted,
@@ -738,6 +817,8 @@ export function useSrqSpeech(
         sttStatus,
         sttBackend,
         sttProgress,
+        sttPreparationStage,
+        sttPreparationElapsed,
         sttMessage,
         interimTranscript,
         transcriptSnippet,

@@ -1,3 +1,5 @@
+import { isSpeechLanguage, type SpeechLanguage } from "./speechLanguage.ts";
+
 export type WebSpeechEvent =
     | { type: "START" }
     | { type: "INTERIM"; transcript: string }
@@ -75,7 +77,7 @@ export function isWebSpeechSupported(): boolean {
     return getSpeechRecognitionConstructor() !== null;
 }
 
-function mapWebSpeechError(code: string): {
+function mapWebSpeechError(code: string, language: SpeechLanguage): {
     message: string;
     suggestOfflineFallback: boolean;
 } {
@@ -89,19 +91,19 @@ function mapWebSpeechError(code: string): {
         case "service-not-allowed":
             return {
                 message:
-                    "Layanan pengenalan suara browser tidak diizinkan pada perangkat ini. Gunakan STT Offline atau jawaban manual.",
+                    "Layanan pengenalan suara browser tidak diizinkan pada perangkat ini. Gunakan STT Offline (Bahasa Indonesia) atau jawaban manual.",
                 suggestOfflineFallback: true,
             };
         case "network":
             return {
                 message:
-                    "Layanan pengenalan suara online gagal terhubung. Anda dapat beralih ke STT Offline atau mengisi jawaban manual.",
+                    "Layanan pengenalan suara online gagal terhubung. Anda dapat beralih ke STT Offline (Bahasa Indonesia) atau mengisi jawaban manual.",
                 suggestOfflineFallback: true,
             };
         case "language-not-supported":
             return {
                 message:
-                    "Bahasa Indonesia (id-ID) tidak didukung oleh layanan pengenalan suara browser ini. Gunakan STT Offline.",
+                    `Bahasa ${language} tidak didukung layanan pengenalan suara browser ini. Pilih bahasa lain atau gunakan jawaban manual.`,
                 suggestOfflineFallback: true,
             };
         case "audio-capture":
@@ -119,7 +121,7 @@ function mapWebSpeechError(code: string): {
         default:
             return {
                 message:
-                    "Pengenalan suara online tidak dapat menyelesaikan transkripsi. Gunakan STT Offline atau jawaban manual.",
+                    "Pengenalan suara online tidak dapat menyelesaikan transkripsi. Gunakan STT Offline (Bahasa Indonesia) atau jawaban manual.",
                 suggestOfflineFallback: true,
             };
     }
@@ -135,20 +137,27 @@ export class WebSpeechClient {
     private hadError = false;
     private readonly onEvent: (event: WebSpeechEvent) => void;
 
-    constructor(onEvent: (event: WebSpeechEvent) => void) {
+    private readonly language: SpeechLanguage;
+
+    constructor(onEvent: (event: WebSpeechEvent) => void, language: SpeechLanguage = "id-ID") {
+        this.language = language;
         this.onEvent = onEvent;
     }
 
     start(): void {
         if (this.disposed) return;
+        if (!isSpeechLanguage(this.language)) {
+            this.onEvent({ type: "ERROR", code: "language-not-supported", message: "Bahasa pengenalan suara tidak didukung.", suggestOfflineFallback: false });
+            return;
+        }
         const Ctor = getSpeechRecognitionConstructor();
         if (!Ctor) {
             this.onEvent({
                 type: "ERROR",
                 code: "unsupported",
                 message:
-                    "Browser ini tidak mendukung Web Speech API. Gunakan STT Offline atau pilih jawaban secara manual.",
-                suggestOfflineFallback: true,
+                    "Browser ini tidak mendukung Web Speech API. Gunakan STT Offline (Bahasa Indonesia) atau pilih jawaban secara manual.",
+                suggestOfflineFallback: this.language === "id-ID",
             });
             return;
         }
@@ -167,7 +176,7 @@ export class WebSpeechClient {
         const rec = new Ctor();
         const segmentOffset = this.finalSegments.length;
         let heardSpeech = false;
-        rec.lang = "id-ID";
+        rec.lang = this.language;
         rec.continuous = true;
         rec.interimResults = true;
         rec.maxAlternatives = 1;
@@ -208,12 +217,14 @@ export class WebSpeechClient {
             }
             if (event.error === "no-speech" && (heardSpeech || retryEmpty || this.stopping)) return;
             this.hadError = true;
-            const mapped = mapWebSpeechError(event.error || "unknown");
+            this.finalSegments = [];
+            const mapped = mapWebSpeechError(event.error || "unknown", this.language);
+            this.abortCurrent();
             this.onEvent({
                 type: "ERROR",
                 code: event.error || "unknown",
                 message: mapped.message,
-                suggestOfflineFallback: mapped.suggestOfflineFallback,
+                suggestOfflineFallback: this.language === "id-ID" && mapped.suggestOfflineFallback,
             });
         };
 
@@ -248,8 +259,8 @@ export class WebSpeechClient {
                 type: "ERROR",
                 code: "start-failed",
                 message:
-                    "Pengenalan suara online tidak dapat dimulai. Gunakan STT Offline atau jawaban manual.",
-                suggestOfflineFallback: true,
+                    "Pengenalan suara online tidak dapat dimulai. Gunakan STT Offline (Bahasa Indonesia) atau jawaban manual.",
+                suggestOfflineFallback: this.language === "id-ID",
             });
         }
     }

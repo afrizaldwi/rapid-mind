@@ -443,3 +443,76 @@ test("trimSilence removes long leading/trailing silence while preserving leading
     const silent = trimSilence(new Float32Array(48_000), 16_000);
     assert.equal(silent.length, 8_000);
 });
+
+test("all 20 speech answers preserve manual/restored states through the real response composable", async () => {
+    const { srqSpeechCases } = await import("./helpers/srqSpeechCases.ts");
+    for (const item of srqSpeechCases) {
+        for (const value of [true, false, "UNCLEAR", "UNANSWERED"] as const) {
+            const answers = ref<any>({});
+            const state = responses.useSrqResponses(answers, () => true, async () => {}, () => {});
+            state.setManualAnswer(item.number, value);
+            if (item.number === 17 && value === true) {
+                state.confirmQ17();
+                state.dismissSafety();
+            }
+            state.applySpeechTranscript(item.yes);
+            assert.equal(answers.value[item.number], value, `Q${item.number} manual ${value}`);
+            state.dismissSafety();
+            state.applySpeechTranscript(item.no);
+            assert.equal(answers.value[item.number], value, `Q${item.number} manual negative ${value}`);
+        }
+        for (const restored of [true, false, "UNCLEAR"] as const) {
+            const answers = ref<any>({ [item.number]: restored });
+            const state = responses.useSrqResponses(answers, () => true, async () => {}, () => {});
+            state.applySpeechTranscript(item.yes);
+            assert.equal(answers.value[item.number], restored, `Q${item.number} restored ${restored}`);
+        }
+        for (const initial of [{}, { [item.number]: "UNANSWERED" }]) {
+            const answers = ref<any>({ ...initial });
+            let saves = 0;
+            const state = responses.useSrqResponses(answers, () => true, async () => { saves++; }, () => {});
+            state.applySpeechTranscript(item.yes);
+            if (item.number === 17) {
+                assert.equal(state.safety.value, "CONFIRM");
+                assert.notEqual(answers.value[17], true);
+                assert.equal(saves, 0);
+                state.confirmQ17();
+            }
+            assert.equal(answers.value[item.number], true, `Q${item.number} eligible answer`);
+            assert.equal(saves, 1);
+        }
+    }
+});
+
+test("feedback distinguishes no match, partial filling, preserved answers and review without claiming success", async () => {
+    const answers = ref<any>({ 3: false });
+    let saves = 0;
+    const state = responses.useSrqResponses(answers, () => true, async () => { saves++; }, () => {});
+    for (const phrase of ["Iya", "Apakah Ibu sering sakit kepala?", "Saya capek", "Saya pusing tetapi saya tidak pusing", "Tidak ada kalimat yang didukung"]) {
+        assert.match(state.applySpeechTranscript(phrase), /Belum ada jawaban yang cocok|No clear match/);
+        assert.equal(saves, 0, phrase);
+        assert.deepEqual(answers.value, { 3: false });
+    }
+    const notice = state.applySpeechTranscript("Saya pusing. Saya insomnia. Saya capek.");
+    assert.match(notice, /mengisi SRQ nomor 1|filled SRQ item\(s\) 1/);
+    assert.match(notice, /dipertahankan|preserved/);
+    assert.match(notice, /belum jelas|unclear/);
+    assert.deepEqual(answers.value, { 1: true, 3: false });
+    assert.equal(saves, 1);
+});
+
+test("ambiguous Q17 scripts and concerns trigger REVIEW and cannot persist YES by confirmation", async () => {
+    const { srqQuestions } = await import("../../resources/js/domain/srq/srqQuestions.ts");
+    for (const phrase of ["Saya capek hidup", "Saya mungkin ingin mati", "Saya ingin mati tetapi saya tidak ingin mati", "Saya ingin mati. Saya mungkin tidak ingin mati.", `${srqQuestions[16].script} Iya`]) {
+        const answers = ref<any>({ 17: "UNANSWERED" });
+        let saves = 0;
+        let interrupted = 0;
+        const state = responses.useSrqResponses(answers, () => true, async () => { saves++; }, () => { interrupted++; });
+        state.applySpeechTranscript(phrase);
+        assert.equal(state.safety.value, "REVIEW", phrase);
+        assert.equal(interrupted, 1);
+        state.confirmQ17();
+        assert.equal(answers.value[17], "UNANSWERED");
+        assert.equal(saves, 0);
+    }
+});

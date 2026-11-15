@@ -79,7 +79,7 @@ const overrides = {
         "export class LocalAudioCapture {cancel(){globalThis.__b31ui.interrupts++;}}",
     ),
     "@/stt/whisperClient": moduleStub(
-        "export class WhisperClient {dispose(){} prepare(){}}",
+        "export class WhisperClient {constructor(callback){this.callback=callback;globalThis.__b31ui.whisper=this;}dispose(){this.disposed=true;} prepare(){}}",
     ),
     "@/offline/patientRepository":
         moduleStub(`export const patientRepository = {
@@ -519,5 +519,62 @@ test("T0 binds the active assessment patient when show and context props update 
             context.value = undefined;
             await f.flush();
         }
+    } finally { f.app.unmount(); }
+});
+
+test("mounted SRQ language selector is labeled, changes spoken language independently and keeps Offline Indonesian only", async () => {
+    state.unlocked = true;
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
+    });
+    try {
+        await f.flush();
+        const languageStatus = () => f.nodes(node => node.id === "srq-spoken-language-status")[0];
+        const selector = () => f.nodes(node => node.id === "srq-spoken-language")[0];
+        assert.match(f.text(languageStatus()), /Offline.*id-ID/);
+        assert.equal(selector(), undefined);
+        f.nodes(node => node["data-stt-mode"] === "online")[0].onClick();
+        await f.flush();
+        assert.equal(selector().disabled, false);
+        assert.equal(selector()["aria-describedby"], "srq-spoken-language-status");
+        assert.equal(f.nodes(node => node.tag === "label" && node.for === "srq-spoken-language").length, 1);
+        assert.deepEqual(selector().options.map((node: any) => node.value), ["id-ID", "en-US"]);
+        selector().onChange({ target: { value: "en-US" } });
+        await f.flush();
+        assert.match(f.text(languageStatus()), /Online.*en-US/);
+        assert.match(f.text(), /Bahasa ucapan/, "spoken-language selection does not change Indonesian UI");
+        f.nodes(node => node["data-stt-mode"] === "offline")[0].onClick();
+        await f.flush();
+        assert.match(f.text(languageStatus()), /Offline.*id-ID/);
+        assert.equal(selector(), undefined);
+    } finally { f.app.unmount(); }
+});
+
+test("mounted SRQ exposes preparation stage and cancellation at 100% without enabling recording", async () => {
+    state.unlocked = true;
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
+    });
+    try {
+        await f.flush();
+        const action = () => f.nodes(node => "data-stt-action" in node)[0];
+        action().onClick(); await f.flush();
+        const client = (state as any).whisper;
+        client.callback({ type: "MODEL_PROGRESS", backend: "wasm", progress: 100 });
+        client.callback({ type: "PREPARATION_STAGE", stage: "warmup", backend: "wasm", elapsedMs: 123000 });
+        await f.flush();
+        assert.equal(action(), undefined, "there is no enabled recording action during preparation");
+        const stage = f.nodes(node => "data-stt-preparation-stage" in node)[0];
+        assert.match(f.text(stage), /100%/);
+        assert.match(f.text(stage), /belum siap|not ready/);
+        assert.match(f.text(stage), /123/);
+        f.nodes(node => "data-stt-cancel-prepare" in node)[0].onClick();
+        await f.flush();
+        assert.equal(client.disposed, true);
+        client.callback({ type: "READY", backend: "wasm" });
+        await f.flush();
+        assert.match(f.text(action()), /Siapkan|Prepare/, "late READY cannot turn a canceled preparation into recording");
     } finally { f.app.unmount(); }
 });

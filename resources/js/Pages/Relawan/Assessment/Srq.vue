@@ -100,6 +100,28 @@
                                 </button>
                             </div>
                         </div>
+                        <div v-if="isVerbal" class="flex flex-wrap items-center gap-2 px-3 pb-2 text-xs sm:px-4">
+                            <label :for="sttMode === 'online' ? 'srq-spoken-language' : undefined" class="font-semibold text-slate-700">
+                                {{ isEn ? "Spoken language" : "Bahasa ucapan" }}
+                            </label>
+                            <select
+                                v-if="sttMode === 'online'"
+                                id="srq-spoken-language"
+                                data-stt-language
+                                :value="spokenLanguage"
+                                :disabled="!draftReady || !!safety"
+                                @change="selectSpeechLanguage(($event.target as HTMLSelectElement).value as 'id-ID' | 'en-US')"
+                                class="min-h-11 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:opacity-60"
+                                aria-describedby="srq-spoken-language-status"
+                            >
+                                <option value="id-ID">{{ isEn ? "Indonesian (id-ID)" : "Bahasa Indonesia (id-ID)" }}</option>
+                                <option value="en-US">{{ isEn ? "English (en-US)" : "Bahasa Inggris (en-US)" }}</option>
+                            </select>
+                            <span id="srq-spoken-language-status" role="status" class="text-slate-600">
+                                {{ sttMode === 'online' ? 'Online' : 'Offline' }} · {{ spokenLanguageLabel }}
+                                <template v-if="sttMode === 'offline'">{{ isEn ? ' · Indonesian only' : ' · Hanya Bahasa Indonesia' }}</template>
+                            </span>
+                        </div>
                         <div v-if="isVerbal && sttStatus !== 'preparing' && sttStatus !== 'processing'" class="flex flex-wrap gap-2 px-3 pb-3 sm:px-4">
                             <button
                                 type="button"
@@ -215,7 +237,7 @@
                                     @click="declineOnlineConsent"
                                     class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition"
                                 >
-                                    {{ isEn ? "Use Offline STT" : "Gunakan STT Offline" }}
+                                    {{ isEn ? "Use Offline STT (Indonesian only)" : "Gunakan STT Offline (Bahasa Indonesia)" }}
                                 </button>
                             </div>
                         </div>
@@ -234,6 +256,17 @@
                             </div>
                             <progress aria-labelledby="stt-model-file" :value="sttProgress" max="100" class="stt-file-progress block h-1.5 w-full"></progress>
                         </div>
+                        <div v-if="sttMode === 'offline' && sttStatus === 'preparing'" class="my-2 space-y-2">
+                            <p role="status" data-stt-preparation-stage class="text-sm text-slate-700">
+                                <span v-if="sttProgress === 100">{{ isEn ? "Model file read (100%). " : "Berkas model selesai dibaca (100%). " }}</span>
+                                {{ sttMessage }}
+                                <span class="tabular-nums">({{ Math.floor(sttPreparationElapsed / 1000) }} {{ isEn ? 'seconds' : 'detik' }})</span>
+                            </p>
+                            <button type="button" data-stt-cancel-prepare @click="cancelRecording"
+                                class="min-h-11 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">
+                                {{ isEn ? "Cancel preparation" : "Batalkan persiapan" }}
+                            </button>
+                        </div>
                         <div
                             v-if="sttMode === 'online' && sttFallbackSuggested"
                             class="mt-2"
@@ -244,7 +277,7 @@
                                 @click="fallbackToOffline"
                                 class="px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-xs transition"
                             >
-                                {{ isEn ? "Switch to Offline STT" : "Beralih ke STT Offline" }}
+                                {{ isEn ? "Switch to Offline STT (Indonesian only)" : "Beralih ke STT Offline (Bahasa Indonesia)" }}
                             </button>
                         </div>
                         <p
@@ -541,11 +574,15 @@ const { safety, safetyEvidence, answeredCount, setManualAnswer, confirmQ17, dism
         persistDraft, () => cleanupStt());
 const {
     sttMode,
+    spokenLanguage,
+    spokenLanguageLabel,
+    selectSpeechLanguage,
     onlineConsentRequired,
     sttFallbackSuggested,
     sttStatus,
     sttBackend,
     sttProgress,
+    sttPreparationElapsed,
     sttMessage,
     interimTranscript,
     transcriptSnippet,
@@ -562,7 +599,7 @@ const {
     cleanupStt,
 } = useSrqSpeech(
     () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
-    text => { const notice = applySpeechTranscript(text); if (notice) sttInterpretationNotice.value = notice; },
+    (text, language) => { const notice = applySpeechTranscript(text, language); if (notice) sttInterpretationNotice.value = notice; },
     owner,
 );
 function interruptAssessment() {
