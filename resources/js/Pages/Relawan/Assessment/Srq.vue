@@ -336,7 +336,7 @@
                     </div>
                 </section>
 
-            <NonVerbalObservationFields v-if="!isVerbal || observations.non_verbal_reasons?.length"
+            <NonVerbalObservationFields v-if="!isVerbal || observations.non_verbal_reasons?.length" v-show="false"
                 :model-value="observations" :disabled="!draftReady || !!safety"
                 @toggle="saveObservations(toggleObservation(observations, $event))"
                 @note="saveObservations({ ...observations, non_verbal_other_note: $event })"
