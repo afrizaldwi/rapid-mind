@@ -6,7 +6,7 @@
                 <h1 class="hc-page-title text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
                     {{ $t('healthcare.validations.title', 'Validasi Asesmen') }}
                 </h1>
-                <p class="text-xs text-slate-500 mt-1 font-normal">
+                <p class="rm-page-description text-sm font-normal">
                     {{ $t('healthcare.validations.subtitle', 'Verifikasi klinis hasil skrining T1 dan T2 dari posko lapangan. Rekomendasi sistem berfungsi sebagai bantuan keputusan.') }}
                 </p>
             </div>

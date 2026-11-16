@@ -3,7 +3,7 @@
         <fieldset :disabled="emergency.can_manage === false" class="hc-page space-y-5 w-full">
             <p v-if="emergency.can_manage === false" role="status" class="text-slate-600">{{ $t('healthcare.actions.readOnlyNotice', 'Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.') }}</p>
             <!-- Back Link & Incident Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <Link
                     href="/healthcare/emergencies"
                     class="text-xs font-semibold text-teal-800 hover:text-teal-900 flex items-center gap-1 transition"

@@ -40,7 +40,7 @@
             class="p-4 sm:p-5 space-y-2.5 hover:bg-slate-50/50 transition text-xs"
           >
             <!-- Row 1: Patient Name, Status Badge, Time -->
-            <div class="flex items-center justify-between gap-3">
+            <div class="hc-referral-heading flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <h2 class="font-bold text-slate-900 text-xs sm:text-sm">
                   {{ r.patient?.name || $t('healthcare.referrals.unrecordedPatient', 'Pasien tidak tercatat') }}

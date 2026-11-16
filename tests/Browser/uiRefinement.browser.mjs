@@ -91,7 +91,7 @@ const roles = [
 ];
 let session;
 try {
-    for (const [role, paths] of roles) {
+    for (const [role, paths] of roles.filter(([role]) => !process.env.RAPID_MIND_UI_ROLE || role === process.env.RAPID_MIND_UI_ROLE)) {
         if (process.env.RAPID_MIND_UI_INTERACTION_ONLY) paths.splice(1);
         session = await nativeChromeSession({ executable: process.env.RAPID_MIND_CHROME_BIN, profile: join(run, role), proxyPort: proxy.port });
         await session.goto('/login', "!!document.querySelector('#email')");

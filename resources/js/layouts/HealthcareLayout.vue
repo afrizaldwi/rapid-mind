@@ -59,7 +59,7 @@
                             </span>
                             <span
                                 class="text-[11px] font-bold text-teal-800 uppercase tracking-wider leading-none"
-                                >Healthcare</span
+                                >Faskes</span
                             >
                         </div>
                         <span
@@ -225,6 +225,7 @@
                         <div class="space-y-0.5">
                             <Link
                                 href="/healthcare/emergencies"
+                                :aria-current="isRoute('/healthcare/emergencies') ? 'page' : undefined"
                                 class="flex items-center justify-between px-3 py-2 rounded-lg text-xs transition"
                                 :class="
                                     isRoute('/healthcare/emergencies')
@@ -263,6 +264,7 @@
 
                             <Link
                                 href="/healthcare/validations"
+                                :aria-current="isRoute('/healthcare/validations') ? 'page' : undefined"
                                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
                                 :class="
                                     isRoute('/healthcare/validations')
@@ -293,6 +295,7 @@
 
                             <Link
                                 href="/healthcare/referrals"
+                                :aria-current="isRoute('/healthcare/referrals') ? 'page' : undefined"
                                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
                                 :class="
                                     isRoute('/healthcare/referrals')
@@ -323,6 +326,7 @@
 
                             <Link
                                 href="/healthcare/patients"
+                                :aria-current="isRoute('/healthcare/patients') ? 'page' : undefined"
                                 class="flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs transition"
                                 :class="
                                     isRoute('/healthcare/patients')
@@ -352,6 +356,10 @@
                             </Link>
                         </div>
                     </div>
+                </div>
+                <div class="border-t border-slate-200 px-6 py-4 text-sm text-slate-700">
+                    <p class="font-semibold break-words">{{ userFacilityName }}</p>
+                    <p class="mt-1 text-xs text-slate-600">{{ $t('healthcare.layout.subtitle', 'Triase & Respons Klinis') }}</p>
                 </div>
             </aside>
 

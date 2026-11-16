@@ -97,7 +97,7 @@
 
         <!-- Queue List Items (Inbox style, thin dividers, Sections 10, 11, 12) -->
         <div
-            class="divide-y divide-slate-100 overflow-y-auto max-h-[calc(100vh-280px)]"
+            class="hc-queue-list divide-y divide-slate-200 overflow-y-auto max-h-[calc(100vh-280px)]"
         >
             <button
                 v-for="item in items"
@@ -105,7 +105,7 @@
                 type="button"
                 @click="emit('select', item)"
                 :aria-current="selectedKey === item.key ? 'true' : undefined"
-                class="block w-full text-left p-3.5 transition cursor-pointer text-xs space-y-1 select-none hover:bg-slate-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
+                class="hc-queue-item block w-full text-left p-3.5 transition cursor-pointer text-xs space-y-1 select-none hover:bg-slate-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-700"
                 :class="[
                     selectedKey === item.key
                         ? 'bg-teal-50/50 border-l-2 border-l-teal-600 pl-3'

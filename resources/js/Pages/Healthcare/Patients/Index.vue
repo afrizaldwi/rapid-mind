@@ -32,7 +32,7 @@
             <!-- Unified Table Surface -->
             <div class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
                 <div class="rm-table-region">
-                    <table class="w-full text-left text-xs">
+                    <table class="hc-patient-table w-full text-left text-xs">
                         <thead class="bg-slate-50/60 text-slate-400 uppercase tracking-wider text-[10px] font-semibold border-b border-slate-100">
                             <tr>
                                 <th class="py-3 px-4">{{ $t('healthcare.patients.columns.name', 'Nama Pasien') }}</th>
