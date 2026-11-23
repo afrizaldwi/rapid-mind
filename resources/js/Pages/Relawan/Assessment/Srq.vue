@@ -1,162 +1,355 @@
 <template>
-    <RelawanLayout>
-        <div class="space-y-6 pb-64">
-            <!-- Top Patient & Progress Sticky Bar -->
-            <div
-                class="bg-white rounded-xl p-4 shadow-xs border border-slate-200 sticky top-16 z-20 space-y-3"
-            >
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-sm font-bold text-slate-900">
-                            {{ patient?.name || "Penyintas" }}
+    <RelawanLayout @clinical-lock="scope.invalidate" @clinical-ready="loadDraft" @emergency-interrupt="interruptAssessment">
+        <div class="flex-1 min-h-0 flex flex-col">
+            <!-- Slim Top Patient & Progress Header -->
+            <div class="shrink-0 bg-white border-b border-slate-200 px-3.5 sm:px-6 py-2">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="min-w-0 flex items-center gap-1.5">
+                        <h2 class="text-sm font-bold text-slate-900 truncate">
+                            {{ patient?.name || (isEn ? "Survivor" : "Penyintas") }}
                         </h2>
-                        <p class="text-xs text-slate-500">
-                            NIK: {{ patient?.nik || "Tanpa NIK" }}
-                        </p>
-                    </div>
-                    <div class="text-right">
-                        <span
-                            class="text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200"
-                        >
-                            {{ answeredCount }} dari 20 Terjawab
+                        <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                            {{ isVerbal ? "Verbal" : "Non-Verbal" }}
+                        </span>
+                        <span v-if="patient?.nik" class="hidden sm:inline text-[11px] text-slate-500 truncate">
+                            • {{ patient.nik }}
                         </span>
                     </div>
+                    <span
+                        class="shrink-0 whitespace-nowrap text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200"
+                    >
+                        {{ isEn ? `${answeredCount}/20 Answered` : `${answeredCount}/20 Terjawab` }}
+                    </span>
                 </div>
-
-                <!-- Progress Bar -->
                 <div
-                    class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"
+                    class="mt-1.5 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden"
                 >
                     <div
-                        class="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                        class="bg-teal-600 h-1.5 rounded-full transition-all duration-300"
                         :style="{ width: `${(answeredCount / 20) * 100}%` }"
                     ></div>
                 </div>
-
-                <!-- Verbal / Non-Verbal Mode & Local Whisper STT -->
-                <div
-                    class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs"
-                >
-                    <div class="flex items-center space-x-2">
-                        <span class="font-semibold text-slate-600">Mode:</span>
-                        <button
-                            type="button"
-                            @click="toggleMode"
-                            class="px-2 py-0.5 rounded-lg border font-bold inline-flex items-center gap-1.5"
-                            :class="
-                                isVerbal
-                                    ? 'bg-teal-50 text-teal-800 border-teal-300'
-                                    : 'bg-slate-100 text-slate-700 border-slate-300'
-                            "
-                        >
-                            <Mic
-                                v-if="isVerbal"
-                                class="h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
-                            <span>{{ isVerbal ? "Verbal" : "Adaptif" }}</span>
-                        </button>
-                    </div>
-
-                    <div v-if="isVerbal" class="flex items-center gap-2">
-                        <button
-                            type="button"
-                            :disabled="sttButtonDisabled"
-                            @click="handleSttAction"
-                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition border disabled:opacity-60"
-                            :class="
-                                sttStatus === 'recording'
-                                    ? 'bg-red-700 text-white border-red-700'
-                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
-                            "
-                        >
-                            <Mic
-                                v-if="sttStatus === 'ready'"
-                                class="h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
-                            <span>{{ sttButtonLabel }}</span>
-                        </button>
-                        <button
-                            v-if="sttStatus === 'recording'"
-                            type="button"
-                            @click="cancelRecording"
-                            class="px-3 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-100"
-                        >
-                            Batalkan
-                        </button>
-                    </div>
-                </div>
-
-                <div
-                    v-if="isVerbal"
-                    class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"
-                    aria-live="polite"
-                >
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-2"
-                    >
-                        <span class="font-bold text-slate-800">{{
-                            sttStatusLabel
-                        }}</span>
-                        <span
-                            v-if="sttBackend"
-                            class="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 font-bold text-teal-800"
-                        >
-                            Backend:
-                            {{
-                                sttBackend === "webgpu"
-                                    ? "WebGPU"
-                                    : "WASM / CPU"
-                            }}
-                        </span>
-                    </div>
-                    <p
-                        v-if="sttStatus === 'preparing' && sttProgress !== null"
-                        class="mt-1"
-                    >
-                        Progres berkas model: {{ sttProgress }}%
-                    </p>
-                    <p
-                        v-if="sttMessage"
-                        :class="
-                            sttStatus === 'error'
-                                ? 'mt-1 font-semibold text-red-800'
-                                : 'mt-1 text-slate-600'
-                        "
-                    >
-                        {{ sttMessage }}
-                    </p>
-                    <p
-                        v-if="sttInterpretationNotice"
-                        class="mt-1 font-semibold text-amber-900"
-                    >
-                        {{ sttInterpretationNotice }}
-                    </p>
-                    <div
-                        v-if="transcriptSnippet"
-                        class="mt-2 rounded-lg bg-white p-2 text-sm text-slate-900 border border-slate-200"
-                    >
-                        <span
-                            class="block text-[11px] font-bold uppercase tracking-wide text-slate-500"
-                            >Transkrip sementara</span
-                        >
-                        <p class="mt-1">“{{ transcriptSnippet }}”</p>
-                    </div>
-                    <p class="mt-2 text-[11px] text-slate-500">
-                        Audio diproses di perangkat. Hanya pernyataan yang cocok
-                        dengan aman yang mengisi jawaban; koreksi manual selalu
-                        dipertahankan.
-                    </p>
-                </div>
             </div>
 
+            <div class="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 pt-3 pb-20 lg:pb-6 space-y-3 sm:space-y-4">
+
+                <section aria-labelledby="interview-mode-title" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <div class="flex items-center justify-between gap-3 px-3 py-1 sm:px-4">
+                            <h3 id="interview-mode-title" class="text-sm font-semibold text-slate-900">
+                                {{ isVerbal ? (isEn ? 'Voice transcription' : 'Transkripsi suara') : (isEn ? 'Interview mode' : 'Mode wawancara') }}
+                            </h3>
+                            <button
+                                type="button"
+                                @click="toggleMode"
+                                :disabled="!draftReady || !!safety"
+                                class="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-60"
+                                :title="isEn ? 'Change interview mode' : 'Ubah mode wawancara'"
+                            >
+                                <Mic
+                                    v-if="isVerbal"
+                                    class="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span>{{ isVerbal ? "Verbal" : "Non-Verbal" }}</span>
+                                <ArrowLeftRight class="size-3.5" aria-hidden="true" />
+                            </button>
+                        </div>
+
+                        <div
+                            v-if="isVerbal"
+                            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-slate-200 px-3 py-2 sm:px-4"
+                        >
+                            <div
+                                role="group"
+                                :aria-label="isEn ? 'STT mode options' : 'Pilihan mode STT'"
+                                class="inline-flex rounded-lg bg-slate-100 p-0.5"
+                            >
+                                <button
+                                    type="button"
+                                    data-stt-mode="offline"
+                                    :aria-pressed="sttMode === 'offline'"
+                                    :disabled="!draftReady || !!safety"
+                                    @click="selectSttMode('offline')"
+                                    class="min-h-[32px] px-2.5 py-1 rounded-md text-xs font-bold transition disabled:opacity-60 cursor-pointer"
+                                    :class="
+                                        sttMode === 'offline'
+                                            ? 'bg-white text-teal-800 shadow-sm ring-1 ring-slate-200'
+                                            : 'text-slate-700 hover:bg-slate-200'
+                                    "
+                                >
+                                    Offline
+                                </button>
+                                <button
+                                    type="button"
+                                    data-stt-mode="online"
+                                    :aria-pressed="sttMode === 'online'"
+                                    :disabled="!draftReady || !!safety"
+                                    @click="selectSttMode('online')"
+                                    class="min-h-[32px] px-2.5 py-1 rounded-md text-xs font-bold transition disabled:opacity-60 cursor-pointer"
+                                    :class="
+                                        sttMode === 'online'
+                                            ? 'bg-white text-teal-800 shadow-sm ring-1 ring-slate-200'
+                                            : 'text-slate-700 hover:bg-slate-200'
+                                    "
+                                >
+                                    Online
+                                </button>
+                            </div>
+                            <span class="text-xs text-slate-600">{{ spokenLanguageLabel }}</span>
+                        </div>
+                        <div v-if="isVerbal && sttStatus !== 'preparing' && sttStatus !== 'processing'" class="flex flex-wrap gap-2 px-3 pb-3 sm:px-4">
+                            <button
+                                type="button"
+                                data-stt-action
+                                :disabled="sttButtonDisabled"
+                                @click="handleSttAction"
+                                class="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-60"
+                                :class="
+                                    sttStatus === 'recording'
+                                        ? 'bg-red-700 text-white'
+                                        : 'bg-teal-700 text-white hover:bg-teal-800'
+                                "
+                            >
+                                <Mic
+                                    v-if="sttStatus === 'ready'"
+                                    class="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span>{{ sttButtonLabel }}</span>
+                            </button>
+                            <button
+                                v-if="sttStatus === 'recording'"
+                                type="button"
+                                data-stt-cancel
+                                @click="cancelRecording"
+                                class="min-h-[38px] px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-100 cursor-pointer"
+                            >
+                                {{ isEn ? "Cancel" : "Batalkan" }}
+                            </button>
+                        </div>
+                    <div
+                        v-if="isVerbal"
+                        class="border-t border-slate-200 px-3 py-1 text-xs text-slate-700 sm:px-4"
+                    >
+                        <div
+                            class="flex items-center justify-between gap-2"
+                        >
+                            <div role="status" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                <span class="font-medium text-slate-600">{{
+                                    sttStatusLabel
+                                }}</span>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md px-1 text-xs font-semibold text-teal-800 hover:bg-teal-50"
+                                :aria-expanded="sttDetailsOpen"
+                                aria-controls="srq-stt-technical-details"
+                                @click="sttDetailsOpen = !sttDetailsOpen"
+                            >
+                                <span>{{
+                                    sttDetailsOpen
+                                        ? (isEn ? "Hide info" : "Tutup info")
+                                        : (isEn ? "Details" : "Detail")
+                                }}</span>
+                                <ChevronDown
+                                    class="h-3.5 w-3.5 transition-transform"
+                                    :class="sttDetailsOpen ? 'rotate-180' : ''"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                        </div>
+
+                        <div
+                            v-if="onlineConsentRequired"
+                            data-stt-online-consent
+                            class="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-950 space-y-2"
+                        >
+                            <p class="font-bold text-amber-900">
+                                {{ isEn ? "Online STT Privacy Notice" : "Pemberitahuan Privasi STT Online" }}
+                            </p>
+                            <p class="leading-relaxed">
+                                <template v-if="isEn">
+                                    Online STT mode uses browser built-in <em>SpeechRecognition</em> which may transmit and process voice via browser provider server services (not guaranteed to be processed privately on-device). This mode is only permitted for local testing with synthetic voice and data.
+                                </template>
+                                <template v-else>
+                                    Mode STT Online menggunakan <em>SpeechRecognition</em>
+                                    bawaan browser yang dapat mengirim dan memproses suara
+                                    melalui layanan server penyedia browser (tidak dijamin
+                                    diproses secara privat di perangkat). Mode ini hanya
+                                    diizinkan untuk pengujian lokal dengan suara dan data
+                                    sintetis.
+                                </template>
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2 pt-0.5">
+                                <button
+                                    type="button"
+                                    data-stt-consent-accept
+                                    @click="grantOnlineConsent"
+                                    class="px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition"
+                                >
+                                    {{ isEn ? "Accept & Enable Online STT (Synthetic Data)" : "Setuju & Aktifkan STT Online (Data Sintetis)" }}
+                                </button>
+                                <button
+                                    type="button"
+                                    data-stt-consent-decline
+                                    @click="declineOnlineConsent"
+                                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition"
+                                >
+                                    {{ isEn ? "Use Offline STT (Indonesian only)" : "Gunakan STT Offline (Bahasa Indonesia)" }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="
+                                sttMode === 'offline' &&
+                                sttStatus === 'preparing' &&
+                                sttProgress !== null
+                            "
+                            class="mb-2"
+                        >
+                            <div class="mb-1 flex items-baseline justify-between gap-3 text-xs">
+                                <span id="stt-model-file">{{ isEn ? 'Model file' : 'Berkas model' }}</span>
+                                <span class="font-semibold tabular-nums">{{ sttProgress }}%</span>
+                            </div>
+                            <progress aria-labelledby="stt-model-file" :value="sttProgress" max="100" class="stt-file-progress block h-1.5 w-full"></progress>
+                        </div>
+                        <div v-if="sttMode === 'offline' && sttStatus === 'preparing'" class="my-2 space-y-2">
+                            <p role="status" data-stt-preparation-stage class="text-sm text-slate-700">
+                                <span v-if="sttProgress === 100">{{ isEn ? "Model file read (100%). " : "Berkas model selesai dibaca (100%). " }}</span>
+                                {{ sttMessage }}
+                                <span class="tabular-nums">({{ Math.floor(sttPreparationElapsed / 1000) }} {{ isEn ? 'seconds' : 'detik' }})</span>
+                            </p>
+                            <button type="button" data-stt-cancel-prepare @click="cancelRecording"
+                                class="min-h-11 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">
+                                {{ isEn ? "Cancel preparation" : "Batalkan persiapan" }}
+                            </button>
+                        </div>
+                        <div
+                            v-if="sttMode === 'online' && sttFallbackSuggested"
+                            class="mt-2"
+                        >
+                            <button
+                                type="button"
+                                data-stt-fallback-offline
+                                @click="fallbackToOffline"
+                                class="px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-900 font-bold text-xs transition"
+                            >
+                                {{ isEn ? "Switch to Offline STT (Indonesian only)" : "Beralih ke STT Offline (Bahasa Indonesia)" }}
+                            </button>
+                        </div>
+                        <p
+                            v-if="localizedSttInterpretationNotice"
+                            class="mt-1.5 font-semibold text-amber-900"
+                        >
+                            {{ localizedSttInterpretationNotice }}
+                        </p>
+                        <div
+                            v-if="interimTranscript"
+                            data-stt-interim
+                            class="mt-2 rounded-lg bg-amber-50/70 p-2 text-sm text-slate-800 border border-amber-200"
+                        >
+                            <span
+                                class="block text-[11px] font-bold uppercase tracking-wide text-amber-800"
+                                >{{ isEn ? "Interim transcript (not yet answering)" : "Transkrip sementara (belum mengisi jawaban)" }}</span
+                            >
+                            <p class="mt-1 italic">“{{ interimTranscript }}”</p>
+                        </div>
+                        <div
+                            v-if="transcriptSnippet"
+                            data-stt-final
+                            class="mt-2 rounded-lg bg-white p-2 text-sm text-slate-900 border border-slate-200"
+                        >
+                            <span
+                                class="block text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                                >{{ isEn ? "Final transcript" : "Transkrip final" }}</span
+                            >
+                            <p class="mt-1">“{{ transcriptSnippet }}”</p>
+                        </div>
+
+                        <p v-if="sttStatus === 'error' && sttMessage" role="alert" class="mb-2 font-semibold text-red-800">{{ sttMessage }}</p>
+                        <div
+                            id="srq-stt-technical-details"
+                            v-show="sttDetailsOpen"
+                            class="mt-1 space-y-3 border-t border-slate-200 pb-2 pt-3 text-sm leading-relaxed"
+                        >
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <label :for="sttMode === 'online' ? 'srq-spoken-language' : undefined" class="font-semibold text-slate-700">
+                                {{ isEn ? "Spoken language" : "Bahasa ucapan" }}
+                            </label>
+                            <select
+                                v-if="sttMode === 'online'"
+                                id="srq-spoken-language"
+                                data-stt-language
+                                :value="spokenLanguage"
+                                :disabled="!draftReady || !!safety"
+                                @change="selectSpeechLanguage(($event.target as HTMLSelectElement).value as 'id-ID' | 'en-US')"
+                                class="min-h-11 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:opacity-60"
+                                aria-describedby="srq-spoken-language-status"
+                            >
+                                <option value="id-ID">{{ isEn ? "Indonesian (id-ID)" : "Bahasa Indonesia (id-ID)" }}</option>
+                                <option value="en-US">{{ isEn ? "English (en-US)" : "Bahasa Inggris (en-US)" }}</option>
+                            </select>
+                            <span id="srq-spoken-language-status" role="status" class="text-slate-600">
+                                {{ sttMode === 'online' ? 'Online' : 'Offline' }} · {{ spokenLanguageLabel }}
+                                <template v-if="sttMode === 'offline'">{{ isEn ? ' · Indonesian only' : ' · Hanya Bahasa Indonesia' }}</template>
+                            </span>
+                        </div>
+                            <p class="flex items-center gap-2 text-xs text-slate-600">
+                                <span
+                                    v-if="sttMode === 'offline' && sttBackend"
+                                    class="text-xs font-medium text-slate-600"
+                                >
+                                    {{
+                                        sttBackend === "webgpu"
+                                            ? "WebGPU"
+                                            : "WASM"
+                                    }}
+                                </span>
+                                <span
+                                    v-else-if="sttMode === 'online'"
+                                    class="text-xs font-medium text-slate-600"
+                                >
+                                    Web Speech
+                                </span>
+                            </p>
+                            <p v-if="sttMessage && sttStatus !== 'error'" class="text-slate-600">
+                                {{ sttMessage }}
+                            </p>
+                            <p class="text-slate-500">
+                                <template v-if="sttMode === 'offline'">
+                                    {{ isEn
+                                        ? "Audio is processed entirely on-device. Only safely matching statements populate answers; manual corrections are always preserved."
+                                        : "Audio diproses di perangkat. Hanya pernyataan yang cocok dengan aman yang mengisi jawaban; koreksi manual selalu dipertahankan."
+                                    }}
+                                </template>
+                                <template v-else>
+                                    {{ isEn
+                                        ? "Online Mode (synthetic testing only): voice may be processed by browser provider services. Only final transcripts are checked against conservative SRQ rules; manual corrections are always preserved."
+                                        : "Mode Online (khusus uji sintetis): suara dapat diproses layanan penyedia browser. Hanya hasil transkripsi final yang diperiksa aturan SRQ konservatif; koreksi manual selalu dipertahankan."
+                                    }}
+                                </template>
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+            <NonVerbalObservationFields v-if="!isVerbal || observations.non_verbal_reasons?.length" v-show="false"
+                :model-value="observations" :disabled="!draftReady || !!safety"
+                @toggle="saveObservations(toggleObservation(observations, $event))"
+                @note="saveObservations({ ...observations, non_verbal_other_note: $event })"
+                @clear="saveObservations({ non_verbal_reasons: [], non_verbal_other_note: null })" />
+            <div v-if="metadataError" role="alert" class="rounded-lg bg-amber-50 p-3 text-xs sm:text-sm text-amber-900">{{ metadataError }} <button type="button" class="min-h-[44px] inline-flex items-center underline font-bold" :disabled="!draftReady || metadataPending > 0" @click="retryMetadata">{{ isEn ? "Try Saving Draft" : "Coba Simpan Draf" }}</button></div>
+
             <!-- SRQ-20 Scrollable Question List -->
-            <div class="space-y-4">
+            <div class="space-y-3 sm:space-y-4">
                 <div
                     v-for="q in srqQuestions"
                     :key="q.number"
-                    class="bg-white p-5 rounded-xl border transition"
+                    :id="`srq-question-${q.number}`" tabindex="-1"
+                    class="scroll-mt-20 bg-white p-4 sm:p-5 rounded-xl border transition"
                     :class="
                         answers[q.number] === true
                             ? 'border-teal-400 shadow-xs'
@@ -178,68 +371,36 @@
                                     class="h-3.5 w-3.5"
                                     aria-hidden="true"
                                 />
-                                <span>Red Flag Gate</span>
+                                <span>{{ $t('assessment.srq.redFlagGate', 'Red Flag Gate') }}</span>
                             </span>
                         </div>
                     </div>
 
                     <p
-                        class="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500"
+                        class="mt-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500"
                     >
-                        Pertanyaan
+                        {{ isEn ? "Question" : "Pertanyaan" }}
                     </p>
                     <h3
-                        class="mt-1 text-md font-bold leading-snug text-slate-900"
+                        class="mt-1 text-base sm:text-lg font-bold leading-snug text-slate-900"
                     >
-                        {{ q.script }}
+                        {{ $t(`assessment.srq.questions.${q.number}.script`, q.script) }}
                     </h3>
 
-                    <!-- Large YA / TIDAK Buttons -->
-                    <div class="grid grid-cols-2 gap-3 mt-4">
-                        <button
-                            type="button"
-                            :disabled="!draftReady"
-                            @click="setManualAnswer(q.number, true)"
-                            class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
-                            :class="
-                                answers[q.number] === true
-                                    ? q.number === 17
-                                        ? 'border-red-600 bg-red-600 text-white shadow-md'
-                                        : 'border-teal-700 bg-teal-700 text-white shadow-md'
-                                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                            "
-                        >
-                            <span v-if="answers[q.number] === true">✓</span>
-                            <span>YA</span>
-                        </button>
+                    <SrqResponseControl :number="q.number" :answer="answers[q.number]"
+                        :disabled="!draftReady || !!safety" @select="setManualAnswer(q.number, $event)" />
 
+                    <div class="mt-2.5 border-t border-slate-100 pt-2">
                         <button
                             type="button"
-                            :disabled="!draftReady"
-                            @click="setManualAnswer(q.number, false)"
-                            class="min-h-[56px] rounded-xl border-2 font-extrabold text-sm transition flex items-center justify-center space-x-2"
-                            :class="
-                                answers[q.number] === false
-                                    ? 'border-slate-700 bg-slate-700 text-white shadow-md'
-                                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                            "
-                        >
-                            <span v-if="answers[q.number] === false">✓</span>
-                            <span>TIDAK</span>
-                        </button>
-                    </div>
-
-                    <div class="mt-3 border-t border-slate-100 pt-2">
-                        <button
-                            type="button"
-                            class="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-sm font-bold text-teal-800 transition hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                            class="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-xs sm:text-sm font-bold text-teal-800 transition hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 cursor-pointer"
                             :aria-expanded="expandedGuidance.has(q.number)"
                             :aria-controls="`srq-guidance-${q.number}`"
                             @click="toggleGuidance(q.number)"
                         >
-                            <span>Petunjuk relawan</span>
+                            <span>{{ isEn ? "Volunteer guidance" : "Petunjuk relawan" }}</span>
                             <ChevronDown
-                                class="h-5 w-5 shrink-0 transition-transform"
+                                class="h-4 w-4 sm:h-5 sm:w-5 shrink-0 transition-transform"
                                 :class="
                                     expandedGuidance.has(q.number)
                                         ? 'rotate-180'
@@ -251,76 +412,61 @@
                         <div
                             v-if="expandedGuidance.has(q.number)"
                             :id="`srq-guidance-${q.number}`"
-                            class="mt-1 rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-700"
+                            class="mt-1 rounded-lg bg-slate-50 p-3 text-xs sm:text-sm leading-relaxed text-slate-700"
                         >
-                            <!-- <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Pertanyaan SRQ-20</p>
-              <p class="mt-1 font-semibold text-slate-900">{{ q.question }}</p> -->
                             <p
-                                class="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500"
+                                class="text-[11px] font-bold uppercase tracking-wide text-slate-500"
                             >
-                                Petunjuk Relawan
+                                {{ isEn ? "Volunteer Guidance" : "Petunjuk Relawan" }}
                             </p>
-                            <p class="mt-1">{{ q.volunteerInstruction }}</p>
+                            <p class="mt-1">{{ $t(`assessment.srq.questions.${q.number}.instruction`, q.volunteerInstruction) }}</p>
                         </div>
                     </div>
                 </div>
             </div>
+            </div>
 
-            <!-- Sticky Bottom Navigation: Next to Risk Factors -->
+            <!-- Docked Bottom Navigation: Next to Risk Factors -->
             <div
                 data-assessment-action-bar
-                class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl z-30 max-w-lg mx-auto"
+                class="shrink-0 bg-white border-t border-slate-200 px-3.5 py-2 sm:px-5 sm:py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-4px_12px_-4px_rgba(15,23,42,0.06)] z-20"
             >
-                <div class="flex items-center justify-between space-x-3">
+                <div class="flex items-center gap-2.5 sm:gap-3">
                     <RelawanLink
                         href="/relawan/assessment"
-                        class="py-3 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                        class="shrink-0 min-h-[44px] inline-flex items-center justify-center px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 whitespace-nowrap"
                     >
-                        ← Kembali
+                        ← {{ isEn ? "Back" : "Kembali" }}
                     </RelawanLink>
                     <button
                         type="button"
                         @click="saveAndNext"
                         :disabled="
-                            isSaving || !draftReady || answeredCount !== 20
+                            isSaving || !draftReady || answeredCount !== 20 || !!safety || metadataPending > 0
                         "
-                        class="flex-1 py-3 px-5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition disabled:opacity-60"
+                        class="flex-1 min-w-0 min-h-[44px] inline-flex items-center justify-center px-3.5 sm:px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold sm:font-extrabold text-xs sm:text-sm shadow-sm transition disabled:opacity-60 cursor-pointer text-center leading-tight"
                     >
-                        Lanjut: Faktor Risiko ({{ answeredCount }}/20) →
+                        {{ isEn ? `Next: Risk Factors (${answeredCount}/20) →` : `Lanjut: Faktor Risiko (${answeredCount}/20) →` }}
                     </button>
                 </div>
                 <p
-                    v-if="answeredCount !== 20"
-                    class="mt-2 text-xs text-slate-600"
-                >
-                    Lengkapi semua jawaban sebelum melanjutkan ({{
-                        answeredCount
-                    }}/20).
-                </p>
-                <p
                     v-if="draftWarning"
                     role="alert"
-                    class="mt-2 text-xs font-semibold text-amber-900"
+                    class="mt-1.5 text-xs font-semibold text-amber-900"
                 >
                     {{ draftWarning }}
                 </p>
                 <p
                     v-if="saveError"
                     role="alert"
-                    class="mt-2 text-xs font-semibold text-red-800"
+                    class="mt-1.5 text-xs font-semibold text-red-800"
                 >
                     {{ saveError }}
                 </p>
             </div>
         </div>
 
-        <!-- Potential Red Flag Safety Interruption Modal -->
-        <PotentialRedFlag
-            :show="showRedFlagModal"
-            :review-only="redFlagReviewOnly"
-            @escalate="handleEscalate"
-            @dismiss="showRedFlagModal = false"
-        />
+        <SrqSafetyDialog :state="safety" :evidence="safetyEvidence" @confirm="confirmQ17" @dismiss="dismissSafety" @escalate="handleEscalate" />
 
         <!-- T0 Verification Modal -->
         <T0Verification
@@ -335,118 +481,129 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
+import { ref, computed, nextTick, onMounted } from "vue";
+import { ArrowLeftRight, ChevronDown, Mic, TriangleAlert } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
     mergeAssessmentDraft,
-    readAssessmentDraft,
-    saveAssessmentDraft,
 } from "@/offline/assessmentDraft";
 import {
-    loadAssessmentContext,
     relawanOwner,
 } from "@/offline/assessmentWorkflow";
 import type { LocalAssessment, LocalPatient } from "@/offline/db";
-import { assessmentRepository } from "@/offline/assessmentRepository";
-import { localPersistenceHealth } from "@/offline/localPersistenceHealth";
-import PotentialRedFlag from "@/components/Relawan/PotentialRedFlag.vue";
 import T0Verification from "@/components/Relawan/T0Verification.vue";
-import { LocalAudioCapture } from "@/stt/audioCapture";
-import { WhisperClient } from "@/stt/whisperClient";
-import type {
-    WhisperBackend,
-    WhisperStatus,
-    WhisperWorkerEvent,
-} from "@/stt/types";
-import {
-    interpretSrqTranscript,
-    selectSrqSpeechAnswerUpdates,
-} from "@/domain/srq/srqTranscriptInterpreter";
+import { useSrqSpeech } from "@/composables/useSrqSpeech";
+import { useSrqResponses } from "@/composables/useSrqResponses";
+import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import { useAssessmentPersistence } from "@/composables/useAssessmentPersistence";
+import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
+import SrqResponseControl from "@/components/Relawan/Assessment/SrqResponseControl.vue";
+import SrqSafetyDialog from "@/components/Relawan/Assessment/SrqSafetyDialog.vue";
+import NonVerbalObservationFields from "@/components/Relawan/Assessment/NonVerbalObservationFields.vue";
 import { srqQuestions } from "@/domain/srq/srqQuestions";
+import type { SrqAnswers } from "@/domain/srq/srqAnswer";
+import { toggleObservation } from "@/domain/assessment/observationPresentation";
+import type { NonVerbalObservations } from "@/domain/assessment/nonVerbalObservations";
 
 const props = defineProps<{
     assessment: any;
     patient: any;
-    responses?: Record<number, boolean>;
+    responses?: SrqAnswers;
 }>();
 
-const answers = ref<Record<number, boolean>>(
+const answers = ref<SrqAnswers>(
     mergeAssessmentDraft("srq_answers", props.responses, {}),
 );
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext, readAssessmentDraft, saveAssessmentDraft, saveObservationDraft, saveAssessmentMode } = persistence;
+const { isEn, locale, t: $t } = useI18n();
 const owner = relawanOwner();
 const localAssessment = ref<LocalAssessment | null>(null);
 const patient = ref<LocalPatient | null>(props.patient);
 const isSaving = ref(false);
-const saveError = ref("");
-const draftWarning = ref("");
-const draftReady = ref(false);
-const sttOwnedAnswers = new Set<number>();
-const manualOverrides = new Set<number>();
-const isVerbal = ref(props.assessment?.mode !== "NON_VERBAL");
-const sttStatus = ref<WhisperStatus>("idle");
-const sttBackend = ref<WhisperBackend | null>(null);
-const sttProgress = ref<number | null>(null);
-const sttMessage = ref(
-    "Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.",
+type LocalizedMsg = { id: string; en: string } | string;
+const resolveMsg = (msg: LocalizedMsg) =>
+    typeof msg === "string"
+        ? localizeMessage(msg, locale.value)
+        : isEn.value
+          ? msg.en
+          : msg.id;
+const rawSaveError = ref<LocalizedMsg>("");
+const rawDraftWarning = ref<LocalizedMsg>("");
+const rawMetadataError = ref<LocalizedMsg>("");
+const saveError = computed(() => resolveMsg(rawSaveError.value));
+const draftWarning = computed(() => resolveMsg(rawDraftWarning.value));
+const metadataError = computed(() => resolveMsg(rawMetadataError.value));
+const localizedSttInterpretationNotice = computed(() =>
+    localizeMessage(sttInterpretationNotice.value, locale.value),
 );
-const transcriptSnippet = ref("");
-const sttInterpretationNotice = ref("");
-const showRedFlagModal = ref(false);
-const redFlagReviewOnly = ref(false);
+const draftReady = ref(false);
+const isVerbal = ref(props.assessment?.mode !== "NON_VERBAL");
+const observations = ref<NonVerbalObservations>({});
+const metadataPending = ref(0);
 const showEmergencyVerification = ref(false);
 const expandedGuidance = ref(new Set<number>());
-let whisperClient: WhisperClient | null = null;
-let audioCapture: LocalAudioCapture | null = null;
-let sttSession = 0;
-
-const answeredCount = computed(() => {
-    return Array.from(
-        { length: 20 },
-        (_, index) => answers.value[index + 1],
-    ).filter((value) => typeof value === "boolean").length;
-});
-
-const sttButtonDisabled = computed(
-    () =>
-        !draftReady.value ||
-        ["preparing", "processing"].includes(sttStatus.value),
+const sttDetailsOpen = ref(false);
+const scope = useClinicalTaskScope(() => {
+    persistence.invalidate();
+    cleanupStt();
+    reset();
+    showEmergencyVerification.value = false;
+    draftReady.value = false;
+    answers.value = {};
+    observations.value = {};
+    patient.value = null;
+    localAssessment.value = null;
+    metadataPending.value = 0;
+    isSaving.value = false;
+    rawSaveError.value = "";
+    rawDraftWarning.value = "";
+    rawMetadataError.value = "";
+}, { serverOnly: persistence.online });
+onMounted(() => { if (persistence.online) void loadDraft(); });
+const { safety, safetyEvidence, answeredCount, setManualAnswer, confirmQ17, dismissSafety,
+    applySpeechTranscript, reset } = useSrqResponses(answers, () => draftReady.value,
+        persistDraft, () => cleanupStt());
+const {
+    sttMode,
+    spokenLanguage,
+    spokenLanguageLabel,
+    selectSpeechLanguage,
+    onlineConsentRequired,
+    sttFallbackSuggested,
+    sttStatus,
+    sttBackend,
+    sttProgress,
+    sttPreparationElapsed,
+    sttMessage,
+    interimTranscript,
+    transcriptSnippet,
+    sttInterpretationNotice,
+    sttButtonDisabled,
+    sttButtonLabel,
+    sttStatusLabel,
+    selectSttMode,
+    grantOnlineConsent,
+    declineOnlineConsent,
+    fallbackToOffline,
+    handleSttAction,
+    cancelRecording,
+    cleanupStt,
+} = useSrqSpeech(
+    () => draftReady.value && isVerbal.value && !safety.value && !showEmergencyVerification.value,
+    (text, language) => { const notice = applySpeechTranscript(text, language); if (notice) sttInterpretationNotice.value = notice; },
+    owner,
 );
-const sttButtonLabel = computed(() => {
-    switch (sttStatus.value) {
-        case "preparing":
-            return "Menyiapkan STT…";
-        case "ready":
-            return "Mulai Rekam";
-        case "recording":
-            return "Selesai & Transkripsikan";
-        case "processing":
-            return "Memproses di Perangkat…";
-        case "error":
-            return "Coba Siapkan Lagi";
-        default:
-            return "Siapkan STT Offline";
-    }
-});
-const sttStatusLabel = computed(() => {
-    switch (sttStatus.value) {
-        case "preparing":
-            return "STT sedang disiapkan";
-        case "ready":
-            return "STT siap";
-        case "recording":
-            return "Perekaman aktif";
-        case "processing":
-            return "Transkripsi lokal diproses";
-        case "error":
-            return "STT tidak tersedia";
-        default:
-            return "STT lokal belum siap";
-    }
-});
+function interruptAssessment() {
+    cleanupStt();
+    dismissSafety();
+    showEmergencyVerification.value = false;
+}
 
 function toggleGuidance(questionNumber: number) {
     const next = new Set(expandedGuidance.value);
@@ -455,345 +612,170 @@ function toggleGuidance(questionNumber: number) {
     expandedGuidance.value = next;
 }
 
-function setAnswer(qNum: number, value: boolean) {
-    answers.value[qNum] = value;
-
-    // Q17 Safety Gate Interruption
-    if (qNum === 17 && value === true) {
-        showRedFlagModal.value = true;
-    }
-}
-
-function setManualAnswer(qNum: number, value: boolean) {
-    manualOverrides.add(qNum);
-    sttOwnedAnswers.delete(qNum);
-    if (qNum === 17 && value) redFlagReviewOnly.value = false;
-    setAnswer(qNum, value);
-    void persistDraft();
-}
-
 function handleEscalate() {
-    showRedFlagModal.value = false;
+    cleanupStt();
+    dismissSafety();
     showEmergencyVerification.value = true;
 }
 
-async function applySpeechTranscript(transcript: string) {
-    const interpretation = interpretSrqTranscript(transcript);
-    const { accepted, protectedQuestionNumbers } = selectSrqSpeechAnswerUpdates(
-        interpretation,
-        answers.value,
-        sttOwnedAnswers,
-        manualOverrides,
-    );
-
-    for (const update of accepted) {
-        answers.value[update.questionNumber] = update.answer;
-        sttOwnedAnswers.add(update.questionNumber);
-    }
-
-    if (accepted.length > 0) await persistDraft();
-
-    const acceptedNumbers = accepted
-        .map(({ questionNumber }) => `#${questionNumber}`)
-        .join(", ");
-    const unresolvedNumbers = [
-        ...new Set([
-            ...interpretation.matches
-                .filter(({ status }) => status === "conflicting")
-                .map(({ questionNumber }) => questionNumber),
-            ...interpretation.unresolved.flatMap(
-                ({ questionNumbers }) => questionNumbers,
-            ),
-        ]),
-    ];
-    const notices: string[] = [];
-    if (acceptedNumbers)
-        notices.push(`Jawaban terisi dari ucapan: ${acceptedNumbers}.`);
-    if (protectedQuestionNumbers.length > 0)
-        notices.push(
-            `Jawaban manual/tersimpan tidak diubah: ${protectedQuestionNumbers.map((number) => `#${number}`).join(", ")}.`,
-        );
-    if (unresolvedNumbers.length > 0)
-        notices.push(
-            `Perlu diperiksa manual: ${unresolvedNumbers.map((number) => `#${number}`).join(", ")}.`,
-        );
-    if (
-        interpretation.unresolved.some(
-            ({ questionNumbers }) => questionNumbers.length === 0,
-        )
-    )
-        notices.push(
-            "Respons tanpa pertanyaan SRQ yang jelas tidak diterapkan.",
-        );
-    if (notices.length === 0)
-        notices.push(
-            "Ucapan belum cukup jelas untuk mengisi jawaban dengan aman.",
-        );
-    sttInterpretationNotice.value = notices.join(" ");
-
-    const q17Interpretation = interpretation.matches.find(
-        ({ questionNumber }) => questionNumber === 17,
-    );
-    const affirmativeQ17 =
-        q17Interpretation?.status === "matched" &&
-        q17Interpretation.answer === true;
-    const protectedQ17 = protectedQuestionNumbers.includes(17);
-    if (interpretation.requiresSafetyReview) {
-        redFlagReviewOnly.value = true;
-        showRedFlagModal.value = true;
-    } else if (affirmativeQ17) {
-        redFlagReviewOnly.value = protectedQ17 && answers.value[17] !== true;
-        showRedFlagModal.value = true;
-    }
-}
-
 async function toggleMode() {
-    if (!localAssessment.value) return;
+    if (!draftReady.value || !localAssessment.value || safety.value) return;
+    const current = scope.capture();
     const nextMode = isVerbal.value ? "NON_VERBAL" : "VERBAL";
+    if (nextMode === "NON_VERBAL") cleanupStt();
+    isVerbal.value = nextMode === "VERBAL";
+    localAssessment.value.mode = nextMode;
+    metadataPending.value++;
     try {
-        await localPersistenceHealth.recordWrite(owner, () =>
-            assessmentRepository.update(owner, props.assessment.id, {
-                mode: nextMode,
-                sync_state: "LOCAL_SAVED",
-            }),
-        );
-        localAssessment.value.mode = nextMode;
-        isVerbal.value = nextMode === "VERBAL";
-        if (!isVerbal.value) cleanupStt();
-        draftWarning.value = "";
+        await saveAssessmentMode(owner, props.assessment.id, nextMode, current);
+        if (current()) rawMetadataError.value = "";
     } catch {
-        draftWarning.value = "Mode belum tersimpan di perangkat ini.";
-    }
-}
-
-function handleWorkerEvent(event: WhisperWorkerEvent) {
-    switch (event.type) {
-        case "MODEL_PROGRESS":
-            sttStatus.value = "preparing";
-            sttBackend.value = event.backend;
-            if (typeof event.progress === "number")
-                sttProgress.value = event.progress;
-            sttMessage.value =
-                event.backend === "webgpu"
-                    ? "Mencoba menyiapkan Whisper dengan WebGPU."
-                    : "Menyiapkan Whisper dengan WASM / CPU.";
-            break;
-        case "READY":
-            sttStatus.value = "ready";
-            sttBackend.value = event.backend;
-            sttProgress.value = 100;
-            sttMessage.value =
-                "Model siap. Rekam satu ujaran pendek untuk transkripsi Bahasa Indonesia.";
-            break;
-        case "BACKEND_FALLBACK":
-            sttStatus.value = "preparing";
-            sttBackend.value = "wasm";
-            sttProgress.value = null;
-            sttMessage.value =
-                "WebGPU tidak dapat dimulai. Mencoba backend WASM / CPU.";
-            break;
-        case "PROCESSING":
-            sttStatus.value = "processing";
-            sttBackend.value = event.backend;
-            sttMessage.value = "Audio sedang ditranskripsikan secara lokal.";
-            break;
-        case "RESULT":
-            sttStatus.value = "ready";
-            sttBackend.value = event.backend;
-            transcriptSnippet.value = event.transcript;
-            sttInterpretationNotice.value = "";
-            if (event.transcript) {
-                sttMessage.value =
-                    "Transkripsi selesai dan diperiksa dengan aturan SRQ konservatif.";
-                void applySpeechTranscript(event.transcript);
-            } else {
-                sttMessage.value =
-                    "Tidak ada ucapan yang dikenali. Coba rekam lagi di tempat yang lebih tenang.";
-            }
-            break;
-        case "ERROR":
-            sttStatus.value =
-                event.stage === "transcribe" && sttBackend.value
-                    ? "ready"
-                    : "error";
-            sttMessage.value =
-                event.stage === "prepare"
-                    ? "Whisper tidak dapat disiapkan di perangkat ini. Jawaban manual tetap dapat digunakan."
-                    : "Transkripsi gagal. Coba rekam ulang; jawaban manual tetap dapat digunakan.";
-            break;
-    }
-}
-
-function prepareStt() {
-    if (whisperClient && sttStatus.value === "error") {
-        whisperClient.dispose();
-        whisperClient = null;
-    }
-    if (!whisperClient) {
-        const client = new WhisperClient((event) => {
-            if (whisperClient === client) handleWorkerEvent(event);
-        });
-        whisperClient = client;
-    }
-    sttStatus.value = "preparing";
-    sttProgress.value = null;
-    sttMessage.value = navigator.onLine
-        ? "Mengunduh atau membuka model yang sudah tersimpan di cache perangkat."
-        : "Mencoba membuka model yang sebelumnya sudah disiapkan di perangkat.";
-    whisperClient.prepare();
-}
-
-async function startRecording() {
-    const session = sttSession;
-    const capture = new LocalAudioCapture();
-    audioCapture = capture;
-    transcriptSnippet.value = "";
-    sttInterpretationNotice.value = "";
-    try {
-        await capture.start();
-        if (sttSession !== session || audioCapture !== capture) {
-            capture.cancel();
-            return;
+        if (current()) {
+            rawMetadataError.value = {
+                id: "Mode atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.",
+                en: "Mode or its sync queue has not been saved yet. Try saving draft again.",
+            };
         }
-        sttStatus.value = "recording";
-        sttMessage.value =
-            "Mikrofon aktif. Ucapkan satu jawaban, lalu selesaikan rekaman.";
-    } catch (error) {
-        if (sttSession !== session || audioCapture !== capture) return;
-        audioCapture = null;
-        sttStatus.value = "ready";
-        if (error instanceof DOMException && error.name === "NotAllowedError") {
-            sttMessage.value =
-                "Izin mikrofon ditolak. Izinkan mikrofon atau gunakan jawaban manual.";
-        } else if (
-            error instanceof DOMException &&
-            error.name === "NotFoundError"
-        ) {
-            sttMessage.value =
-                "Mikrofon tidak ditemukan. Jawaban manual tetap dapat digunakan.";
-        } else {
-            sttMessage.value =
-                "Mikrofon tidak dapat dimulai. Jawaban manual tetap dapat digunakan.";
-        }
-    }
+    } finally { if (current()) metadataPending.value--; }
 }
 
-async function stopAndTranscribe() {
-    const capture = audioCapture;
-    const client = whisperClient;
-    const session = sttSession;
-    if (!capture || !client) return;
-    audioCapture = null;
-    sttStatus.value = "processing";
-    sttMessage.value = "Menyiapkan audio untuk Whisper di perangkat.";
+async function saveObservations(value: NonVerbalObservations) {
+    if (!draftReady.value || safety.value) return;
+    const current = scope.capture();
+    observations.value = value;
+    metadataPending.value++;
     try {
-        const audio = await capture.stop();
-        if (sttSession !== session || whisperClient !== client) return;
-        client.transcribe(audio);
+        await saveObservationDraft(owner, props.assessment.id, value, current);
+        if (current()) rawMetadataError.value = "";
     } catch {
-        if (sttSession !== session || whisperClient !== client) return;
-        sttStatus.value = "ready";
-        sttMessage.value = "Rekaman tidak dapat diproses. Coba rekam ulang.";
-    }
+        if (current()) {
+            rawMetadataError.value = {
+                id: "Observasi atau antrean sinkronisasinya belum tersimpan. Coba simpan draf kembali.",
+                en: "Observations or their sync queue have not been saved yet. Try saving draft again.",
+            };
+        }
+    } finally { if (current()) metadataPending.value--; }
 }
-
-function cancelRecording() {
-    audioCapture?.cancel();
-    audioCapture = null;
-    sttStatus.value = "ready";
-    sttMessage.value = "Rekaman dibatalkan. Mikrofon sudah dimatikan.";
-}
-
-function handleSttAction() {
-    if (sttStatus.value === "idle" || sttStatus.value === "error") prepareStt();
-    else if (sttStatus.value === "ready") void startRecording();
-    else if (sttStatus.value === "recording") void stopAndTranscribe();
-}
-
-function cleanupStt() {
-    sttSession += 1;
-    audioCapture?.cancel();
-    audioCapture = null;
-    whisperClient?.dispose();
-    whisperClient = null;
-    sttStatus.value = "idle";
-    sttBackend.value = null;
-    sttProgress.value = null;
-    sttMessage.value =
-        "Siapkan model saat internet tersedia agar dapat digunakan kembali secara offline.";
-    transcriptSnippet.value = "";
-    sttInterpretationNotice.value = "";
+async function retryMetadata() {
+    if (!draftReady.value) return;
+    const current = scope.capture();
+    metadataPending.value++;
+    try {
+        await saveAssessmentMode(owner, props.assessment.id, isVerbal.value ? "VERBAL" : "NON_VERBAL", current);
+        await saveObservationDraft(owner, props.assessment.id, observations.value, current);
+        if (current()) rawMetadataError.value = "";
+    } catch {
+        if (current()) {
+            rawMetadataError.value = {
+                id: "Mode atau observasi belum tersimpan. Coba lagi.",
+                en: "Mode or observations have not been saved yet. Please try again.",
+            };
+        }
+    } finally { if (current()) metadataPending.value--; }
 }
 
 async function persistDraft() {
+    const current = scope.capture();
+    if (!draftReady.value) return;
     try {
         if (!localAssessment.value)
             throw new Error("Asesmen lokal belum siap.");
         await saveAssessmentDraft(
             { ...localAssessment.value, user_id: owner },
             "srq_answers",
-            answers.value,
+            answers.value, current,
         );
-        draftWarning.value = "";
-    } catch {
-        draftWarning.value =
-            "Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.";
+        if (current()) rawDraftWarning.value = "";
+    } catch (error) {
+        if (!current()) return;
+        rawDraftWarning.value = persistence.online && error instanceof Error ? error.message : {
+            id: "Draf lokal belum tersimpan. Jawaban di halaman ini masih ada; coba pilih jawaban lagi.",
+            en: "Local draft is not saved yet. Answers on this page remain intact; please try selecting an answer again.",
+        };
     }
 }
 
-onMounted(async () => {
+async function loadDraft() {
+    if (runtime.owner !== owner) return;
+    const current = scope.capture();
+    draftReady.value = false;
     try {
-        const context = await loadAssessmentContext(
-            owner,
-            props.assessment,
-            props.patient,
-            runtime.mode === "OFFLINE_FIELD_MODE",
-        );
+        const context = await loadAssessmentContext(owner, props.assessment, props.patient, runtime.mode === "OFFLINE_FIELD_MODE");
+        if (!current()) return;
+        const local = await readAssessmentDraft(owner, props.assessment.id, "srq_answers");
+        if (!current()) return;
         localAssessment.value = context.assessment;
         isVerbal.value = context.assessment.mode === "VERBAL";
         patient.value = context.patient;
-        const local = await readAssessmentDraft(
-            owner,
-            props.assessment.id,
-            "srq_answers",
-        );
-        const merged = mergeAssessmentDraft(
-            "srq_answers",
-            props.responses,
-            local,
-        );
-        for (const [key, value] of Object.entries(merged)) {
-            if (!manualOverrides.has(Number(key)))
-                (answers.value as Record<string, typeof value>)[key] = value;
+        observations.value = {
+            non_verbal_reasons: context.assessment.non_verbal_reasons ?? [],
+            non_verbal_other_note: context.assessment.non_verbal_other_note ?? null,
+        };
+        answers.value = mergeAssessmentDraft("srq_answers", props.responses, local);
+        draftReady.value = context.assessment.status === "IN_PROGRESS";
+        rawDraftWarning.value = draftReady.value
+            ? ""
+            : {
+                  id: "Asesmen selesai tidak dapat diubah.",
+                  en: "Completed assessments cannot be modified.",
+              };
+        const target = window.location.hash;
+        if (/^#srq-question-(?:[1-9]|1[0-9]|20)$/.test(target)) {
+            await nextTick();
+            if (current()) document.querySelector<HTMLElement>(target)?.focus();
         }
-        draftReady.value = true;
     } catch (error) {
-        draftWarning.value =
-            error instanceof Error
+        if (current()) {
+            rawDraftWarning.value = error instanceof Error
                 ? error.message
-                : "Asesmen lokal tidak dapat dibaca.";
+                : {
+                      id: "Asesmen lokal tidak dapat dibaca.",
+                      en: "Local assessment cannot be read.",
+                  };
+        }
     }
-});
-
-onUnmounted(cleanupStt);
+}
 
 async function saveAndNext() {
-    if (isSaving.value || !draftReady.value) return;
+    if (isSaving.value || !draftReady.value || safety.value || metadataPending.value) return;
+    const current = scope.capture();
     if (answeredCount.value !== 20) {
-        saveError.value = "Lengkapi semua jawaban sebelum melanjutkan.";
+        rawSaveError.value = {
+            id: "Lengkapi semua jawaban sebelum melanjutkan.",
+            en: "Complete all answers before proceeding.",
+        };
         return;
     }
     isSaving.value = true;
-    saveError.value = "";
+    rawSaveError.value = "";
     try {
         await persistDraft();
+        if (!current()) return;
+        if (metadataError.value) throw new Error(metadataError.value);
         if (draftWarning.value) throw new Error(draftWarning.value);
         runtime.navigate(`/relawan/assessment/${props.assessment.id}/risk`);
-    } catch {
-        saveError.value =
-            "Jawaban belum tersimpan di perangkat ini. Coba lagi.";
+    } catch (error) {
+        if (!current()) return;
+        rawSaveError.value = persistence.online && error instanceof Error ? error.message : {
+            id: "Jawaban belum tersimpan di perangkat ini. Coba lagi.",
+            en: "Answers are not saved on this device yet. Please try again.",
+        };
     } finally {
-        isSaving.value = false;
+        if (current()) isSaving.value = false;
     }
 }
 </script>
+
+<style scoped>
+.stt-file-progress {
+    appearance: none;
+    overflow: hidden;
+    border: 0;
+    border-radius: 1rem;
+    background: var(--color-slate-200);
+    color: var(--color-teal-700);
+}
+.stt-file-progress::-webkit-progress-bar { background: var(--color-slate-200); }
+.stt-file-progress::-webkit-progress-value { background: var(--color-teal-700); }
+.stt-file-progress::-moz-progress-bar { background: var(--color-teal-700); }
+</style>

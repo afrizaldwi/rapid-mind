@@ -1,11 +1,91 @@
 # RAPID-MIND — Relawan Mobile Shell, Navigation, and SRQ-20 Interaction Design
 
+## Offline reload — 14 November 2026
+
+With verified local owner continuity, Home, PFA and the assessment start page
+reopen directly offline while the clinical key is locked. Saved assessments
+and emergency records still require unlock. The Home action on the clinical
+lock screen returns to the dashboard. This supersedes the global offline
+unlock described in the historical navigation checkpoint below.
+
+# Current navigation checkpoint — 10 November 2026
+
+Source: `demo` at `7076e13`. [Current implementation](CURRENT_IMPLEMENTATION.md)
+supersedes earlier implementation-status paragraphs below; original design and
+clinical requirements are preserved. P0 local demo remains CONDITIONAL PASS,
+native background locking NOT TESTED, production security NOT ESTABLISHED.
+P1/P2 acceptance remains pending; C2 NOT ACCEPTED; C3 not started.
+
+Online routes still use Inertia. An offline PWA document bootstrap checks owner
+continuity and requires clinical unlock. Once unlocked, supported Relawan routes
+use `OfflineRelawanShell` / `offlineNavigation.ts` in the same document, through
+both `RelawanLink` and runtime.navigate(). Route props are reactive; history stores
+URLs/null state, not clinical data. Back/Forward, query strings and SRQ anchors
+are supported; external/download/modified clicks retain native behavior. Owner,
+storage and key-generation checks reject unauthorized or late results.
+
+Actual reload/pagehide, hidden-tab invalidation, logout, owner switch and worker
+protocol invalidation retain their safety boundaries. An uninterrupted visible,
+authorized session can change routes without entering the passphrase repeatedly.
+Login password and offline encryption passphrase remain distinct. The proposed
+online double-prompt UX change is DEFERRED, not part of this navigation fix.
+
+Recorded automation: 64 focused PASS; final 13-test navigation/link subset PASS
+again; type-check/diff-check PASS. Not rerun here. The owner reports successful
+manual Chrome offline navigation after controlled service-worker activation;
+this narrow result is not full browser acceptance or native-lock proof.
+The receiving team owns remaining browser/race checks, complete P1/P2 acceptance
+and the requested three-button SRQ revision. **Current SRQ UI has four controls**;
+YES/NO/UNCLEAR/UNANSWERED, Q17 confirmation and scoring/progression are unchanged.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Relawan mobile PWA shell, navigation, assessment interaction, and SRQ-20 verbal/non-verbal workflow  
 **Product language:** Bahasa Indonesia  
 **Discussion/design language:** English  
 **Design direction:** Operational Humanitarian UI  
-**Status:** Design baseline for the next UI/UX phase  
+**Status:** Historical design with current source/interaction alignment
+
+---
+
+# Historical interaction alignment — 7 November 2026
+
+Later-approved P0–P2 safety decisions govern conflicting examples below. The
+[reviewed D1 baseline](CURRENT_IMPLEMENTATION.md) defines the implemented contract;
+this specification adds no new clinical rules or verification claim.
+
+- Show all four SRQ states: `YES` / `NO` / `UNCLEAR` / `UNANSWERED` (Indonesian
+  labels: `Ya`, `Tidak`, `Respons Tidak Jelas`, `Belum dijawab`). Count definitive
+  answers separately; unresolved/missing/malformed required answers cannot be
+  treated as NO/zero or produce definitive scoring/recommendation.
+- Non-verbal mode retains manual four-state input and multiple observational
+  reasons, with UNKNOWN exclusive and an optional OTHER note. Reasons describe
+  observed communication, not diagnosis or SRQ/risk/function/triage/T0 inputs.
+  Preserve answers/observations through mode changes, drafts and sync.
+- Manual or STT apparent Q17 YES opens confirmation before persisting YES;
+  cancellation preserves the previous answer. Protected manual answers remain
+  authoritative. Q17 confirmation is separate from verification/final T0 send;
+  manual T0 remains available without completing SRQ, GPS or identity.
+- Relawan sees T0-Suspect plus local/server delivery state only. No Healthcare
+  handling, clinical result, referral or dispatch progress is exposed.
+- P0 lock/enrollment/retention follow [offline security](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md).
+  Local encryption is not implied by login; retention eligibility is not deletion.
+  Real-user migration/plaintext cleanup remain objectives, not completed rollout.
+
+**Team clarification — 7 November 2026:** the four-state data contract does not
+require four visible answer buttons. Three explicit choices are allowed while
+unanswered remains separately represented on untouched/reset input. Current
+`SrqResponseControl.vue` has four controls; no UI change is claimed here. Healthcare
+may now explicitly/auditably downgrade T0-Suspect to T1/T2/T3, but Relawan receives
+none of those outcomes. Necessary details are subject to authorization, not
+universal Healthcare-role access. Internal Dispatch is not proof of pickup.
+
+Binary-only illustrations, inferential observation wording and future continuous
+STT below are historical design targets where they conflict with this note.
+Current speech remains assistive; enhancements do not outrank P0–P2. October STT
+C1/C2 do not close November Safety C1/C2. Safety C1 acceptance remains pending;
+C2 integration/C3 final acceptance remain pending (see the
+[evidence ledger](workflow-verification.md#november-safety-evidence)).
 
 ---
 
@@ -1158,6 +1238,10 @@ Do not assume full audio/transcripts should be permanently stored.
 
 # 31. Non-Verbal Mode
 
+> **Current supersession:** the binary illustrations below are historical.
+> Use all four states and separate observational reasons as specified in the
+> November alignment; observation alone must not fill a symptom answer.
+
 When `NON-VERBAL` is selected:
 
 - the microphone control disappears;
@@ -1251,6 +1335,9 @@ Do not make unsupported assumptions about browser/offline speech-recognition cap
 ---
 
 # 34. SRQ-20 Question 17 — Safety Exception
+
+> **Current Q17 gate:** confirm apparent YES before persisting it, including
+> manual input. This is separate from final T0 verification/submission.
 
 Question 17 is not treated as an ordinary item.
 
@@ -1630,3 +1717,27 @@ Cover:
 The design must preserve the principle:
 
 > T0 is an emergency event and bypasses normal T1/T2/T3 scoring, but it is still a T0-Suspect until Healthcare performs secondary/clinical validation.
+
+
+## Supersession — 15 November 2026: device-managed Relawan encryption
+
+The owner approved removing all additional offline authentication input for
+Relawan, including T0. A random non-extractable AES-256-GCM CryptoKey is persisted
+in IndexedDB and restored automatically for eligible local owner continuity.
+Normal online login and explicit logout remain. Backgrounding does not revoke
+field access. This replaces passphrase enrollment, recovery confirmation and
+background-timeout unlock requirements described historically below/above.
+
+Assessments now save through encrypted repositories before background delivery.
+Connectivity changes do not initiate navigation; session/CSRF recovery stays in
+place. T0 still requires human verification/final send and atomically saves its
+encrypted incident and priority-1 outbox. Receipt is separate from Healthcare action.
+
+Schema v9 and worker protocol v3 leave old stores intact. Existing passphrase data
+requires the separately scoped clean start agreed by the owner; it is never
+silently converted or deleted. PostgreSQL reset/reseeding and production activation
+are outside this checkpoint. Browser-profile access is trusted; hardware-backed
+protection and recovery after browser storage loss are not claimed.
+
+See [implementation and verification](checkpoints/device-managed-relawan-2026-11-15.md).
+Historical PASS results remain historical, not evidence for this implementation.

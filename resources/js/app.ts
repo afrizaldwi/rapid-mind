@@ -1,10 +1,22 @@
 import "../css/app.css";
 
-import { createInertiaApp } from "@inertiajs/vue3";
+import { router, createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
-import { createApp, h, type DefineComponent } from "vue";
+import { createApp, defineAsyncComponent, h, provide, shallowRef, type DefineComponent } from "vue";
+import { offlineHandoffKey } from "./relawan/offlineHandoff";
+import { resolveRelawanContinuity } from "./offline/relawanContinuity";
+import { clinicalKeyReady } from "./offline/encryptedClinicalStorage";
+import { captureClinicalAccess, assertClinicalAccess } from "./offline/clinicalAccessFence";
+import { resolveOfflineRoute } from "./relawan/offlineRoutes";
+import { offlineRelawanUrl } from "./relawan/offlineLink";
+
+const OfflineRelawanShell = defineAsyncComponent(() => import("./relawan/OfflineRelawanShell.vue"));
 import { configureEcho } from "@laravel/echo-vue";
 import { lockRelawanContinuity, type VerifiedRelawan } from "./offline/relawanContinuity";
+import { i18nPlugin } from "./i18n";
+
+import { onClinicalInvalidation } from "./offline/clinicalAccessFence";
+onClinicalInvalidation(() => router.clearHistory());
 
 const realtimeUsesTls = window.location.protocol === "https:";
 const realtimePort = Number(window.location.port || (realtimeUsesTls ? 443 : 80));
@@ -18,14 +30,15 @@ configureEcho({
     enabledTransports: ["ws", "wss"],
 });
 
-// Safely clear any legacy/stale service workers registered with broad root scope ('/')
-// that can intercept /login or non-relawan routes, while preserving legitimate /relawan/ PWA
+// Retire only a known RAPID-MIND worker at the old root scope.
+// Other registrations on this origin may belong to unrelated applications.
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const reg of registrations) {
             try {
                 const scopePath = new URL(reg.scope).pathname;
-                if (scopePath !== "/relawan/") {
+                const script = reg.active?.scriptURL ?? reg.waiting?.scriptURL ?? reg.installing?.scriptURL;
+                if (scopePath === "/" && script && new URL(script).pathname === "/build/serviceWorker.js") {
                     void reg.unregister();
                 }
             } catch {
@@ -35,7 +48,23 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     }).catch(() => {});
 }
 
-createInertiaApp({
+// Inertia's installed history encryptor falls back to plaintext without
+// SubtleCrypto. Do not initialize clinical history in that environment.
+const clinicalPath = /^\/(relawan|healthcare)(\/|$)/.test(window.location.pathname);
+if (clinicalPath && !window.crypto?.subtle) {
+    const isEn = (() => {
+        try {
+            return window.localStorage?.getItem("rapid_mind_locale") === "en";
+        } catch {
+            return false;
+        }
+    })();
+    const notice = document.createElement("p");
+    notice.textContent = isEn
+        ? "Clinical access requires a browser with secure encryption (HTTPS or localhost). Data will not be opened. In an emergency, stay with the survivor and contact medical assistance through available channels."
+        : "Akses klinis memerlukan browser dengan enkripsi aman (HTTPS atau localhost). Data tidak dibuka. Untuk kondisi darurat, tetap dampingi penyintas dan hubungi bantuan medis melalui sarana yang tersedia.";
+    document.body.replaceChildren(notice);
+} else createInertiaApp({
     title: (title) => (title ? `${title} — RAPID-MIND` : "RAPID-MIND"),
 
     resolve: (name) =>
@@ -45,14 +74,39 @@ createInertiaApp({
         ),
 
     setup({ el, App, props, plugin }) {
+        // Inertia has consumed this bootstrap JSON. Do not retain a second
+        // plaintext clinical payload in the DOM after the view is locked.
+        document.querySelector('script[data-page="app"][type="application/json"]')?.remove();
         const user = (props.initialPage.props.auth as { user?: VerifiedRelawan | null } | undefined)?.user;
         if (user && user.role !== "RELAWAN") {
             void lockRelawanContinuity().catch(() => {});
         }
         createApp({
-            render: () => h(App, props),
+            setup() {
+                const offlineOwner = shallowRef<number | null>(null);
+                let navigation = 0;
+                provide(offlineHandoffKey, async (owner, path) => {
+                    const sequence = ++navigation;
+                    const access = captureClinicalAccess();
+                    const url = offlineRelawanUrl(path, window.location.href);
+                    const continuity = await resolveRelawanContinuity();
+                    if (continuity.state !== "ELIGIBLE" || continuity.context.owner_user_id !== owner ||
+                        !clinicalKeyReady(owner) || !url)
+                        throw new Error("Akses offline belum tersedia untuk akun ini.");
+                    const page = await resolveOfflineRoute(owner, url.pathname);
+                    assertClinicalAccess(access);
+                    if (sequence !== navigation || "unavailable" in page)
+                        throw new Error("Halaman ini belum tersedia di perangkat.");
+                    window.history.pushState(null, "", url.pathname + url.search + url.hash);
+                    offlineOwner.value = owner;
+                });
+                return () => offlineOwner.value
+                    ? h(OfflineRelawanShell, { owner: offlineOwner.value })
+                    : h(App, props);
+            },
         })
             .use(plugin)
+            .use(i18nPlugin)
             .mount(el);
     },
 });

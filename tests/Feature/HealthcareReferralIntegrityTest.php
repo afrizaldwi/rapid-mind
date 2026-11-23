@@ -29,6 +29,7 @@ use Tests\TestCase;
 final class HealthcareReferralIntegrityTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private User $healthcare;
     private Patient $patient;
@@ -45,6 +46,7 @@ final class HealthcareReferralIntegrityTest extends TestCase
             'facility_id' => $this->facility->id,
         ]);
         $this->actingAs($this->healthcare);
+        $this->configureWorkflowScope($this->healthcare);
         $this->patient = Patient::create(['name' => 'Pasien Demo', 'created_by' => $this->healthcare->id]);
     }
 
@@ -137,18 +139,18 @@ final class HealthcareReferralIntegrityTest extends TestCase
     {
         $emergency = $this->emergency();
         $assessment = $this->assessment();
-        $this->facility->update(['is_active' => false]);
+        $inactive = HealthcareFacility::create(['name' => 'Tujuan nonaktif', 'type' => 'RS', 'is_active' => false]);
 
         $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
             'clinical_result' => 'T0_CONFIRMED',
         ])->assertOk();
         $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
-            'facility_id' => $this->facility->id,
+            'facility_id' => $inactive->id,
         ])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
         $this->assertSame(EmergencyStatus::CONFIRMED, $emergency->fresh()->status);
 
         $this->postJson("/healthcare/validations/{$assessment->id}", [
-            'clinical_result' => 'T1', 'referral_required' => true, 'facility_id' => $this->facility->id,
+            'clinical_result' => 'T1', 'referral_required' => true, 'facility_id' => $inactive->id,
         ])->assertUnprocessable()->assertJsonValidationErrors('facility_id');
         $this->postJson("/healthcare/validations/{$assessment->id}", [
             'clinical_result' => 'T1', 'referral_required' => true,
@@ -160,7 +162,6 @@ final class HealthcareReferralIntegrityTest extends TestCase
     public function test_emergency_referral_requires_an_explicit_active_facility(): void
     {
         $active = HealthcareFacility::create(['name' => 'Faskes Aktif', 'type' => 'RS', 'is_active' => true]);
-        $this->facility->update(['is_active' => false]);
         $emergency = $this->emergency();
 
         $emergency->update(['status' => EmergencyStatus::CONFIRMED]);
@@ -174,20 +175,21 @@ final class HealthcareReferralIntegrityTest extends TestCase
 
     public function test_historical_referral_remains_readable_after_facility_becomes_inactive(): void
     {
+        $destination = HealthcareFacility::create(['name' => 'Tujuan historis', 'type' => 'RS', 'is_active' => true]);
         $emergency = $this->emergency();
         $this->postJson("/healthcare/emergencies/{$emergency->id}/classify", [
             'clinical_result' => 'T0_CONFIRMED',
         ])->assertOk();
         $this->postJson("/healthcare/emergencies/{$emergency->id}/referrals", [
-            'facility_id' => $this->facility->id,
+            'facility_id' => $destination->id,
         ])->assertOk();
         $referral = $emergency->referrals()->firstOrFail();
-        $this->facility->update(['is_active' => false]);
+        $destination->update(['is_active' => false]);
 
-        $this->assertSame($this->facility->id, $referral->fresh()->facility_id);
+        $this->assertSame($destination->id, $referral->fresh()->facility_id);
         $this->get('/healthcare/referrals')->assertOk()->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
             ->component('Healthcare/Referrals/Index', false)
-            ->where('referrals.0.facility.id', $this->facility->id)
+            ->where('referrals.0.facility.id', $destination->id)
             ->where('referrals.0.facility.is_active', false)
             ->etc());
     }
@@ -195,6 +197,7 @@ final class HealthcareReferralIntegrityTest extends TestCase
     public function test_referral_status_and_history_change_together(): void
     {
         $referral = Referral::create([
+            'clinical_validation_id' => $this->workflowValidation($this->healthcare, $this->patient)->id,
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,
@@ -372,6 +375,7 @@ final class HealthcareReferralIntegrityTest extends TestCase
     private function newReferral(): Referral
     {
         return Referral::create([
+            'clinical_validation_id' => $this->workflowValidation($this->healthcare, $this->patient)->id,
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,

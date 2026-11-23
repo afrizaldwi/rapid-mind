@@ -4,10 +4,10 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-xl font-black text-slate-900 tracking-tight">
-            Manajemen Akun Pengguna
+            {{ $t('admin.accounts.title', 'Manajemen Akun Pengguna') }}
           </h2>
           <p class="text-xs text-slate-500 mt-1">
-            Pemberian akses akun resmi untuk Relawan Lapangan dan Tenaga Kesehatan.
+            {{ $t('admin.accounts.subtitle', 'Pemberian akses akun resmi untuk Relawan Lapangan dan Tenaga Kesehatan.') }}
           </p>
         </div>
 
@@ -16,7 +16,7 @@
           @click="showCreateModal = true"
           class="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl shadow-xs transition"
         >
-          + Buat Akun Baru
+          {{ $t('admin.accounts.createButton', '+ Buat Akun Baru') }}
         </button>
       </div>
 
@@ -25,11 +25,11 @@
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
             <tr>
-              <th class="py-4 px-6">Nama Pengguna</th>
-              <th class="py-4 px-6">Email / Username</th>
-              <th class="py-4 px-6">Peran (Role)</th>
-              <th class="py-4 px-6">Penugasan Organisasi</th>
-              <th class="py-4 px-6">Status Akun</th>
+              <th class="py-4 px-6">{{ $t('admin.accounts.columns.name', 'Nama Pengguna') }}</th>
+              <th class="py-4 px-6">{{ $t('admin.accounts.columns.email', 'Email / Username') }}</th>
+              <th class="py-4 px-6">{{ $t('admin.accounts.columns.role', 'Peran (Role)') }}</th>
+              <th class="py-4 px-6">{{ $t('admin.accounts.columns.organization', 'Penugasan Organisasi') }}</th>
+              <th class="py-4 px-6">{{ $t('admin.accounts.columns.status', 'Status Akun') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
@@ -53,10 +53,10 @@
                 </span>
               </td>
               <td class="py-4 px-6 text-slate-600">
-                {{ u.shelter?.name || u.facility?.name || 'Komando Pusat' }}
+                {{ u.shelter?.name || u.facility?.name || $t('admin.accounts.centralCommand', 'Komando Pusat') }}
               </td>
               <td class="py-4 px-6">
-                <span class="text-emerald-700 font-bold">● Aktif</span>
+                <span class="text-emerald-700 font-bold">{{ $t('admin.facilities.activeBadge', '● Aktif') }}</span>
               </td>
             </tr>
           </tbody>
@@ -68,75 +68,75 @@
         <div class="bg-white w-full max-w-md rounded-xl p-6 space-y-4 shadow-2xl border border-slate-200">
           <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 class="font-bold text-slate-900 text-base">
-              Buat Akun Petugas Baru
+              {{ $t('admin.accounts.modalTitle', 'Buat Akun Petugas Baru') }}
             </h3>
-            <button type="button" @click="showCreateModal = false" class="text-slate-400 hover:text-slate-600">✕</button>
+            <button type="button" @click="showCreateModal = false" :aria-label="$t('common.close', 'Tutup')" class="text-slate-400 hover:text-slate-600">✕</button>
           </div>
 
           <form @submit.prevent="submitCreate" class="space-y-3.5 text-xs">
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Peran Akun *</label>
+              <label class="block font-bold text-slate-700 mb-1">{{ $t('admin.accounts.roleLabel', 'Peran Akun *') }}</label>
               <select
                 v-model="createForm.role"
                 class="w-full rounded-xl border border-slate-300 p-2.5 focus:border-teal-700 focus:outline-none"
               >
-                <option value="RELAWAN">RELAWAN (Mobile PWA Pendamping Posko)</option>
-                <option value="HEALTHCARE">HEALTHCARE (Tenaga Medis Faskes / Dokter)</option>
-                <option value="ADMIN">ADMIN (Pusat Komando Regional)</option>
+                <option value="RELAWAN">{{ $t('admin.accounts.roleRelawan', 'RELAWAN (Mobile PWA Pendamping Posko)') }}</option>
+                <option value="HEALTHCARE">{{ $t('admin.accounts.roleHealthcare', 'HEALTHCARE (Tenaga Medis Faskes / Dokter)') }}</option>
+                <option value="ADMIN">{{ $t('admin.accounts.roleAdmin', 'ADMIN (Pusat Komando Regional)') }}</option>
               </select>
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Nama Lengkap *</label>
+              <label class="block font-bold text-slate-700 mb-1">{{ $t('admin.accounts.fullNameLabel', 'Nama Lengkap *') }}</label>
               <input
                 v-model="createForm.name"
                 type="text"
                 required
-                placeholder="Contoh: dr. Ahmad Fauzi"
+                :placeholder="$t('admin.accounts.fullNamePlaceholder', 'Contoh: dr. Ahmad Fauzi')"
                 class="w-full rounded-xl border border-slate-300 p-2.5 focus:border-teal-700 focus:outline-none"
               />
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Email / Username *</label>
+              <label class="block font-bold text-slate-700 mb-1">{{ $t('admin.accounts.emailLabel', 'Email / Username *') }}</label>
               <input
                 v-model="createForm.email"
                 type="email"
                 required
-                placeholder="nama@rapidmind.id"
+                :placeholder="$t('auth.emailPlaceholder', 'nama@rapidmind.id')"
                 class="w-full rounded-xl border border-slate-300 p-2.5 focus:border-teal-700 focus:outline-none"
               />
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Kata Sandi Awal *</label>
+              <label class="block font-bold text-slate-700 mb-1">{{ $t('admin.accounts.passwordLabel', 'Kata Sandi Awal *') }}</label>
               <input
                 v-model="createForm.password"
                 type="password"
                 required
-                placeholder="Minimal 6 karakter"
+                :placeholder="$t('admin.accounts.passwordPlaceholder', 'Minimal 6 karakter')"
                 class="w-full rounded-xl border border-slate-300 p-2.5 focus:border-teal-700 focus:outline-none"
               />
             </div>
 
             <div v-if="createForm.role === 'RELAWAN'">
-              <label class="block font-bold text-slate-700 mb-1">Penugasan Posko Pengungsian</label>
+              <label class="block font-bold text-slate-700 mb-1">{{ $t('admin.accounts.shelterAssignment', 'Penugasan Posko Pengungsian') }}</label>
               <select
                 v-model="createForm.shelter_id"
                 class="w-full rounded-xl border border-slate-300 p-2.5 focus:border-teal-700 focus:outline-none"
               >
-                <option :value="null">-- Belum Ditugaskan --</option>
+                <option :value="null">{{ $t('admin.accounts.unassignedOption', '-- Belum Ditugaskan --') }}</option>
                 <option v-for="s in shelters" :key="s.id" :value="s.id">{{ s.name }}</option>
               </select>
             </div>
 
             <div v-if="createForm.role === 'HEALTHCARE'">
-              <label class="block font-bold text-slate-700 mb-1">Penugasan Faskes / Rumah Sakit</label>
+              <label class="block font-bold text-slate-700 mb-1">{{ $t('admin.accounts.facilityAssignment', 'Penugasan Faskes / Rumah Sakit') }}</label>
               <select
                 v-model="createForm.facility_id"
                 class="w-full rounded-xl border border-slate-300 p-2.5 focus:border-teal-700 focus:outline-none"
               >
-                <option :value="null">-- Belum Ditugaskan --</option>
+                <option :value="null">{{ $t('admin.accounts.unassignedOption', '-- Belum Ditugaskan --') }}</option>
                 <option v-for="f in facilities" :key="f.id" :value="f.id">{{ f.name }}</option>
               </select>
             </div>
@@ -147,13 +147,13 @@
                 @click="showCreateModal = false"
                 class="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-600"
               >
-                Batal
+                {{ $t('common.cancel', 'Batal') }}
               </button>
               <button
                 type="submit"
                 class="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white font-bold rounded-xl shadow-xs transition"
               >
-                Terbitkan Akun
+                {{ $t('admin.accounts.submitButton', 'Terbitkan Akun') }}
               </button>
             </div>
           </form>
@@ -167,6 +167,7 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { t as $t } from '@/i18n';
 
 defineProps<{
   users: any[];

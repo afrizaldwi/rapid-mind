@@ -5,7 +5,13 @@ export type SrqSpeechRule = {
     negativePatterns: readonly RegExp[];
 };
 
-const self = String.raw`(?:saya|aku)`;
+// Match whole survivor statements. Anchors prevent embedded/negated/quoted
+// fragments from becoming independent affirmative evidence.
+function statement(expression: string): RegExp {
+    // Feeling verbs may follow the outer negation; never invert its polarity.
+    expression = expression.replace(/^tidak /, "tidak (?:(?:merasa|merasakan) )?");
+    return new RegExp(String.raw`^(?:saya|aku) (?:(?:sering|merasa|merasakan) )?(?:${expression})$`);
+}
 
 export const srqSpeechRules: readonly SrqSpeechRule[] = [
     {
@@ -14,14 +20,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:sering )?(?:merasa )?sakit kepala\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:sering |merasa )?(?:sakit kepala|pusing|kepala (?:terasa )?berat)\b`,
-            ),
+            statement(String.raw`(?:sakit kepala|pusing|cekot cekot|kepala (?:terasa )?berat)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:sering )?(?:sakit kepala|pusing|merasa sakit kepala)\b`,
-            ),
+            statement(String.raw`tidak (?:sering )?(?:sakit kepala|pusing|cekot cekot|merasa sakit kepala)|kepala (?:terasa )?tidak berat`),
         ],
     },
     {
@@ -31,14 +33,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?tidak berselera makan\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:kehilangan nafsu makan|tidak (?:nafsu|berselera) makan|malas makan)\b`,
-            ),
+            statement(String.raw`kehilangan nafsu makan|nafsu makan (?:saya )?menurun|tidak (?:nafsu|berselera|selera) makan|malas (?:banget )?(?:buat )?makan`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:tetap |masih )?(?:nafsu makan|berselera makan)\b`,
-            ),
+            statement(String.raw`(?:tetap |masih )?(?:punya )?(?:nafsu makan|selera makan|berselera makan)|nafsu makan (?:saya )?tidak menurun|tidak (?:kehilangan nafsu makan|malas makan)`),
         ],
     },
     {
@@ -47,14 +45,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:sulit|susah) tidur(?: nyenyak)?\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:sulit|susah|tidak bisa) tidur\b`,
-            ),
-            new RegExp(String.raw`\b${self} sering terbangun\b`),
+            statement(String.raw`(?:sulit|susah|tidak bisa) tidur(?: nyenyak)?|sering terbangun|insomnia|melek terus|kebangun bangun`),
         ],
         negativePatterns: [
-            new RegExp(String.raw`\b${self} tidak (?:sulit|susah) tidur\b`),
-            new RegExp(String.raw`\b${self} (?:bisa tidur|tidur nyenyak)\b`),
+            statement(String.raw`tidak (?:sulit|susah) tidur|(?:bisa tidur(?: nyenyak)?|tidur nyenyak)|tidak (?:insomnia|sering terbangun|kebangun bangun)`),
         ],
     },
     {
@@ -63,14 +57,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:mudah|sering) (?:merasa )?takut\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:mudah |sering |merasa )?(?:takut|was was|mudah kaget)\b`,
-            ),
+            statement(String.raw`(?:(?:mudah |sering )?(?:merasa )?takut|was was|mudah kaget)(?: dan khawatir)?`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:mudah |sering |merasa )?(?:takut|was was)\b`,
-            ),
+            statement(String.raw`tidak (?:mudah |sering )?(?:merasa )?(?:takut|was was|kaget)`),
         ],
     },
     {
@@ -79,17 +69,12 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:tangan|jari jari)(?: anda)? (?:terasa |sering )?gemetar\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self}(?: merasa)? (?:tangan|jari jari)(?: saya)? (?:sering )?(?:gemetar|gemeter)\b`,
-            ),
-            new RegExp(
-                String.raw`\btangan ${self} (?:sering )?(?:gemetar|gemeter)\b`,
-            ),
+            statement(String.raw`(?:tangan|jari jari)(?: saya)? (?:sering )?(?:terasa )?(?:gemetar|tremor)`),
+            /^(?:tangan|jari jari) (?:saya|aku) (?:sering )?(?:terasa )?(?:gemetar|tremor)$/,
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b(?:tangan ${self}|${self}(?: merasa)? tangan(?: saya)?) tidak (?:gemetar|gemeter)\b`,
-            ),
+            statement(String.raw`(?:tangan|jari jari)(?: saya)? tidak (?:sering )?(?:gemetar|tremor)`),
+            /^(?:tangan|jari jari) (?:saya|aku) tidak (?:sering )?(?:gemetar|tremor)$/,
         ],
     },
     {
@@ -98,15 +83,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:merasa )?(?:cemas|tegang|khawatir)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:sering |merasa )?(?:cemas|tegang|khawatir|gelisah)\b`,
-            ),
-            new RegExp(String.raw`\b${self} merasa takut dan khawatir\b`),
+            statement(String.raw`cemas|tegang|khawatir|gelisah|deg degan|debar debar|takut dan khawatir`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:sering |merasa )?(?:cemas|tegang|khawatir|gelisah)\b`,
-            ),
+            statement(String.raw`tidak (?:sering )?(?:cemas|tegang|khawatir|gelisah|deg degan|debar debar)`),
         ],
     },
     {
@@ -116,14 +96,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:sering )?(?:mual|diare)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:sering )?(?:mual|diare|mengalami gangguan pencernaan)\b`,
-            ),
+            statement(String.raw`mual|diare|(?:mengalami )?gangguan pencernaan|pencernaan (?:saya )?buruk`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:mual|diare|mengalami gangguan pencernaan)\b`,
-            ),
+            statement(String.raw`tidak (?:sering )?(?:mual|diare|(?:mengalami )?gangguan pencernaan)|pencernaan (?:saya )?baik`),
         ],
     },
     {
@@ -132,32 +108,20 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:sulit|susah) berpikir jernih\b/,
         ],
         positivePatterns: [
-            new RegExp(String.raw`\b${self} (?:sulit|susah) berpikir jernih\b`),
-            new RegExp(
-                String.raw`\b${self} (?:sering |merasa )?(?:linglung|sulit fokus|susah fokus)\b`,
-            ),
+            statement(String.raw`(?:mengalami kesulitan|kesulitan|sulit|susah) (?:untuk )?(?:berpikir jernih|fokus|konsentrasi)|linglung|tidak fokus`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:sulit|susah) berpikir jernih\b`,
-            ),
-            new RegExp(
-                String.raw`\b${self} (?:bisa berpikir jernih|bisa fokus)\b`,
-            ),
+            statement(String.raw`tidak (?:mengalami kesulitan|kesulitan|sulit|susah) (?:untuk )?(?:berpikir jernih|fokus|konsentrasi)|bisa (?:berpikir jernih|fokus)|tidak linglung`),
         ],
     },
     {
         number: 9,
         questionPatterns: [/\bapakah (?:anda )?(?:merasa )?tidak bahagia\b/],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:tidak bahagia|sedih|hampa)\b`,
-            ),
+            statement(String.raw`tidak bahagia|sedih|hampa|merana`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:bahagia|tidak sedih)\b`,
-            ),
+            statement(String.raw`bahagia|tidak (?:sedih|hampa|merana)`),
         ],
     },
     {
@@ -166,14 +130,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:lebih |sering )?(?:sering )?menangis\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:lebih |sering )?(?:sering )?(?:menangis|ingin menangis)\b`,
-            ),
+            statement(String.raw`(?:lebih sering |sering )?(?:menangis|nangis|mewek)(?: terus)?|ingin (?:menangis|nangis)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:sering )?(?:menangis|ingin menangis)\b`,
-            ),
+            statement(String.raw`tidak (?:lebih sering |sering )?(?:(?:menangis|nangis|mewek)(?: terus)?|ingin (?:menangis|nangis))`),
         ],
     },
     {
@@ -182,14 +142,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:sulit|susah) menikmati kegiatan sehari hari\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:sulit menikmati kegiatan|tidak menikmati kegiatan|tidak tertarik dengan kegiatan)\b`,
-            ),
+            statement(String.raw`(?:sulit |tidak )menikmati kegiatan(?: sehari hari)?|tidak tertarik dengan kegiatan|hobi (?:saya )?tidak (?:menarik|seru) lagi`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:masih |tetap )?menikmati kegiatan\b`,
-            ),
+            statement(String.raw`tidak sulit menikmati kegiatan(?: sehari hari)?|(?:masih |tetap )?menikmati kegiatan(?: sehari hari)?|(?:bisa|dapat) menikmati kegiatan(?: sehari hari)?`),
         ],
     },
     {
@@ -198,14 +154,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:kesulitan|sulit) mengambil keputusan\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:kesulitan|sulit|susah) (?:mengambil|membuat) keputusan\b`,
-            ),
+            statement(String.raw`(?:kesulitan|sulit|susah) (?:untuk )?(?:mengambil|membuat) keputusan|bingung (?:memilih|milih)|tidak bisa (?:memutuskan|mutusin)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:kesulitan|sulit|susah) (?:mengambil|membuat) keputusan\b`,
-            ),
+            statement(String.raw`tidak (?:kesulitan|sulit|susah) (?:untuk )?(?:mengambil|membuat) keputusan|bisa (?:memutuskan|mutusin)|tidak bingung (?:memilih|milih)`),
         ],
     },
     {
@@ -215,17 +167,12 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:hasil )?(?:kerja|tugas)(?: anda)? (?:menurun|terganggu)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self}(?: merasa)? (?:kerja|tugas)(?: saya)? (?:terganggu|terbengkalai|tidak terurus)\b`,
-            ),
-            new RegExp(
-                String.raw`\b(?:kerja|tugas) ${self} (?:terganggu|terbengkalai|tidak terurus)\b`,
-            ),
+            statement(String.raw`(?:hasil )?(?:kerja|tugas)(?: sehari hari)?(?: saya)? (?:memburuk|menurun|terganggu|terbengkalai|tidak terurus)|lambat (?:mengerjakan|ngerjain) tugas`),
+            /^(?:hasil )?(?:kerja|tugas)(?: sehari hari)? (?:saya|aku) (?:memburuk|menurun|terganggu|terbengkalai|tidak terurus)$/,
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b(?:kerja|tugas) ${self} tidak (?:terganggu|terbengkalai)\b`,
-            ),
+            statement(String.raw`(?:hasil )?(?:kerja|tugas)(?: sehari hari)?(?: saya)? tidak (?:memburuk|menurun|terganggu|terbengkalai)|(?:hasil )?(?:kerja|tugas)(?: sehari hari)?(?: saya)? (?:baik|terurus)`),
+            /^(?:hasil )?(?:kerja|tugas)(?: sehari hari)? (?:saya|aku) tidak (?:memburuk|menurun|terganggu|terbengkalai)$/,
         ],
     },
     {
@@ -234,14 +181,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:merasa )?(?:tidak mampu berbuat hal bermanfaat|tidak berguna)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:tidak berguna|tidak mampu (?:berbuat|melakukan) (?:hal )?bermanfaat|hanya merepotkan)\b`,
-            ),
+            statement(String.raw`tidak berguna|tidak (?:mampu|bisa) (?:berbuat|melakukan) (?:hal (?:yang )?|sesuatu yang )?bermanfaat(?: dalam hidup)?|hanya merepotkan(?: orang lain)?|nyusahin orang(?: lain)?|tidak ada gunanya`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:berguna|masih bisa (?:berbuat|melakukan) (?:hal )?bermanfaat)\b`,
-            ),
+            statement(String.raw`berguna|(?:masih )?bisa (?:berbuat|melakukan) (?:hal (?:yang )?)?bermanfaat(?: dalam hidup)?|tidak merepotkan orang lain`),
         ],
     },
     {
@@ -250,14 +193,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:kehilangan|minat anda hilang) (?:minat|semangat)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:kehilangan minat|tidak punya minat|kehilangan semangat|tidak punya semangat)\b`,
-            ),
+            statement(String.raw`kehilangan (?:minat|semangat)(?: untuk melakukan berbagai macam hal)?|tidak (?:punya|ada) (?:minat|semangat)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:masih |tetap )?(?:punya minat|berminat|bersemangat)\b`,
-            ),
+            statement(String.raw`(?:masih |tetap )?(?:punya minat|berminat|bersemangat|punya semangat)|tidak kehilangan (?:minat|semangat)`),
         ],
     },
     {
@@ -266,14 +205,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:merasa )?(?:diri )?(?:tidak berharga|gagal)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:tidak berharga|gagal|tidak ada artinya)\b`,
-            ),
+            statement(String.raw`(?:sebagai orang yang |diri (?:ini )?)?(?:tidak berharga|gagal|tidak ada artinya)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:berharga|tidak gagal)\b`,
-            ),
+            statement(String.raw`(?:sebagai orang yang )?berharga|tidak gagal`),
         ],
     },
     {
@@ -282,18 +217,11 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:memiliki (?:pikiran|pemikiran)|pernah berpikir|ingin|mau) (?:untuk )?(?:mati|bunuh diri|mengakhiri hidup)\b/,
         ],
         positivePatterns: [
-            new RegExp(String.raw`\b${self} (?:ingin|mau) mati(?: saja)?\b`),
-            new RegExp(String.raw`\blebih baik ${self} mati(?: saja)?\b`),
-            new RegExp(String.raw`\b${self} (?:ingin|mau) bunuh diri\b`),
-            new RegExp(String.raw`\b${self} (?:ingin|mau) mengakhiri hidup\b`),
-            new RegExp(String.raw`\b${self} tidak (?:mau|ingin) hidup lagi\b`),
+            statement(String.raw`(?:ingin|mau) (?:mati(?: saja)?|bunuh diri|mengakhiri hidup)|tidak (?:mau|ingin) hidup lagi|(?:memiliki (?:pikiran|pemikiran)|pernah berpikir) (?:untuk )?(?:bunuh diri|mengakhiri hidup)`),
+            /^lebih baik (?:saya|aku) mati(?: saja)?$/,
         ],
         negativePatterns: [
-            new RegExp(String.raw`\b${self} tidak (?:ingin|mau) mati\b`),
-            new RegExp(String.raw`\b${self} tidak (?:ingin|mau) bunuh diri\b`),
-            new RegExp(
-                String.raw`\b${self} tidak (?:ingin|mau) mengakhiri hidup\b`,
-            ),
+            statement(String.raw`tidak (?:ingin|mau) (?:mati|bunuh diri|mengakhiri hidup)|tidak (?:memiliki (?:pikiran|pemikiran)|pernah berpikir) (?:untuk )?(?:bunuh diri|mengakhiri hidup)`),
         ],
     },
     {
@@ -302,14 +230,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:merasa )?(?:lelah|capek) (?:sepanjang|setiap) waktu\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa )?(?:lelah|capek) (?:sepanjang waktu|setiap waktu|terus menerus)\b`,
-            ),
+            statement(String.raw`(?:lelah|capek|lemas) (?:sepanjang waktu|setiap waktu|terus menerus|sepanjang hari)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:merasa )?(?:lelah|capek) (?:sepanjang waktu|setiap waktu|terus menerus)\b`,
-            ),
+            statement(String.raw`tidak (?:lelah|capek|lemas) (?:sepanjang waktu|setiap waktu|terus menerus|sepanjang hari)`),
         ],
     },
     {
@@ -318,14 +242,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:merasakan |merasa )?(?:tidak nyaman|nyeri|perih) (?:di )?(?:perut|ulu hati)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:merasa |merasakan )?(?:perut (?:saya )?perih|nyeri (?:di )?ulu hati|ulu hati (?:saya )?perih)\b`,
-            ),
+            statement(String.raw`perut (?:saya )?(?:perih|tidak nyaman|tidak enak)|(?:perasaan )?(?:nyeri|perih|tidak nyaman) (?:di )?(?:perut|ulu hati)|ulu hati (?:saya )?(?:perih|sakit)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:merasa |merasakan )?(?:perut (?:saya )?perih|nyeri (?:di )?ulu hati|ulu hati (?:saya )?perih)\b`,
-            ),
+            statement(String.raw`tidak (?:perasaan )?(?:nyeri|perih|tidak nyaman) (?:di )?(?:perut|ulu hati)|perut (?:saya )?tidak perih|ulu hati (?:saya )?tidak (?:perih|sakit)|perut (?:saya )?nyaman`),
         ],
     },
     {
@@ -334,17 +254,10 @@ export const srqSpeechRules: readonly SrqSpeechRule[] = [
             /\bapakah (?:anda )?(?:mudah|cepat|gampang) (?:merasa )?(?:lelah|capek)\b/,
         ],
         positivePatterns: [
-            new RegExp(
-                String.raw`\b${self} (?:mudah|cepat|gampang) (?:merasa )?(?:lelah|capek)\b`,
-            ),
-            new RegExp(
-                String.raw`\b${self} baru (?:bergerak|beraktivitas) sebentar (?:sudah |langsung )?(?:lelah|capek)\b`,
-            ),
+            statement(String.raw`(?:mudah|cepat) (?:merasa )?(?:lelah|capek)|baru (?:bergerak|beraktivitas|gerak) sebentar (?:sudah |langsung )?(?:lelah|capek|kehabisan tenaga)`),
         ],
         negativePatterns: [
-            new RegExp(
-                String.raw`\b${self} tidak (?:mudah|cepat|gampang) (?:merasa )?(?:lelah|capek)\b`,
-            ),
+            statement(String.raw`tidak (?:mudah|cepat) (?:merasa )?(?:lelah|capek)`),
         ],
     },
 ];

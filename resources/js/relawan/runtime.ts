@@ -1,6 +1,8 @@
 import { inject, type InjectionKey } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { requireOwner } from "@/offline/db";
+import { offlineHandoffKey } from "./offlineHandoff";
+import { navigateRelawan } from "./navigateRelawan";
 
 export type RelawanRuntime = {
     mode: "ONLINE_SERVER" | "OFFLINE_FIELD_MODE";
@@ -20,6 +22,7 @@ export function useRelawanRuntime(): RelawanRuntime {
     const local = inject(relawanRuntimeKey, null);
     if (local) return local;
     const page = usePage();
+    const handoff = inject(offlineHandoffKey, null);
     const user = () =>
         (
             page.props.auth as
@@ -57,7 +60,7 @@ export function useRelawanRuntime(): RelawanRuntime {
             return page.props as Record<string, unknown>;
         },
         navigate(path) {
-            router.visit(path);
+            navigateRelawan(requireOwner(Number(user()?.id)), path, handoff);
         },
         reload(only) {
             router.reload({ only });

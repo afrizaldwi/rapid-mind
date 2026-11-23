@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Demo\CompetitionLoginAccounts;
 use App\Enums\UserRole;
-use App\Models\RefreshToken;
+use App\Http\Middleware\ValidateWebSessionVersion;
 use App\Models\User;
+use App\Services\OpaqueRefreshTokens;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 final class AuthController extends Controller
 {
@@ -23,19 +23,26 @@ final class AuthController extends Controller
     {
         $reauthentication = $request->boolean('reauth');
 
-        if (Auth::guard('web')->check() && !$reauthentication) {
+        if (Auth::guard('web')->check() && ! $reauthentication) {
             $user = Auth::guard('web')->user();
+
             return redirect($this->getRedirectPath($user));
         }
 
-        return Inertia::render('Auth/Login', $reauthentication ? [
+        $props = $reauthentication ? [
             // The existing server session remains intact until valid replacement
             // credentials are submitted, but it must not affect local continuity.
             'auth' => ['user' => null],
-        ] : []);
+        ] : [];
+        $demoAccounts = CompetitionLoginAccounts::forRequest($request);
+        if ($demoAccounts !== []) {
+            $props['demoAccounts'] = $demoAccounts;
+        }
+
+        return Inertia::render('Auth/Login', $props);
     }
 
-    public function login(Request $request): JsonResponse|RedirectResponse
+    public function login(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse|RedirectResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'string'],
@@ -47,46 +54,35 @@ final class AuthController extends Controller
             ->orWhere('name', $credentials['email'])
             ->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             $errorMessage = 'Email/username atau kata sandi tidak sesuai.';
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json(['message' => $errorMessage], 401);
             }
+
             return back()->withErrors(['email' => $errorMessage]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             $inactiveMessage = 'Akun Anda sedang nonaktif. Hubungi Admin.';
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json(['message' => $inactiveMessage], 403);
             }
+
             return back()->withErrors(['email' => $inactiveMessage]);
         }
 
-        // Generate JWT token
-        $token = JWTAuth::fromUser($user);
-        $refreshToken = (string) Str::uuid();
-
-        RefreshToken::create([
-            'jti' => $refreshToken,
-            'user_id' => $user->id,
-            'expires_at' => now()->addDays(7),
-        ]);
-
-        // Also log into web session for Inertia page transitions
-        Auth::guard('web')->login($user);
-        if ($request->hasSession()) {
-            $request->session()->regenerate();
-        }
-
         $redirectPath = $this->getRedirectPath($user);
+        if ($request->is('api/*')) {
+            $issued = $refreshTokens->login($user);
+            if (! $issued) {
+                return response()->json(['message' => 'Akun Anda sedang nonaktif. Hubungi Admin.'], 403);
+            }
 
-        if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
-                'token' => $token,
+                ...$issued,
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl', 60) * 60,
-                'refresh_token' => $refreshToken,
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -96,40 +92,52 @@ final class AuthController extends Controller
                     'facility_id' => $user->facility_id,
                 ],
                 'redirect' => $redirectPath,
-            ]);
+            ])->header('Cache-Control', 'no-store');
         }
+
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+        $request->session()->put(ValidateWebSessionVersion::USER_ID, $user->id);
+        $request->session()->put(ValidateWebSessionVersion::VERSION, $user->token_version);
 
         return redirect()->intended($redirectPath);
     }
 
-    public function refresh(): JsonResponse
+    public function refresh(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse
     {
-        try {
-            $newToken = JWTAuth::parseToken()->refresh();
-            return response()->json([
-                'token' => $newToken,
-                'token_type' => 'bearer',
-                'expires_in' => config('jwt.ttl', 60) * 60,
-            ]);
-        } catch (\Throwable $e) {
+        $credential = $request->input('refresh_token');
+        if ($request->headers->has('Authorization') || ! is_string($credential)) {
             return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
         }
-    }
 
-    public function logout(Request $request): JsonResponse|RedirectResponse
-    {
-        try {
-            JWTAuth::parseToken()->invalidate();
-        } catch (\Throwable) {
-            // Ignore if token already invalid
+        $issued = $refreshTokens->rotate($credential);
+        if (! $issued) {
+            return response()->json(['message' => 'Token tidak dapat diperbarui. Silakan login kembali.'], 401);
         }
 
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        return response()->json([
+            ...$issued,
+            'token_type' => 'bearer',
+            'expires_in' => config('jwt.ttl', 60) * 60,
+        ])->header('Cache-Control', 'no-store');
+    }
 
-        if ($request->wantsJson() || $request->is('api/*')) {
-            return response()->json(['message' => 'Berhasil keluar.']);
+    public function logout(Request $request, OpaqueRefreshTokens $refreshTokens): JsonResponse|RedirectResponse
+    {
+        if ($request->is('api/*')) {
+            $refreshTokens->revoke($request->user('api'), $request->attributes->get('api_refresh_family_id'));
+
+            return response()->json(['message' => 'Berhasil keluar.'])->header('Cache-Control', 'no-store');
+        }
+
+        if ($request->hasSession()) {
+            if ($request->user()?->role === UserRole::HEALTHCARE) {
+                // Invalidate private clinical subscriptions held by an old browser session.
+                $request->user()->increment('token_version');
+            }
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
         return redirect('/login');
@@ -139,7 +147,7 @@ final class AuthController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 

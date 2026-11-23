@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Relawan;
 
 use App\Domain\Assessment\AssessmentResume;
+use App\Domain\Assessment\NonVerbalObservations;
+use App\Domain\Assessment\SrqAnswer;
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\RedFlagType;
 use App\Enums\TriageCategory;
 use App\Http\Controllers\Controller;
+use App\Http\Responses\SrqResponseMap;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\FunctionResponse;
 use App\Models\Patient;
@@ -47,17 +51,10 @@ final class RelawanController extends Controller
             $resume->attach($activeDraft);
         }
 
-        $recentAssessments = Assessment::with(['patient', 'triageResult'])
-            ->where('user_id', $user->id)
-            ->latest('created_at')
-            ->take(5)
-            ->get();
-
         $shelter = $user->shelter_id ? Shelter::find($user->shelter_id) : null;
 
         return Inertia::render('Relawan/Home', [
             'activeDraft' => $activeDraft,
-            'recentAssessments' => $recentAssessments,
             'shelter' => $shelter,
         ]);
     }
@@ -178,7 +175,7 @@ final class RelawanController extends Controller
     {
         $assessment = $this->assessmentShell($assessmentId, ['patient', 'srqResponses']);
 
-        $existingResponses = $assessment?->srqResponses->pluck('answer', 'question_number')->toArray() ?? [];
+        $existingResponses = SrqResponseMap::fromResponses($assessment?->srqResponses ?? []);
 
         return Inertia::render('Relawan/Assessment/Srq', [
             'assessment' => $assessment,
@@ -192,29 +189,37 @@ final class RelawanController extends Controller
         $assessment = $this->ownedAssessment($assessmentId);
 
         $validated = $request->validate([
-            'responses' => ['required', 'array', 'size:20'],
+            ...NonVerbalObservations::rules(),
+            'responses' => ['present', 'array', 'max:20'],
             'responses.*' => ['required', 'array:question_number,answer'],
             'responses.*.question_number' => ['required', 'integer', 'between:1,20', 'distinct:strict'],
-            'responses.*.answer' => ['required', function ($attribute, $value, $fail) {
-                if (!is_bool($value)) $fail('Jawaban SRQ harus Ya atau Tidak.');
-            }],
+            'responses.*.answer' => ['required', SrqAnswer::rule()],
             'mode' => ['nullable', 'string', 'in:VERBAL,NON_VERBAL'],
         ]);
+        $validated = NonVerbalObservations::normalize($validated);
 
-        DB::transaction(function () use ($assessment, $validated) {
+        $version = DB::transaction(function () use ($assessment, $validated) {
+            $assessment = $this->editableAssessment($assessment->id);
             if (isset($validated['mode'])) {
                 $assessment->update(['mode' => AssessmentMode::from($validated['mode'])]);
+            }
+            if (array_key_exists('non_verbal_reasons', $validated)) {
+                $assessment->update([
+                    'non_verbal_reasons' => $validated['non_verbal_reasons'],
+                    'non_verbal_other_note' => $validated['non_verbal_other_note'],
+                ]);
             }
 
             foreach ($validated['responses'] as $resp) {
                 SrqResponse::updateOrCreate(
                     ['assessment_id' => $assessment->id, 'question_number' => $resp['question_number']],
-                    ['answer' => $resp['answer']]
+                    SrqAnswer::storage($resp['answer'])
                 );
             }
+            return app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
         });
 
-        return response()->json(['message' => 'Jawaban SRQ tersimpan di server.']);
+        return response()->json(['message' => 'Jawaban SRQ tersimpan di server.', 'server_version' => $version]);
     }
 
     public function assessmentRisk(string $assessmentId): InertiaResponse
@@ -243,16 +248,18 @@ final class RelawanController extends Controller
 
         $weights = ['R1' => 2, 'R2' => 2, 'R3' => 1, 'R4' => 2, 'R5' => 1];
 
-        DB::transaction(function () use ($assessment, $validated, $weights) {
+        $version = DB::transaction(function () use ($assessment, $validated, $weights) {
+            $assessment = $this->editableAssessment($assessment->id);
             foreach ($validated['risks'] as $indicator => $answer) {
                 RiskResponse::updateOrCreate(
                     ['assessment_id' => $assessment->id, 'indicator' => $indicator],
                     ['answer' => $answer, 'weight' => $weights[$indicator]]
                 );
             }
+            return app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
         });
 
-        return response()->json(['message' => 'Faktor risiko tersimpan.']);
+        return response()->json(['message' => 'Faktor risiko tersimpan.', 'server_version' => $version]);
     }
 
     public function assessmentFunction(string $assessmentId): InertiaResponse
@@ -279,16 +286,18 @@ final class RelawanController extends Controller
             }]])->all(),
         ]);
 
-        DB::transaction(function () use ($assessment, $validated) {
+        $version = DB::transaction(function () use ($assessment, $validated) {
+            $assessment = $this->editableAssessment($assessment->id);
             foreach ($validated['functions'] as $domain => $level) {
                 FunctionResponse::updateOrCreate(
                     ['assessment_id' => $assessment->id, 'domain' => $domain],
                     ['level' => $level]
                 );
             }
+            return app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
         });
 
-        return response()->json(['message' => 'Fungsi harian tersimpan.']);
+        return response()->json(['message' => 'Fungsi harian tersimpan.', 'server_version' => $version]);
     }
 
     public function assessmentReview(string $assessmentId): InertiaResponse
@@ -298,7 +307,7 @@ final class RelawanController extends Controller
         return Inertia::render('Relawan/Assessment/Review', [
             'assessment' => $assessment,
             'patient' => $assessment?->patient,
-            'srqResponses' => $assessment?->srqResponses->pluck('answer', 'question_number') ?? [],
+            'srqResponses' => SrqResponseMap::fromResponses($assessment?->srqResponses ?? []),
             'riskResponses' => $assessment?->riskAssessment->pluck('answer', 'indicator') ?? [],
             'functionResponses' => $assessment?->functionAssessment->pluck('level', 'domain') ?? [],
         ]);
@@ -306,41 +315,48 @@ final class RelawanController extends Controller
 
     public function completeAssessment(Request $request, string $assessmentId, TriageCalculator $calculator): JsonResponse|RedirectResponse
     {
-        $assessment = $this->ownedAssessment($assessmentId, ['srqResponses', 'riskAssessment', 'functionAssessment']);
+        $this->ownedAssessment($assessmentId);
+        $result = DB::transaction(function () use ($assessmentId, $calculator) {
+            $assessment = $this->editableAssessment($assessmentId);
+            $assessment->load(['srqResponses', 'riskAssessment', 'functionAssessment']);
 
-        if (
-            !$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
-            || !$this->hasExactResponseSet($assessment->riskAssessment, ['R1', 'R2', 'R3', 'R4', 'R5'], 'indicator', 'answer', [true, false])
-            || !$this->hasExactResponseSet($assessment->functionAssessment, ['F1', 'F2', 'F3'], 'domain', 'level', [0, 1, 3])
-        ) {
-            throw ValidationException::withMessages([
-                'assessment' => 'Asesmen belum lengkap atau memiliki jawaban tidak valid. Periksa SRQ-20, faktor risiko, dan fungsi harian.',
+            if (
+                !$this->hasExactResponseSet($assessment->srqResponses, range(1, 20), 'question_number', 'answer', [true, false])
+                || !$this->hasExactResponseSet($assessment->riskAssessment, ['R1', 'R2', 'R3', 'R4', 'R5'], 'indicator', 'answer', [true, false])
+                || !$this->hasExactResponseSet($assessment->functionAssessment, ['F1', 'F2', 'F3'], 'domain', 'level', [0, 1, 3])
+            ) {
+                throw ValidationException::withMessages([
+                    'assessment' => 'Asesmen belum lengkap atau memiliki jawaban tidak valid. Periksa SRQ-20, faktor risiko, dan fungsi harian.',
+                ]);
+            }
+
+            $srqMap = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
+            $riskMap = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
+            $functionMap = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
+
+            $result = $calculator->calculate($srqMap, $riskMap, $functionMap);
+
+            TriageResult::updateOrCreate(
+                ['assessment_id' => $assessment->id],
+                [
+                    'srq_score' => $result->srqScore,
+                    'risk_score' => $result->riskScore,
+                    'function_score' => $result->functionScore,
+                    'total_score' => $result->totalScore,
+                    'system_recommendation' => $result->recommendation,
+                    'is_red_flag_override' => $result->isRedFlagOverride,
+                    'red_flag_source' => $result->redFlagSource,
+                ]
+            );
+
+            $assessment->update([
+                'status' => AssessmentStatus::COMPLETED,
+                'completed_at' => now(),
             ]);
-        }
+            \App\Events\AssessmentUpdated::afterCommit($assessment->id);
 
-        $srqMap = $assessment->srqResponses->pluck('answer', 'question_number')->toArray();
-        $riskMap = $assessment->riskAssessment->pluck('answer', 'indicator')->toArray();
-        $functionMap = $assessment->functionAssessment->pluck('level', 'domain')->toArray();
-
-        $result = $calculator->calculate($srqMap, $riskMap, $functionMap);
-
-        TriageResult::updateOrCreate(
-            ['assessment_id' => $assessment->id],
-            [
-                'srq_score' => $result->srqScore,
-                'risk_score' => $result->riskScore,
-                'function_score' => $result->functionScore,
-                'total_score' => $result->totalScore,
-                'system_recommendation' => $result->recommendation,
-                'is_red_flag_override' => $result->isRedFlagOverride,
-                'red_flag_source' => $result->redFlagSource,
-            ]
-        );
-
-        $assessment->update([
-            'status' => AssessmentStatus::COMPLETED,
-            'completed_at' => now(),
-        ]);
+            return $result;
+        });
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -349,7 +365,7 @@ final class RelawanController extends Controller
             ]);
         }
 
-        return redirect("/relawan/assessment/{$assessment->id}/result");
+        return redirect("/relawan/assessment/{$assessmentId}/result");
     }
 
     private function hasExactResponseSet($responses, array $expectedKeys, string $key, string $value, array $allowedValues): bool
@@ -379,6 +395,20 @@ final class RelawanController extends Controller
         ]);
     }
 
+    /** Called inside the same transaction as every legacy assessment write. */
+    private function editableAssessment(string $assessmentId): Assessment
+    {
+        $assessment = Assessment::whereKey($assessmentId)
+            ->where('user_id', Auth::id())->lockForUpdate()->firstOrFail();
+        abort_if($assessment->status === AssessmentStatus::COMPLETED, 409, 'Asesmen selesai tidak dapat diubah.');
+        $version = request()->input('base_version');
+        $current = app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment)['server_version'];
+        abort_unless(is_string($version) && hash_equals($current, $version), 409,
+            'Asesmen server telah berubah. Muat dan tinjau versi terbaru sebelum menyimpan.');
+
+        return $assessment;
+    }
+
     private function ownedAssessment(string $assessmentId, array $relations = []): Assessment
     {
         abort_unless(\Illuminate\Support\Str::isUuid($assessmentId), 404);
@@ -392,6 +422,8 @@ final class RelawanController extends Controller
         $assessment = Assessment::with($relations)->find($assessmentId);
         if ($assessment) {
             abort_unless($assessment->user_id === Auth::id(), 404);
+            $canonical = app(\App\Domain\Sync\AssessmentSynchronizer::class)->canonical($assessment);
+            $assessment->setAttribute('server_version', $canonical['server_version']);
             return $assessment;
         }
 
@@ -400,55 +432,39 @@ final class RelawanController extends Controller
         return $shell;
     }
 
-    public function data(AssessmentResume $resume): InertiaResponse
+    public function data(): RedirectResponse
     {
-        $user = Auth::user();
-
-        $inProgress = Assessment::with(['patient', 'srqResponses', 'riskAssessment', 'functionAssessment'])
-            ->where('user_id', $user->id)
-            ->where('status', AssessmentStatus::IN_PROGRESS)
-            ->latest('updated_at')
-            ->get();
-
-        $inProgress->each(fn(Assessment $assessment) => $resume->attach($assessment));
-
-        $completed = Assessment::with(['patient', 'triageResult'])
-            ->where('user_id', $user->id)
-            ->where('status', AssessmentStatus::COMPLETED)
-            ->latest('completed_at')
-            ->get();
-
-        $emergencies = EmergencyEvent::query()
-            ->select(['id', 'user_id', 'patient_id', 'red_flag_type', 'notes', 'created_at'])
-            ->with(['patient:id,name'])
-            ->where('user_id', $user->id)
-            ->latest('created_at')
-            ->get();
-
-        return Inertia::render('Relawan/Data', [
-            'inProgress' => $inProgress,
-            'completed' => $completed,
-            'emergencies' => $emergencies,
-        ]);
+        return redirect()->route('relawan.home');
     }
 
     public function emergencyDetail(string $emergencyId): InertiaResponse
     {
+        abort_unless(\Illuminate\Support\Str::isUuid($emergencyId), 404);
         $emergency = EmergencyEvent::query()
             ->select([
                 'id',
                 'patient_id',
                 'user_id',
                 'red_flag_type',
+                'red_flag_types',
                 'latitude',
                 'longitude',
                 'shelter_id',
                 'notes',
                 'created_at',
             ])
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('emergency_events', 'routing_status'), fn ($query) => $query->addSelect('routing_status'))
             ->with(['patient:id,name', 'shelter:id,name'])
             ->where('user_id', Auth::id())
-            ->findOrFail($emergencyId);
+            ->find($emergencyId);
+
+        if (!$emergency) {
+            // A foreign persisted UUID must never become a local lookup shell.
+            abort_if(EmergencyEvent::whereKey($emergencyId)->exists(), 404);
+            return Inertia::render('Relawan/Emergency', [
+                'localEmergencyId' => $emergencyId,
+            ]);
+        }
 
         return Inertia::render('Relawan/Emergency', [
             'emergency' => $emergency,
@@ -462,6 +478,9 @@ final class RelawanController extends Controller
         $validated = $request->validate([
             'patient_id' => ['nullable', 'uuid', 'exists:patients,id'],
             'red_flag_type' => ['required', Rule::enum(RedFlagType::class)],
+            'red_flag_types' => ['sometimes', 'required', 'array', 'list', 'min:1', 'max:4'],
+            'red_flag_types.*' => ['required', 'distinct:strict', Rule::enum(RedFlagType::class)],
+            'red_flag_types.0' => ['required_with:red_flag_types', 'same:red_flag_type'],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -487,22 +506,42 @@ final class RelawanController extends Controller
             $patientId = $assessment->patient_id;
         }
 
+        if ($patientId !== null && !$this->eligiblePatients($user)->whereKey($patientId)->exists()) {
+            throw ValidationException::withMessages([
+                'patient_id' => 'Penyintas tidak tersedia untuk Relawan ini.',
+            ]);
+        }
+
         $redFlag = RedFlagType::from($validated['red_flag_type']);
 
-        $emergency = EmergencyEvent::create([
-            'patient_id' => $patientId,
-            'assessment_id' => $validated['assessment_id'] ?? null,
-            'user_id' => $user->id,
-            'red_flag_type' => $redFlag,
-            'status' => EmergencyStatus::PENDING,
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
-            'shelter_id' => $user->shelter_id,
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        $emergency = DB::transaction(function () use ($patientId, $validated, $user, $redFlag): EmergencyEvent {
+            $emergency = EmergencyEvent::create([
+                'patient_id' => $patientId,
+                'assessment_id' => $validated['assessment_id'] ?? null,
+                'user_id' => $user->id,
+                'red_flag_type' => $redFlag,
+                'red_flag_types' => $validated['red_flag_types'] ?? [$redFlag->value],
+                'status' => EmergencyStatus::PENDING,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'shelter_id' => $user->shelter_id,
+                'notes' => $validated['notes'] ?? null,
+            ]);
 
-        $realtimeDelivered = true;
+            AuditLog::create([
+                'actor_id' => $user->id,
+                'action' => 'EMERGENCY_CREATED',
+                'entity_type' => 'EmergencyEvent',
+                'entity_id' => $emergency->id,
+                'new_values' => ['status' => $emergency->status->value, 'source' => 'ONLINE'],
+            ]);
+
+            return $emergency;
+        });
+
+        $realtimeDelivered = false;
         try {
+            $realtimeDelivered = count((new \App\Events\EmergencyCreated($emergency))->broadcastOn()) > 0;
             event(new \App\Events\EmergencyCreated($emergency));
         } catch (\Throwable $exception) {
             $realtimeDelivered = false;
@@ -517,6 +556,7 @@ final class RelawanController extends Controller
                     ? 'Insiden T0 tersimpan di server dan notifikasi realtime berhasil dikirim.'
                     : 'Insiden T0 tersimpan di server.',
                 'emergency_id' => $emergency->id,
+                'routing_status' => $emergency->routing_status,
                 'realtime_delivered' => $realtimeDelivered,
                 ...($realtimeDelivered ? [] : ['warning' => $warning]),
             ], 201);

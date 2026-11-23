@@ -1,5 +1,13 @@
 # RAPID-MIND — Implementation Plan (Revised)
 
+> **Later owner/team supersession — 7 November 2026:** explicit, auditable
+> Healthcare T0-Suspect downgrade to T1/T2/T3 is now approved product behavior.
+> Earlier T1/T2-only restrictions, unresolved T3 findings or demo blockers below
+> are historical, not active prohibitions. This is not external clinical protocol
+> certification and changes no recorded execution/test result or runtime state.
+> Current official Admin reporting requirements and source gaps are linked from
+> [the current baseline](CURRENT_IMPLEMENTATION.md).
+
 > Corrected to follow AGENTS.md mandatory Docker workflow.
 > All PHP/Composer/Laravel commands run via `docker compose exec -T app`.
 > Only Node/npm runs on the host.
@@ -572,7 +580,7 @@ Opening/viewing ≠ acknowledgement. Explicit `AKUI KASUS` action required.
 T0-Suspect → T0-confirmed | T1 | T2
 ```
 
-No T3 downgrade from T0 verification.
+**Historical restriction — superseded by owner/team approval on 7 November 2026:** No T3 downgrade from T0 verification.
 
 Secondary verification records **method** (Telepon / Video / Langsung) — no integrated calling engine needed for MVP.
 

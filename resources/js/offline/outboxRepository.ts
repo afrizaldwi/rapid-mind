@@ -1,5 +1,8 @@
+import { canonicalAssessmentResponse } from "./assessmentCanonical";
+import { receiptVersionPatch } from "./assessmentReceiptVersion";
 import {
     db,
+    nextOutboxId,
     requireOwner,
     type LocalAssessment,
     type LocalEmergency,
@@ -9,13 +12,40 @@ import {
 import { assessmentRepository } from "./assessmentRepository";
 import { emergencyRepository } from "./emergencyRepository";
 import { patientRepository } from "./patientRepository";
+import { assertStorageMode, encryptedMode } from "./encryptedClinicalStorage";
+import {
+    encryptedOutboxComplete,
+    encryptedOutboxEnqueue,
+    encryptedOutboxGet,
+    encryptedOutboxList,
+    encryptedOutboxMark,
+    pruneDeliveredClinicalRecords,
+    encryptedOutboxRecover,
+} from "./encryptedOutbox";
+import {
+    assessmentSnapshotCurrent,
+    reconcileAssessment,
+} from "./assessmentContract";
 
 export const outboxRepository = {
+    async pruneDelivered(owner: number, stillActive: () => boolean = () => true) {
+        if (!await encryptedMode(requireOwner(owner))) return 0;
+        return pruneDeliveredClinicalRecords(owner, stillActive);
+    },
     async list(owner: number) {
-        const items = await db.outbox
-            .where("owner_user_id")
-            .equals(requireOwner(owner))
-            .toArray();
+        if (await encryptedMode(owner)) return encryptedOutboxList(owner);
+        const items = await db.transaction(
+            "r",
+            db.outbox,
+            db.ownerEncryptionModes,
+            async () => {
+                await assertStorageMode(owner, "LEGACY");
+                return db.outbox
+                    .where("owner_user_id")
+                    .equals(requireOwner(owner))
+                    .toArray();
+            },
+        );
         return items
             .filter(
                 (item) =>
@@ -36,8 +66,17 @@ export const outboxRepository = {
         type: OutboxItem["type"],
         entityId: string,
         payload: Record<string, unknown>,
+        expectedAssessmentRevision?: number,
     ) {
         requireOwner(owner);
+        if (await encryptedMode(owner))
+            return encryptedOutboxEnqueue(
+                owner,
+                type,
+                entityId,
+                payload,
+                expectedAssessmentRevision,
+            );
         const entity =
             type === "ASSESSMENT"
                 ? await assessmentRepository.get(owner, entityId)
@@ -46,10 +85,35 @@ export const outboxRepository = {
         const now = new Date().toISOString();
         await db.transaction(
             "rw",
-            db.outbox,
-            db.assessments,
-            db.emergencies,
+            [
+                db.outbox,
+                db.encryptedOutboxIndex,
+                db.outboxIdCounter,
+                db.localSyncReceipts,
+                db.assessments,
+                db.emergencies,
+                db.ownerEncryptionModes,
+            ],
             async () => {
+                await assertStorageMode(owner, "LEGACY");
+                const latestEntity =
+                    type === "ASSESSMENT"
+                        ? await db.assessments.get(entityId)
+                        : undefined;
+                if (
+                    type === "ASSESSMENT" &&
+                    (!latestEntity ||
+                        latestEntity.owner_user_id !== owner ||
+                        (expectedAssessmentRevision !== undefined &&
+                            !assessmentSnapshotCurrent(
+                                latestEntity,
+                                expectedAssessmentRevision,
+                            )))
+                )
+                    throw new Error(
+                        "Asesmen berubah saat menyiapkan antrean. Coba lagi.",
+                    );
+                const assessmentRevision = latestEntity?.local_revision ?? 0;
                 const existing = (
                     await db.outbox
                         .where("[owner_user_id+type+entity_id]")
@@ -64,6 +128,9 @@ export const outboxRepository = {
                 if (existing) {
                     await db.outbox.update(existing.id!, {
                         payload,
+                        ...(type === "ASSESSMENT"
+                            ? { assessment_local_revision: assessmentRevision }
+                            : {}),
                         status: "PENDING",
                         last_error: undefined,
                         last_http_status: undefined,
@@ -72,10 +139,14 @@ export const outboxRepository = {
                     });
                 } else {
                     await db.outbox.add({
+                        id: await nextOutboxId(),
                         owner_user_id: owner,
                         type,
                         entity_id: entityId,
                         payload,
+                        ...(type === "ASSESSMENT"
+                            ? { assessment_local_revision: assessmentRevision }
+                            : {}),
                         priority: type === "EMERGENCY" ? 1 : 2,
                         status: "PENDING",
                         retry_count: 0,
@@ -99,24 +170,51 @@ export const outboxRepository = {
     },
     async recover(owner: number, item: OutboxItem) {
         requireOwner(owner);
-        await db.transaction("rw", db.outbox, db.assessments, db.emergencies, async () => {
-            const current = item.id ? await db.outbox.get(item.id) : undefined;
-            if (
-                current?.owner_user_id !== owner ||
-                current?.revision !== item.revision ||
-                current?.status !== "SYNCING"
-            ) return;
-            await db.outbox.update(item.id!, { status: "PENDING" });
-            const table = item.type === "ASSESSMENT" ? db.assessments : db.emergencies;
-            const entity = await table.get(item.entity_id);
-            if (entity?.owner_user_id === owner)
-                await table.update(item.entity_id, { sync_state: "PENDING_SYNC" });
-        });
+        if (await encryptedMode(owner))
+            return encryptedOutboxRecover(owner, item);
+        await db.transaction(
+            "rw",
+            db.outbox,
+            db.assessments,
+            db.emergencies,
+            db.ownerEncryptionModes,
+            async () => {
+                await assertStorageMode(owner, "LEGACY");
+                const current = item.id
+                    ? await db.outbox.get(item.id)
+                    : undefined;
+                if (
+                    current?.owner_user_id !== owner ||
+                    current?.revision !== item.revision ||
+                    current?.status !== "SYNCING"
+                )
+                    return;
+                await db.outbox.update(item.id!, { status: "PENDING" });
+                const table =
+                    item.type === "ASSESSMENT"
+                        ? db.assessments
+                        : db.emergencies;
+                const entity = await table.get(item.entity_id);
+                if (entity?.owner_user_id === owner)
+                    await table.update(item.entity_id, {
+                        sync_state: "PENDING_SYNC",
+                    });
+            },
+        );
     },
     async get(owner: number, id: number) {
         requireOwner(owner);
-        const item = await db.outbox.get(id);
-        return item?.owner_user_id === owner ? item : undefined;
+        if (await encryptedMode(owner)) return encryptedOutboxGet(owner, id);
+        return db.transaction(
+            "r",
+            db.outbox,
+            db.ownerEncryptionModes,
+            async () => {
+                await assertStorageMode(owner, "LEGACY");
+                const item = await db.outbox.get(id);
+                return item?.owner_user_id === owner ? item : undefined;
+            },
+        );
     },
     async complete(
         owner: number,
@@ -128,52 +226,60 @@ export const outboxRepository = {
         stillActive: () => boolean,
     ) {
         requireOwner(owner);
+        if (await encryptedMode(owner))
+            return encryptedOutboxComplete(owner, item, canonical, stillActive);
         return db.transaction(
             "rw",
-            db.outbox,
-            db.assessments,
-            db.emergencies,
-            db.patients,
-            db.patientSnapshots,
+            [
+                db.outbox,
+                db.assessments,
+                db.emergencies,
+                db.patients,
+                db.patientSnapshots,
+                db.ownerEncryptionModes,
+                db.localSyncReceipts,
+            ],
             async () => {
+                await assertStorageMode(owner, "LEGACY");
                 const latest = await this.get(owner, item.id!);
                 if (!latest) throw new Error("Outbox owner changed");
-                if (!stillActive() || latest.revision !== item.revision)
+                if (!stillActive() || (item.type !== "ASSESSMENT" && latest.revision !== item.revision))
                     return false;
                 if (item.type === "ASSESSMENT") {
-                    if (
-                        !canonical.assessment ||
-                        canonical.assessment.id !== item.entity_id
-                    )
-                        throw new Error("Invalid assessment response");
                     const local = await assessmentRepository.get(
                         owner,
                         item.entity_id,
                     );
                     if (!local) throw new Error("Local assessment missing");
-                    const server = canonical.assessment as Record<
-                        string,
-                        unknown
-                    >;
-                    const patient = server.patient as
-                        | Record<string, unknown>
-                        | undefined;
+                    const { assessment, patient } = canonicalAssessmentResponse(
+                        canonical,
+                        local,
+                    );
+                    if (
+                        latest.revision !== item.revision || !assessmentSnapshotCurrent(
+                            local,
+                            item.assessment_local_revision,
+                        )
+                    ) {
+                        await db.assessments.put({ ...local, ...receiptVersionPatch(local, item, assessment) });
+                        return false;
+                    }
                     if (patient && typeof patient.id === "string") {
                         if (await patientRepository.get(owner, patient.id)) {
                             await patientRepository.reconcile(
                                 owner,
-                                patient as Partial<LocalPatient> & { id: string },
+                                patient as Partial<LocalPatient> & {
+                                    id: string;
+                                },
                             );
                         }
                     }
-                    await db.assessments.put({
-                        ...local,
-                        ...server,
-                        patient_id: patient?.id ?? local.patient_id,
-                        owner_user_id: owner,
-                        sync_state: "SYNCED",
-                        last_error: undefined,
-                    } as LocalAssessment);
+                    await db.assessments.put(
+                        reconcileAssessment(local, {
+                            ...assessment,
+                            patient_id: patient?.id ?? local.patient_id,
+                        } as Partial<LocalAssessment>),
+                    );
                 } else {
                     if (
                         !canonical.emergency ||
@@ -199,12 +305,24 @@ export const outboxRepository = {
                         if (await patientRepository.get(owner, patient.id)) {
                             await patientRepository.reconcile(
                                 owner,
-                                patient as Partial<LocalPatient> & { id: string },
+                                patient as Partial<LocalPatient> & {
+                                    id: string;
+                                },
                             );
                         }
                     }
                 }
                 await db.outbox.delete(item.id!);
+                await db.localSyncReceipts.put({
+                    outbox_id: item.id!,
+                    key: `${owner}:${item.type}:${item.entity_id}`,
+                    owner_user_id: owner,
+                    type: item.type,
+                    entity_id: item.entity_id,
+                    canonical_id: item.entity_id,
+                    revision: item.revision,
+                    accepted_at: new Date().toISOString(),
+                });
                 return true;
             },
         );
@@ -217,36 +335,50 @@ export const outboxRepository = {
         httpStatus?: number,
     ) {
         requireOwner(owner);
-        const current = item.id ? await db.outbox.get(item.id) : undefined;
-        if (
-            !current ||
-            current.owner_user_id !== owner ||
-            current.revision !== item.revision
-        )
-            return;
-        await db.outbox.update(item.id!, {
-            status,
-            last_error: error,
-            last_http_status: httpStatus,
-            retry_count:
-                status === "FAILED"
-                    ? current.retry_count + 1
-                    : current.retry_count,
-            updated_at: new Date().toISOString(),
-        });
-        if (item.type === "ASSESSMENT")
-            await assessmentRepository.setState(
-                owner,
-                item.entity_id,
-                status === "SYNCING" ? "SYNCING" : "SYNC_FAILED",
-                error,
-            );
-        else
-            await emergencyRepository.setState(
-                owner,
-                item.entity_id,
-                status === "SYNCING" ? "SYNCING" : "SYNC_FAILED",
-                error,
-            );
+        if (await encryptedMode(owner))
+            return encryptedOutboxMark(owner, item, status, error, httpStatus);
+        await db.transaction(
+            "rw",
+            db.outbox,
+            db.assessments,
+            db.emergencies,
+            db.ownerEncryptionModes,
+            async () => {
+                await assertStorageMode(owner, "LEGACY");
+                const current = item.id
+                    ? await db.outbox.get(item.id)
+                    : undefined;
+                if (
+                    !current ||
+                    current.owner_user_id !== owner ||
+                    current.revision !== item.revision
+                )
+                    return;
+                await db.outbox.update(item.id!, {
+                    status,
+                    last_error: error,
+                    last_http_status: httpStatus,
+                    retry_count:
+                        status === "FAILED"
+                            ? current.retry_count + 1
+                            : current.retry_count,
+                    updated_at: new Date().toISOString(),
+                });
+                if (item.type === "ASSESSMENT")
+                    await assessmentRepository.setState(
+                        owner,
+                        item.entity_id,
+                        status === "SYNCING" ? "SYNCING" : "SYNC_FAILED",
+                        error,
+                    );
+                else
+                    await emergencyRepository.setState(
+                        owner,
+                        item.entity_id,
+                        status === "SYNCING" ? "SYNCING" : "SYNC_FAILED",
+                        error,
+                    );
+            },
+        );
     },
 };

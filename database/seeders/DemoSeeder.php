@@ -106,6 +106,14 @@ final class DemoSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        // Explicit responsibility for freshly created synthetic Posko only.
+        // Never fill missing assignments on an existing Posko or historical case.
+        foreach ([[$shelterCandi, $rsud], [$shelterUtama, $rsud], [$shelterPakem, $puskesmas]] as [$posko, $primary]) {
+            if ($posko->wasRecentlyCreated && \Illuminate\Support\Facades\Schema::hasColumn('shelters', 'primary_facility_id')) {
+                $posko->update(['primary_facility_id' => $primary->id]);
+            }
+        }
+
         // 4. Seed Canonical Users
         $admin = User::firstOrCreate(
             ['email' => 'admin@rapidmind.id'],
@@ -427,5 +435,9 @@ final class DemoSeeder extends Seeder
             'system_recommendation' => TriageCategory::T3,
             'is_red_flag_override' => false,
         ]);
+        // Additive separated-domain fixtures; no migration or reset is performed.
+        if (app(\App\Domain\Healthcare\HealthcareOperationsRead::class)->ready()) {
+            $this->call(DispatchDemoSeeder::class);
+        }
     }
 }

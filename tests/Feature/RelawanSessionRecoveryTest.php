@@ -6,12 +6,12 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 final class RelawanSessionRecoveryTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     public function test_active_relawan_receives_minimal_machine_readable_identity(): void
     {
@@ -21,10 +21,12 @@ final class RelawanSessionRecoveryTest extends TestCase
         ]);
 
         $this->actingAs($relawan)
+            ->withSession(['_token' => str_repeat('a', 40)])
             ->getJson('/relawan/session-status')
             ->assertOk()
             ->assertExactJson([
                 'state' => 'AUTHENTICATED',
+                'csrf_token' => str_repeat('a', 40),
                 'user' => [
                     'id' => $relawan->id,
                     'role' => UserRole::RELAWAN->value,

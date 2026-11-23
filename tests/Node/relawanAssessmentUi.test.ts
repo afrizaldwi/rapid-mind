@@ -1,0 +1,587 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { ref, reactive, defineComponent, h } from "vue";
+import {
+    vueModuleUrl,
+    moduleStub,
+    mountFixture,
+} from "./helpers/mountedVueFixture.ts";
+const vue = import.meta.resolve("vue");
+(globalThis as any).document = {
+    activeElement: null,
+    querySelector: () => null,
+};
+(globalThis as any).window = Object.assign(new EventTarget(), { location: { hash: "" } });
+(globalThis as any).navigator ??= { onLine: true };
+const state = ((globalThis as any).__b31ui = {
+    runtime: reactive({
+        owner: 101,
+        path: "/relawan/assessment/synthetic/srq",
+        mode: "OFFLINE_FIELD_MODE",
+        shelterId: null,
+        pageProps: {},
+    }),
+    key: ref(0),
+    saved: [] as any[],
+    interrupts: 0,
+    layouts: [] as any[],
+    calls: 0,
+    assessment: {
+        id: "synthetic",
+        patient_id: "patient-synthetic",
+        mode: "VERBAL",
+        status: "IN_PROGRESS",
+        srq_answers: { 17: false },
+    },
+    modes: [] as any[],
+    observations: [] as any[],
+    context: null as any,
+    emergencyCalls: [] as any[],
+    emergencyPending: null as any,
+    events: 0,
+    pending: null as any,
+    unlocked: true,
+    patientReads: 0,
+    restoreDuringWait: false,
+});
+state.context = async () => ({
+    assessment: state.assessment,
+    patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
+});
+const overrides = {
+    "@/offline/deviceKeyWorkflow": moduleStub("export const ensureDeviceClinicalAccess=async()=>{};export const waitForDeviceClinicalAccess=async()=>{const s=globalThis.__b31ui;if(s.restoreDuringWait){s.unlocked=true;s.key.value++;}if(!s.unlocked)throw Error('Penyimpanan belum tersedia');};"),
+    "@/offline/cacheRelawanPage": moduleStub("export const cacheRelawanPatients=async()=>{};"),
+    "@/offline/assessmentHandoff": moduleStub("export const preserveOfflineAssessment=async()=>{};"),
+    "@/components/Relawan/OfflineEncryptionGate.vue": moduleStub(`import {defineComponent,h} from '${vue}';
+        export default defineComponent({emits:['unlocked'],setup(_props,{emit}){return()=>h('button',{onClick(){const s=globalThis.__b31ui;s.unlocked=true;s.key.value++;emit('unlocked');}},'Buka kunci sintetis');}});`),
+    "@/relawan/runtime": moduleStub(
+        "export const useRelawanRuntime = () => globalThis.__b31ui.runtime;",
+    ),
+    "@/offline/encryptedClinicalStorage": moduleStub(
+        "export const clinicalKeyVersion = () => globalThis.__b31ui.key.value; export const clinicalKeyReady = () => globalThis.__b31ui.unlocked;",
+    ),
+    "@/offline/assessmentWorkflow":
+        moduleStub(`export const relawanOwner = () => 101;
+        export const loadAssessmentContext = (...args) => globalThis.__b31ui.context(...args);
+        export { exactAssessmentAnswers } from '${await vueModuleUrl("resources/js/offline/assessmentContract.ts")}';
+        export const completeLocalAssessment = async () => {globalThis.__b31ui.calls++;};`),
+    "@/offline/assessmentDraft":
+        moduleStub(`export const readAssessmentDraft = async () => globalThis.__b31ui.assessment.srq_answers;
+        export const mergeAssessmentDraft = (_field, server, local) => ({...server,...local});
+        export const saveAssessmentDraft = async (_a,_f,value) => {globalThis.__b31ui.saved.push({...value});};
+        export const saveObservationDraft = async (_owner,_id,value) => {globalThis.__b31ui.observations.push(value);}; export const saveAssessmentMode = async (_owner,_id,mode) => {globalThis.__b31ui.modes.push(mode);};`),
+    "@/layouts/RelawanLayout.vue":
+        moduleStub(`import {defineComponent,h,onMounted} from '${vue}';
+        export default defineComponent({emits:['clinical-ready','clinical-lock','emergency-interrupt'],setup(_p,{emit,slots}){
+            globalThis.__b31ui.layouts.push(emit);onMounted(()=>emit('clinical-ready'));
+            return ()=>h('main',{},slots.default?.());}});`),
+    "@/relawan/RelawanLink.vue": moduleStub(
+        `import {defineComponent,h} from '${vue}'; export default defineComponent({props:['href'],setup(p,{slots}){return ()=>h('a',{href:p.href},slots.default?.());}});`,
+    ),
+    "@/stt/audioCapture": moduleStub(
+        "export class LocalAudioCapture {cancel(){globalThis.__b31ui.interrupts++;}}",
+    ),
+    "@/stt/whisperClient": moduleStub(
+        "export class WhisperClient {constructor(callback){this.callback=callback;globalThis.__b31ui.whisper=this;}dispose(){this.disposed=true;} prepare(){}}",
+    ),
+    "@/offline/patientRepository":
+        moduleStub(`export const patientRepository = {
+        list: async () => {globalThis.__b31ui.patientReads++;return [];}, get: async () => {if(globalThis.__b31ui.pending) await globalThis.__b31ui.pending; return {id:'patient-synthetic'};},
+        saveServerSnapshot: async () => {}};`),
+    "@/offline/emergencyWorkflow": moduleStub(
+        `export const createLocalEmergency = async (_owner,input) => {globalThis.__b31ui.emergencyCalls.push(input); if(globalThis.__b31ui.emergencyPending) await globalThis.__b31ui.emergencyPending; return 'emergency-synthetic';};`,
+    ),
+    "@/offline/syncManager": moduleStub(
+        "export const syncManager = {sync: async () => {}};",
+    ),
+};
+const Srq = (
+    await import(
+        await vueModuleUrl(
+            "resources/js/Pages/Relawan/Assessment/Srq.vue",
+            overrides,
+        )
+    )
+).default;
+const Review = (
+    await import(
+        await vueModuleUrl(
+            "resources/js/Pages/Relawan/Assessment/Review.vue",
+            overrides,
+        )
+    )
+).default;
+const T0 = (
+    await import(
+        await vueModuleUrl(
+            "resources/js/components/Relawan/T0Verification.vue",
+            overrides,
+        )
+    )
+).default;
+
+function button(f: any, label: string) {
+    return f
+        .nodes((node: any) => node.tag === "button")
+        .find((node: any) => f.text(node).includes(label));
+}
+
+test("mounted SRQ gates manual Q17 persistence, retains old answer on cancellation, hides dialog synchronously on lock", async () => {
+    state.saved = [];
+    state.emergencyCalls = [];
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
+    });
+    try {
+        await f.flush();
+        const question = f.nodes((node) => node.id === "srq-question-17")[0];
+        const yes = f.nodes(
+            (node) => node.tag === "button" && f.text(node) === "Ya",
+        );
+        assert.equal(yes.length, 20);
+        yes[16].onClick();
+        await f.flush();
+        assert.equal(state.saved.length, 0);
+        assert.ok(button(f, "Batal"));
+        button(f, "Batal").onClick();
+        await f.flush();
+        assert.equal(state.saved.length, 0);
+        assert.match(f.text(question), /Tidak/);
+        yes[16].onClick();
+        await f.flush();
+        button(f, "Konfirmasi Jawaban Ya").onClick();
+        await f.flush();
+        assert.equal(state.saved.at(-1)[17], true);
+        assert.equal(state.emergencyCalls.length, 0);
+        const panel = f.nodes((node) => node.role === "dialog")[0];
+        state.layouts.at(-1)("clinical-lock");
+        // Dialog prop updates follow Vue scheduling; layout masks the enclosing DOM synchronously.
+        await f.flush();
+        assert.equal(f.nodes((node) => node.role === "dialog").length, 0);
+        assert.equal(panel.style.display, "none");
+        state.layouts.at(-1)("clinical-ready");
+        await f.flush();
+        yes[16].onClick();
+        await f.flush();
+        state.layouts.at(-1)("emergency-interrupt");
+        await f.flush();
+        assert.equal(f.nodes((node) => node.role === "dialog").length, 0);
+    } finally {
+        f.app.unmount();
+    }
+});
+
+test("patient name renders before delayed SRQ draft hydration; persisted false restores as Tidak", async () => {
+    let resolve!: (value: any) => void;
+    const previousContext = state.context;
+    const previousAnswers = state.assessment.srq_answers;
+    state.assessment.srq_answers = { 1: false } as any;
+    state.saved = [];
+    state.context = () => new Promise(done => { resolve = done; });
+    const patient = { id: "patient-synthetic", name: "Penyintas Sintetis" };
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient,
+    });
+    const no = () => f.nodes(node => node.tag === "button" && f.text(node) === "Tidak")[0];
+    try {
+        await f.flush();
+        assert.match(f.text(), /Penyintas Sintetis/);
+        assert.equal(no()["aria-pressed"], false, "Patient visibility does not prove draft hydration");
+        assert.equal(f.nodes(node => node.tag === "fieldset")[0].disabled, true);
+        resolve({ assessment: state.assessment, patient });
+        await f.flush();
+        assert.equal(no()["aria-pressed"], true, "Stored boolean false must select Tidak after hydration");
+        assert.equal(f.nodes(node => node.tag === "fieldset")[0].disabled, false);
+        assert.deepEqual(state.saved, [], "Hydration must not write or replace the answer");
+    } finally {
+        f.app.unmount();
+        state.context = previousContext;
+        state.assessment.srq_answers = previousAnswers;
+    }
+});
+
+test("delayed SRQ context cannot rehydrate after lock or owner switch", async () => {
+    let resolve!: (value: any) => void;
+    const previous = state.context;
+    state.context = () =>
+        new Promise((done) => {
+            resolve = done;
+        });
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: null,
+    });
+    try {
+        await f.flush();
+        state.layouts.at(-1)("clinical-lock");
+        state.runtime.owner = 202;
+        resolve({
+            assessment: state.assessment,
+            patient: { name: "Contoh Rahasia Sintetis" },
+        });
+        await f.flush();
+        assert.doesNotMatch(f.text(), /Contoh Rahasia Sintetis/);
+        assert.equal(
+            f.nodes(
+                (node) => node.tag === "fieldset" && node.disabled === false,
+            ).length,
+            0,
+        );
+    } finally {
+        f.app.unmount();
+        state.context = previous;
+        state.runtime.owner = 101;
+    }
+});
+
+test("mounted review lists exact unresolved questions, hides definitive SRQ score and blocks finalize", async () => {
+    state.assessment.srq_answers = { 1: "UNCLEAR", 2: "UNANSWERED", 17: false };
+    const f = mountFixture(Review, {
+        assessment: { ...state.assessment, user_id: 101 },
+    });
+    try {
+        await f.flush();
+        const links = f.nodes(
+            (node) => node.tag === "a" && node.href?.includes("#srq-question-"),
+        );
+        assert.equal(links.length, 19);
+        assert.ok(
+            links.some(
+                (node) =>
+                    node.href.endsWith("#srq-question-1") &&
+                    /Respons Tidak Jelas/.test(f.text(node)),
+            ),
+        );
+        assert.ok(
+            links.some(
+                (node) =>
+                    node.href.endsWith("#srq-question-2") &&
+                    /Belum dijawab/.test(f.text(node)),
+            ),
+        );
+        assert.ok(
+            !links.some((node) => node.href.endsWith("#srq-question-17")),
+        );
+        const finalize = button(f, "SELESAIKAN");
+        assert.equal(finalize.disabled, true);
+        const before = state.calls;
+        await finalize.onClick();
+        assert.equal(state.calls, before);
+        assert.doesNotMatch(f.text(), /Total skor estimasi/);
+    } finally {
+        f.app.unmount();
+        state.assessment.srq_answers = { 17: false };
+    }
+});
+
+for (const online of [true, false]) test(`T0 assistance guide opens with locked clinical data and sends nothing (online=${online})`, async () => {
+    state.unlocked = false;
+    state.patientReads = 0;
+    state.emergencyCalls = [];
+    const previousOnline = navigator.onLine;
+    Object.assign(navigator, { onLine: online });
+    const show = ref(false);
+    const f = mountFixture(defineComponent({ setup: () => () => h(T0, { show: show.value }) }));
+    try {
+        show.value = true; await f.flush();
+        button(f, "Panduan bantuan darurat").onClick(); await f.flush();
+        assert.match(f.text(), /Kontak bantuan terverifikasi belum tersedia/);
+        assert.match(f.text(), /Tidak ada permintaan yang dikirim/);
+        assert.equal(state.patientReads, 0);
+        assert.equal(state.emergencyCalls.length, 0);
+        assert.equal(button(f, "KIRIM T0-SUSPECT").disabled, true);
+        assert.doesNotMatch(f.text(), /Buka kunci sintetis/);
+        button(f, "Panduan bantuan darurat").onClick(); await f.flush();
+        assert.equal(state.emergencyCalls.length, 0);
+        show.value = false; await f.flush();
+        show.value = true; await f.flush();
+        assert.doesNotMatch(f.text(), /Kontak bantuan terverifikasi belum tersedia/);
+    } finally {
+        state.unlocked = true;
+        Object.assign(navigator, { onLine: previousOnline });
+        f.app.unmount();
+    }
+});
+
+test("T0 reports unavailable storage without introducing an unlock step or sending", async () => {
+    state.unlocked = false;
+    state.patientReads = 0;
+    state.emergencyCalls = [];
+    const show = ref(false);
+    const f = mountFixture(defineComponent({ setup: () => () => h(T0, { show: show.value }) }));
+    try {
+        show.value = true; await f.flush();
+        button(f, "Kegawatdaruratan Medis").onClick(); await f.flush();
+        await button(f, "KIRIM T0-SUSPECT").onClick(); await f.flush();
+        assert.match(f.text(), /T0 BELUM TERSIMPAN/);
+        assert.doesNotMatch(f.text(), /Buka kunci sintetis|frasa sandi/i);
+        assert.equal(state.emergencyCalls.length, 0);
+        state.unlocked = true;
+        await button(f, "KIRIM T0-SUSPECT").onClick(); await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        assert.equal(state.emergencyCalls[0].redFlagType, "MEDICAL_CRISIS");
+    } finally { state.unlocked = true; f.app.unmount(); }
+});
+
+test("T0 key restoration preserves verification and sends only on explicit final action", async () => {
+    state.unlocked = false;
+    state.restoreDuringWait = true;
+    state.emergencyCalls = [];
+    const f = mountFixture(T0, { show: true, patientId: "patient-synthetic", patientName: "Sintetis" });
+    try {
+        await f.flush();
+        button(f, "Gejala Psikosis").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 0);
+        await button(f, "KIRIM T0-SUSPECT").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        assert.equal(state.emergencyCalls[0].redFlagType, "PSYCHOSIS");
+    } finally { f.app.unmount(); state.restoreDuringWait = false; state.unlocked = true; }
+});
+
+test("mounted manual T0 remains independent of incomplete SRQ; invalidated pre-write async cannot create T0", async () => {
+    state.emergencyCalls = [];
+    const show = ref(false);
+    const { defineComponent, h } = await import("vue");
+    const f = mountFixture(
+        defineComponent({
+            setup: () => () =>
+                h(T0, {
+                    show: show.value,
+                    patientId: "patient-synthetic",
+                    patientName: "Sintetis",
+                    assessmentId: "synthetic",
+                }),
+        }),
+    );
+    try {
+        show.value = true;
+        await f.flush();
+        button(f, "Kegawatdaruratan Medis").onClick();
+        await f.flush();
+        await button(f, "KIRIM T0-SUSPECT").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        assert.equal(state.emergencyCalls[0].assessmentId, "synthetic");
+        show.value = false;
+        await f.flush();
+        show.value = true;
+        await f.flush();
+        button(f, "Kegawatdaruratan Medis").onClick();
+        await f.flush();
+        let resolve!: () => void;
+        state.pending = new Promise<void>((done) => {
+            resolve = done;
+        });
+        const submission = button(f, "KIRIM T0-SUSPECT").onClick();
+        const panel = f.nodes((node) => node.role === "dialog")[0];
+        state.key.value++;
+        assert.equal(
+            panel.style.display,
+            "none",
+            "mask before next Vue render",
+        );
+        resolve();
+        await submission;
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+    } finally {
+        state.pending = null;
+        f.app.unmount();
+    }
+});
+
+test("mounted rapid mode changes queue every mode and same-tick observations merge without losing selections", async () => {
+    state.assessment.mode = "VERBAL";
+    state.modes = [];
+    state.observations = [];
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: null,
+    });
+    try {
+        await f.flush();
+        const mode = button(f, "Verbal");
+        const first = mode.onClick();
+        const second = mode.onClick();
+        await Promise.all([first, second]);
+        await f.flush();
+        assert.deepEqual(state.modes, ["NON_VERBAL", "VERBAL"]);
+        await mode.onClick();
+        await f.flush();
+        const checkboxes = f.nodes(
+            (node) => node.tag === "input" && node.type === "checkbox",
+        );
+        checkboxes[0].onChange();
+        checkboxes[6].onChange();
+        await f.flush();
+        assert.deepEqual(state.observations.at(-1).non_verbal_reasons, [
+            "NOT_SPEAKING",
+            "OTHER",
+        ]);
+        const note = f.nodes((node) => node.tag === "textarea")[0];
+        assert.equal(note.maxlength, "500");
+        note.onInput({ target: { value: "Catatan sintetis" } });
+        await f.flush();
+        checkboxes[5].onChange();
+        await f.flush();
+        assert.deepEqual(state.observations.at(-1), {
+            non_verbal_reasons: ["UNKNOWN"],
+            non_verbal_other_note: null,
+        });
+        checkboxes[6].onChange();
+        await f.flush();
+        assert.deepEqual(state.observations.at(-1).non_verbal_reasons, [
+            "OTHER",
+        ]);
+        button(f, "Kosongkan Observasi").onClick();
+        await f.flush();
+        assert.deepEqual(state.observations.at(-1), {
+            non_verbal_reasons: [],
+            non_verbal_other_note: null,
+        });
+    } finally {
+        f.app.unmount();
+        state.assessment.mode = "VERBAL";
+    }
+});
+
+test("lock after starting a durable T0 write suppresses stale UI callbacks without undoing the emergency", async () => {
+    let resolve!: () => void;
+    state.emergencyPending = new Promise<void>((done) => {
+        resolve = done;
+    });
+    state.emergencyCalls = [];
+    state.events = 0;
+    (globalThis as any).window.dispatchEvent = () => {
+        state.events++;
+    };
+    const { defineComponent, h } = await import("vue");
+    const show = ref(false);
+    const f = mountFixture(
+        defineComponent({
+            setup: () => () =>
+                h(T0, {
+                    show: show.value,
+                    patientId: "patient-synthetic",
+                    assessmentId: "synthetic",
+                }),
+        }),
+    );
+    try {
+        show.value = true;
+        await f.flush();
+        button(f, "Kegawatdaruratan Medis").onClick();
+        await f.flush();
+        const submission = button(f, "KIRIM T0-SUSPECT").onClick();
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        state.key.value++;
+        resolve();
+        await submission;
+        await f.flush();
+        assert.equal(state.emergencyCalls.length, 1);
+        assert.equal(state.events, 0);
+    } finally {
+        state.emergencyPending = null;
+        f.app.unmount();
+    }
+});
+
+
+test("T0 binds the active assessment patient when show and context props update together", async () => {
+    state.emergencyCalls = [];
+    const show = ref(false);
+    const context = ref<{ patientId: string; patientName: string; assessmentId: string }>();
+    const { defineComponent, openBlock, createElementBlock, createVNode } = await import("vue");
+    const f = mountFixture(defineComponent({
+        setup: () => () => {
+            openBlock();
+            return createElementBlock("div", null, [createVNode(T0, {
+            show: show.value,
+            patientId: context.value?.patientId,
+            patientName: context.value?.patientName,
+            assessmentId: context.value?.assessmentId,
+        }, null, 8, ["show", "patientId", "patientName", "assessmentId"]) ]);
+        },
+    }));
+    try {
+        for (const suffix of ["first", "second"]) {
+            context.value = { patientId: `patient-${suffix}`, patientName: `Sintetis ${suffix}`, assessmentId: `assessment-${suffix}` };
+            show.value = true;
+            await f.flush();
+            assert.equal(state.emergencyCalls.length, suffix === "first" ? 0 : 1, "opening does not create T0");
+            assert.match(f.text(), new RegExp(`Sintetis ${suffix}`));
+            button(f, "Kegawatdaruratan Medis").onClick();
+            await f.flush();
+            await button(f, "KIRIM T0-SUSPECT").onClick();
+            await f.flush();
+            assert.equal(state.emergencyCalls.at(-1).patientId, `patient-${suffix}`);
+            assert.equal(state.emergencyCalls.at(-1).assessmentId, `assessment-${suffix}`);
+            show.value = false;
+            await f.flush();
+            context.value = undefined;
+            await f.flush();
+        }
+    } finally { f.app.unmount(); }
+});
+
+test("mounted SRQ language selector is labeled, changes spoken language independently and keeps Offline Indonesian only", async () => {
+    state.unlocked = true;
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
+    });
+    try {
+        await f.flush();
+        const languageStatus = () => f.nodes(node => node.id === "srq-spoken-language-status")[0];
+        const selector = () => f.nodes(node => node.id === "srq-spoken-language")[0];
+        assert.match(f.text(languageStatus()), /Offline.*id-ID/);
+        assert.equal(selector(), undefined);
+        f.nodes(node => node["data-stt-mode"] === "online")[0].onClick();
+        await f.flush();
+        assert.equal(selector().disabled, false);
+        assert.equal(selector()["aria-describedby"], "srq-spoken-language-status");
+        assert.equal(f.nodes(node => node.tag === "label" && node.for === "srq-spoken-language").length, 1);
+        assert.deepEqual(selector().options.map((node: any) => node.value), ["id-ID", "en-US"]);
+        selector().onChange({ target: { value: "en-US" } });
+        await f.flush();
+        assert.match(f.text(languageStatus()), /Online.*en-US/);
+        assert.match(f.text(), /Bahasa ucapan/, "spoken-language selection does not change Indonesian UI");
+        f.nodes(node => node["data-stt-mode"] === "offline")[0].onClick();
+        await f.flush();
+        assert.match(f.text(languageStatus()), /Offline.*id-ID/);
+        assert.equal(selector(), undefined);
+    } finally { f.app.unmount(); }
+});
+
+test("mounted SRQ exposes preparation stage and cancellation at 100% without enabling recording", async () => {
+    state.unlocked = true;
+    const f = mountFixture(Srq, {
+        assessment: { ...state.assessment, user_id: 101 },
+        patient: { id: "patient-synthetic", name: "Penyintas Sintetis" },
+    });
+    try {
+        await f.flush();
+        const action = () => f.nodes(node => "data-stt-action" in node)[0];
+        action().onClick(); await f.flush();
+        const client = (state as any).whisper;
+        client.callback({ type: "MODEL_PROGRESS", backend: "wasm", progress: 100 });
+        client.callback({ type: "PREPARATION_STAGE", stage: "warmup", backend: "wasm", elapsedMs: 123000 });
+        await f.flush();
+        assert.equal(action(), undefined, "there is no enabled recording action during preparation");
+        const stage = f.nodes(node => "data-stt-preparation-stage" in node)[0];
+        assert.match(f.text(stage), /100%/);
+        assert.match(f.text(stage), /belum siap|not ready/);
+        assert.match(f.text(stage), /123/);
+        f.nodes(node => "data-stt-cancel-prepare" in node)[0].onClick();
+        await f.flush();
+        assert.equal(client.disposed, true);
+        client.callback({ type: "READY", backend: "wasm" });
+        await f.flush();
+        assert.match(f.text(action()), /Siapkan|Prepare/, "late READY cannot turn a canceled preparation into recording");
+    } finally { f.app.unmount(); }
+});

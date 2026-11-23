@@ -1,4 +1,5 @@
 <template>
+    <OfflineReadinessNotice v-if="loggedOutLocally || checkingContinuity" compact />
     <div
         v-if="loggedOutLocally || checkingContinuity"
         class="min-h-screen bg-slate-100 p-6 text-slate-900"
@@ -7,13 +8,16 @@
             <h1 class="text-lg font-bold">
                 {{
                     checkingContinuity
-                        ? "Memeriksa akses perangkat…"
-                        : "Akses lokal dikunci"
+                        ? (isEn ? "Checking device access…" : "Memeriksa akses perangkat…")
+                        : (isEn ? "Local access locked" : "Akses lokal dikunci")
                 }}
             </h1>
             <p v-if="!checkingContinuity" class="mt-3">
-                Data di perangkat tetap tersimpan. Masuk kembali untuk
-                mengaksesnya.
+                {{
+                    isEn
+                        ? "Data remains stored on device. Sign in again to access it."
+                        : "Data di perangkat tetap tersimpan. Masuk kembali untuk mengaksesnya."
+                }}
             </p>
             <p v-if="logoutError" class="mt-3 text-sm text-amber-800">
                 {{ logoutError }}
@@ -24,65 +28,42 @@
                 class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-white"
                 @click="retryServerLogout"
             >
-                Selesaikan keluar
+                {{ isEn ? "Complete sign out" : "Selesaikan keluar" }}
             </button>
         </div>
     </div>
     <div
-        v-else
-        class="min-h-screen bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
-        :class="isFocusedAssessment ? 'pb-0' : 'pb-20'"
+        v-else-if="currentOwner"
+        class="rm-app h-dvh overflow-hidden bg-slate-100 flex flex-col text-slate-900 font-sans selection:bg-teal-500 selection:text-white"
     >
-        <!-- Top Application Bar -->
-        <header
-            class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-2 shadow-xs"
-        >
-            <div class="flex min-w-0 flex-1 items-center space-x-3">
-                <img
-                    src="/logo.png?v=3"
-                    alt="RAPID-MIND Logo"
-                    class="w-8 h-8 object-contain shrink-0"
-                />
-                <div class="min-w-0">
-                    <p
-                        class="truncate text-sm text-slate-700 font-semibold leading-tight"
-                    >
-                        {{ user?.shelter?.name || "Posko Relawan" }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="flex shrink-0 items-center space-x-2">
-                <StatusIndicator
-                    :kind="status.kind.value"
-                    :label="compactStatusLabel"
-                    @open="showStatusSheet = true"
-                />
-                <button
-                    type="button"
-                    @click="logout"
-                    title="Logout Relawan"
-                    aria-label="Logout Relawan"
-                    class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
-                >
-                    <LogOut class="w-4 h-4" />
-                </button>
-            </div>
-        </header>
-
+        <a href="#relawan-main" class="rm-skip-link">Langsung ke konten utama</a>
+        <OfflineReadinessNotice compact />
+        <AssessmentAppHeader hide-routine-status :shelter="layoutProps.identityShelter || runtime.shelterName || (isEn ? 'Volunteer Shelter' : 'Posko Relawan')" :kind="status.kind.value" :label="compactStatusLabel" :online-server="runtime.mode === 'ONLINE_SERVER'" @status="showStatusSheet = true" @logout="logout" />
         <!-- Main Content Area -->
-        <main class="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
+        <main
+            id="relawan-main" tabindex="-1" class="rm-field-content flex-1 min-h-0"
+            :class="[hasAssessmentActionBar ? 'flex flex-col overflow-hidden' : 'rm-field-scroll overflow-y-auto px-3.5 py-4 sm:px-6 sm:pt-6', { 'relawan-identity-main': !!$slots.greeting && !showLocalIncident }]"
+        >
+            <slot v-if="!showLocalIncident" name="greeting" :status-kind="status.kind.value" :status-label="compactStatusLabel" :open-status="() => showStatusSheet = true" />
+            <p v-if="requiresClinicalKey && ownerStorageMode === 'CHECKING'" role="status">Memeriksa akses penyimpanan terenkripsi…</p>
+            <slot v-if="requiresClinicalKey && !clinicalViewAvailable" name="clinical-unlock-notice" />
+            <OfflineEncryptionGate v-if="requiresClinicalKey && !clinicalViewAvailable && ownerStorageMode !== 'CHECKING'" :key="encryptionGateKey" :owner="currentOwner!" @unlocked="onClinicalUnlocked">
+                <template #actions><button type="button" aria-label="Logout Relawan" class="mt-3 min-h-11 text-sm font-semibold text-teal-800" @click="logout">Keluar akun</button></template>
+            </OfflineEncryptionGate>
             <p
                 v-if="logoutError"
                 role="alert"
-                class="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900"
+                class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900"
+                :class="hasAssessmentActionBar ? 'mx-3.5 mt-3 sm:mx-6 shrink-0' : 'mb-4'"
             >
                 {{ logoutError }}
             </p>
+            <div v-if="!requiresClinicalKey || clinicalViewAvailable" ref="clinicalViewRoot" :key="clinicalViewKey" :class="hasAssessmentActionBar ? 'flex min-h-0 flex-1 flex-col' : ''">
             <section
                 v-if="recoveryMessage"
                 role="status"
-                class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+                class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+                :class="hasAssessmentActionBar ? 'mx-3.5 mt-3 sm:mx-6 shrink-0' : 'mb-4'"
             >
                 <p class="font-bold">{{ recoveryMessage.title }}</p>
                 <p class="mt-1">{{ recoveryMessage.detail }}</p>
@@ -92,27 +73,25 @@
                     class="mt-3 rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white"
                     @click="openRelawanLogin"
                 >
-                    Masuk kembali
+                    {{ isEn ? "Sign in again" : "Masuk kembali" }}
                 </button>
             </section>
             <LocalEmergencyActive
-                v-if="
-                    runtime.mode === 'ONLINE_SERVER' &&
-                    activeLocalId &&
-                    currentOwner &&
-                    !isDataRoute
-                "
+                v-if="showLocalIncident && activeLocalId && currentOwner"
                 :key="String(currentOwner) + activeLocalId"
                 :owner="currentOwner"
                 :id="activeLocalId"
                 @close="activeLocalId = null"
             />
             <slot v-else />
+            </div>
         </main>
 
         <!-- Persistent Floating Red Flag Button -->
         <T0Button
-            :focused="isFocusedAssessment"
+            :class="{ 'incident-emergency-action': showLocalIncident }"
+            :focused="isFocusedAssessment && !showLocalIncident"
+            :has-bottom-nav="!isFocusedAssessment"
             @trigger="openEmergencyModal"
         />
 
@@ -126,7 +105,9 @@
         />
 
         <RelawanStatusDataSheet
+            :server-assessment="false"
             :show="showStatusSheet"
+            :owner="currentOwner"
             :kind="status.kind.value"
             :label="status.label.value"
             :ready="status.ready.value"
@@ -142,12 +123,12 @@
             @retry="status.retry"
         />
 
-        <!-- Bottom Navigation Bar (4 items) -->
+        <!-- Bottom Navigation Bar -->
         <nav
             v-if="!isFocusedAssessment"
-            class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-lg max-w-md mx-auto sm:max-w-lg"
+            class="rm-field-content shrink-0 z-30 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
         >
-            <div class="grid grid-cols-4 h-16">
+            <div class="grid grid-cols-3 h-16">
                 <RelawanLink
                     href="/relawan/home"
                     class="flex flex-col items-center justify-center text-xs font-semibold transition"
@@ -158,7 +139,7 @@
                     "
                 >
                     <House class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>Beranda</span>
+                    <span>{{ $t('nav.home') }}</span>
                 </RelawanLink>
 
                 <RelawanLink
@@ -171,7 +152,7 @@
                     "
                 >
                     <BookOpen class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>PFA</span>
+                    <span>{{ $t('nav.pfa') }}</span>
                 </RelawanLink>
 
                 <RelawanLink
@@ -184,27 +165,9 @@
                     "
                 >
                     <ClipboardList class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>Asesmen</span>
+                    <span>{{ $t('nav.assessment') }}</span>
                 </RelawanLink>
 
-                <RelawanLink
-                    href="/relawan/data"
-                    class="flex flex-col items-center justify-center text-xs font-semibold transition relative"
-                    :class="
-                        isRoute('/relawan/data')
-                            ? 'text-teal-700 font-bold'
-                            : 'text-slate-500 hover:text-slate-800'
-                    "
-                >
-                    <FolderOpen class="mb-1 h-5 w-5" aria-hidden="true" />
-                    <span>Data</span>
-                    <span
-                        v-if="status.pendingCount.value > 0"
-                        class="absolute top-2 right-6 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs"
-                    >
-                        {{ status.pendingCount.value }}
-                    </span>
-                </RelawanLink>
             </div>
         </nav>
     </div>
@@ -212,12 +175,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { BookOpen, ClipboardList, FolderOpen, House, LogOut } from "lucide-vue-next";
+import {
+    BookOpen,
+    ClipboardList,
+    House,
+
+} from "lucide-vue-next";
 import { liveQuery, type Subscription } from "dexie";
 import { router } from "@inertiajs/vue3";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import RelawanLink from "@/relawan/RelawanLink.vue";
-import StatusIndicator from "@/components/ui/StatusIndicator.vue";
+
+
+import { useI18n } from "@/i18n";
+
+const { isEn, t: $t } = useI18n();
 import T0Button from "@/components/Relawan/T0Button.vue";
 import T0Verification from "@/components/Relawan/T0Verification.vue";
 import LocalEmergencyActive from "@/components/Relawan/LocalEmergencyActive.vue";
@@ -225,6 +197,24 @@ import { emergencyRepository } from "@/offline/emergencyRepository";
 import { assessmentRepository } from "@/offline/assessmentRepository";
 import { patientRepository } from "@/offline/patientRepository";
 import RelawanStatusDataSheet from "@/components/Relawan/RelawanStatusDataSheet.vue";
+import OfflineEncryptionGate from "@/components/Relawan/OfflineEncryptionGate.vue";
+import {
+    clinicalKeyReady,
+    clinicalKeyVersion,
+    encryptedMode,
+    lockAllClinicalKeys,
+} from "@/offline/encryptedClinicalStorage";
+import {
+    inspectClinicalInitialization,
+    syntheticLegacyFixture,
+    type InitializationState,
+} from "@/offline/clinicalStorageInitialization";
+import { acceptLocalEnrollmentBootstrap } from "@/offline/localEnrollmentAuthorization";
+import { ensureDeviceClinicalAccess, waitForDeviceClinicalAccess } from "@/offline/deviceKeyWorkflow";
+import { cacheRelawanPatients, cacheRelawanEmergency } from "@/offline/cacheRelawanPage";
+import { rememberUnlockedRelawan } from "@/offline/offlineOwnerProfile";
+import { isolatedEncryptionFixture } from "@/offline/offlineKeyWorkflow";
+import { syncManager } from "@/offline/syncManager";
 import { useRelawanOperationalStatus } from "@/composables/useRelawanOperationalStatus";
 import {
     lockRelawanContinuity,
@@ -232,11 +222,19 @@ import {
     resolveRelawanContinuity,
 } from "@/offline/relawanContinuity";
 import { registerRelawanServiceWorker } from "@/pwa/register";
+import OfflineReadinessNotice from "@/components/Relawan/OfflineReadinessNotice.vue";
+import AssessmentAppHeader from "@/components/Relawan/Assessment/AssessmentAppHeader.vue";
 import {
     openRelawanLogin,
     relawanSessionRecovery,
 } from "@/offline/sessionRecovery";
 
+const layoutProps = defineProps<{ clinicalAccessRequested?: boolean; identityShelter?: string | null }>();
+const emit = defineEmits<{
+    "clinical-lock": [];
+    "clinical-ready": [];
+    "emergency-interrupt": [];
+}>();
 const runtime = useRelawanRuntime();
 const user = computed(() => ({
     id: runtime.owner,
@@ -252,74 +250,207 @@ const currentOwner = computed(() =>
         ? Number(user.value.id) || null
         : null,
 );
+const clinicalViewRoot = ref<HTMLElement | null>(null);
+type OwnerStorageState =
+    | InitializationState
+    | "CHECKING"
+    | "LEGACY"
+    | "ENCRYPTED";
+const ownerStorageMode = ref<OwnerStorageState>("CHECKING");
+let storageModeSubscription: Subscription | undefined;
+// Recheck the gate when blocked storage recovers, without remounting a
+// legitimate FRESH → ENROLLMENT_PENDING → confirmed enrollment.
+const encryptionGateKey = computed(
+    () =>
+        `${currentOwner.value}:${[
+            "INCONSISTENT",
+            "INACCESSIBLE",
+            "LEGACY_BLOCKED",
+            "ACTIVATION_DISABLED",
+        ].includes(ownerStorageMode.value)}`,
+);
+const clinicalUnlocked = computed(() =>
+    currentOwner.value ? clinicalKeyReady(currentOwner.value) : false,
+);
+const clinicalViewKey = computed(() => `${currentOwner.value}:${clinicalKeyVersion()}`);
+function maskClinicalView() {
+    emit("clinical-lock");
+    if (clinicalViewRoot.value) {
+        clinicalViewRoot.value.style.display = "none";
+        clinicalViewRoot.value.setAttribute("aria-hidden", "true");
+    }
+}
+let storageModeCheck = 0;
 const activeLocalId = ref<string | null>(null);
 const showStatusSheet = ref(false);
 const loggedOutLocally = ref(false);
 const checkingContinuity = ref(runtime.mode === "ONLINE_SERVER");
-const logoutError = ref("");
+const rawLogoutError = ref<{ id: string; en: string } | string>("");
+const logoutError = computed(() =>
+    typeof rawLogoutError.value === "string"
+        ? rawLogoutError.value
+        : isEn.value
+          ? rawLogoutError.value.en
+          : rawLogoutError.value.id,
+);
 let continuityCheck = 0;
 let offlineContinuitySubscription: Subscription | undefined;
-const status = useRelawanOperationalStatus(
-    currentOwner,
-    computed(() => runtime.mode === "ONLINE_SERVER"),
+function refreshOwnerStorageMode(owner: number | null) {
+    const check = ++storageModeCheck;
+    storageModeSubscription?.unsubscribe();
+    storageModeSubscription = undefined;
+    ownerStorageMode.value = "CHECKING";
+    if (!owner) return;
+    const apply = (state: OwnerStorageState) => {
+        if (check !== storageModeCheck || owner !== currentOwner.value) return;
+        ownerStorageMode.value = state;
+        const trusted =
+            state === "ENCRYPTED_LOCKED" ||
+            (syntheticLegacyFixture() &&
+                (state === "ENCRYPTED" || state === "LEGACY"));
+        // Only installed clinical keys are revoked. Fresh/pending enrollment
+        // has no installed key, so repeated inspections cannot cancel it.
+        if (!trusted && clinicalKeyReady(owner)) lockAllClinicalKeys();
+    };
+    if (syntheticLegacyFixture()) {
+        void encryptedMode(owner)
+            .then((encrypted) => apply(encrypted ? "ENCRYPTED" : "LEGACY"))
+            .catch(() => apply("INACCESSIBLE"));
+        return;
+    }
+    void acceptLocalEnrollmentBootstrap(owner, runtime.pageProps.offlineEnrollment)
+        .then(() => ensureDeviceClinicalAccess(owner)).then(() => {
+        if (check !== storageModeCheck || owner !== currentOwner.value) return;
+        storageModeSubscription = liveQuery(() => inspectClinicalInitialization(owner)).subscribe({
+            next: apply,
+            error: () => apply("INACCESSIBLE"),
+        });
+    }).catch(() => apply("INACCESSIBLE"));
+}
+watch(currentOwner, refreshOwnerStorageMode, {
+    immediate: true,
+    flush: "sync",
+});
+const onlineAssessmentAvailable = computed(() => {
+    const assessment = runtime.pageProps.assessment as { id?: string; user_id?: number; patient_id?: string } | undefined;
+    const match = runtime.path.split(/[?#]/)[0].match(/^\/relawan\/assessment\/([^/]+)\/(identity|srq|risk|function|review|result)$/);
+    return runtime.mode === "ONLINE_SERVER" && !!match && assessment?.id === match[1] &&
+        assessment?.user_id === currentOwner.value && !!assessment?.patient_id;
+});
+const onlineAssessmentListAvailable = computed(() => runtime.mode === "ONLINE_SERVER" &&
+    runtime.path.split(/[?#]/)[0] === "/relawan/assessment/drafts" && Array.isArray(runtime.pageProps.inProgressAssessments));
+const requiresClinicalKey = computed(() => layoutProps.clinicalAccessRequested || !/^\/relawan\/(home|pfa|assessment)\/?$/.test(runtime.path.split(/[?#]/)[0]));
+const clinicalViewAvailable = computed(
+    () =>
+        !!currentOwner.value &&
+        (ownerStorageMode.value === "LEGACY" ||
+            ((ownerStorageMode.value === "ENCRYPTED_LOCKED" ||
+                ownerStorageMode.value === "ENCRYPTED") &&
+                clinicalUnlocked.value)),
 );
+const status = useRelawanOperationalStatus(
+    computed(() => (clinicalViewAvailable.value ? currentOwner.value : null)),
+    computed(() => true),
+);
+watch(
+    clinicalViewAvailable,
+    (available) => {
+        if (!available && requiresClinicalKey.value) maskClinicalView();
+    },
+    { flush: "sync" },
+);
+watch(
+    [clinicalViewAvailable, clinicalViewKey],
+    ([available]) => {
+        if (available || !requiresClinicalKey.value) {
+            clinicalViewRoot.value?.style.removeProperty("display");
+            clinicalViewRoot.value?.removeAttribute("aria-hidden");
+            if (available) emit("clinical-ready");
+            if (available && !syntheticLegacyFixture() && runtime.mode === "ONLINE_SERVER")
+                void rememberUnlockedRelawan(user.value).then(async () => {
+                    await cacheRelawanPatients(runtime.owner, runtime.pageProps.patients);
+                    await cacheRelawanEmergency(runtime.owner, runtime.pageProps.emergency);
+                }).catch(() => {});
+        }
+    },
+    { immediate: true, flush: "post" },
+);
+
+function onClinicalUnlocked() {
+    status.refresh();
+    if (runtime.mode === "ONLINE_SERVER" && currentOwner.value)
+        void syncManager.sync(currentOwner.value).catch(() => {});
+}
 const compactStatusLabel = computed(() => {
     switch (status.kind.value) {
         case "local-failure":
-            return "Belum tersimpan";
+            return isEn.value ? "Not saved" : "Belum tersimpan";
         case "unavailable":
-            return "Status belum siap";
+            return isEn.value ? "Status unavailable" : "Status belum siap";
         case "recovering-session":
-            return "Memulihkan…";
+            return isEn.value ? "Recovering…" : "Memulihkan…";
         case "reauthentication-required":
-            return "Perlu masuk";
+            return isEn.value ? "Sign in required" : "Perlu masuk";
         case "syncing":
             return status.pendingCount.value > 0
-                ? `Sinkron ${status.pendingCount.value}`
-                : "Sinkron…";
+                ? (isEn.value ? `Syncing ${status.pendingCount.value}` : `Sinkron ${status.pendingCount.value}`)
+                : (isEn.value ? "Syncing…" : "Sinkron…");
         case "offline":
             if (status.pendingCount.value > 0) {
-                return `Offline • ${status.pendingCount.value} tertunda`;
+                return isEn.value
+                    ? `Offline • ${status.pendingCount.value} pending`
+                    : `Offline • ${status.pendingCount.value} tertunda`;
             }
 
             if (status.unfinishedCount.value > 0) {
-                return "Offline • tersimpan";
+                return isEn.value ? "Offline • saved" : "Offline • tersimpan";
             }
 
             return "Offline";
         case "failed":
-            return "Sinkron gagal";
+            return isEn.value ? "Sync failed" : "Sinkron gagal";
         case "pending":
-            return `${status.pendingCount.value} tertunda`;
+            return isEn.value ? `${status.pendingCount.value} pending` : `${status.pendingCount.value} tertunda`;
         case "unqueued":
-            return "Belum siap";
+            return isEn.value ? "Not ready" : "Belum siap";
         case "local-only":
-            return "Tersimpan lokal";
+            return isEn.value ? "Saved locally" : "Tersimpan lokal";
         case "synced":
-            return "Tersinkron";
+            return isEn.value ? "Synced" : "Tersinkron";
         default:
             return "Status";
     }
 });
-const isDataRoute = computed(
-    () => runtime.path.split("?")[0] === "/relawan/data",
+const isFocusedAssessment = computed(
+    () =>
+        runtime.path.split("?")[0] !== "/relawan/assessment/drafts" &&
+        /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(
+            runtime.path.split("?")[0],
+        ),
 );
-const isFocusedAssessment = computed(() =>
-    runtime.path.split("?")[0] !== "/relawan/assessment/drafts" &&
-    /^\/relawan\/assessment\/[^/]+(?:\/|$)/.test(runtime.path.split("?")[0]),
+const showLocalIncident = computed(() => runtime.mode === "ONLINE_SERVER" && !!activeLocalId.value && !!currentOwner.value);
+const hasAssessmentActionBar = computed(() =>
+    !showLocalIncident.value &&
+    /^\/relawan\/assessment\/[^/]+\/(srq|risk|function|review)\/?$/.test(
+        runtime.path.split("?")[0],
+    ),
 );
 const recoveryMessage = computed(() => {
     if (runtime.mode === "ONLINE_SERVER") {
         if (status.sessionState.value === "RECOVERING_SESSION")
             return {
-                title: "Memulihkan sesi…",
-                detail: "Data tetap aman di perangkat. Sinkronisasi akan dilanjutkan setelah konteks server dipulihkan.",
+                title: isEn.value ? "Recovering session…" : "Memulihkan sesi…",
+                detail: isEn.value
+                    ? "Data remains safe on device. Synchronization will continue after server context is restored."
+                    : "Data tetap aman di perangkat. Sinkronisasi akan dilanjutkan setelah konteks server dipulihkan.",
                 login: false,
             };
         if (status.sessionState.value === "REAUTHENTICATION_REQUIRED")
             return {
-                title: "Perlu masuk kembali untuk sinkronisasi.",
-                detail: "Data tetap aman di perangkat.",
+                title: isEn.value
+                    ? "Sign in again to synchronize."
+                    : "Perlu masuk kembali untuk sinkronisasi.",
+                detail: isEn.value ? "Data remains safe on device." : "Data tetap aman di perangkat.",
                 login: true,
             };
         return null;
@@ -327,38 +458,44 @@ const recoveryMessage = computed(() => {
     switch (relawanSessionRecovery.state) {
         case "CHECKING":
             return {
-                title: "Memulihkan sesi…",
-                detail: "Memeriksa ketersediaan server tanpa mengirim data lokal.",
-                login: false,
-            };
-        case "RESTORING_ONLINE_RUNTIME":
-            return {
-                title: "Memulihkan sesi…",
-                detail: "Membuka kembali aplikasi server sebelum sinkronisasi dimulai.",
+                title: isEn.value ? "Recovering session…" : "Memulihkan sesi…",
+                detail: isEn.value
+                    ? "Checking server availability without transmitting local data."
+                    : "Memeriksa ketersediaan server tanpa mengirim data lokal.",
                 login: false,
             };
         case "REAUTHENTICATION_REQUIRED":
             return {
-                title: "Perlu masuk kembali untuk sinkronisasi.",
-                detail: "Data tetap aman di perangkat.",
+                title: isEn.value
+                    ? "Sign in again to synchronize."
+                    : "Perlu masuk kembali untuk sinkronisasi.",
+                detail: isEn.value ? "Data remains safe on device." : "Data tetap aman di perangkat.",
                 login: true,
             };
         case "WRONG_IDENTITY":
             return {
-                title: "Akun server tidak sesuai.",
-                detail: "Data akun Relawan ini tetap aman dan tidak akan disinkronkan melalui akun lain. Keluar dari akun server yang aktif, lalu masuk dengan akun yang benar.",
+                title: isEn.value ? "Server account mismatch." : "Akun server tidak sesuai.",
+                detail: isEn.value
+                    ? "This Volunteer's data remains safe and will not sync through another account. Sign out of the active server account and sign in with the correct one."
+                    : "Data akun Relawan ini tetap aman dan tidak akan disinkronkan melalui akun lain. Keluar dari akun server yang aktif, lalu masuk dengan akun yang benar.",
                 login: true,
             };
         case "ACCOUNT_INACTIVE":
             return {
-                title: "Sinkronisasi tidak diizinkan.",
-                detail: "Akun perlu diaktifkan oleh Admin. Data tetap aman di perangkat.",
+                title: isEn.value ? "Synchronization not allowed." : "Sinkronisasi tidak diizinkan.",
+                detail: isEn.value
+                    ? "Account needs activation by Admin. Data remains safe on device."
+                    : "Akun perlu diaktifkan oleh Admin. Data tetap aman di perangkat.",
                 login: true,
             };
         case "SERVER_REJECTED":
             return {
-                title: "Sinkronisasi belum dapat dilanjutkan.",
-                detail: "Server menolak pemulihan sesi. Data tetap aman di perangkat.",
+                title: isEn.value
+                    ? "Synchronization cannot continue yet."
+                    : "Sinkronisasi belum dapat dilanjutkan.",
+                detail: isEn.value
+                    ? "Server rejected session recovery. Data remains safe on device."
+                    : "Server menolak pemulihan sesi. Data tetap aman di perangkat.",
                 login: true,
             };
         default:
@@ -367,9 +504,11 @@ const recoveryMessage = computed(() => {
 });
 
 const assessmentRoute = computed(() =>
-    runtime.path.split("?")[0].match(
-        /^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/,
-    ),
+    runtime.path
+        .split("?")[0]
+        .match(
+            /^\/relawan\/assessment\/([^/]+)\/(?:identity|srq|risk|function|review|result)\/?$/,
+        ),
 );
 const serverAssessmentContext = computed(() => {
     const route = assessmentRoute.value;
@@ -404,18 +543,22 @@ const t0AssessmentContext = ref<T0AssessmentContext | null>(null);
 const showEmergencyModal = ref(false);
 let emergencyOpenCheck = 0;
 async function openEmergencyModal() {
+    emit("emergency-interrupt");
     const check = ++emergencyOpenCheck;
     const path = runtime.path;
     const owner = currentOwner.value;
     t0AssessmentContext.value = null;
     if (!owner) return;
-
+    // Startup is automatic; an emergency never starts enrollment or requests a secret.
+    await waitForDeviceClinicalAccess(owner).catch(() => {});
+    if (owner !== currentOwner.value || path !== runtime.path || check !== emergencyOpenCheck) return;
+    const keyVersion = clinicalKeyVersion();
     const route = assessmentRoute.value;
     let context: T0AssessmentContext | null = null;
     if (route) {
         if (serverAssessmentContext.value) {
             context = serverAssessmentContext.value;
-        } else {
+        } else if (clinicalViewAvailable.value) {
             try {
                 const assessment = await assessmentRepository.get(
                     owner,
@@ -436,7 +579,12 @@ async function openEmergencyModal() {
             }
         }
     }
-    if (check !== emergencyOpenCheck || path !== runtime.path || owner !== currentOwner.value) {
+    if (
+        check !== emergencyOpenCheck ||
+        keyVersion !== clinicalKeyVersion() ||
+        path !== runtime.path ||
+        owner !== currentOwner.value
+    ) {
         return;
     }
     t0AssessmentContext.value = context;
@@ -447,24 +595,62 @@ watch([() => runtime.path, currentOwner], () => {
     showEmergencyModal.value = false;
     t0AssessmentContext.value = null;
 });
+let emergencyKeyWasReady = clinicalKeyReady(currentOwner.value ?? 0);
+watch(
+    clinicalKeyVersion,
+    () => {
+        const keyReady = !!currentOwner.value && clinicalKeyReady(currentOwner.value);
+        const unlocking = !emergencyKeyWasReady && keyReady;
+        emergencyKeyWasReady = keyReady;
+        // Hide synchronously; Vue then unmounts the old view on its next render.
+        if (requiresClinicalKey.value) maskClinicalView();
+        refreshOwnerStorageMode(currentOwner.value);
+        if (!unlocking) {
+            ++emergencyOpenCheck;
+            showEmergencyModal.value = false;
+            t0AssessmentContext.value = null;
+            showStatusSheet.value = false;
+        }
+        activeLocalId.value = null;
+    },
+    { flush: "sync" },
+);
+watch(
+    currentOwner,
+    (owner, prior) => {
+        if (prior && owner !== prior) {
+            maskClinicalView();
+            lockAllClinicalKeys();
+        }
+    },
+    { flush: "sync" },
+);
 function isRoute(path: string) {
     return runtime.path.startsWith(path);
 }
 
 function retryServerLogout() {
     if (!navigator.onLine) {
-        logoutError.value =
-            "Hubungkan perangkat untuk menyelesaikan logout server.";
+        rawLogoutError.value = {
+            id: "Hubungkan perangkat untuk menyelesaikan logout server.",
+            en: "Connect device to complete server sign-out.",
+        };
         return;
     }
+    const failed = () => {
+        rawLogoutError.value = {
+            id: "Logout server belum berhasil. Akses lokal tetap dikunci.",
+            en: "Server sign-out did not succeed. Local access remains locked.",
+        };
+        return false;
+    };
     router.post(
         "/logout",
         {},
         {
-            onError: () => {
-                logoutError.value =
-                    "Logout server belum berhasil. Akses lokal tetap dikunci.";
-            },
+            onError: failed,
+            onNetworkError: failed,
+            onHttpException: failed,
         },
     );
 }
@@ -477,8 +663,10 @@ async function logout() {
     } catch {
         if (check === continuityCheck) {
             checkingContinuity.value = false;
-            logoutError.value =
-                "Perangkat belum dapat mencatat permintaan keluar. Coba lagi.";
+            rawLogoutError.value = {
+                id: "Perangkat belum dapat mencatat permintaan keluar. Coba lagi.",
+                en: "Device could not record sign-out request yet. Please try again.",
+            };
         }
         return;
     }
@@ -487,14 +675,17 @@ async function logout() {
     if (navigator.onLine && runtime.mode === "ONLINE_SERVER") {
         retryServerLogout();
     } else {
-        logoutError.value =
-            "Logout server tertunda hingga perangkat terhubung kembali.";
+        rawLogoutError.value = {
+            id: "Logout server tertunda hingga perangkat terhubung kembali.",
+            en: "Server sign-out is deferred until device reconnects.",
+        };
     }
 }
 
 function onEmergencyCreated(event: Event) {
     const detail = (event as CustomEvent<{ owner: number; id: string }>).detail;
     if (detail.owner !== currentOwner.value) return;
+    emit("emergency-interrupt");
     if (runtime.mode === "OFFLINE_FIELD_MODE")
         runtime.navigate(`/relawan/emergencies/${detail.id}`);
     else activeLocalId.value = detail.id;
@@ -503,13 +694,19 @@ function onEmergencyCreated(event: Event) {
 watch(
     currentOwner,
     (owner) => {
+        const keyVersion = clinicalKeyVersion();
         activeLocalId.value = null;
         showStatusSheet.value = false;
-        if (!owner || /^\/relawan\/emergencies\//.test(runtime.path)) return;
+        if (!owner || (!clinicalKeyReady(owner) && !syntheticLegacyFixture()) || /^\/relawan\/emergencies\//.test(runtime.path)) return;
         void emergencyRepository
             .list(owner)
             .then((items) => {
-                if (owner !== currentOwner.value || activeLocalId.value) return;
+                if (
+                    owner !== currentOwner.value ||
+                    keyVersion !== clinicalKeyVersion() ||
+                    activeLocalId.value
+                )
+                    return;
                 const pending = items.filter(
                     (item) =>
                         item.status === "PENDING" &&
@@ -539,15 +736,19 @@ async function checkContinuity() {
             result.state !== "ELIGIBLE" ||
             result.context.owner_user_id !== Number(user.value?.id);
         if (result.state === "STORAGE_UNAVAILABLE") {
-            logoutError.value =
-                "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.";
+            rawLogoutError.value = {
+                id: "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.",
+                en: "Device access cannot be verified yet. Retry when storage is available.",
+            };
         }
     } catch {
         if (check !== continuityCheck) return;
         // If the local store cannot be checked, a previous logout intent is unknown.
         loggedOutLocally.value = true;
-        logoutError.value =
-            "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.";
+        rawLogoutError.value = {
+            id: "Akses perangkat belum dapat diperiksa. Coba lagi saat penyimpanan tersedia.",
+            en: "Device access cannot be verified yet. Retry when storage is available.",
+        };
     } finally {
         if (check === continuityCheck) checkingContinuity.value = false;
     }
@@ -577,6 +778,8 @@ onMounted(() => {
     window.addEventListener("rapid-mind:emergency-created", onEmergencyCreated);
 });
 onUnmounted(() => {
+    ++storageModeCheck;
+    storageModeSubscription?.unsubscribe();
     offlineContinuitySubscription?.unsubscribe();
     window.removeEventListener(
         "rapid-mind:emergency-created",
@@ -585,3 +788,19 @@ onUnmounted(() => {
     window.removeEventListener("rapid-mind:verified-login", onVerifiedLogin);
 });
 </script>
+
+<style scoped>
+.relawan-identity-main { padding-top: 0; }
+</style>
+
+<style scoped>
+.incident-emergency-action {
+    position: static;
+    flex: none;
+    display: flex;
+    justify-content: flex-end;
+    padding: .375rem 1rem max(.375rem, env(safe-area-inset-bottom));
+    background: white;
+    border-top: 1px solid #e2e8f0;
+}
+</style>

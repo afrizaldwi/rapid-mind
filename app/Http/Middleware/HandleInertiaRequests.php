@@ -52,6 +52,24 @@ class HandleInertiaRequests extends Middleware
                     'facility' => $request->user()->facility ? ['id' => $request->user()->facility->id, 'name' => $request->user()->facility->name] : null,
                 ] : null,
             ],
+            'offlineEnrollment' => fn () => $request->user()?->role === UserRole::RELAWAN ? [
+                'owner' => $request->user()->id,
+                'origin' => \App\Support\LocalOfflineEnrollment::resolvedOrigin(
+                    (string) app()->environment(), (string) config('app.url'),
+                    (bool) config('offline.local_enrollment', false), $request,
+                    $request->user(), (int) $request->user()->id, (array) config('offline.demo_origins', []),
+                ),
+                'allowed' => \App\Support\LocalOfflineEnrollment::allowed(
+                    (string) app()->environment(), (string) config('app.url'),
+                    (bool) config('offline.local_enrollment', false), $request,
+                    $request->user(), (int) $request->user()->id,
+                    (array) config('offline.demo_origins', []),
+                ),
+            ] : null,
+            'clinicalScopeAvailable' => \App\Domain\Healthcare\HealthcareCaseAccess::available(),
+            'healthcareChannel' => \App\Domain\Healthcare\HealthcareCaseAccess::available()
+                && \App\Domain\Healthcare\HealthcareCaseAccess::facility($request->user()) !== null
+                ? \App\Domain\Healthcare\CaseAudience::channel($request->user()->fresh()) : null,
             'flash' => [
                 'message' => fn () => $request->session()->get('message'),
                 'error' => fn () => $request->session()->get('error'),
@@ -59,7 +77,9 @@ class HandleInertiaRequests extends Middleware
         ];
 
         if ($request->user()?->role === UserRole::HEALTHCARE && $request->is('healthcare/*')) {
-            $shared['pendingT0Count'] = fn () => EmergencyEvent::where('status', EmergencyStatus::PENDING)->count();
+            $shared['pendingT0Count'] = fn () => \App\Domain\Healthcare\HealthcareCaseAccess::available()
+                ? \App\Domain\Healthcare\HealthcareCaseAccess::cases(EmergencyEvent::query(), $request->user())
+                    ->where('status', EmergencyStatus::PENDING)->count() : null;
         }
 
         return $shared;

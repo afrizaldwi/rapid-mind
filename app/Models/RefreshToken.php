@@ -9,11 +9,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class RefreshToken extends Model
 {
+    protected $hidden = ['token_hash', 'jti'];
+
     protected $fillable = [
         'jti',
+        'family_id',
+        'token_hash',
         'user_id',
         'expires_at',
         'revoked_at',
+        'consumed_at',
     ];
 
     protected function casts(): array
@@ -21,6 +26,7 @@ final class RefreshToken extends Model
         return [
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'consumed_at' => 'datetime',
         ];
     }
 

@@ -1,14 +1,14 @@
 <template>
     <HealthcareLayout>
-        <div class="space-y-5 max-w-5xl">
+        <div class="hc-page space-y-5 w-full">
             <!-- Page Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
-                        Rekam Medis Pasien
+                    <h1 class="hc-page-title rm-page-heading text-slate-900">
+                        {{ $t('healthcare.patients.title', 'Rekam Medis Pasien') }}
                     </h1>
-                    <p class="text-xs text-slate-500 mt-1 font-normal">
-                        Direktori rekam jejak skrining dan status tindak lanjut klinis penyintas bencana.
+                    <p class="rm-page-description text-sm font-normal">
+                        {{ $t('healthcare.patients.subtitle', 'Direktori rekam jejak skrining dan status tindak lanjut klinis penyintas bencana.') }}
                     </p>
                 </div>
 
@@ -22,23 +22,24 @@
                     <input
                         v-model="searchQuery"
                         type="search"
-                        placeholder="Cari nama atau NIK..."
-                        class="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-700 focus:outline-none"
+                        :aria-label="$t('healthcare.patients.searchPlaceholder', 'Cari nama atau NIK...')"
+                        :placeholder="$t('healthcare.patients.searchPlaceholder', 'Cari nama atau NIK...')"
+                        class="hc-panel w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-700 focus:outline-none"
                     />
                 </div>
             </div>
 
             <!-- Unified Table Surface -->
-            <div class="bg-white rounded-xl border border-slate-200/80 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
+            <div class="hc-panel bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+                <div class="rm-table-region">
+                    <table class="hc-patient-table w-full text-left text-xs">
                         <thead class="bg-slate-50/60 text-slate-400 uppercase tracking-wider text-[10px] font-semibold border-b border-slate-100">
                             <tr>
-                                <th class="py-3 px-4">Nama Pasien</th>
+                                <th class="py-3 px-4">{{ $t('healthcare.patients.columns.name', 'Nama Pasien') }}</th>
                                 <th class="py-3 px-4">NIK</th>
-                                <th class="py-3 px-4">Posko Lapangan</th>
-                                <th class="py-3 px-4">Status Klinis Terkini</th>
-                                <th class="py-3 px-4 text-right">Aksi</th>
+                                <th class="py-3 px-4">{{ $t('healthcare.patients.columns.shelter', 'Posko Lapangan') }}</th>
+                                <th class="py-3 px-4">{{ $t('healthcare.patients.columns.status', 'Status Klinis Terkini') }}</th>
+                                <th class="py-3 px-4 text-right">{{ $t('common.actions', 'Aksi') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-normal text-slate-800">
@@ -54,7 +55,7 @@
                                     {{ maskNik(p.nik) }}
                                 </td>
                                 <td class="py-3 px-4 text-slate-600">
-                                    {{ p.shelter?.name || "Posko tidak diketahui" }}
+                                    {{ p.shelter?.name || $t('healthcare.patients.unrecordedShelter', 'Posko tidak diketahui') }}
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="flex items-center gap-1.5 text-xs font-bold" :class="latestTextColor(p)">
@@ -68,7 +69,7 @@
                                         <template
                                             v-if="p.latest_clinical_status.source === 'active_emergency'"
                                         >
-                                            Insiden darurat
+                                            {{ $t('healthcare.patients.emergencyIncident', 'Insiden darurat') }}
                                         </template>
                                         <template v-else>
                                             {{ latestSource(p.latest_clinical_status.source) }}
@@ -81,9 +82,9 @@
                                 <td class="py-3 px-4 text-right">
                                     <Link
                                         :href="`/healthcare/patients/${p.id}`"
-                                        class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition inline-block"
+                                        class="hc-record-link px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition inline-block"
                                     >
-                                        Detail Pasien
+                                        {{ $t('healthcare.patients.viewRecord', 'Detail Pasien') }}
                                     </Link>
                                 </td>
                             </tr>
@@ -95,13 +96,13 @@
                     v-if="!patients || patients.length === 0"
                     class="p-8 text-center text-xs text-slate-400"
                 >
-                    Belum ada data pasien terdata.
+                    {{ $t('healthcare.patients.noPatients', 'Belum ada data pasien terdata.') }}
                 </div>
                 <div
                     v-else-if="filteredPatients.length === 0"
                     class="p-8 text-center text-xs text-slate-400"
                 >
-                    Tidak ada pasien yang cocok dengan kata kunci pencarian.
+                    {{ $t('healthcare.patients.noResults', 'Tidak ada pasien yang cocok dengan kata kunci pencarian.') }}
                 </div>
             </div>
         </div>
@@ -112,13 +113,19 @@
 import { computed, ref } from "vue";
 import { Link } from "@inertiajs/vue3";
 import HealthcareLayout from "@/layouts/HealthcareLayout.vue";
+import { t as $t, useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
 
 const props = defineProps<{
     patients: any[];
 }>();
 
+const { locale } = useI18n();
+
 function latestCategory(patient: any): string {
-    return patient.latest_clinical_status?.label || "Belum ada hasil";
+    return patient.latest_clinical_status?.label
+        ? localizeMessage(patient.latest_clinical_status.label, locale.value)
+        : $t("healthcare.patients.noResultYet", "Belum ada hasil");
 }
 
 function latestTextColor(patient: any): string {
@@ -140,20 +147,21 @@ function latestDotColor(patient: any): string {
 }
 
 function latestSource(source?: string): string {
-    return (
-        (
-            {
-                active_emergency: "Darurat aktif",
-                emergency_decision: "Keputusan T0 Healthcare",
-                assessment_validation: "Validasi Healthcare",
-                system_recommendation: "Rekomendasi sistem",
-            } as Record<string, string>
-        )[source ?? ""] || "Sumber tidak tersedia"
-    );
+    const key = `healthcare.patients.sources.${source ?? ""}`;
+    const fallbacks: Record<string, string> = {
+        active_emergency: "Darurat aktif",
+        emergency_decision: "Keputusan T0 Healthcare",
+        assessment_validation: "Validasi Healthcare",
+        system_recommendation: "Rekomendasi sistem",
+    };
+    if (source && fallbacks[source]) {
+        return $t(key, fallbacks[source]);
+    }
+    return $t("healthcare.patients.sources.unavailable", "Sumber tidak tersedia");
 }
 
 function formatDate(value: string): string {
-    return new Intl.DateTimeFormat("id-ID", {
+    return new Intl.DateTimeFormat(locale.value === "en" ? "en-US" : "id-ID", {
         dateStyle: "medium",
         timeStyle: "short",
         timeZone: "Asia/Jakarta",
@@ -162,18 +170,19 @@ function formatDate(value: string): string {
 
 function maskNik(nik?: string): string {
     const normalized = String(nik ?? "").replace(/\D/g, "");
-    if (normalized.length < 8) return "NIK tidak tersedia";
+    if (normalized.length < 8) return $t("healthcare.patients.nikUnavailable", "NIK tidak tersedia");
     return `${normalized.slice(0, 4)}••••${normalized.slice(-4)}`;
 }
 
 const searchQuery = ref("");
 const filteredPatients = computed(() => {
-    const query = searchQuery.value.trim().toLocaleLowerCase("id-ID");
+    const localeCode = locale.value === "en" ? "en-US" : "id-ID";
+    const query = searchQuery.value.trim().toLocaleLowerCase(localeCode);
     const digits = query.replace(/\D/g, "");
     if (!query) return props.patients ?? [];
 
     return (props.patients ?? []).filter((patient) => {
-        const name = String(patient.name ?? "").toLocaleLowerCase("id-ID");
+        const name = String(patient.name ?? "").toLocaleLowerCase(localeCode);
         const nik = String(patient.nik ?? "").replace(/\D/g, "");
         return (
             name.includes(query) || (digits.length > 0 && nik.includes(digits))

@@ -1,0 +1,446 @@
+# RAPID-MIND — Offline Clinical Data Security
+
+## Preserve legacy storage while enabling new work — 15 November 2026
+
+An authenticated online Relawan with legacy plaintext, a version-1 wrapped key,
+or unfinished enrollment may initialize a separate physical IndexedDB database,
+`RapidMindDeviceOfflineDB`. The original `RapidMindOfflineDB` is preserved.
+This is a new-write isolation boundary, not a cryptographic migration or recovery.
+Existing healthy device storage stays in its original database unless the profile
+has already established the isolated database.
+
+Continuity selects the established database before reads on offline restart.
+New keys still require the existing exact-origin, authenticated server grant.
+Owner isolation, logout intent, key proofs, access fences, non-extractable
+AES-256-GCM keys, and atomic encrypted emergency/outbox writes remain required.
+Opening a separate database grants neither authentication nor decryption.
+Old clients retain their old database, so they cannot overwrite the new queue.
+
+The Relawan shell explicitly states that old drafts/queues remain stored and
+have not automatically been delivered. Old wrapped ciphertext still requires its
+original secret for recovery. Unknown or inconsistent data in the selected
+database continues to fail closed; there is no repeated automatic reset.
+See [preservation and browser evidence](checkpoints/legacy-storage-isolation-2026-11-15.md).
+
+## Explicit HTTPS demo enrollment — 15 November 2026
+
+The owner-reported ngrok T0 failure was caused by the localhost-only device
+enrollment policy. HTTPS demo enrollment now supports exact server-configured
+origins in `OFFLINE_ENCRYPTION_DEMO_ORIGINS` (comma-separated, default empty).
+`APP_ENV=local`, the existing localhost `APP_URL`, the enrollment opt-in,
+active Relawan role, matching web-session version and owner remain required.
+The direct Host must match the configured HTTPS origin; a foreign Origin,
+wildcard setting or spoofed forwarded host cannot authorize enrollment.
+
+The frontend requests same-origin authorization and accepts only a grant for
+its exact current origin and owner. New device activation metadata records
+`activation_origin`; HTTPS offline restoration requires that exact origin.
+The existing non-extractable AES-256-GCM key remains in IndexedDB. Localhost
+keys and ciphertext are not copied to ngrok; old or ambiguous storage is neither
+converted nor deleted. See
+[live ngrok T0 evidence](checkpoints/ngrok-t0-enrollment-2026-11-15.md).
+
+## Offline refresh with a locked key
+
+A verified local Relawan session can reopen Home, PFA and the assessment start
+page from the installed PWA after a reload. These routes can render with empty
+props and generic volunteer identity. Reading the encrypted owner profile,
+drafts, patients and individual reports still requires a valid clinical key.
+The locked clinical screen links back to Home. Local logout and owner mismatch
+still deny the offline session. Reload never restores the key from storage.
+
+## Online assessment creation — 14 November 2026
+
+Assessment Index now creates online assessments directly through the existing
+authorized, idempotent assessment sync endpoint without a clinical DEK or local
+clinical write. Patient and assessment UUIDs are generated once per attempt.
+Uncertain acceptance retains that exact snapshot and those identifiers for an
+encrypted retry, preventing a lost response from producing a second case.
+
+If a valid clinical key is already available, failed creation persists through
+the encrypted repositories and durable assessment outbox. Otherwise it explicitly
+requests unlock, warns that the snapshot exists only in page memory, and requires
+another Start action after unlocking. It never persists plaintext or claims the
+pending snapshot is durable before encryption succeeds. If enrollment is disabled,
+that secure fallback remains blocked; ordinary successful online creation works.
+Existing completion/receipt/routing cleanup and unfinished-draft retention remain.
+
+This change concerns assessment creation. Existing online stage adapters retain
+their separate failure behavior, including page-memory-only partial answers;
+this checkpoint does not claim automatic offline recovery for every online stage.
+See [creation checkpoint](ui/online-assessment-start-2026-11-14.md).
+
+## Emergency guidance inside T0 — 14 November 2026
+
+The owner requested removal of the standalone emergency-help card. Public help
+is now an explicitly expanded guide inside the T0 panel, available before local
+clinical unlock. It is removed from the general layout and encryption gate.
+The locked offline shell also exposes T0 guidance, including while its unlock
+screen is visible. That shell's help dialog contains no report submission form.
+
+Opening or expanding guidance does not unlock data, create an emergency, enqueue
+an operation, call anyone or transmit a T0 request. Existing explicit verification,
+final Send, clinical unlock and atomic encrypted emergency/outbox requirements
+remain unchanged. No verified assistance contacts have been configured, and no
+sample contact numbers are introduced. See the
+[checkpoint evidence](ui/t0-emergency-guidance-panel-2026-11-14.md).
+
+## Relawan delivered-copy retention — 14 November 2026
+
+The owner authorized automatic removal of delivered local History copies.
+Cleanup requires an encrypted record marked SYNCED and ROUTED, a matching
+canonical receipt with a valid acceptance time/revision, and an exact digest
+match to the ciphertext acknowledged by that receipt. A completed assessment
+must also have no pending T0 or outbox dependency. Orphan patient copies are
+removed only when all related work is gone and their local state is SYNCED.
+
+The cleanup transaction rechecks the owner/key access fence, all owner
+ciphertexts, outbox indexes and receipts before deletion. Concurrent writes or
+locking abort cleanup. Minimal receipt/ID bookkeeping remains for idempotency.
+Server records, Healthcare state, device keys and unfinished work are preserved.
+Cleanup runs after sync acceptance and when unlocked local records are loaded.
+
+Relawan has no History page or navigation entry. The old /relawan/data URL
+redirects to Home online and resolves to Home in the offline router. Home no
+longer queries or receives recent server assessment history. Unfinished work
+remains accessible through Assessment. Status Data provides an encrypted pending
+delivery queue, explicit unlock, review, preparation and retry. Unlocking that
+queue keeps the status dialog open; locking or replacing an active key closes it.
+Server-accepted reports whose routing is unresolved remain visible with an
+explicit delivery warning and count as pending, even without an outbox item.
+ROUTED denotes an authorized Healthcare destination, without asserting human
+acknowledgement, review or clinical validation.
+
+Old copies without trustworthy receipts and legacy plaintext storage are not
+automatically erased. This authorization does not permit guessing their
+delivery state or resetting storage. Such cases require separate verification.
+
+## Operation-specific online assessment and T0 access — 14 November 2026
+
+Owner-authorized server assessment pages and their server draft list can render
+with the local clinical key locked. Each stage reads the authorized Inertia
+payload and saves through the existing server endpoints. These operations do not
+hydrate clinical IndexedDB stores. Save receipts return the new canonical
+server_version from inside the write transaction. Subsequent queued writes send
+that exact base_version, retaining the existing owner and conflict checks.
+
+SRQ retains four internal states and explicit human confirmation of Q17. Partial
+risk/function answers remain in page memory until the full stage is valid for
+the existing endpoint. Failed or uncertain online saves retain page answers and
+show that server acceptance is unconfirmed. They never fall back to plaintext
+storage or claim an offline outbox exists. Logout and owner/path invalidation
+clear the online adapter and suppress stale continuations.
+
+T0 verification opens before local unlock. Authorized server patient choices
+may be used immediately. Explicit access to device patients and final encrypted
+T0 persistence request unlock when necessary. Unlock retains the verification
+form and does not submit it. A second explicit final Send action is required.
+Only then can the existing atomic encrypted emergency/priority-1 outbox write
+run, followed by delivery attempts.
+
+An online assessment supplies a page-scoped, memory-only context for that final
+encrypted operation. Existing local drafts retain their merge protection.
+Server-known assessments carry their online mode into the emergency payload;
+their snapshot is not queued as a new assessment write. Server patient/case
+authorization and mode validation remain enforced during emergency acceptance.
+Existing offline assessments keep their existing protected workflow.
+
+Checkpoint evidence is recorded in
+[the operation-specific unlock report](ui/online-assessment-t0-unlock-2026-11-14.md).
+Physical Android/iPhone acceptance remains pending.
+
+## Background lock decision — 14 November 2026
+
+The owner approved a five-minute continuous background grace period. Changing
+tabs or applications retains the in-memory clinical key for less than five
+minutes. Returning to the foreground before the deadline cancels that timer.
+At five minutes, the key is revoked and decrypted views are masked through the
+existing access-generation invalidation.
+
+Foreground restoration and clinical access also check elapsed wall and monotonic
+time. This prevents delayed background timers from extending access on resume.
+Backward clock movement fails closed. Repeated hidden events do not restart the
+deadline. No key or unlock credential is persisted for this grace period.
+
+Full-document pagehide/pageshow, logout, account/key changes, storage invalidation
+and service-worker protocol changes retain immediate revocation. Full reload or
+browser closure still requires an explicit unlock. Ciphertext is preserved.
+Historical immediate-visibility-lock descriptions below are superseded by this
+owner-approved decision. Native Android/iPhone background acceptance remains
+pending separate device verification.
+
+Verification for this checkpoint passed 290 Node tests, TypeScript, frontend
+build and diff checks. Repository/DOM regressions cover key revocation and stale
+navigation rejection at the deadline. An isolated native Chrome probe loaded
+the fence source with synthetic access tickets and fixture storage bypass.
+A short actual tab switch retained access. After 301.572 seconds hidden/frozen,
+returning to the tab rejected the old ticket. This probe verifies browser
+visibility and suspended-timer handling, while native mobile OS behavior and
+full browser encryption integration remain outside its scope.
+
+## Current security handoff — 10 November 2026
+
+[P0-HANDOFF.md](../P0-HANDOFF.md) records P0 IMPLEMENTED YES, P0 CORE BROWSER
+VERIFIED YES and P0 LOCAL DEMO ACCEPTANCE CONDITIONAL PASS. Natural
+background/foreground privacy locking remains NOT TESTED; production security
+acceptance remains NOT ESTABLISHED. Seven core browser PASS and six runner-safety
+PASS results are historical evidence, not newly executed checks. Full P1/P2
+acceptance remains pending; C2 NOT ACCEPTED; C3 not started.
+
+`7076e13` separates online Inertia navigation, full-document offline bootstrap and
+same-document navigation inside the unlocked offline shell. The last reuses the
+existing route resolver/repositories, checks owner/storage/access generations,
+keeps decrypted props only in memory and puts URL-only/null state into history.
+It preserves an authorized uninterrupted visible key session across supported
+routes without persisting a key, passphrase or unlocked-session secret. Actual
+reload/pagehide, visibility, logout, owner change and worker protocol invalidation
+still revoke access; synchronous masking and stale-result rejection remain.
+
+Recorded navigation evidence: 64 focused tests PASS; final 13-test subset PASS
+again; type-check/diff-check PASS. Browser/history/storage transport and leaf-page
+doubles limit that automation. The owner reports a successful manual Chrome
+offline-navigation check after controlled service-worker activation. This is
+narrow manual evidence, not native background acceptance, a full suite rerun or a
+new asset/hash inventory. Login password and encryption passphrase stay separate;
+online double-prompt UX improvement is DEFERRED.
+
+Local Inertia DevTools disablement was verified separately without deleting
+historical captures. Each teammate must set `INERTIA_DEVTOOLS_ENABLED=false` in
+its own ignored `.env` and verify effective disablement. The owner-approved
+synthetic SQL/history decision is RESOLVED; preserve existing repository/history
+and dump. This does not authorize transferring private runtime credentials,
+recovery codes, profiles or debug captures, or future real clinical data.
+See [current source/evidence](CURRENT_IMPLEMENTATION.md#current-handoff).
+
+
+**Current source alignment:** 2026-11-10 (Asia/Jakarta), `demo` at `7076e13`.
+**Evidence boundary:** source/report inspection only during this alignment; no
+runtime/browser/database check or test rerun. Earlier D1 evidence is historical.
+
+## Current scope and authority
+
+P0 privacy and T0 integrity take priority over P1 non-verbal observations and P2
+four-state SRQ safety. Current owner instructions and later-approved safety
+requirements supersede older workflow assumptions about deferred encryption,
+silent SMS or automatic deletion. Authentication is not encryption; TLS is not
+application-level E2EE, and Base64 is not encryption.
+
+### Encrypted-first storage and controlled local enrollment
+
+- Patient/snapshot, assessment, emergency, outbox payloads and the optional owner
+  profile use authenticated ciphertext in `encryptedStaging` for enrolled owners.
+  AES-256-GCM uses fresh random 96-bit IVs and version/owner/store/record-bound AAD.
+  PBKDF2-HMAC-SHA-256 (600,000 iterations) wraps the DEK using the offline
+  passphrase; a separate recovery code wraps the same DEK. Runtime DEKs are
+  non-extractable and access is invalidated on lock/logout/owner change.
+- Ordinary development and production-built assets support enrollment only at
+  `http://localhost:8080` after server authorization. The server requires local
+  environment, that exact configured URL/direct Host, HTTP, matching supplied
+  Origin, `OFFLINE_ENCRYPTION_LOCAL_ENROLLMENT=true` (default false), and an active
+  matching Relawan with a version-bound web session. Bearer identity alone is
+  insufficient. `127.0.0.1:8080` is a different, unauthorized enrollment origin.
+- Browser navigation uses a version-bound Laravel session; API routes require a
+  bearer JWT checked against user/token version and refresh-family state. Neither
+  authenticates an offline DEK. Previously enrolled owners can unlock retained
+  ciphertext with passphrase/recovery and valid local continuity without calling
+  the enrollment endpoint. New/pending enrollment still requires server approval.
+- Initialization distinguishes `FRESH`, `ENROLLMENT_PENDING`, `ENCRYPTED_LOCKED`,
+  `LEGACY_BLOCKED`, `INCONSISTENT`, `INACCESSIBLE`, and `ACTIVATION_DISABLED`.
+  Missing mode/key metadata never authorizes ordinary plaintext persistence.
+  Existing plaintext, including ownerless rows, blocks ordinary initialization;
+  unknown records are neither reassigned nor automatically deleted.
+
+### Migration, cutover and retention boundaries
+
+The ordinary workflow creates fresh encrypted records; it does not migrate
+historical plaintext in place. Older shadow-staging/activation functions remain
+isolated synthetic-fixture mechanisms. Current-client write fences and cross-tab
+invalidation do not control every unsupported old same-origin writer. Raw native
+IndexedDB writes without Dexie notifications remain an observation limitation.
+
+[B4.4](checkpoints/checkpoint-b44-controlled-development-activation.md) records
+owner-executed dummy-profile reset/enrollment and scoped local browser acceptance.
+This demonstrates controlled local enrollment for that reviewed development
+profile, not general activation/migration of real clinical users, other profiles,
+or production. The [cutover procedure](checkpoints/checkpoint-b42-development-reset.md)
+requires exact profile/origin inventory and retirement of old clients/workers;
+unknown storage requires review. No reset, cleanup or rollout is authorized by D1.
+
+`retentionEligibility.ts` computes eligibility only. Assessment eligibility needs
+completion, `SYNCED`, a valid canonical receipt with a positive revision and
+matching ciphertext digest, no related pending outbox and no active T0
+dependency. Patient and emergency
+records remain ineligible under their current checks. No retention check deletes
+rows, and synchronization does not imply automatic purge. Fresh encrypted records
+have no plaintext shadow; retained historical fixture copies do not prove cleanup
+of a real user's historical storage.
+
+### T0, browser privacy and assessment contracts
+
+Explicit human verification/final submission creates T0-Suspect; a first shortcut
+tap, STT inference or unconfirmed Q17 interpretation does not. The emergency and
+priority-1 idempotent outbox commit atomically before network delivery. Manual T0
+remains available with unresolved SRQ, missing GPS or incomplete identity. Local
+save, server receipt, Healthcare action, referral and dispatch remain separate.
+Browser SMS is a user-mediated composer handoff, not proof of sending/delivery.
+
+Clinical privacy middleware precedes web/API handling, enables clinical Inertia
+history encryption and adds private/no-store headers to covered responses. The
+app removes consumed bootstrap JSON and masks/unmounts locked clinical content.
+The Relawan worker caches approved static assets, not clinical/authentication
+payloads; updates wait rather than unconditionally activating over active tabs.
+Source behavior is not proof of deployed headers or universal browser privacy.
+
+P1 observations are multiple reasons with an optional OTHER explanation, retained
+through drafts/sync and shown to Healthcare without diagnosis or score/T0 effects.
+P2 preserves YES/NO/UNCLEAR/UNANSWERED; definitive booleans remain compatible.
+Unresolved required answers cannot yield a definitive score. Apparent Q17 YES
+requires human confirmation before persistence, separately from final T0 sending.
+See [the implementation inventory](CURRENT_IMPLEMENTATION.md) for schema and UI details.
+
+## Historical November 7 evidence — superseded in scope by the current handoff
+
+The original C1/C2 planning table and measured results below retain their original
+limits. Later P0 browser evidence above does not retroactively rewrite them.
+
+October **STT C1/C2** are historical speech checkpoints. November **Safety C1/C2**
+refer to browser/privacy/PWA and integration; their results are not interchangeable.
+
+| Checkpoint | Status and evidence boundary |
+|---|---|
+| B4.4 controlled local enrollment | Recorded local acceptance passed within its reviewed scope; not production activation or general historical migration. |
+| November Safety C1 | **IMPLEMENTED — ACCEPTANCE PENDING.** The [C1 report](checkpoints/checkpoint-c1-local-browser-integration.md) records 29 Node files / 0 failures, 82 PHP tests / 302 assertions, typecheck/build/lint, and Chromium **18 PASS / 1 NOT TESTED**. These are previously recorded results, not D1 reruns. |
+| November Safety C2 | **PENDING:** live Relawan → outbox/sync → Laravel/PostgreSQL → Healthcare integration, authorization, realtime, replay/failure semantics and privacy. |
+| November Safety C3 | **PENDING:** final local P0–P2 regression/signoff including unresolved C1 conditions. Production readiness is not established. |
+
+C1 exercised ordinary production-built assets and the actual generated service
+worker with synthetic authentication/server responses. Natural background/foreground
+locking remains **NOT TESTED**: the display stayed visible during automated tab
+switching/minimization. A synthetic hidden-state handler pass is not native
+background acceptance; physical mobile background lock remains unverified.
+C1 did not submit a browser emergency or establish live backend authorization,
+PostgreSQL, C2 sync, real-release asset migration, or complete offline Whisper.
+
+AES-GCM does not protect an unlocked application from malicious same-origin
+JavaScript, an attacker controlling the unlocked device, or browser eviction.
+No hardware-backed keys, universal old-client detection, production security
+certification, or application-level E2EE is claimed.
+
+## Current source anchors
+
+Repository-relative paths inspected for D1:
+
+- `resources/js/offline/offlineCrypto.ts`, `resources/js/offline/clinicalKeyEnrollment.ts`
+- `resources/js/offline/clinicalStorageInitialization.ts`, `resources/js/offline/encryptedClinicalStorage.ts`
+- `resources/js/offline/localEnrollmentAuthorization.ts`, `resources/js/offline/offlineActivationEnvironment.ts`
+- `app/Support/LocalOfflineEnrollment.php`, `config/offline.php`
+- `app/Http/Middleware/AuthenticateJwt.php`, `app/Http/Middleware/ValidateWebSessionVersion.php`
+- `resources/js/offline/retentionEligibility.ts`, `resources/js/offline/emergencyWorkflow.ts`
+- `app/Http/Middleware/ClinicalBrowserPrivacy.php`, `resources/js/pwa/serviceWorker.ts`
+
+## Historical DEMO-SEC-02C.5 design and fixture record
+
+Everything below preserves the original staging design, limitations and reproduction
+notes. Present-tense claims such as "real owner enrollment remains disabled",
+"absent mode means legacy plaintext", or "plaintext originals coexist" describe
+that historical fixture baseline, not the ordinary November implementation above.
+Dependency availability and reproduction notes are historical, not reverified by D1.
+
+### Previous checkpoint annotation (before November C1)
+
+**Checkpoint:** DEMO-SEC-02C.5
+**Implementation state:** B4.2 encrypted-first storage and B4.3 isolated Chromium acceptance are complete. B4.4 controlled local development activation and browser acceptance have passed, including the unmodified Laravel/Inertia SRQ response contract and targeted emergency interception verification (61/61 matcher assertions). Production activation remains restricted. Production PWA, full live synchronization, realtime integration, and final security signoff remain pending Checkpoint C.
+
+### Original plaintext boundary
+
+`RapidMindOfflineDB` currently persists plaintext clinical data in `patients`, `patientSnapshots`, `assessments`, `emergencies`, and `outbox.payload`. Patient names and NIK, assessment responses and triage, emergency notes and coordinates, and complete synchronization payloads are sensitive. `owner_user_id` indexes restrict application queries but do not encrypt data. The Service Worker caches the offline shell and assets; it does not intentionally cache clinical API responses. The existing `relawanContinuity` row holds a remembered identity and logout intent, not an unlocking secret.
+
+The current real-user repositories continue to use plaintext because no real owner has been activated. **This checkpoint does not yet provide local clinical confidentiality.** Server role authorization remains a separate boundary from client-side local encryption.
+
+### Encrypted representation
+
+- Web Crypto AES-256-GCM uses one random 256-bit Data Encryption Key (DEK) per Relawan and a fresh random 96-bit IV for every record encryption. Authenticated additional data binds version, owner ID, store type, and immutable record ID. Ciphertext or metadata moved to another owner, type, or ID fails authentication.
+- A 600,000-iteration PBKDF2-HMAC-SHA-256 Key Encryption Key (KEK), with a distinct random 128-bit salt, wraps the DEK under the offline passphrase. Enrollment requires a 20–1024 character passphrase with at least four distinct characters. This is separate from the server password.
+- An independently generated 256-bit recovery code wraps the same DEK with a separate salt and IV. Show it once at eventual enrollment and instruct the Relawan to store it outside the device. It is not a server credential. A lost passphrase **and** recovery code cannot be recovered by the application.
+- Wrapped-key and ciphertext envelopes are versioned. The DEK is imported into a non-extractable runtime `CryptoKey`; raw generation/unlock bytes are cleared after import. A live key is held only in application memory and must be dropped on lock, logout, or owner switch. A remembered owner ID never unlocks it.
+- The fixture-only Relawan gate verifies the online `/relawan/session-status` response, including role and owner ID, before enrollment. It requires passphrase confirmation, presents the recovery code once, and accepts passphrase or recovery-code unlock after reopening without server access. The static offline bootstrap waits for this unlock before resolving assessment or emergency props. A remembered owner ID cannot unlock the DEK. This interface is absent from ordinary development and production behavior; real owner enrollment remains disabled.
+- `installClinicalKey` independently reads the persisted wrapped key and verifies its authenticated key proof before registering a runtime DEK. Binding metadata also verifies the proof. Metadata changes after installation fail closed on repository access. Logout and owner switching clear runtime access.
+- A reactive key generation changes on installation, explicit lock, lock-all, session replacement, and BroadcastChannel invalidation. The Relawan layout synchronously masks its mounted clinical root on a generation change, rechecks owner storage mode, then Vue unmounts that view and shows the encrypted-owner unlock gate. It clears in-memory T0 context and rejects late UI read results from an older generation. The mode recheck also blocks a tab that was rendering a legacy view when another tab activates that synthetic owner. The static offline bootstrap checks the generation and mode again after route resolution and continuity checks; a result obtained before locking cannot mount later. Legacy owners continue through the existing route without a blocking encrypted-owner gate.
+- IndexedDB indexes contain only store, owner, stable record ID, and migration metadata. Identity, demographics, assessment, emergency, and outbox payload fields belong inside authenticated ciphertext. `encryptedStaging` is a shadow before activation and the active encrypted record store only for a synthetic owner activated in the isolated fixture.
+
+### Migration and activation gate
+
+Dexie version 5 adds `offlineKeys` and `encryptedStaging` without modifying earlier stores. `prepareOwnerKey` refuses to overwrite an existing owner key. A stored key proof binds a staging session to that owner's wrapped DEK. The session also binds the exact persisted wrapped-key metadata; a change in another tab requires a new unlock. `stageOwnerPlaintext` reads only records already attributed to the unlocked owner, encrypts and verifies a copy outside an IndexedDB transaction, then atomically compares both the source row and persisted key before storing the encrypted copy. A changed source is skipped for a later pass. Bounded staging scans 64-row pages, skips verified copies, and stages up to the requested batch size. Repeated calls, including after reopening, advance through missing copies and restage changed or damaged copies. Each pass starts at the beginning so newly inserted or changed records remain eligible. Plaintext source rows, UUIDs, outbox IDs, priorities, revisions, retries, and relationships remain intact. `inspectStagedOwner` reports missing, stale, orphaned, owner-mismatched, unsupported-version, unreadable, and concurrently changed records without deleting data. Its count and consistency result is a snapshot diagnostic, **not** an activation authorization: a source may change immediately after inspection.
+
+Legacy ownerless rows remain untouched and excluded from owner-scoped operations. They are logically quarantined; they must never be automatically assigned to the currently signed-in Relawan. Browser stores of unknown provenance must not be automatically deleted.
+
+Dexie version 6 adds an owner mode table and a numeric outbox-ID index. An absent mode row means legacy plaintext; an explicit `ENCRYPTED` row makes patient, snapshot, assessment, emergency, and outbox repositories read and write ciphertext in `encryptedStaging`. The outbox index maps its numeric ID contract to a stable random UUID used as the AES-GCM record identity for new items. Dexie version 7 adds a durable global outbox-ID counter and minimal canonical sync receipts. Legacy and encrypted outbox creation serialize against both ID tables and the counter in one transaction, preventing active cross-owner collisions and later reuse by this build after reconciliation. Existing staged outbox items retain their numeric IDs and revisions. New encrypted records keep clinical fields and payloads inside ciphertext; the outbox index exposes only ID, owner, and encrypted-record reference.
+
+`activateSyntheticOwner` is available only when Vite runs in `staging-fixture` mode. It verifies all source rows against authenticated ciphertext, then repeats source, ciphertext, and wrapped-key comparisons inside the transaction that inserts the mode row and old outbox-ID mappings. Legacy repository write transactions read the same mode table before writing; a concurrent legacy writer either commits first and invalidates the activation snapshot or observes the new mode and fails. Encrypted writes also compare the current ciphertext and persisted wrapped key inside their write transaction. Web Crypto completes before those transactions. The encrypted emergency and priority outbox item commit together, including numeric ID allocation.
+
+After activation, shadow staging and its inspection API reject the owner so a stale plaintext source cannot overwrite newer active ciphertext.
+
+The synthetic transition retains all original plaintext rows; it does not provide confidentiality for the fixture's migrated history. Normal development and production builds reject activation, and the fixture enrollment interface has no activation button. Current bundles use a mode fence for repository writes; a `BroadcastChannel` notification locks runtime keys in other current tabs after synthetic activation. An older already-open application bundle that lacks these safeguards could still write plaintext. A real rollout must first establish a client-version cutover that excludes older tabs and Service Workers, verify no old writer remains, and then re-inspect and activate each owner under a reviewed migration procedure. A broadcast is advisory and cannot control unsupported old clients. No real owner is migrated or activated automatically. A successful TypeScript build or isolated synthetic test alone is insufficient approval for real-browser activation.
+
+### Sync and retention
+
+Encrypted outbox listing requires the matching unlocked owner key, decrypts payloads before the existing priority sort, and uses the existing server request path. A locked key fails closed. Server authentication remains necessary to transmit; the isolated test uses synthetic responses and does not establish live server authentication or transmission. A canonical response with matching entity identity and the same outbox revision reconciles encrypted clinical rows, removes the encrypted outbox item, and records a minimal receipt atomically. An older revision or repeated acknowledgement does not complete a newer or absent item. A synthetic SyncManager test covers failure, retry, payload identity, priority, and revision handling. Unlock refreshes local status and resumes eligible online synchronization. The encrypted patient snapshot update and superseded-copy deletion also share one compare-and-swap transaction.
+
+Retention eligibility is a read-only decision. A completed encrypted assessment requires `SYNCED`, a matching canonical receipt and ciphertext digest, no related outbox item, and no active T0 dependency. Any subsequent record rewrite invalidates that receipt match. Incomplete assessments and active T0 cases remain available offline. Patient and emergency rows remain ineligible because a standalone patient receipt or a verified end to offline emergency need is not yet established. Legacy rows without a digest remain ineligible. No eligibility check deletes rows. Cleanup of existing real browser records is irreversible and requires separate explicit owner approval. In the meantime encrypted shadow copies and plaintext originals coexist, so local confidentiality cannot be claimed.
+
+### Workflow interpretations and limits
+
+This document interprets the `docs/workflow.md` goal of local AES-256 encryption and post-upload cleanup without changing that file:
+
+1. Synchronized clinical data may be minimized only after verified server acceptance and reconciliation, with no remaining local operational dependency.
+2. Background synchronization may wait for an offline unlock when the DEK is unavailable.
+3. Long-term recovery must use persisted wrapped keys, not an in-memory-only key. The isolated Chrome profile cold-reopen test exercises the cached Service Worker shell with the network offline; it does not establish physical phone-restart behavior.
+
+AES-GCM does not protect data from malicious same-origin JavaScript while unlocked, an attacker controlling an unlocked device, or browser storage eviction. Passphrase quality and recovery-code custody matter. No hardware-backed key protection is claimed. Until activation and separately approved plaintext cleanup, the existing local data remains readable in browser storage.
+
+### Reproducing the isolated browser staging test
+
+`node tests/Browser/offlineStaging.browser.mjs` and `node tests/Browser/offlineEncryptedRepositories.browser.mjs` require local Node, Vite from the existing project installation, a resolvable `playwright` package, and Chrome. Run the DOM and cold-offline regression directly with `node tests/Browser/offlineClinicalDomLock.browser.mjs`; no separate staging build is needed. It creates a unique temporary Vite configuration, fixture PWA build, and Chrome profile outside the repository, redirects Laravel's hot file and PWA manifest lookup there, and removes only that temporary directory afterward. It never writes `public/build` or `public/hot`. Set `RAPID_MIND_CHROME_BIN` to a different Chrome path if needed. The DOM harness switches its ephemeral localhost server from Vite to static temporary fixture assets before Service Worker registration, closes Chrome, reopens the same isolated profile with networking disabled, and unlocks through the cached offline shell. These checks use synthetic Dexie fixtures and never open the owner's profile. On this checkout, `playwright@1.63.0` is present in `node_modules` as an **extraneous** package: it is absent from `package.json` and `package-lock.json`, so the browser tests are not reproducible from a clean dependency installation yet. No package or lockfile was changed in this checkpoint.
+
+
+## Adendum 13 November 2026: unlock UX dan bantuan darurat
+
+Passphrase menjadi metode utama; recovery menjadi pilihan sekunder pada gate yang sudah ada. Tombol Bantuan Darurat membuka panduan dan status jaringan perangkat tanpa DEK atau akses ke repository klinis. Pemilik mengonfirmasi belum ada kontak terverifikasi: UI menampilkan kondisi kosong tanpa nomor/tel fiktif. Tidak ada pelaporan T0 baru saat terkunci; desain online tanpa DEK dan outbox offline tanpa DEK tidak diimplementasikan. Enrollment, enkripsi dan invalidasi hidden/pagehide/reload/logout/owner tetap sama.
+
+Bukti baru: 55 tes Node, TypeScript/build dan11 skenario browser sintetis PASS; bukan uji Laravel live atau native mobile background. Aset kandidat belum dipublikasikan. Bukti historis di atas tidak ditimpa atau dianggap uji ulang. Lihat [laporan dan batas verifikasi](checkpoints/offline-unlock-emergency-assistance-2026-11-13.md).
+
+
+## Later owner correction, 13 November 2026: operation-specific unlock
+
+This decision supersedes the earlier same-day global-gate UX. Server-authenticated Home/PFA and a new assessment form render without a clinical DEK; saving the encrypted draft requests unlock explicitly. An authorized persisted server emergency projection is readable without local decryption. Existing local clinical workspaces retain an inline operation gate while app navigation remains available. Offline LOCKED shows a limited shell and independent assistance; opening local data requires a user action. No plaintext clinical outbox, automatic unlock, cryptographic migration, data reset or ciphertext deletion was added. AES-GCM, ownership, session/key invalidation and stale-generation fences remain.
+
+Final evidence:47 focused Node tests, TypeScript/build PASS;15 published Chrome–Laravel scenarios PASS, including actual asset-byte verification, login dashboard without passphrase, PFA/back, draft-save unlock and encrypted offline T0/sync. Current localhost app asset is assets/app-C76lqTlK.js, manifest f2ee7d9b6d0eaf4523a8016d10c2f14cd602db6d1197cd663e98e48681d7c9f4. Native mobile/background acceptance is still not established. See [checkpoint, source baseline, files, fixtures and limits](checkpoints/operation-specific-clinical-unlock-2026-11-13.md). Historical evidence above is preserved.
+
+
+## Owner-authorized demo rebuild and passphrase guidance — 13 November 2026
+
+Owner explicitly authorized backup then truncate/rebuild of localhost demo data and identified browser storage. Chrome profile Daffa was exported privately before reset; PostgreSQL backup was restored into an isolated verification database. Existing user IDs were not reused (new users46–51), preventing old owner ciphertext/outbox from matching new accounts. No cryptographic migration or weakening was added. New enrollment UI explains a personal phrase of several unrelated words, minimum20 characters, spaces allowed, no mandatory special symbols; unlock preserves existing compatibility. There is no shared/default offline phrase. See [backup hashes, changed files, scoped reset, seeded synthetic histories, verification and limits](checkpoints/demo-rebuild-simple-passphrase-2026-11-13.md). This reset authorization does not apply to unidentified devices or later real-user data.
+
+
+## Supersession — 15 November 2026: device-managed Relawan encryption
+
+The owner approved removing all additional offline authentication input for
+Relawan, including T0. A random non-extractable AES-256-GCM CryptoKey is persisted
+in IndexedDB and restored automatically for eligible local owner continuity.
+Normal online login and explicit logout remain. Backgrounding does not revoke
+field access. This replaces passphrase enrollment, recovery confirmation and
+background-timeout unlock requirements described historically below/above.
+
+Assessments now save through encrypted repositories before background delivery.
+Connectivity changes do not initiate navigation; session/CSRF recovery stays in
+place. T0 still requires human verification/final send and atomically saves its
+encrypted incident and priority-1 outbox. Receipt is separate from Healthcare action.
+
+Schema v9 and worker protocol v3 leave old stores intact. Existing passphrase data
+requires the separately scoped clean start agreed by the owner; it is never
+silently converted or deleted. PostgreSQL reset/reseeding and production activation
+are outside this checkpoint. Browser-profile access is trusted; hardware-backed
+protection and recovery after browser storage loss are not claimed.
+
+See [implementation and verification](checkpoints/device-managed-relawan-2026-11-15.md).
+Historical PASS results remain historical, not evidence for this implementation.

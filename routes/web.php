@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\LogisticsController;
 use App\Http\Controllers\Admin\ProvisioningController;
 use App\Http\Controllers\Admin\ShelterManagementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Healthcare\ClinicalReferralController;
+use App\Http\Controllers\Healthcare\DispatchController;
 use App\Http\Controllers\Healthcare\HealthcareController;
 use App\Http\Controllers\Relawan\RelawanController;
 use App\Http\Controllers\Relawan\RelawanSessionController;
@@ -17,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 // Public & Auth Routes
 Route::get('/', [AuthController::class, 'showLogin'])->name('home');
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:web-login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Web App Manifest fallbacks (ensuring valid JSON and 200 OK across dev/prod environments)
@@ -58,6 +60,8 @@ Route::get('/relawan/session-status', [RelawanSessionController::class, 'status'
 // ROLE 1: RELAWAN (Mobile PWA)
 // ──────────────────────────────────────────────
 Route::middleware(['auth.jwt', 'role:RELAWAN'])->prefix('relawan')->name('relawan.')->group(function () {
+    Route::get('/offline-enrollment-status', [\App\Http\Controllers\Relawan\OfflineEnrollmentController::class, 'status'])
+        ->name('offline-enrollment-status');
     Route::get('/home', [RelawanController::class, 'home'])->name('home');
     Route::get('/pfa', [RelawanController::class, 'pfa'])->name('pfa');
     Route::get('/patients/options', [RelawanController::class, 'patientOptions'])->name('patients.options');
@@ -98,6 +102,9 @@ Route::middleware(['auth.jwt', 'role:HEALTHCARE'])->prefix('healthcare')->name('
     Route::post('/emergencies/{emergencyId}/verify', [HealthcareController::class, 'verify'])->name('emergencies.verify');
     Route::post('/emergencies/{emergencyId}/classify', [HealthcareController::class, 'classify'])->name('emergencies.classify');
     Route::post('/emergencies/{emergencyId}/referrals', [HealthcareController::class, 'createEmergencyReferral'])->name('emergencies.referrals.store');
+    Route::post('/emergencies/{emergencyId}/dispatches', [DispatchController::class, 'store'])->whereUuid('emergencyId')->name('emergencies.dispatches.store');
+    Route::post('/dispatches/{dispatchId}/status', [DispatchController::class, 'status'])->whereUuid('dispatchId')->name('dispatches.status');
+    Route::post('/dispatches/{dispatchId}/referral', [DispatchController::class, 'referral'])->whereUuid('dispatchId')->name('dispatches.referral');
 
     // Clinical Validations
     Route::get('/validations', [HealthcareController::class, 'validations'])->name('validations.index');
@@ -107,6 +114,7 @@ Route::middleware(['auth.jwt', 'role:HEALTHCARE'])->prefix('healthcare')->name('
     // Referrals & Dispatch Tracking
     Route::get('/referrals', [HealthcareController::class, 'referrals'])->name('referrals.index');
     Route::post('/referrals/{referralId}/status', [HealthcareController::class, 'updateReferralStatus'])->name('referrals.status');
+    Route::post('/referrals/{referralId}/complete', [ClinicalReferralController::class, 'complete'])->whereUuid('referralId')->name('referrals.complete');
 
     // Patient Records
     Route::get('/patients', [HealthcareController::class, 'patients'])->name('patients.index');

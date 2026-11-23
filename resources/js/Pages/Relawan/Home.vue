@@ -1,39 +1,43 @@
 <template>
-    <RelawanLayout>
-        <div class="space-y-6">
-            <!-- Greeting & Posko Context -->
-            <div
-                class="bg-white rounded-xl p-5 shadow-xs border border-slate-200"
-            >
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p
-                            class="text-xs font-bold text-teal-700 uppercase tracking-wider"
-                        >
-                            Relawan Pendamping Lapangan
-                        </p>
-                        <h2 class="text-xl font-bold text-slate-900 mt-0.5">
-                            {{ userName }}
+    <RelawanLayout :identity-shelter="shelter?.name || userShelterName">
+        <template #greeting="{ statusKind, statusLabel, openStatus }">
+            <section class="home-identity my-4 overflow-hidden rounded-xl border border-slate-200 bg-white" aria-labelledby="home-greeting">
+                <div class="flex items-center gap-3 px-4 py-4 sm:px-5">
+                    <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-800" aria-hidden="true">
+                        <ContactRound class="size-6" :stroke-width="1.6" />
+                    </div>
+                    <div class="min-w-0">
+                        <h2 id="home-greeting" class="text-2xl font-semibold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere]">
+                            {{ isEn ? 'Hello,' : 'Halo,' }} {{ userName }}
                         </h2>
+                        <p class="mt-0.5 text-sm leading-snug text-slate-600">{{ $t('relawan.roleBadge') }}</p>
                     </div>
                 </div>
-                <div
-                    class="mt-3 inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60"
-                >
-                    <MapPin class="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                    <span>{{
-                        shelter?.name ||
-                        userShelterName ||
-                        "Posko belum ditetapkan"
-                    }}</span>
+                <div class="home-assignment border-t border-slate-200 bg-slate-50 py-1 ps-4 pe-2 sm:ps-5 sm:pe-3">
+                    <p class="flex min-w-0 items-start gap-2 py-1.5 text-sm font-medium leading-snug text-slate-700">
+                        <MapPin class="mt-0.5 size-4 shrink-0 text-teal-700" aria-hidden="true" />
+                        <span class="min-w-0 [overflow-wrap:anywhere]">
+                            <span class="sr-only">{{ isEn ? 'Assigned shelter' : 'Posko penugasan' }}: </span>
+                            {{ shelter?.name || userShelterName || (isEn ? 'Shelter information unavailable' : 'Informasi posko belum tersedia') }}
+                        </span>
+                    </p>
                 </div>
-            </div>
-
+            </section>
+            <button type="button" @click="openStatus"
+                class="mb-4 flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-sm text-slate-600 hover:bg-white focus-visible:outline-2 focus-visible:outline-teal-700">
+                <span class="font-medium">{{ isEn ? 'Data status' : 'Status Data' }}</span>
+                <span class="flex min-w-0 items-center gap-2">
+                    <span class="text-right" :class="statusKind === 'local-failure' ? 'text-red-800' : ['failed', 'unqueued', 'reauthentication-required'].includes(statusKind) ? 'text-amber-800' : ''">{{ statusLabel }}</span>
+                    <ChevronRight class="size-4 shrink-0" aria-hidden="true" />
+                </span>
+            </button>
+        </template>
+        <div class="space-y-6">
             <p
                 v-if="runtime.mode === 'OFFLINE_FIELD_MODE'"
                 class="rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-900"
             >
-                Mode lapangan offline · data tersedia dari perangkat ini
+                {{ clinicalKeyReady(owner) ? $t('relawan.offlineFieldMode') : (isEn ? 'Offline field mode · Patient data is locked.' : 'Mode lapangan offline · Data pasien terkunci.') }}
             </p>
             <p
                 v-if="local.error.value"
@@ -53,7 +57,7 @@
                         <span
                             class="text-xs font-bold uppercase tracking-wider text-red-800"
                         >
-                            Laporan T0-Suspect
+                            {{ $t('relawan.activeEmergencyReport') }}
                         </span>
                     </div>
                     <span
@@ -68,7 +72,7 @@
                     <h3 class="font-bold text-base">
                         {{
                             displayEmergency?.patient?.name ||
-                            "Penyintas Tanpa Nama"
+                            $t('common.unidentified')
                         }}
                     </h3>
                     <p class="text-xs text-red-800 mt-1">
@@ -80,77 +84,70 @@
                 </p>
             </div>
 
-            <!-- Resume Incomplete Draft Banner -->
-            <div
+            <section
                 v-if="displayDraft"
-                class="bg-amber-50 border border-amber-300 rounded-xl p-5 shadow-xs space-y-3"
+                aria-labelledby="resume-assessment-title"
+                class="rounded-2xl bg-slate-200/70 p-1"
             >
-                <div class="flex items-center justify-between">
-                    <span
-                        class="text-xs font-bold text-amber-800 uppercase tracking-wider"
+                <div class="rounded-xl bg-white px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
+                    <div class="min-w-0">
+                        <h3 id="resume-assessment-title" class="text-sm font-semibold text-amber-800">
+                            {{ $t('relawan.activeDraftTitle') }}
+                        </h3>
+                        <p class="mt-1 break-words text-xl font-bold leading-tight text-slate-900">
+                            {{ displayDraft.name }}
+                        </p>
+                        <p class="mt-1 text-sm leading-snug text-slate-600">
+                            {{
+                                displayDraft.local
+                                    ? (isEn ? "Answers saved on this device." : "Jawaban tersimpan di perangkat ini.")
+                                    : local.ready.value
+                                      ? (isEn ? "Available on the server. Open while online." : "Tersedia di server. Buka saat terhubung ke internet.")
+                                      : (isEn ? "Available on the server. Offline availability is unconfirmed." : "Tersedia di server. Ketersediaan offline belum terkonfirmasi.")
+                            }}
+                        </p>
+                    </div>
+                    <RelawanLink
+                        :href="displayDraft.resumeUrl"
+                        class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-teal-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 sm:mt-0 sm:w-auto sm:shrink-0"
                     >
-                        Lanjutkan Asesmen
-                    </span>
-                    <span class="text-xs text-amber-700 font-medium"
-                        >Sedang Dikerjakan</span
-                    >
+                        {{ displayDraft.resumeLabel }}
+                    </RelawanLink>
                 </div>
-                <div>
-                    <h3 class="font-bold text-slate-900 text-base">
-                        {{ displayDraft?.name || "Penyintas" }}
-                    </h3>
-                    <p class="text-xs text-slate-600 mt-0.5">
-                        {{
-                            displayDraft?.local
-                                ? "Tahap berikutnya mengikuti jawaban yang tersimpan di perangkat."
-                                : local.ready.value
-                                  ? "Asesmen ini tersedia di server; buka saat online untuk menyalinnya ke perangkat."
-                                  : "Asesmen tersedia di server. Status di perangkat belum dapat dipastikan."
-                        }}
-                    </p>
-                </div>
-                <RelawanLink
-                    :href="displayDraft?.resumeUrl || '/relawan/assessment'"
-                    class="inline-flex items-center justify-center w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-xs transition"
-                >
-                    {{ displayDraft?.resumeLabel }} →
-                </RelawanLink>
-            </div>
-
+            </section>
             <!-- Main Interaction Paths: PFA vs Structured Screening -->
             <div class="space-y-3">
                 <h3
                     class="text-xs font-bold text-slate-500 uppercase tracking-wider"
                 >
-                    Pilihan Modul Operasional
+                    {{ $t('relawan.menuTitle') }}
                 </h3>
 
                 <!-- PFA Guidebook Card (Hari 1-3) -->
                 <RelawanLink
                     href="/relawan/pfa"
-                    class="block bg-white hover:bg-teal-50/40 p-5 rounded-xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
+                    class="block bg-white hover:bg-teal-50/40 p-4 sm:p-5 rounded-lg border border-slate-200 transition-colors group"
                 >
-                    <div class="flex items-start justify-between">
+                    <div class="flex items-start justify-between gap-4">
                         <div class="space-y-1">
                             <span
                                 class="text-[11px] font-bold text-teal-800 uppercase tracking-wider block"
                             >
-                                Fase Akut · Hari 1–3
+                                {{ isEn ? 'Acute Phase · Day 1–3' : 'Fase Akut · Hari 1–3' }}
                             </span>
                             <h4
                                 class="text-lg font-bold text-slate-900 group-hover:text-teal-800 transition"
                             >
-                                Buku Saku Digital PFA
+                                {{ $t('relawan.pfaGuideTitle') }}
                             </h4>
                             <p
                                 class="text-xs text-slate-600 max-w-xs leading-relaxed"
                             >
-                                Panduan humanis Look, Listen, Link tanpa beban
-                                input formulir.
+                                {{ $t('relawan.pfaGuideDesc') }}
                             </p>
                         </div>
                         <BookOpen
-                            class="h-8 w-8 text-teal-600 group-hover:scale-110 transition"
+                            class="h-6 w-6 shrink-0 text-teal-700"
                             aria-hidden="true"
                         />
                     </div>
@@ -159,30 +156,28 @@
                 <!-- Structured SRQ-20 Screening Card (Hari 4-30) -->
                 <RelawanLink
                     href="/relawan/assessment"
-                    class="block bg-white hover:bg-teal-50/40 p-5 rounded-xl border border-slate-200 shadow-xs transition hover:border-teal-300 group"
+                    class="block bg-white hover:bg-teal-50/40 p-4 sm:p-5 rounded-lg border border-slate-200 transition-colors group"
                 >
-                    <div class="flex items-start justify-between">
+                    <div class="flex items-start justify-between gap-4">
                         <div class="space-y-1">
                             <span
                                 class="text-[11px] font-bold text-indigo-800 uppercase tracking-wider block"
                             >
-                                Fase Lanjutan · Hari 4–30
+                                {{ isEn ? 'Follow-up Phase · Day 4–30' : 'Fase Lanjutan · Hari 4–30' }}
                             </span>
                             <h4
                                 class="text-lg font-bold text-slate-900 group-hover:text-teal-800 transition"
                             >
-                                Penapisan Terstruktur SRQ-20
+                                {{ $t('relawan.newAssessmentTitle') }}
                             </h4>
                             <p
                                 class="text-xs text-slate-600 max-w-xs leading-relaxed"
                             >
-                                Wawancara psikologis terstandarisasi, checklist
-                                faktor risiko, keberfungsian harian, dan
-                                rekomendasi triase sistem.
+                                {{ $t('relawan.newAssessmentDesc') }}
                             </p>
                         </div>
                         <ClipboardList
-                            class="h-8 w-8 text-teal-600 group-hover:scale-110 transition"
+                            class="h-6 w-6 shrink-0 text-teal-700"
                             aria-hidden="true"
                         />
                     </div>
@@ -197,13 +192,10 @@
                     class="font-bold text-slate-800 inline-flex items-center gap-1.5"
                 >
                     <Info class="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Catatan Etik Garda Depan:</span>
+                    <span>{{ $t('relawan.ethicsNoteTitle') }}</span>
                 </p>
                 <p>
-                    Prioritaskan keselamatan fisik dan kenyamanan emosional
-                    penyintas. Jika menemukan indikasi ideasi bunuh diri atau
-                    amuk, gunakan tombol <strong>T0 DARURAT</strong> di pojok
-                    kanan bawah.
+                    {{ $t('relawan.ethicsNoteContent') }}
                 </p>
             </div>
         </div>
@@ -211,13 +203,19 @@
 </template>
 
 <script setup lang="ts">
+import { ChevronRight } from "lucide-vue-next";
 import { computed } from "vue";
-import { BookOpen, ClipboardList, Info, MapPin, Siren } from "lucide-vue-next";
+import { BookOpen, ClipboardList, ContactRound, Info, MapPin, Siren } from "lucide-vue-next";
 import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import { useOwnedLocalRecords } from "@/composables/useRelawanDataWorkspace";
+import { clinicalKeyReady } from "@/offline/encryptedClinicalStorage";
 import { resumeStage } from "@/offline/assessmentWorkflow";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
+
+const { isEn, t } = useI18n();
 
 const props = defineProps<{
     activeDraft?: {
@@ -227,7 +225,6 @@ const props = defineProps<{
         resume_url?: string;
         resume_label?: string;
     } | null;
-    recentAssessments?: unknown[];
     shelter?: { name?: string } | null;
 }>();
 const runtime = useRelawanRuntime();
@@ -241,22 +238,29 @@ const displayEmergency = computed(() => {
         .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
     return item ? { ...item, patient: { name: item.patient_name } } : null;
 });
-const emergencyTransmission = computed(
-    () =>
-        ({
-            LOCAL_SAVED: "Tersimpan di perangkat",
-            PENDING_SYNC: "Menunggu sinkronisasi",
-            SYNCING: "Menyinkronkan",
-            SYNC_FAILED: "Sinkronisasi belum berhasil",
-            SYNCED: "Diterima server",
-        })[displayEmergency.value?.sync_state ?? "LOCAL_SAVED"],
+const emergencyTransmission = computed(() =>
+    isEn.value
+        ? ({
+              LOCAL_SAVED: "Saved on device",
+              PENDING_SYNC: "Awaiting synchronization",
+              SYNCING: "Synchronizing",
+              SYNC_FAILED: "Synchronization unsuccessful",
+              SYNCED: "Accepted by server",
+          })[displayEmergency.value?.sync_state ?? "LOCAL_SAVED"]
+        : ({
+              LOCAL_SAVED: "Tersimpan di perangkat",
+              PENDING_SYNC: "Menunggu sinkronisasi",
+              SYNCING: "Menyinkronkan",
+              SYNC_FAILED: "Sinkronisasi belum berhasil",
+              SYNCED: "Diterima server",
+          })[displayEmergency.value?.sync_state ?? "LOCAL_SAVED"],
 );
-const stageLabels: Record<string, string> = {
-    srq: "Lanjutkan SRQ-20",
-    risk: "Lanjutkan Faktor Risiko",
-    function: "Lanjutkan Fungsi Harian",
-    review: "Tinjau Asesmen",
-};
+const stageLabels = computed<Record<string, string>>(() => ({
+    srq: t("assessment.continueSrq"),
+    risk: t("assessment.continueRisk"),
+    function: t("assessment.continueFunction"),
+    review: t("assessment.reviewStep"),
+}));
 const displayDraft = computed(() => {
     const drafts = local.records.value.assessments
         .filter((item) => item.status === "IN_PROGRESS")
@@ -268,21 +272,23 @@ const displayDraft = computed(() => {
         );
         const stage = resumeStage(latest);
         return {
-            name: patient?.name || "Penyintas",
+            name: patient?.name || t('common.survivor'),
             local: true,
             resumeUrl: `/relawan/assessment/${latest.id}/${stage}`,
-            resumeLabel: stageLabels[stage],
+            resumeLabel: stageLabels.value[stage],
         };
     }
     const server =
         props.activeDraft?.user_id === owner.value ? props.activeDraft : null;
     return server
         ? {
-              name: server.patient?.name || "Penyintas",
+              name: server.patient?.name || t('common.survivor'),
               local: false,
               resumeUrl:
                   server.resume_url || `/relawan/assessment/${server.id}/srq`,
-              resumeLabel: server.resume_label || "Lanjutkan",
+              resumeLabel: server.resume_label
+                  ? localizeMessage(server.resume_label, isEn.value ? 'en' : 'id')
+                  : (isEn.value ? 'Continue' : 'Lanjutkan'),
           }
         : null;
 });

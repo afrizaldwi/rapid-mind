@@ -1,5 +1,23 @@
 # RAPID-MIND — Authentication & Account Provisioning UX
 
+## Current handoff note — 10 November 2026
+
+Current source is `demo` at `7076e13`; this is a design reference, not a claim
+that all account lifecycle features are complete. Login password and offline
+clinical encryption passphrase remain separate. Local server-authorized enrollment,
+offline unlock and same-document navigation are implemented; the online two-prompt
+UX improvement is DEFERRED. Guarded C2 synthetic accounts/scopes were provisioned
+through validated Admin workflows; strict production phone validation is retained.
+Healthcare case/facility authorization is implemented; Admin has no clinical access.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Universal login, role routing, authentication states, Relawan offline continuity, account provisioning, credential lifecycle, revocation, logout, and account lifecycle  
 **Product language:** Bahasa Indonesia  
@@ -1710,3 +1728,27 @@ What operational ambiguity or failure mode does this solve?
 ```
 
 The next phase should close those shared behaviors before the final screen inventory and implementation handoff.
+
+
+## Supersession — 15 November 2026: device-managed Relawan encryption
+
+The owner approved removing all additional offline authentication input for
+Relawan, including T0. A random non-extractable AES-256-GCM CryptoKey is persisted
+in IndexedDB and restored automatically for eligible local owner continuity.
+Normal online login and explicit logout remain. Backgrounding does not revoke
+field access. This replaces passphrase enrollment, recovery confirmation and
+background-timeout unlock requirements described historically below/above.
+
+Assessments now save through encrypted repositories before background delivery.
+Connectivity changes do not initiate navigation; session/CSRF recovery stays in
+place. T0 still requires human verification/final send and atomically saves its
+encrypted incident and priority-1 outbox. Receipt is separate from Healthcare action.
+
+Schema v9 and worker protocol v3 leave old stores intact. Existing passphrase data
+requires the separately scoped clean start agreed by the owner; it is never
+silently converted or deleted. PostgreSQL reset/reseeding and production activation
+are outside this checkpoint. Browser-profile access is trusted; hardware-backed
+protection and recovery after browser storage loss are not claimed.
+
+See [implementation and verification](checkpoints/device-managed-relawan-2026-11-15.md).
+Historical PASS results remain historical, not evidence for this implementation.

@@ -26,7 +26,8 @@ const code = ts
         },
     })
     .outputText.replaceAll('from "vue"', `from "${import.meta.resolve("vue")}"`)
-    .replaceAll('from "@inertiajs/vue3"', `from "${mockInertia}"`);
+    .replaceAll('from "@inertiajs/vue3"', `from "${mockInertia}"`)
+    .replaceAll('from "./useHealthcareDraft.ts"', `from "${pathToFileURL(resolve("resources/js/composables/useHealthcareDraft.ts")).href}"`);
 const { useEmergencyActions } = await import(
     `data:text/javascript,${encodeURIComponent(code)}`
 );

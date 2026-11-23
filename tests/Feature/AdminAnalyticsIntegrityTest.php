@@ -6,9 +6,14 @@ namespace Tests\Feature;
 
 use App\Enums\AssessmentMode;
 use App\Enums\AssessmentStatus;
+use App\Enums\EmergencyStatus;
+use App\Enums\RedFlagType;
 use App\Enums\TriageCategory;
 use App\Enums\UserRole;
 use App\Models\Assessment;
+use App\Models\ClinicalValidation;
+use App\Models\EmergencyEvent;
+use App\Models\EmergencyVerification;
 use App\Models\Patient;
 use App\Models\Region;
 use App\Models\Shelter;
@@ -72,6 +77,59 @@ final class AdminAnalyticsIntegrityTest extends TestCase
         ]);
 
         return $assessment;
+    }
+
+    public function test_summary_keeps_recommendations_and_t0_reports_out_of_clinically_confirmed_total(): void
+    {
+        $region = Region::create(['name' => 'Wilayah Uji']);
+        $shelter = Shelter::create(['region_id' => $region->id, 'name' => 'Posko Uji', 'is_active' => true]);
+        $patient = $this->patient('Penyintas Sintetis', $shelter->id);
+        $this->assessment($patient, TriageCategory::T1, '2026-10-02 08:00:00');
+        $t3Assessment = $this->assessment($patient, TriageCategory::T3, '2026-10-02 09:00:00');
+        $emergency = EmergencyEvent::create([
+            'patient_id' => $patient->id,
+            'user_id' => $this->relawan->id,
+            'shelter_id' => $shelter->id,
+            'red_flag_type' => RedFlagType::SUICIDAL_IDEATION,
+            'status' => EmergencyStatus::PENDING,
+        ]);
+
+        $this->get('/admin/summary')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Admin/Summary', false)
+            ->where('kpis.totalConfirmed', 0)
+            ->where('kpis.countT0', 1)
+            ->where('kpis.countT1', 1)
+            ->where('kpis.countT3', 1)
+            ->where('shelters.0.total_cases', 3)
+            ->etc());
+
+        $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $emergency->update(['status' => EmergencyStatus::CONFIRMED]);
+        EmergencyVerification::create([
+            'emergency_event_id' => $emergency->id,
+            'verified_by' => $healthcare->id,
+            'clinical_result' => TriageCategory::T0_CONFIRMED,
+        ]);
+
+        $this->get('/admin/summary')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('kpis.totalConfirmed', 1)
+            ->where('kpis.countT0Confirmed', 1)
+            ->where('kpis.countT0', 1)
+            ->where('kpis.countT1', 1)
+            ->where('kpis.countT3', 1)
+            ->etc());
+
+        ClinicalValidation::create([
+            'assessment_id' => $t3Assessment->id,
+            'validated_by' => $healthcare->id,
+            'clinical_result' => TriageCategory::T3,
+        ]);
+
+        $this->get('/admin/summary')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('kpis.totalConfirmed', 2)
+            ->where('kpis.countT0Confirmed', 1)
+            ->where('kpis.countT3', 1)
+            ->etc());
     }
 
     public function test_no_data_returns_thirty_zero_daily_buckets_and_real_zero_distribution(): void

@@ -1,5 +1,5 @@
 <template>
-    <RelawanLayout>
+    <RelawanLayout @clinical-lock="scope.invalidate" @clinical-ready="loadResult">
         <div class="space-y-6">
             <!-- Result Card -->
             <div
@@ -8,7 +8,7 @@
                 <span
                     class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700"
                 >
-                    Hasil Skrining Lapangan
+                    {{ isEn ? "Field Screening Result" : "Hasil Skrining Lapangan" }}
                 </span>
 
                 <!-- Triage Level Display -->
@@ -32,24 +32,24 @@
                         {{ categoryStyle.title }}
                     </h2>
                     <p class="text-xs text-slate-500 mt-1">
-                        Pasien:
+                        {{ isEn ? "Patient:" : "Pasien:" }}
                         <strong class="text-slate-800">{{
                             localPatient?.name
                         }}</strong>
-                        (NIK: {{ localPatient?.nik || "Tanpa NIK" }})
+                        (NIK: {{ localPatient?.nik || (isEn ? "Without NIK" : "Tanpa NIK") }})
                     </p>
                 </div>
 
                 <!-- Score Breakdown Cards -->
                 <div
                     v-if="triageResult"
-                    class="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 text-center"
+                    class="grid grid-cols-4 gap-1.5 sm:gap-2 pt-3 border-t border-slate-100 text-center"
                 >
                     <div
-                        class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80"
+                        class="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-slate-500 uppercase block"
+                            class="text-[10px] font-bold text-slate-500 uppercase block truncate"
                             >SRQ-20</span
                         >
                         <span class="text-base font-extrabold text-slate-900">{{
@@ -59,11 +59,11 @@
                     </div>
 
                     <div
-                        class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80"
+                        class="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-slate-500 uppercase block"
-                            >Risiko</span
+                            class="text-[10px] font-bold text-slate-500 uppercase block truncate"
+                            >{{ isEn ? "Risk" : "Risiko" }}</span
                         >
                         <span class="text-base font-extrabold text-amber-800">{{
                             triageResult?.risk_score
@@ -72,11 +72,11 @@
                     </div>
 
                     <div
-                        class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80"
+                        class="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-slate-500 uppercase block"
-                            >Fungsi</span
+                            class="text-[10px] font-bold text-slate-500 uppercase block truncate"
+                            >{{ isEn ? "Function" : "Fungsi" }}</span
                         >
                         <span class="text-base font-extrabold text-teal-800">{{
                             triageResult?.function_score
@@ -85,10 +85,10 @@
                     </div>
 
                     <div
-                        class="p-2.5 rounded-xl bg-teal-50 border border-teal-200"
+                        class="p-2 sm:p-2.5 rounded-xl bg-teal-50 border border-teal-200 min-w-0"
                     >
                         <span
-                            class="text-[10px] font-bold text-teal-800 uppercase block"
+                            class="text-[10px] font-bold text-teal-800 uppercase block truncate"
                             >Total</span
                         >
                         <span class="text-base font-bold text-teal-950">{{
@@ -107,7 +107,7 @@
                 <h3
                     class="text-xs font-bold text-slate-500 uppercase tracking-wider"
                 >
-                    Rekomendasi Tindak Lanjut Relawan
+                    {{ isEn ? "Volunteer Follow-up Recommendation" : "Rekomendasi Tindak Lanjut Relawan" }}
                 </h3>
                 <p class="text-xs text-slate-700 leading-relaxed font-medium">
                     {{ categoryStyle.actionText }}
@@ -121,30 +121,31 @@
                 <p
                     class="text-xs font-bold uppercase tracking-wider text-red-800"
                 >
-                    Tindakan darurat wajib
+                    {{ isEn ? "Mandatory Emergency Action" : "Tindakan darurat wajib" }}
                 </p>
                 <h3 class="mt-1 text-base font-extrabold text-red-950">
-                    Buat insiden T0-Suspect untuk antrean Healthcare
+                    {{ isEn ? "Create T0-Suspect incident for Healthcare queue" : "Buat insiden T0-Suspect untuk antrean Healthcare" }}
                 </h3>
                 <p class="mt-2 text-xs leading-relaxed text-red-900">
-                    Hasil asesmen tidak sama dengan insiden darurat. Verifikasi
-                    indikator dan kirim T0-Suspect agar kasus masuk ke antrean
-                    darurat Healthcare.
+                    {{ isEn
+                        ? "Assessment results are not an emergency incident. Verify indicators and submit T0-Suspect to enter Healthcare emergency queue."
+                        : "Hasil asesmen tidak sama dengan insiden darurat. Verifikasi indikator dan kirim T0-Suspect agar kasus masuk ke antrean darurat Healthcare."
+                    }}
                 </p>
                 <RelawanLink
                     v-if="existingEmergencyId"
                     :href="`/relawan/emergencies/${existingEmergencyId}`"
                     class="mt-4 flex w-full justify-center rounded-xl bg-red-800 px-4 py-3 text-sm font-extrabold text-white hover:bg-red-900"
                 >
-                    LIHAT STATUS T0-SUSPECT
+                    {{ isEn ? "VIEW T0-SUSPECT STATUS" : "LIHAT STATUS T0-SUSPECT" }}
                 </RelawanLink>
                 <button
                     v-else
                     type="button"
-                    class="mt-4 w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-extrabold text-white shadow-md hover:bg-red-900"
+                    class="mt-4 w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-extrabold text-white shadow-md hover:bg-red-900 cursor-pointer"
                     @click="showEmergencyVerification = true"
                 >
-                    VERIFIKASI & KIRIM T0-SUSPECT
+                    {{ isEn ? "VERIFY & SEND T0-SUSPECT" : "VERIFIKASI & KIRIM T0-SUSPECT" }}
                 </button>
             </div>
 
@@ -153,14 +154,19 @@
                 class="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-start space-x-2.5 leading-relaxed"
             >
                 <Info class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <div>
+                <div v-if="isEn">
+                    <strong class="text-slate-800 block mb-0.5"
+                        >System Recommendation (Not a Medical Diagnosis):</strong
+                    >
+                    This assessment result is a SYSTEM RECOMMENDATION serving as an initial decision-support tool until official CLINICAL VALIDATION is performed by Healthcare Personnel / Professional Specialists.
+                </div>
+                <div v-else>
                     <strong class="text-slate-800 block mb-0.5"
                         >Rekomendasi Sistem (Bukan Diagnosis Medis):</strong
                     >
-                    RAPID-MIND adalah instrumen pendukung keputusan penapisan
-                    awal. Penetapan diagnosis klinis resmi, tata laksana
-                    medikamentosa, dan tindakan rujukan medis sepenuhnya menjadi
-                    kewenangan tenaga kesehatan (dokter/psikiater).
+                    Hasil asesmen ini bersifat REKOMENDASI SISTEM sebagai alat
+                    bantu keputusan awal hingga dilakukan VALIDASI KLINIS resmi
+                    oleh Tenaga Kesehatan / Spesialis Profesional.
                 </div>
             </div>
 
@@ -170,13 +176,13 @@
                     href="/relawan/home"
                     class="w-full flex justify-center py-3.5 px-4 bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm rounded-xl shadow-md transition"
                 >
-                    Kembali ke Beranda
+                    {{ isEn ? "Back to Home" : "Kembali ke Beranda" }}
                 </RelawanLink>
                 <RelawanLink
                     href="/relawan/assessment"
                     class="w-full flex justify-center py-3 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-sm rounded-xl transition"
                 >
-                    Kembali ke Daftar Asesmen
+                    {{ isEn ? "Back to Assessment List" : "Kembali ke Daftar Asesmen" }}
                 </RelawanLink>
             </div>
         </div>
@@ -201,14 +207,21 @@ import RelawanLink from "@/relawan/RelawanLink.vue";
 import RelawanLayout from "@/layouts/RelawanLayout.vue";
 import { useRelawanRuntime } from "@/relawan/runtime";
 import {
-    loadAssessmentContext,
+    exactAssessmentAnswers,
     relawanOwner,
     type ServerAssessment,
     type ServerPatient,
 } from "@/offline/assessmentWorkflow";
 import { emergencyRepository } from "@/offline/emergencyRepository";
+import { useClinicalTaskScope } from "@/composables/useClinicalTaskScope";
+import { useAssessmentPersistence } from "@/composables/useAssessmentPersistence";
 import { normalizeTriage } from "@/offline/triageDisplay";
 import type { LocalPatient } from "@/offline/db";
+import { useI18n } from "@/i18n";
+import { localizeMessage } from "@/i18n/localizeMessage";
+
+const { locale } = useI18n();
+const isEn = computed(() => locale.value === "en");
 
 const props = defineProps<{
     assessment: ServerAssessment;
@@ -219,31 +232,66 @@ const props = defineProps<{
         assessment_id: string;
     } | null;
 }>();
-
 const runtime = useRelawanRuntime();
+const persistence = useAssessmentPersistence(props.assessment, props.patient);
+const { loadAssessmentContext } = persistence;
 const owner = relawanOwner();
 const localPatient = ref<LocalPatient | null>(null);
-const triageResult = ref(normalizeTriage(props.triageResult));
-const syncLabel = ref(
-    "Tersimpan di perangkat ini; sinkronisasi belum dikonfirmasi.",
+const triageResult = ref<any>(null);
+const localSyncState = ref<"SYNCED" | "LOCAL" | null>(null);
+const syncLabel = computed(() => {
+    if (localSyncState.value === "SYNCED") {
+        return isEn.value ? "Synchronized with server." : "Tersinkronisasi dengan server.";
+    }
+    if (localSyncState.value === "LOCAL") {
+        return isEn.value
+            ? "Stored on this device; sync not confirmed yet."
+            : "Tersimpan di perangkat ini; sinkronisasi belum dikonfirmasi.";
+    }
+    return "";
+});
+const rawLoadError = ref<{ id: string; en: string } | string>("");
+const loadError = computed(() =>
+    typeof rawLoadError.value === "string"
+        ? localizeMessage(rawLoadError.value, locale.value)
+        : isEn.value
+          ? rawLoadError.value.en
+          : rawLoadError.value.id,
 );
-const loadError = ref("");
 const showEmergencyVerification = ref(false);
-const existingEmergencyId = ref(props.existingEmergency?.id ?? null);
+const existingEmergencyId = ref<string | null>(
+    props.existingEmergency?.id ?? null,
+);
+const scope = useClinicalTaskScope(() => {
+    persistence.invalidate();
+    localPatient.value = null;
+    triageResult.value = null;
+    showEmergencyVerification.value = false;
+}, { serverOnly: persistence.online });
+onMounted(() => { if (persistence.online) void loadResult(); });
 const isT0Recommendation = computed(
     () => triageResult.value?.system_recommendation === "T0_SUSPECT",
 );
 
 function handleEmergencyCreated(event: Event) {
-    const detail = (event as CustomEvent<{ owner: number; id: string }>).detail;
-    if (detail.owner === owner) existingEmergencyId.value = detail.id;
+    const detail = (event as CustomEvent<{ id: string; assessment_id?: string }>)
+        .detail;
+    if (detail?.assessment_id === props.assessment.id) {
+        existingEmergencyId.value = detail.id;
+        showEmergencyVerification.value = false;
+    }
 }
-
-onMounted(async () => {
+onMounted(() =>
     window.addEventListener(
         "rapid-mind:emergency-created",
         handleEmergencyCreated,
-    );
+    ),
+);
+
+async function loadResult() {
+    if (runtime.owner !== owner) return;
+    const current = scope.capture();
+    rawLoadError.value = "";
     try {
         const context = await loadAssessmentContext(
             owner,
@@ -251,31 +299,57 @@ onMounted(async () => {
             props.patient,
             runtime.mode === "OFFLINE_FIELD_MODE",
         );
-        if (context.assessment.status !== "COMPLETED")
-            throw new Error("Asesmen belum selesai.");
+        if (!current()) return;
+        const unloadedServerResult =
+            props.assessment.status === "COMPLETED" &&
+            props.assessment.srq_responses === undefined &&
+            context.assessment.sync_state === "SYNCED" &&
+            Object.keys(context.assessment.srq_answers ?? {}).length === 0 &&
+            normalizeTriage(props.triageResult) !== null;
+        if (
+            context.assessment.status !== "COMPLETED" ||
+            (!exactAssessmentAnswers(context.assessment) &&
+                !unloadedServerResult)
+        ) {
+            rawLoadError.value = {
+                id: "Asesmen belum selesai.",
+                en: "Assessment is incomplete.",
+            };
+            return;
+        }
         localPatient.value = context.patient;
         triageResult.value = normalizeTriage(
             context.assessment.triage_result ?? props.triageResult,
         );
-        if (!triageResult.value)
-            throw new Error("Rekomendasi sistem belum tersedia.");
-        syncLabel.value =
-            context.assessment.sync_state === "SYNCED"
-                ? "Tersinkronisasi dengan server."
-                : "Tersimpan di perangkat ini; sinkronisasi belum dikonfirmasi.";
+        if (!triageResult.value) {
+            rawLoadError.value = {
+                id: "Rekomendasi sistem belum tersedia.",
+                en: "System recommendation not available yet.",
+            };
+            return;
+        }
+        localSyncState.value =
+            context.assessment.sync_state === "SYNCED" ? "SYNCED" : "LOCAL";
 
         if (isT0Recommendation.value && !existingEmergencyId.value) {
-            const localEmergency = (await emergencyRepository.list(owner)).find(
+            const localEmergency = (persistence.online ? [] : await emergencyRepository.list(owner)).find(
                 (item) => item.assessment_id === props.assessment.id,
             );
+            if (!current()) return;
             existingEmergencyId.value = localEmergency?.id ?? null;
             showEmergencyVerification.value = !existingEmergencyId.value;
         }
     } catch (error) {
-        loadError.value =
-            error instanceof Error ? error.message : "Hasil tidak tersedia.";
+        if (!current()) return;
+        rawLoadError.value =
+            error instanceof Error
+                ? error.message
+                : {
+                      id: "Hasil tidak tersedia.",
+                      en: "Result not available.",
+                  };
     }
-});
+}
 onUnmounted(() =>
     window.removeEventListener(
         "rapid-mind:emergency-created",
@@ -290,30 +364,34 @@ const categoryStyle = computed(() => {
         case "T0_SUSPECT":
             return {
                 badge: "bg-red-50 text-red-900 border-red-500",
-                title: "T0 — Gawat Darurat Psikiatrik",
-                actionText:
-                    "SEGERA dampingi penyintas secara fisik. Picu sinyal T0 Darurat untuk respons cepat evakuasi medis PSC 119.",
+                title: isEn.value ? "T0 — Psychiatric Emergency" : "T0 — Gawat Darurat Psikiatrik",
+                actionText: isEn.value
+                    ? "IMMEDIATELY accompany the survivor physically. Trigger the T0 Emergency signal for rapid PSC 119 medical evacuation response."
+                    : "SEGERA dampingi penyintas secara fisik. Picu sinyal T0 Darurat untuk respons cepat evakuasi medis PSC 119.",
             };
         case "T1":
             return {
                 badge: "bg-orange-50 text-orange-950 border-orange-400",
-                title: "T1 — Distres Berat / Prioritas Konsultasi Medis",
-                actionText:
-                    "Jadwalkan konsultasi dengan dokter / perawat faskes di Pos Medis terdekat untuk evaluasi lanjutan dan validasi klinis.",
+                title: isEn.value ? "T1 — Severe Distress / Medical Priority" : "T1 — Distres Berat / Prioritas Konsultasi Medis",
+                actionText: isEn.value
+                    ? "Schedule a consultation with a healthcare doctor/nurse at the nearest Medical Post for further evaluation and clinical validation."
+                    : "Jadwalkan konsultasi dengan dokter / perawat faskes di Pos Medis terdekat untuk evaluasi lanjutan dan validasi klinis.",
             };
         case "T2":
             return {
                 badge: "bg-amber-50 text-amber-950 border-amber-400",
-                title: "T2 — Distres Sedang / Dukungan Psikososial",
-                actionText:
-                    "Berikan intervensi PFA lanjutan, ajak bergabung dalam aktivitas dukungan psikososial kelompok terstruktur, dan evaluasi ulang dalam 7 hari.",
+                title: isEn.value ? "T2 — Moderate Distress / Psychosocial Support" : "T2 — Distres Sedang / Dukungan Psikososial",
+                actionText: isEn.value
+                    ? "Provide follow-up PFA interventions, engage in structured psychosocial group activities, and re-evaluate within 7 days."
+                    : "Berikan intervensi PFA lanjutan, ajak bergabung dalam aktivitas dukungan psikososial kelompok terstruktur, dan evaluasi ulang dalam 7 hari.",
             };
         default:
             return {
                 badge: "bg-emerald-50 text-emerald-950 border-emerald-400",
-                title: "T3 — Resilien / Dukungan Komunitas Rutin",
-                actionText:
-                    "Kondisi psikologis stabil. Sertakan dalam kegiatan harian posko, berikan edukasi reaksi stres normal, dan pantau secara berkala.",
+                title: isEn.value ? "T3 — Resilient / Routine Community Support" : "T3 — Resilien / Dukungan Komunitas Rutin",
+                actionText: isEn.value
+                    ? "Stable psychological condition. Include in routine shelter activities, provide normal stress reaction education, and monitor periodically."
+                    : "Kondisi psikologis stabil. Sertakan dalam kegiatan harian posko, berikan edukasi reaksi stres normal, dan pantau secara berkala.",
             };
     }
 });

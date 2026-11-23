@@ -5,7 +5,130 @@
 **Product language:** Bahasa Indonesia  
 **Discussion/design language:** English  
 **Design direction:** Operational Humanitarian UI  
-**Status:** Design baseline for the next UI/UX phase
+**Status:** Historical design baseline with current implementation alignment below
+
+---
+
+# Current reporting alignment — 10 November 2026 (decision approved 7 November)
+
+**Approved requirement:** official counts and geographic distribution use only
+Healthcare-validated outcomes, without identifiable patient information. System
+recommendations and unverified T0-Suspect reports must remain separate populations,
+with explicit labels. Technical delivery is not validation; internal Dispatch
+assignment does not prove external contact or pickup. Admin has no clinical role.
+This is a requirement/source review, not an implementation fix or runtime pass.
+
+**Rechecked source baseline:** `demo` at `7076e13`:
+`app/Http/Controllers/Admin/AdminController.php`,
+`resources/js/Pages/Admin/Summary.vue`, `resources/js/Pages/Admin/Analytics.vue`,
+`resources/js/Pages/Admin/Map.vue`, and
+`tests/Feature/AdminAnalyticsIntegrityTest.php` (test source, not rerun).
+
+| Surface / query | Actual current population | Gap against official validated reporting |
+|---|---|---|
+| Summary `kpis.totalConfirmed` | CONFIRMED EmergencyEvent rows + ClinicalValidation rows with T1/T2/T3 results; frontend reads this value directly | No recommendation fallback exists in current source. Still a raw sum across event/assessment records, not a defined unique-case or unique-person count. No cross-source/latest-outcome reconciliation. |
+| Summary category KPIs | T0 includes PENDING/ACKNOWLEDGED/REVIEWING/CONFIRMED; T1/T2/T3 count system TriageResult rows without the completed-assessment restriction used by distribution | Unverified suspects and recommendations are not official validated categories; KPI and chart populations also differ. |
+| Summary / Analytics distributions | Summary T0 uses active statuses; Analytics T0 uses all emergency rows. T1/T2/T3 use system recommendations from completed assessments | Mixed provenance; Analytics includes downgraded/historical emergency rows in T0. No unified Healthcare-outcome distribution. |
+| Posko category totals and map T0 emphasis | Completed system recommendations grouped by current patient shelter; emergency rows grouped by event shelter and active statuses | `total_cases` sums overlapping event/assessment populations; repeated assessments/events or one patient in both streams can inflate a unique-case interpretation. These are not validated-only geographic counts. |
+| Trend dates and coverage | Summary T0 trend counts all emergency creations; T1/T2/T3 trends use completed-assessment recommendations. Analytics trend contains no T0 series | Not validation-time trends, with inconsistent T0 coverage/time semantics. |
+| Downgraded emergency outcomes | T1/T2/T3 decisions are stored in EmergencyVerification; validated T1/T2/T3 counters read ClinicalValidation only | Healthcare's downgraded T1/T2/T3 outcomes are missing from those validated-category counters, including newly approved T3. |
+| Privacy boundary | Inspected reporting payloads omit direct patient names/NIK and use institutional aggregates; Summary also sends event ID, shelter, status and creation time in early-warning rows | Not proof of full anonymity or aggregate-only minimization: event linkability and sparse geographic cells require review. No current browser/privacy acceptance for these reporting decisions is claimed. |
+
+**Implementation gaps — not fixed:** define the reporting unit (case/event/person),
+canonical outcome reconciliation and deduplication, category completeness,
+validation-time/geographic attribution (including missing shelter), and approved
+aggregate privacy/minimization. Do not silently discard unknown geography or
+replace absent validation with system recommendations. Separate any permitted
+operational suspect workload from official validated reporting. The team has not
+specified a new deduplication algorithm or aggregation unit in this checkpoint.
+
+Healthcare authorization is separate from these unresolved Admin reporting gaps.
+The earlier broad-read/role-wide-channel finding is historical: `e561c98` now
+implements facility/case reads, writes, patient-history/summary scope, counts and
+recipient-specific event audiences. The old emergency channel is denied. This
+neither fixes Admin aggregation semantics nor grants Admin clinical access. See
+[Healthcare alignment](RAPID_MIND_HEALTHCARE_WORKSPACE.md).
+
+These findings do not invalidate historical tests within their old scope. They
+show why those tests do not prove the newly approved official reporting contract.
+Current [P0 handoff classifications](../P0-HANDOFF.md) remain unchanged: local
+demo CONDITIONAL PASS, natural background locking NOT TESTED and production
+security NOT ESTABLISHED. P1/P2 complete acceptance is pending; C2 NOT ACCEPTED;
+C3 not started. No Admin reporting implementation was changed by this alignment.
+
+---
+
+# Historical Implementation Alignment — 24 October 2026
+
+This section retains the October snapshot. Its fallback description and any
+suggestion that mixed counts are official validated outcomes are superseded by
+the inspected November query definitions above; historical design targets remain.
+The numbered sections that follow preserve the original product and UX rationale.
+Where they prescribe four destinations, a map-first landing page, exports,
+realtime aggregates, or a density heatmap, those passages are **historical design
+targets**, not claims about the implemented application.
+
+## Implemented navigation
+
+`resources/js/layouts/AdminLayout.vue` implements eight visible destinations in
+four groups:
+
+| Group | Label | Route | Current surface |
+|---|---|---|---|
+| Command Center | Pusat Komando | `/admin/summary` | Regional KPIs, Posko case table, embedded marker map, distribution, and 30-day trend |
+| Command Center | Data Longitudinal | `/admin/analytics` | Triage distribution, 30-day daily case-count trend, and aggregate Posko table |
+| Operations | Manajemen Relawan | `/admin/volunteers` | Relawan accounts, current Posko assignment, and assignment changes |
+| Operations | Posko & Sumber Daya | `/admin/operations/posko` | Posko registry, operational status, coordinates, and assigned Relawan count |
+| Operations | Kebutuhan Logistik | `/admin/logistics` | Resource-need creation/update and append-only allocation records |
+| Healthcare Network | Organisasi Faskes | `/admin/facilities/organizations` | Faskes registry and activation/deactivation |
+| Healthcare Network | Akun Healthcare | `/admin/facilities/users` | Healthcare account provisioning and facility assignment |
+| Spatial | Peta Geospasial | `/admin/map` | MapLibre Posko/Faskes markers and a textual Posko directory |
+
+The earlier four-destination proposal (`Ringkasan`, `Relawan`, `Faskes`,
+`Operasional`) is therefore **SUPERSEDED AS NAVIGATION**. Its grouping rationale
+remains useful background, but it is not the current sidebar.
+
+## Implemented operational surfaces
+
+- **IMPLEMENTED — Pusat Komando:** database-backed counts and Posko aggregates,
+  a Posko table, an embedded MapLibre marker map, triage distribution, and a
+  30-day series. Some labels and populations are not uniform: for example,
+  `totalConfirmed` can fall back to system-triage counts, and T0 counting differs
+  between summary/analytics contexts. Treat this as a known metric/copy alignment
+  issue, not a uniformly clinically confirmed population.
+- **IMPLEMENTED — Peta Geospasial:** circular Posko markers communicate active T0
+  presence and square markers identify active Faskes when coordinates exist. A
+  Posko directory provides a non-map path. This is **not** a regional density
+  heatmap and does not render a T0–T3 density surface.
+- **IMPLEMENTED — Data Longitudinal:** ECharts renders aggregate T1/T2/T3 daily
+  counts from completed assessments over 30 calendar days plus distribution and
+  Posko totals. This is a case-volume trend, not proven patient-level recovery or
+  prevalence analysis; no population denominator is supplied.
+- **IMPLEMENTED — Relawan/Posko/Faskes provisioning:** dedicated controllers and
+  forms manage accounts, current assignments, organization records, operational
+  status, and guarded deactivation. This does not confer patient-level clinical
+  authority on Admin.
+- **IMPLEMENTED — logistics MVP:** Admin records needs and allocations using real
+  persisted data. It is not stock accounting, procurement, supplier, warehouse,
+  or fleet-management software.
+- **PARTIAL — responsive behavior:** the shared sidebar becomes a drawer below
+  the large breakpoint; summary/map grids stack; logistics uses a desktop table,
+  a mobile card view, and a responsive priority panel; wide tables may scroll.
+  These source-level adaptations are not a new device/browser verification claim.
+
+## Explicit current limitations
+
+- **PLANNED:** a true geospatial density heatmap and broader geographic clustering.
+- **UNVERIFIED / NOT IMPLEMENTED:** Admin Reverb/Echo aggregate subscriptions.
+  `AdminLayout.vue` reports browser online/offline state only; Admin data is loaded
+  by normal server/Inertia requests.
+- **NOT IMPLEMENTED:** PDF/Excel export, live volunteer GPS tracking, response-unit
+  CRUD, fleet scheduling, and a general report builder.
+- **BOUNDARY:** Admin has no patient-specific T0 acknowledgement, clinical
+  classification, referral decision, or dispatch-progression command.
+
+For the compact live inventory and evidence boundaries, see
+`CURRENT_IMPLEMENTATION.md` and `workflow-verification.md`.
 
 ---
 
@@ -132,7 +255,11 @@ instead of permanent flashing
 
 # 4. Admin Information Architecture
 
-## Final Direction
+## Historical Design Direction (Navigation Superseded)
+
+The four-destination proposal below is retained as design history. The current
+implemented eight-link grouped sidebar is documented in the alignment section
+above and in `CURRENT_IMPLEMENTATION.md`.
 
 Use four permanent top-level Admin destinations:
 

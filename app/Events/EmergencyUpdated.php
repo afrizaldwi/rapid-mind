@@ -19,9 +19,9 @@ final class EmergencyUpdated implements ShouldBroadcastNow
     {
     }
 
-    public function broadcastOn(): PrivateChannel
+    public function broadcastOn(): array
     {
-        return new PrivateChannel('emergencies');
+        return \App\Domain\Healthcare\CaseAudience::forCase($this->emergency->fresh());
     }
 
     /** @return array{emergency: array{id: string}} */

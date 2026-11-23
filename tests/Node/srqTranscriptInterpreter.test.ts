@@ -64,6 +64,17 @@ test("a bare direct response stays unresolved", () => {
     assert.equal(interpretation.unresolved[0]?.reason, "unanchored_response");
 });
 
+test("short final answers and punctuation-free question/answer pairs match conservatively", () => {
+    assert.equal(answerFor("Pusing.", 1), true);
+    assert.equal(answerFor("Nggak pusing.", 1), false);
+    assert.equal(answerFor("Insomnia.", 3), true);
+    assert.equal(answerFor("Apakah anda sulit tidur iya", 3), true);
+    assert.equal(answerFor("Apakah anda sulit tidur, enggak", 3), false);
+    for (const phrase of ["Pusing?", "Ibu pusing", "Pusing atau tidak", "Capek", "Mau mati"]) {
+        assert.equal(interpretSrqTranscript(phrase).matches.length, 0, phrase);
+    }
+});
+
 test("one transcript can produce multiple independent answers", () => {
     const interpretation = interpretSrqTranscript(
         "saya sering sakit kepala, saya susah tidur, saya merasa takut dan khawatir, saya sering menangis, saya tidak berguna, saya tidak ingin mati",

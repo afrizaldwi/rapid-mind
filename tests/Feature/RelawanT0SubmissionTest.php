@@ -11,8 +11,12 @@ use App\Enums\RedFlagType;
 use App\Enums\UserRole;
 use App\Events\EmergencyCreated;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
+use App\Models\HealthcareFacility;
 use App\Models\Patient;
+use App\Models\Region;
+use App\Models\Shelter;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -24,6 +28,7 @@ use Tests\TestCase;
 final class RelawanT0SubmissionTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private User $relawan;
 
@@ -44,6 +49,100 @@ final class RelawanT0SubmissionTest extends TestCase
             'status' => AssessmentStatus::IN_PROGRESS,
             'mode' => AssessmentMode::VERBAL,
         ]);
+    }
+
+    public function test_owned_patient_is_accepted_without_a_posko(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $patient = Patient::create(['name' => 'Penyintas Milik Relawan', 'created_by' => $this->relawan->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertCreated();
+
+        $this->assertSame($patient->id, EmergencyEvent::sole()->patient_id);
+        Event::assertDispatched(EmergencyCreated::class, 1);
+    }
+
+    public function test_same_posko_patient_is_accepted(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $shelter = Shelter::create(['name' => 'Posko Bersama', 'region_id' => Region::create(['name' => 'Wilayah Uji'])->id]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Posko', 'created_by' => $other->id, 'shelter_id' => $shelter->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertCreated();
+
+        $this->assertSame($patient->id, EmergencyEvent::sole()->patient_id);
+        Event::assertDispatched(EmergencyCreated::class, 1);
+    }
+
+    public function test_foreign_patient_from_another_posko_is_rejected_without_persistence_or_broadcast(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $region = Region::create(['name' => 'Wilayah Uji']);
+        $ownShelter = Shelter::create(['name' => 'Posko Sendiri', 'region_id' => $region->id]);
+        $otherShelter = Shelter::create(['name' => 'Posko Lain', 'region_id' => $region->id]);
+        $this->relawan->update(['shelter_id' => $ownShelter->id]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Identitas Rahasia', 'created_by' => $other->id, 'shelter_id' => $otherShelter->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('patient_id')->assertDontSee('Identitas Rahasia');
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertDatabaseCount('assessments', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
+    public function test_relawan_without_posko_cannot_use_another_relawans_patient(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Lain', 'created_by' => $other->id]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'patient_id' => $patient->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
+    public function test_owned_assessment_with_now_ineligible_patient_is_rejected(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        $region = Region::create(['name' => 'Wilayah Uji']);
+        $shelter = Shelter::create(['name' => 'Posko Lama', 'region_id' => $region->id]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        $other = User::factory()->create(['role' => UserRole::RELAWAN, 'is_active' => true]);
+        $patient = Patient::create(['name' => 'Penyintas Dipindah', 'created_by' => $other->id, 'shelter_id' => $shelter->id]);
+        $assessment = Assessment::create([
+            'patient_id' => $patient->id,
+            'user_id' => $this->relawan->id,
+            'status' => AssessmentStatus::IN_PROGRESS,
+            'mode' => AssessmentMode::VERBAL,
+        ]);
+        $this->relawan->update(['shelter_id' => null]);
+
+        $this->postJson('/relawan/emergencies', [
+            'red_flag_type' => RedFlagType::PSYCHOSIS->value,
+            'assessment_id' => $assessment->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('assessments', 1);
+        Event::assertNotDispatched(EmergencyCreated::class);
     }
 
     public function test_owned_assessment_and_matching_patient_are_saved_together(): void
@@ -90,6 +189,7 @@ final class RelawanT0SubmissionTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('patient_id');
 
         $this->assertSame(0, EmergencyEvent::count());
+        $this->assertDatabaseCount('audit_logs', 0);
     }
 
     public function test_foreign_relawan_assessment_is_rejected(): void
@@ -130,20 +230,40 @@ final class RelawanT0SubmissionTest extends TestCase
         $this->assertSame(0, EmergencyEvent::count());
     }
 
-    public function test_valid_emergency_is_persisted_and_reports_successful_broadcast_dispatch(): void
+    public function test_unrouted_emergency_is_persisted_without_claiming_a_healthcare_audience(): void
     {
         Event::fake([EmergencyCreated::class]);
 
         $response = $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::PSYCHOSIS->value])
             ->assertCreated()
-            ->assertJsonPath('realtime_delivered', true)
-            ->assertJsonMissingPath('warning');
+            ->assertJsonPath('realtime_delivered', false)
+            ->assertJsonStructure(['warning']);
 
         $emergency = EmergencyEvent::sole();
         $this->assertSame($emergency->id, $response->json('emergency_id'));
         $this->assertSame(RedFlagType::PSYCHOSIS, $emergency->red_flag_type);
         $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $audit = AuditLog::where('action', 'EMERGENCY_CREATED')->sole();
+        $this->assertSame($this->relawan->id, $audit->actor_id);
+        $this->assertSame('EmergencyEvent', $audit->entity_type);
+        $this->assertSame($emergency->id, $audit->entity_id);
+        $this->assertNull($audit->old_values);
+        $this->assertEqualsCanonicalizing(['status' => 'PENDING', 'source' => 'ONLINE'], $audit->new_values);
+        $this->assertNotNull($audit->created_at);
         Event::assertDispatched(EmergencyCreated::class, 1);
+    }
+
+    public function test_audit_write_failure_rolls_back_online_emergency_and_sends_no_event(): void
+    {
+        Event::fake([EmergencyCreated::class]);
+        AuditLog::creating(fn () => throw new RuntimeException('Simulated audit write failure'));
+
+        $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::PSYCHOSIS->value])
+            ->assertInternalServerError();
+
+        $this->assertDatabaseCount('emergency_events', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+        Event::assertNotDispatched(EmergencyCreated::class);
     }
 
     public function test_broadcast_failure_keeps_one_emergency_and_returns_json_warning(): void
@@ -161,6 +281,7 @@ final class RelawanT0SubmissionTest extends TestCase
         $emergency = EmergencyEvent::sole();
         $this->assertSame($emergency->id, $response->json('emergency_id'));
         $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $emergency->id)->count());
     }
 
     public function test_broadcast_failure_redirects_to_saved_emergency_with_visible_flash_warning(): void
@@ -178,6 +299,57 @@ final class RelawanT0SubmissionTest extends TestCase
                 ->component('Relawan/Emergency', false)
                 ->where('emergency.id', $emergency->id)
                 ->where('flash.error', fn($warning) => str_contains($warning, 'belum dapat dikonfirmasi')));
+    }
+
+    private function failHealthcareAudienceResolution(): void
+    {
+        $facility = HealthcareFacility::create(['name' => 'Faskes sintetis audience', 'type' => 'RS', 'is_active' => true]);
+        $shelter = Shelter::create([
+            'name' => 'Posko sintetis audience',
+            'region_id' => Region::create(['name' => 'Wilayah sintetis audience'])->id,
+            'is_active' => true,
+            'primary_facility_id' => $facility->id,
+        ]);
+        $this->relawan->update(['shelter_id' => $shelter->id]);
+        User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true, 'facility_id' => $facility->id]);
+        User::retrieved(function (User $user): void {
+            if ($user->role === UserRole::HEALTHCARE) {
+                throw new RuntimeException('Simulated audience resolution failure');
+            }
+        });
+        Event::fake([EmergencyCreated::class]);
+    }
+
+    public function test_audience_resolution_failure_preserves_online_json_receipt_and_audit(): void
+    {
+        $this->failHealthcareAudienceResolution();
+
+        $response = $this->postJson('/relawan/emergencies', ['red_flag_type' => RedFlagType::MEDICAL_CRISIS->value])
+            ->assertCreated()
+            ->assertJsonPath('routing_status', 'ROUTED')
+            ->assertJsonPath('realtime_delivered', false);
+
+        $this->assertStringContainsString('belum dapat dikonfirmasi', $response->json('warning'));
+        $emergency = EmergencyEvent::sole();
+        $this->assertSame($emergency->id, $response->json('emergency_id'));
+        $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $emergency->id)->count());
+        Event::assertNotDispatched(EmergencyCreated::class);
+    }
+
+    public function test_audience_resolution_failure_redirects_to_persisted_emergency_with_warning(): void
+    {
+        $this->failHealthcareAudienceResolution();
+
+        $response = $this->post('/relawan/emergencies', ['red_flag_type' => RedFlagType::SEVERE_AGITATION->value]);
+
+        $emergency = EmergencyEvent::sole();
+        $response->assertRedirect("/relawan/emergencies/{$emergency->id}")
+            ->assertSessionHas('error', fn($warning) => str_contains($warning, 'belum dapat dikonfirmasi'));
+        $this->assertSame(EmergencyStatus::PENDING, $emergency->status);
+        $this->assertSame('ROUTED', $emergency->routing_status);
+        $this->assertSame(1, AuditLog::where('action', 'EMERGENCY_CREATED')->where('entity_id', $emergency->id)->count());
+        Event::assertNotDispatched(EmergencyCreated::class);
     }
 
     public function test_emergency_detail_is_scoped_to_reporting_relawan(): void
@@ -218,6 +390,7 @@ final class RelawanT0SubmissionTest extends TestCase
     public function test_healthcare_classification_stays_internal_to_relawan_detail_and_data(): void
     {
         $healthcare = User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true]);
+        $this->configureWorkflowScope($healthcare);
         $patient = Patient::create(['name' => 'Penyintas Batas Peran', 'created_by' => $this->relawan->id]);
         $emergency = EmergencyEvent::create([
             'patient_id' => $patient->id,
@@ -242,12 +415,7 @@ final class RelawanT0SubmissionTest extends TestCase
                 ->missing('emergency.clinical_result')
                 ->etc());
 
-        $this->get('/relawan/data')->assertInertia(fn(Assert $page) => $page
-            ->where('emergencies.0.id', $emergency->id)
-            ->missing('emergencies.0.status')
-            ->missing('emergencies.0.verifications')
-            ->missing('emergencies.0.clinical_result')
-            ->etc());
+        $this->get('/relawan/data')->assertRedirect('/relawan/home');
 
         $this->get('/relawan/home')->assertInertia(fn(Assert $page) => $page
             ->component('Relawan/Home', false)
@@ -268,8 +436,8 @@ final class RelawanT0SubmissionTest extends TestCase
         $payload = (new EmergencyCreated($emergency))->broadcastWith();
         $this->assertSame(['emergency' => ['id' => $emergency->id]], $payload);
         $authorize = Broadcast::getChannels()->get('emergencies');
-        $this->assertTrue($authorize(User::factory()->make(['role' => UserRole::HEALTHCARE])));
-        $this->assertFalse($authorize(User::factory()->make(['role' => UserRole::ADMIN])));
+        $this->assertFalse($authorize(User::factory()->create(['role' => UserRole::HEALTHCARE, 'is_active' => true])));
+        $this->assertFalse($authorize(User::factory()->create(['role' => UserRole::ADMIN, 'is_active' => true])));
         $this->assertFalse($authorize($this->relawan));
     }
 }

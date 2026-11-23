@@ -10,6 +10,7 @@ use App\Enums\EmergencyStatus;
 use App\Enums\RedFlagType;
 use App\Events\EmergencyCreated;
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\EmergencyEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +72,7 @@ final class EmergencySynchronizer
                 'assessment_id' => $assessment?->id,
                 'user_id' => $user->id,
                 'red_flag_type' => RedFlagType::from($data['red_flag_type']),
+                'red_flag_types' => $data['red_flag_types'] ?? [$data['red_flag_type']],
                 'status' => EmergencyStatus::PENDING,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
@@ -80,14 +82,21 @@ final class EmergencySynchronizer
             $emergency->id = $data['id'];
             if (isset($data['created_at'])) $emergency->created_at = $data['created_at'];
             $emergency->save();
+            AuditLog::create([
+                'actor_id' => $user->id,
+                'action' => 'EMERGENCY_CREATED',
+                'entity_type' => 'EmergencyEvent',
+                'entity_id' => $emergency->id,
+                'new_values' => ['status' => $emergency->status->value, 'source' => 'OFFLINE_SYNC'],
+            ]);
             return [$emergency, true];
         });
 
         $delivered = null;
         $warning = null;
         if ($created) {
-            $delivered = true;
             try {
+                $delivered = count((new EmergencyCreated($emergency))->broadcastOn()) > 0;
                 event(new EmergencyCreated($emergency));
             } catch (\Throwable $exception) {
                 $delivered = false;
@@ -109,7 +118,8 @@ final class EmergencySynchronizer
         if (
             $event->user_id !== $user->id
             || $event->assessment_id !== ($data['assessment_id'] ?? null)
-            || $event->red_flag_type->value !== $data['red_flag_type']
+            || array_diff($event->red_flag_types ?? [$event->red_flag_type->value], $data['red_flag_types'] ?? [$data['red_flag_type']])
+            || array_diff($data['red_flag_types'] ?? [$data['red_flag_type']], $event->red_flag_types ?? [$event->red_flag_type->value])
             || $event->notes !== ($data['notes'] ?? null)
         ) return false;
         $patientId = $data['patient']['id'] ?? null;
@@ -132,7 +142,9 @@ final class EmergencySynchronizer
             'patient' => $event->patient?->only(['id', 'nik', 'name', 'age', 'gender', 'shelter_id']),
             'patient_id' => $event->patient_id,
             'assessment_id' => $event->assessment_id,
+            'routing_status' => $event->routing_status ?? 'UNRESOLVED',
             'red_flag_type' => $event->red_flag_type->value,
+            'red_flag_types' => $event->red_flag_types ?? [$event->red_flag_type->value],
             'latitude' => $event->latitude === null ? null : (float) $event->latitude,
             'longitude' => $event->longitude === null ? null : (float) $event->longitude,
             'shelter_id' => $event->shelter_id,

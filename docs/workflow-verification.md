@@ -1,8 +1,95 @@
 # RAPID-MIND Workflow Verification Ledger
 
-**Verification checkpoint:** 1 October 2026 — Phase B2B local-first T0 emergency gate
+<a id="november-10-handoff"></a>
+
+## Current handoff and later evidence — 10 November 2026
+
+Source baseline: `demo` at `7076e1327e53db9671dbc6fcc575ffd03cded6d7`.
+This entry supersedes earlier current-state wording, preserving original dates,
+measured results and NOT TESTED outcomes below. Documentation alignment performed
+source/commit/reference/diff inspection only; no tests, runtime checks or browser
+scenarios were rerun. See [P0 handoff](../P0-HANDOFF.md) for historical artifact
+provenance and evidence limits; no private evidence was changed.
+
+| Classification | Status |
+| --- | --- |
+| P0 IMPLEMENTED | YES |
+| P0 CORE BROWSER VERIFIED | YES |
+| P0 LOCAL DEMO ACCEPTANCE | CONDITIONAL PASS |
+| Natural background/foreground privacy locking | NOT TESTED |
+| Production security acceptance | NOT ESTABLISHED |
+
+| Evidence / decision | Recorded result | Limit / remaining work |
+| --- | --- | --- |
+| Core localhost P0 browser evidence | Seven historical PASS results: enrollment, encrypted persistence, offline recovery, real sync, privacy handler, T0 and scoped realtime | Original headed/native lock remains NOT TESTED; simulated visibility is not native proof. T0 service replay is not browser lost-response replay; queue reload is not complete freshness proof. |
+| Browser-runner safety cleanup `be61204` | Six nonclinical safety tests PASS | Original clinical suite not rerun after cleanup; private profiles/results preserved. |
+| Clinical C2 integration `e561c98` | Facility/case scope, routing/sharing, audiences, canonical reconciliation, concurrency/replay guards and bounded T0 retry implemented with recorded automated/database evidence | Prior broad-access findings are historical. Full sharing/revocation, reconciliation and failure/session-race acceptance pending. Final audience-resolution correction included; focused regression recorded 12 tests / 348 assertions, rollback transactions without schema reset. |
+| Offline navigation `7076e13` — automated | 64 focused tests PASS; final navigation/link subset 13 PASS again; vue-tsc and diff-check PASS | 13 overlaps the 64. Real encryption/repository/fence logic with browser/history/storage transport and leaf-page doubles. No new run here. |
+| Offline navigation — owner manual report | Successful manual Chrome offline-navigation test after controlled service-worker activation | Narrow owner report only; no full suite rerun, native-lock pass, new screenshot, migration or release hash is inferred. Extend browser evidence for Back/Forward, anchors/reload, races and online recovery. |
+| November migrations / backup / publication / provisioning | Recorded completion in C2 reports | November 9 hashes describe that release only, not `7076e13`. No operations repeated here. |
+| Local Inertia DevTools correction | Effective false, zero capture routes, capture GETs404 and normal role routes operational; historical captures preserved | Each teammate sets and verifies INERTIA_DEVTOOLS_ENABLED=false in its own ignored .env. Not production certification. |
+| SQL/history decision | RESOLVED by owner for competition synthetic data; retain repository/history and historical dump | No removal, sanitization or history rewrite; exclude private runtime credentials/evidence and future real clinical data. |
+
+Local Git inspection confirms commit groups `e561c98` 81, `1e44ff8` 6,
+`be61204` 5, `9f8fd4b` 7 (99 distinct reviewed paths), followed by navigation
+`7076e13` 8. Eight superseded scripts/c2 paths are excluded. The owner supplied
+remote-baseline verification; no network fetch/push was performed here.
+
+Online Inertia, offline full-document bootstrap and authorized same-document
+shell navigation are distinct. Reload/pagehide, visibility, logout, owner and
+worker invalidation retain their safety boundaries. Password and passphrase stay
+separate; online double-prompt UX is DEFERRED. Four SRQ controls remain; the
+three-button revision is a receiving-team task without a scoring/data-policy change.
+Admin validated-reporting query gaps remain unresolved.
+
+P1/P2 are substantially implemented with automated coverage, but complete
+acceptance remains pending. Preserve four C2 checkpoints: environment;
+authorization/realtime; assessment/clinical data; emergency/final verification.
+**C2 remains NOT ACCEPTED; C3 has not started.** The receiving team owns remaining
+native-lock, P1/P2 and C2/C3 evidence and separate signoff.
+
+
+**Latest documentation alignment:** 10 November 2026 — committed P0/C2 handoff; acceptance limits preserved
 **Branch:** `demo`
 **Document type:** Evidence and status documentation
+
+## Historical final team decision supersession — 7 November 2026
+
+Current source/acceptance statements in this dated section are superseded by the
+November 10 entry above; original decisions and evidence remain unchanged.
+
+The owner/team now approves explicit, auditable Healthcare downgrade to T1/T2/T3,
+superseding earlier T1/T2-only restrictions and unresolved-T3 wording in the dated
+records below. This is a product decision, not external protocol certification.
+No historical result or NOT TESTED entry is converted into a new pass.
+See [the current baseline](CURRENT_IMPLEMENTATION.md) and
+[Admin reporting requirements/query gaps](RAPID_MIND_ADMIN_WORKSPACE.md).
+
+Official Admin reporting must separate Healthcare-validated outcomes from system
+recommendations/unverified suspects and omit patient identity. Current source has
+mixed distributions, omitted downgrade categories, undefined cross-source counting/
+deduplication and unresolved access/minimization gaps; no code was fixed here.
+Current confirmed-total source has no recommendation fallback. Healthcare needs
+case/facility permission; role membership is not universal record authorization.
+Internal Dispatch assignment does not prove vehicle contact or pickup. Three
+explicit SRQ choices are permissible with unanswered separate; source still has
+four controls. Q17 confirmation, P1 observational semantics and Relawan visibility
+remain unchanged. November Safety C1 acceptance and C2/C3 remain pending.
+
+## Current reading guide — 7 November 2026
+
+The [November evidence addendum](#november-safety-evidence) indexes the later
+checkpoint reports and pending acceptance. D2–D4 performed source/documentation
+inspection only; no application tests, browser runs, runtime or database checks.
+The [D1 implementation baseline](CURRENT_IMPLEMENTATION.md) and
+[security contract](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md) govern current status.
+
+Earlier matrices, environment inventories, migration/seeding commands and PASS
+results describe their original September/October sessions, not today's runtime
+or permission to repeat those operations. In particular, the opening matrix's
+automatic referral, legacy movement and Q17 examples are historical. October
+**STT C1/C2** are not November **Safety C1/C2**. A later implementation does not
+retroactively convert an earlier NOT TESTED result to PASS.
 
 ## 1. Purpose and Scope
 
@@ -24,7 +111,10 @@ The evidence below preserves what was actually verified during this development 
 - **NOT DIRECTLY TESTED**: The behavior remains unverified in this session.
 - **NOT IMPLEMENTED**: The required behavior is not currently available in the approved workflow form.
 
-No browser-agent result in this ledger is described as a Playwright automated E2E suite, automated E2E test, or CI E2E test. No such suite was run for this checkpoint.
+No browser-agent result in this ledger is described as a Playwright automated E2E suite, automated E2E test, or CI E2E test. No such suite was run for this checkpoint. The preceding statement describes the
+historical browser-agent checkpoint. November Safety C1 separately records an
+automated isolated Chromium harness with synthetic server responses; it is not a
+live Laravel/PostgreSQL end-to-end acceptance suite.
 
 ## 3. Environment and Preconditions
 
@@ -1452,3 +1542,128 @@ Deferred and unclaimed: separate dispatch model/schema, referral/dispatch redesi
 **Preserved limits:** None of these checkpoints is a production security certification. Checkpoints 4C/4D did not establish a complete offline connectivity-failure test or a full network-disconnect/reconnect test during a mid-flight POST. Checkpoint 4D did not submit a T3 clinical downgrade. The existing legacy `genderLabel` reference and frontend/backend pending-emergency ordering discrepancy remain unresolved. Device-level native SMS delivery, local AES-256 encryption, purging, pseudonymization, and application-level end-to-end encryption are not established by these reports.
 
 Earlier dated entries remain historical evidence for their own code states; this section does not retroactively change their outcomes.
+
+---
+
+## 20. Healthcare Queue and Referral/Dispatch Checkpoints — 24 October 2026
+
+This section appends current evidence without rewriting the older dated records.
+The documentation-alignment checkpoint itself performed source inspection and
+documentation consistency checks only. It did not rerun Laravel/frontend tests,
+open a browser, apply migrations, or inspect a deployed development database.
+
+### Evidence matrix
+
+| Scope | Source inspected | Automated tested | Browser verified | Not directly verified / pending |
+|---|---|---|---|---|
+| Healthcare Emergency Queue Checkpoint 1 | **YES.** Current normalization, queue composable, queue/header components, routes, and focused Node test source confirm oldest-first pending order, deterministic ID ties, stable selection/fallback, explicit missing-gender copy, and accessibility changes. | **REPORTED HISTORICAL EVIDENCE:** 31 Laravel tests, 501 assertions passed. The correction commit also contains focused Node regression coverage. Not rerun during documentation alignment. | **REPORTED HISTORICAL EVIDENCE:** six Antigravity browser categories passed, with the original limitations preserved. Not rerun here and not owner manual testing. | Current genuinely empty backend queue and an actual missing-gender database record were not independently recreated in this checkpoint. |
+| Checkpoint 2B — Domain Foundation | **YES.** Enums, models, relationships, factories, two additive migrations, and focused tests were inspected. | **REPORTED CHECKPOINT EVIDENCE:** 115 tests, 1,210 assertions passed in total (33 focused / 177 assertions plus 82 regression / 1,033 assertions) on guarded PostgreSQL/PostGIS `rapid_mind_testing`. | **NO.** No browser test belonged to the domain-only checkpoint. | No development database migration/reset/reseed; no frontend, realtime transport, or operational workflow proof. |
+| Checkpoint 2C — Backend Workflows | **YES.** Services, controllers, routes, histories/audits, lock/replay rules, rollback tests, and concurrency worker were inspected. | **REPORTED CHECKPOINT EVIDENCE:** 149 tests, 1,670 assertions passed. Four real PostgreSQL concurrency scenarios passed. The later 34-test focused rerun overlaps this selection and is not counted as a second independent set. | **NO.** Checkpoint 2C has no browser verification. | No Dispatch frontend/read projection, new realtime event/subscription, external response-unit contact, development cutover, production load/security/clinical validation, or production-readiness proof. |
+
+### Source-confirmed current boundaries
+
+- Referral is the clinical handoff record; the target lifecycle is
+  `ACTIVE → COMPLETED`.
+- EmergencyDispatch is independent operational coordination with
+  `ASSIGNED → EN_ROUTE → ON_SITE → TRANSPORT → COMPLETED` and the retained
+  `ON_SITE → COMPLETED` branch.
+- Dispatch can be created for a confirmed T0 without a referral or identified
+  patient. Dispatch progression does not alter clinical or Referral state.
+- Checkpoint 2C commands are Healthcare-only and use locked transactions,
+  expected-state checks, replay/conflict handling, and atomic history/audit writes.
+- Existing emergency realtime behavior remains. No Dispatch broadcast or
+  subscription was added.
+- The current `Rujukan` Vue page still invokes the legacy movement endpoint.
+  Independent Dispatch frontend integration is pending 2D + 2E; the coordinated
+  database/application cutover and final verification belong to 2F + 2G.
+
+### Pending implementation
+
+```text
+Checkpoint 2D + 2E
+→ Dispatch read props and UI controls
+→ Referral/Dispatch sibling presentation
+→ frontend integration
+→ queue and patient-history projections
+→ Dispatch realtime reconciliation
+→ separated-domain synthetic demo fixtures
+
+Checkpoint 2F + 2G
+→ coordinated database/application cutover
+→ final verification
+```
+
+Checkpoints 2D + 2E do not remove legacy endpoints, Referral casts, or existing
+constraints. No development database reset or destructive migration is authorized
+yet. These stage boundaries do not change the historical verification evidence.
+
+### Historical clinical-product discrepancy — superseded 7 November 2026
+
+**Historical finding — superseded 7 November 2026 (originally REQUIRES OWNER DECISION):** the earlier Healthcare design baseline restricted
+T0 downgrade to T1/T2. The UI and controller inspected at that time also accepted
+T3. That ledger entry recorded source behavior without approving a clinical-policy
+change. The owner/team subsequently approved T1/T2/T3 as product behavior on
+7 November 2026; external clinical-protocol certification was not established.
+
+### Documentation-only verification
+
+- `docs/workflow.md` remained untouched.
+- Application source, routes, migrations, models, controllers, Vue components,
+  tests, dependencies, environment, and database state remained untouched.
+- Route names and cited source paths were checked against current repository
+  source.
+- Documentation consistency and whitespace checks are recorded in the completion
+  report for this checkpoint.
+
+---
+
+<a id="november-safety-evidence"></a>
+
+## Historical November Safety evidence — 7 November 2026
+
+This retains the original D1 evidence matrix. For later P0 browser evidence,
+committed authorization/navigation and owner manual report, use the
+[November 10 handoff entry](#november-10-handoff).
+
+**Source baseline:** `demo` at `e85b981`; D1 documentation changes retained.
+**Provenance:** the results below are previously recorded in linked reports,
+not newly executed tests. Source/test inspection confirms code and coverage
+exist; it does not independently reproduce any historical result.
+
+| Scope / original report | Implementation inspected | Previously recorded automated evidence | Recorded browser/runtime evidence and acceptance boundary |
+|---|---|---|---|
+| [Referral/Dispatch 2D/2E — 24 October](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md) | UI/backend commands, schema-aware projections, sibling controls, histories, events/listeners, deterministic synthetic fixtures | 173 Laravel tests / 2,057 assertions; 9 Node/Vue tests; typecheck/build and focused checks. Guarded testing PostgreSQL; overlapping runs not added together. | No live browser/Reverb acceptance in that report. Additive schema prerequisites, legacy compatibility and unverified final cutover/runtime acceptance remain. A dated stopped maintenance attempt is not current DB/service state. |
+| [B4.4 — 6 November](checkpoints/checkpoint-b44-controlled-development-activation.md) | Server-authorized exact-localhost ordinary-asset enrollment; no automatic historical migration | Corrected SRQ map contract and 61/61 emergency-interception matcher assertions recorded, plus scoped automated checks in the report | Owner-executed dummy-profile reset/enrollment and scoped manual/Chromium acceptance recorded. This is controlled-local enrollment, not general real-clinical-user migration, plaintext cleanup or production activation. No clinical mutations reached Laravel in the targeted Gate B rerun. |
+| [November Safety C1 — report reviewed 7 November](checkpoints/checkpoint-c1-local-browser-integration.md) | Privacy middleware/history/bootstrap cleanup, lock/recovery, bounded session/navigation requests, PWA readiness/update lifecycle | 29 Node files / 0 failures; 82 PHP tests / 302 assertions; typecheck/build/lint. PHP privacy fixtures are database-free; these are not full live backend Feature results. | Chromium **18 PASS / 1 NOT TESTED** with ordinary production-built assets and the actual worker, but synthetic authentication/server responses. **IMPLEMENTED — ACCEPTANCE PENDING.** |
+| November Safety C2 | Sync implementation exists; that alone is not integration acceptance | Existing fixture/unit regressions do not establish C2 completion | **PENDING:** live Relawan → outbox/sync → Laravel/PostgreSQL → Healthcare, authorization, realtime, replay/idempotency, failure semantics and privacy. |
+| November Safety C3 | Final local safety regression/signoff remains planned | No newer final-acceptance evidence established by this review | **PENDING:** P0–P2 acceptance including unresolved C1 conditions. |
+
+C1's natural background/foreground lock remains **NOT TESTED**: automated
+minimization/tab switching left the display visible. The synthetic hidden-state
+handler pass does not satisfy native background acceptance; mobile background
+lock is unverified. C1 did not submit a browser T0, establish live backend
+sessions/authorization or C2 sync, or verify migration across different release
+asset graphs. Testing production-built assets on localhost is not production
+deployment/readiness evidence. Recorded isolated offline restart is a separate,
+scoped observation.
+
+P0 real-user migration and plaintext cleanup remain objectives, not completed
+capabilities. Retention is eligibility-only; server receipt does not authorize
+auto-purge. P1 observations and P2 four states/Q17 confirmation are implemented
+contracts in D1; relevant test sources include
+`tests/Feature/AssessmentResponseContractTest.php`,
+`tests/Feature/AssessmentCanonicalJsonTest.php`,
+`tests/Node/relawanSrqSafety.test.ts` and
+`tests/Node/healthcareAssessmentPresentation.test.ts`. Their existence is not a
+fresh pass or complete cross-role acceptance.
+
+**Historical D1–D4 decision boundary — superseded by the final team decision:**
+the earlier design allowed only T1/T2 while source accepted T3. The owner/team
+now explicitly approves T1/T2/T3 as product behavior, without external certification.
+Relawan remains limited to its original T0-Suspect report and delivery state;
+Healthcare decisions/referral/dispatch are not exposed through Relawan payloads.
+
+D2–D4 verification is documentation-only: complete diff/source review, reference
+checks, historical-record preservation, changed-file inventory and whitespace
+checks. No application tests, build, browser, live transport, database operation,
+enrollment, dependency change or Git mutation was performed for this alignment.

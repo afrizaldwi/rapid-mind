@@ -1,9 +1,11 @@
+import { captureClinicalAccess, assertClinicalAccess } from "./clinicalAccessFence";
 import { assessmentRepository } from "./assessmentRepository";
 import {
     db,
     localUuid,
     requireOwner,
     type LocalEmergency,
+    type LocalAssessment,
     type LocalPatient,
 } from "./db";
 import { emergencyRepository } from "./emergencyRepository";
@@ -11,6 +13,9 @@ import { outboxRepository } from "./outboxRepository";
 import { patientRepository } from "./patientRepository";
 import { syncManager } from "./syncManager";
 import { localPersistenceHealth } from "./localPersistenceHealth";
+import { assertStorageMode, encryptedMode } from "./encryptedClinicalStorage";
+import { createEncryptedEmergencyWithOutbox } from "./encryptedOutbox";
+import { queueAssessmentSnapshot } from "./assessmentSync";
 
 const redFlags = new Set([
     "SUICIDAL_IDEATION",
@@ -23,15 +28,19 @@ export type EmergencyInput = {
     patientId?: string | null;
     assessmentId?: string | null;
     redFlagType: string;
+    redFlagTypes?: string[];
     latitude?: number | null;
     longitude?: number | null;
     shelterId?: number | null;
     notes?: string | null;
+    serverKnownAssessment?: boolean;
+    serverAssessmentMode?: LocalAssessment["mode"];
 };
 
 export async function buildEmergencySyncPayload(
     owner: number,
     emergency: LocalEmergency,
+    serverAssessmentMode?: LocalAssessment["mode"],
 ) {
     requireOwner(owner);
     if (emergency.owner_user_id !== owner)
@@ -52,8 +61,9 @@ export async function buildEmergencySyncPayload(
         id: emergency.id,
         patient: patient ? patientPayload(patient) : null,
         assessment_id: emergency.assessment_id ?? null,
-        ...(assessment ? { assessment_mode: assessment.mode } : {}),
+        ...(assessment ? { assessment_mode: serverAssessmentMode ?? assessment.mode } : {}),
         red_flag_type: emergency.red_flag_type,
+        red_flag_types: emergency.red_flag_types ?? [emergency.red_flag_type],
         latitude: emergency.latitude ?? null,
         longitude: emergency.longitude ?? null,
         notes: emergency.notes ?? null,
@@ -76,7 +86,9 @@ export async function createLocalEmergency(
     input: EmergencyInput,
 ) {
     requireOwner(owner);
-    if (!redFlags.has(input.redFlagType))
+    const access = captureClinicalAccess();
+    const selected = input.redFlagTypes ?? [input.redFlagType];
+    if (selected[0] !== input.redFlagType || new Set(selected).size !== selected.length || selected.some(flag => !redFlags.has(flag)))
         throw new Error("Pilih indikator Red Flag yang valid.");
     const notes = input.notes?.trim() || null;
     if (notes && notes.length > 1000)
@@ -111,6 +123,7 @@ export async function createLocalEmergency(
         patient_name: patient?.name,
         assessment_id: assessment?.id ?? null,
         red_flag_type: input.redFlagType,
+        red_flag_types: selected,
         status: "PENDING",
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
@@ -120,24 +133,65 @@ export async function createLocalEmergency(
         updated_at: now,
         sync_state: "LOCAL_SAVED",
     };
-    const payload = await buildEmergencySyncPayload(owner, emergency);
-    // One IndexedDB transaction makes the emergency and its priority-1 outbox item durable together.
-    await localPersistenceHealth.recordWrite(owner, () => db.transaction(
-        "rw",
-        db.emergencies,
-        db.outbox,
-        db.assessments,
-        async () => {
-            await emergencyRepository.save(owner, emergency);
-            await outboxRepository.enqueue(
-                owner,
-                "EMERGENCY",
-                emergency.id,
-                payload,
+    const payload = await buildEmergencySyncPayload(owner, emergency, input.serverKnownAssessment ? input.serverAssessmentMode : undefined);
+    if (await encryptedMode(owner)) {
+        assertClinicalAccess(access);
+        try {
+            await localPersistenceHealth.recordWrite(owner, () =>
+                createEncryptedEmergencyWithOutbox(owner, emergency, payload),
             );
-        },
-    ));
+        } catch {
+            throw new Error(
+                "Insiden darurat belum tersimpan di perangkat. Tetap dampingi penyintas dan coba lagi.",
+            );
+        }
+        if (!input.serverKnownAssessment) preserveAssessmentContext(owner, emergency.assessment_id);
+        return emergency.id;
+    }
+    // One IndexedDB transaction makes the emergency and its priority-1 outbox item durable together.
+    await localPersistenceHealth.recordWrite(owner, () =>
+        db.transaction(
+            "rw",
+            [
+                db.emergencies,
+                db.outbox,
+                db.encryptedOutboxIndex,
+                db.outboxIdCounter,
+                db.localSyncReceipts,
+                db.assessments,
+                db.ownerEncryptionModes,
+            ],
+            async () => {
+                await assertStorageMode(owner, "LEGACY");
+                await emergencyRepository.save(owner, emergency);
+                await outboxRepository.enqueue(
+                    owner,
+                    "EMERGENCY",
+                    emergency.id,
+                    payload,
+                );
+            },
+        ),
+    );
+    if (!input.serverKnownAssessment) preserveAssessmentContext(owner, emergency.assessment_id);
     return emergency.id;
+}
+
+function preserveAssessmentContext(owner: number, id?: string | null) {
+    if (!id) return;
+    // The emergency + priority-1 outbox is already durable. A partial context
+    // uses its own priority-2 assessment item and cannot block the T0 save.
+    void queueAssessmentSnapshot(owner, id)
+        .then(() => syncManager.sync(owner))
+        .catch(async () => {
+            await assessmentRepository
+                .update(owner, id, {
+                    sync_state: "SYNC_FAILED",
+                    last_error:
+                        "Draf tetap tersimpan; antrean konteks asesmen perlu dicoba kembali.",
+                })
+                .catch(() => {});
+        });
 }
 
 export function loadLocalEmergency(owner: number, id: string) {

@@ -1,5 +1,35 @@
 # RAPID-MIND — T0 Emergency Interaction Design
 
+## Owner-approved guidance placement — 14 November 2026
+
+The standalone help card is removed from normal Relawan pages and unlock screens.
+The T0 panel now contains a separate “Panduan bantuan darurat” disclosure that
+opens before any offline key prompt. The locked offline shell exposes the same
+guide through its T0 button in a read-only help dialog. Opening either guide
+creates no report and transmits no emergency request. Explicit report verification,
+final send and encrypted persistence requirements are preserved. This placement
+supersedes older descriptions of a persistent standalone help card; it changes
+no clinical, referral or dispatch policy. Evidence is recorded in
+[the guidance checkpoint](ui/t0-emergency-guidance-panel-2026-11-14.md).
+
+## Current handoff note — 10 November 2026
+
+Committed C2 delivery uses bounded transient retry, stable IDs, atomic encrypted
+emergency/priority-1 outbox and idempotent server receipts. Audience resolution and
+dispatch share a best-effort boundary: a persisted emergency returns uncertain
+notification status on failure, not a false clinical failure. This changes no
+confirmation, scoring or clinical policy. The navigation fix `7076e13` retains
+an authorized offline key across supported same-document routes, without relaxing
+reload/pagehide, visibility, logout, owner or worker invalidation.
+
+The owner reports successful manual Chrome offline navigation after controlled
+worker activation; scope is narrow, not a full suite or native-lock acceptance.
+P0 local demo remains CONDITIONAL PASS; natural background locking NOT TESTED;
+production security NOT ESTABLISHED. Complete P1/P2 acceptance is pending;
+C2 NOT ACCEPTED; C3 not started. See [current implementation](CURRENT_IMPLEMENTATION.md)
+and [P0 handoff](../P0-HANDOFF.md). No tests were rerun for this annotation.
+
+
 **Document type:** UI/UX design specification  
 **Scope:** Relawan T0 emergency interaction, verification, offline behavior, transmission, and active emergency state  
 **Product language:** Bahasa Indonesia  
@@ -1456,6 +1486,12 @@ Healthcare may record `T0_CONFIRMED` in its own clinical workflow. Relawan must 
 
 # 51. Healthcare Downgrade
 
+> **APPROVED TEAM SUPERSESSION — 7 November 2026:** Healthcare may explicitly
+> and auditably downgrade T0-Suspect to T1/T2/T3. This supersedes the earlier
+> T1/T2-only product restriction and matches source support. It does not certify
+> an external clinical protocol. Relawan still receives no clinical outcome.
+> See [the current baseline](CURRENT_IMPLEMENTATION.md).
+
 Healthcare may record a T1/T2/T3 downgrade in its own clinical workflow. Relawan must not receive or display the downgrade or any derived clinical label. The original Relawan report remains `T0-Suspect`.
 
 ---
@@ -1840,3 +1876,27 @@ Topics should include:
 Do not write production code yet.
 
 Design the Healthcare experience from its operational state model and queue/workspace architecture before moving into visual mockups.
+
+
+## Supersession — 15 November 2026: device-managed Relawan encryption
+
+The owner approved removing all additional offline authentication input for
+Relawan, including T0. A random non-extractable AES-256-GCM CryptoKey is persisted
+in IndexedDB and restored automatically for eligible local owner continuity.
+Normal online login and explicit logout remain. Backgrounding does not revoke
+field access. This replaces passphrase enrollment, recovery confirmation and
+background-timeout unlock requirements described historically below/above.
+
+Assessments now save through encrypted repositories before background delivery.
+Connectivity changes do not initiate navigation; session/CSRF recovery stays in
+place. T0 still requires human verification/final send and atomically saves its
+encrypted incident and priority-1 outbox. Receipt is separate from Healthcare action.
+
+Schema v9 and worker protocol v3 leave old stores intact. Existing passphrase data
+requires the separately scoped clean start agreed by the owner; it is never
+silently converted or deleted. PostgreSQL reset/reseeding and production activation
+are outside this checkpoint. Browser-profile access is trusted; hardware-backed
+protection and recovery after browser storage loss are not claimed.
+
+See [implementation and verification](checkpoints/device-managed-relawan-2026-11-15.md).
+Historical PASS results remain historical, not evidence for this implementation.

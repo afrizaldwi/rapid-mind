@@ -26,6 +26,7 @@ use Tests\TestCase;
 final class HealthcareEmergencyLifecycleTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SingleFacilityWorkflowFixtures;
 
     private User $healthcare;
 
@@ -47,6 +48,7 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
             'is_active' => true,
             'facility_id' => $this->facility->id,
         ]);
+        $this->configureWorkflowScope($this->healthcare);
         $this->patient = Patient::create([
             'name' => 'Pasien Darurat',
             'created_by' => $this->healthcare->id,
@@ -284,7 +286,7 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
         $emergency = $this->emergency();
         $event = new EmergencyUpdated($emergency);
 
-        $this->assertSame('private-emergencies', $event->broadcastOn()->name);
+        $this->assertContains('private-'.\App\Domain\Healthcare\CaseAudience::channel($this->healthcare->fresh()), array_column($event->broadcastOn(), 'name'));
         $this->assertSame(['emergency' => ['id' => $emergency->id]], $event->broadcastWith());
     }
 
@@ -342,6 +344,7 @@ final class HealthcareEmergencyLifecycleTest extends TestCase
             'status' => ReferralStatus::ACTIVE,
         ]);
         $assessmentReferral = Referral::create([
+            'clinical_validation_id' => $this->workflowValidation($this->healthcare, $this->patient)->id,
             'patient_id' => $this->patient->id,
             'referred_by' => $this->healthcare->id,
             'facility_id' => $this->facility->id,

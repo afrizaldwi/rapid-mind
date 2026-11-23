@@ -8,9 +8,11 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\HealthcareFacility;
+use App\Models\RefreshTokenFamily;
 use App\Models\Shelter;
 use App\Models\User;
 use App\Support\IndonesianPhone;
+use App\Support\C2SyntheticPhone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -95,13 +97,20 @@ final class ProvisioningController extends Controller
                 $this->assertActiveAssignment($role, (int) $data[$field]);
             }
             $oldAssignment = $user->$field;
+            $wasActive = $user->is_active;
             $user->update([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 $field => $data[$field],
                 'is_active' => $data['is_active'],
+                ...($wasActive && ! $data['is_active'] ? ['token_version' => $user->token_version + 1] : []),
                 ...($role === UserRole::RELAWAN ? ['phone_number' => $data['phone_number']] : []),
             ]);
+            if ($wasActive && ! $data['is_active']) {
+                RefreshTokenFamily::where('user_id', $user->id)
+                    ->whereNull('revoked_at')
+                    ->update(['revoked_at' => now(), 'revoked_reason' => 'account_disabled']);
+            }
             if ((int) $oldAssignment !== (int) $data[$field]) {
                 AuditLog::create([
                     'actor_id' => $request->user()->id,
@@ -131,15 +140,24 @@ final class ProvisioningController extends Controller
             $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
         }
         if ($role === UserRole::RELAWAN) {
-            $rules['phone_number'] = ['required', 'string', 'max:24', function (string $attribute, mixed $value, \Closure $fail): void {
-                if (IndonesianPhone::normalize((string) $value) === null) {
+            $rules['phone_number'] = ['required', 'string', 'max:24', function (string $attribute, mixed $value, \Closure $fail) use ($request, $user): void {
+                $synthetic = C2SyntheticPhone::allows(
+                    (string) $value,
+                    (string) $request->input('name'),
+                    (string) $request->input('email'),
+                    $user === null,
+                    app()->environment(),
+                    DB::connection()->getDatabaseName(),
+                    (string) config('app.url'),
+                );
+                if (IndonesianPhone::normalize((string) $value) === null && !$synthetic) {
                     $fail('Masukkan nomor telepon Relawan Indonesia yang valid.');
                 }
             }];
         }
         $data = $request->validate($rules);
         if ($role === UserRole::RELAWAN) {
-            $data['phone_number'] = IndonesianPhone::normalize($data['phone_number']);
+            $data['phone_number'] = IndonesianPhone::normalize($data['phone_number']) ?? $data['phone_number'];
         }
         return $data;
     }

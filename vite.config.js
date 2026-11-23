@@ -104,13 +104,11 @@ export default defineConfig({
         }),
     ],
     server: {
-        host: "0.0.0.0",
+        host: "127.0.0.1",
         port: 5173,
         origin: "http://localhost:5173",
-        cors: true,
-        headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Private-Network": "true",
+        cors: {
+            origin: ["http://localhost:8080"],
         },
     },
     resolve: {

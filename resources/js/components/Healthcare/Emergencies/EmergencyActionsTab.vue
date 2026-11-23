@@ -1,7 +1,8 @@
 <template>
-    <div
+    <fieldset :disabled="item.raw?.can_manage === false"
         class="space-y-5"
     >
+        <p v-if="item.raw?.can_manage === false" class="text-slate-600" role="status">{{ $t('healthcare.actions.readOnlyNotice', 'Akses baca untuk kasus rujukan. Tindakan klinis tetap pada Faskes penanggung jawab.') }}</p>
         <!-- Section A: Tele-Verification Form -->
         <div
             v-if="
@@ -16,12 +17,11 @@
                 <h3
                     class="text-xs font-bold text-slate-900 uppercase tracking-wider"
                 >
-                    Verifikasi Medis Sekunder
-                    (Tele-Verifikasi)
+                    {{ $t('healthcare.actions.teleVerificationTitle', 'Verifikasi Medis Sekunder (Tele-Verifikasi)') }}
                 </h3>
                 <span
                     class="text-[10px] font-semibold text-slate-400"
-                    >Tahap 1</span
+                    >{{ $t('healthcare.actions.step1', 'Tahap 1') }}</span
                 >
             </div>
 
@@ -38,11 +38,11 @@
                         <label
                             class="text-[11px] font-semibold text-slate-700 block mb-1"
                         >
-                            Metode Verifikasi
+                            {{ $t('healthcare.actions.verificationMethod', 'Metode Verifikasi') }}
                         </label>
                         <input
                             type="text"
-                            value="Tim Lapangan/ Pemeriksaan Langsung"
+                            :value="$t('healthcare.actions.directInspection', 'Tim Lapangan/ Pemeriksaan Langsung')"
                             readonly
                             aria-readonly="true"
                             class="w-full cursor-default rounded-lg border border-slate-200 bg-slate-100 p-2 text-xs text-slate-800"
@@ -52,7 +52,7 @@
                         <label
                             class="text-[11px] font-semibold text-slate-700 block mb-1"
                         >
-                            Pelapor Lapangan
+                            {{ $t('healthcare.actions.fieldReporter', 'Pelapor Lapangan') }}
                         </label>
                         <div
                             class="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-semibold truncate"
@@ -68,13 +68,12 @@
                     <label
                         class="text-[11px] font-semibold text-slate-700 block mb-1"
                     >
-                        Catatan Hasil Verifikasi
-                        Sekunder Nakes
+                        {{ $t('healthcare.actions.verificationNotesLabel', 'Catatan Hasil Verifikasi Sekunder Nakes') }}
                     </label>
                     <textarea
                         v-model="verificationNotes"
                         rows="2"
-                        placeholder="Konfirmasi kondisi kesadaran, kontak mata, orientasi, serta potensi melukai diri..."
+                        :placeholder="$t('healthcare.actions.verificationNotesPlaceholder', 'Konfirmasi kondisi kesadaran, kontak mata, orientasi, serta potensi melukai diri...')"
                         class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600"
                     ></textarea>
                 </div>
@@ -85,7 +84,7 @@
                         :disabled="isSubmitting"
                         class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
                     >
-                        Simpan Verifikasi
+                        {{ $t('healthcare.actions.saveVerification', 'Simpan Verifikasi') }}
                     </button>
                 </div>
             </form>
@@ -99,12 +98,11 @@
                 <h3
                     class="text-xs font-bold text-slate-900 uppercase tracking-wider"
                 >
-                    Penetapan Klasifikasi Triase Klinis
-                    Nakes
+                    {{ $t('healthcare.actions.classifyTitle', 'Penetapan Klasifikasi Triase Klinis Nakes') }}
                 </h3>
                 <span
                     class="text-[10px] font-semibold text-slate-400"
-                    >Tahap 2</span
+                    >{{ $t('healthcare.actions.step2', 'Tahap 2') }}</span
                 >
             </div>
 
@@ -118,27 +116,23 @@
                     <label
                         class="text-[11px] font-semibold text-slate-700 block mb-1"
                     >
-                        Keputusan Klasifikasi
+                        {{ $t('healthcare.actions.classificationDecision', 'Keputusan Klasifikasi') }}
                     </label>
                     <select
                         v-model="clinicalResult"
                         class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-teal-600"
                     >
                         <option value="T0_CONFIRMED">
-                            Konfirmasi T0 (Kedaruratan
-                            Nyata — Evakuasi/Rujukan)
+                            {{ $t('healthcare.actions.optionConfirmT0', 'Konfirmasi T0 (Kedaruratan Nyata — Evakuasi/Rujukan)') }}
                         </option>
                         <option value="T1">
-                            Turunkan ke T1 (Mendesak —
-                            Pos Medis Lapangan)
+                            {{ $t('healthcare.actions.optionDowngradeT1', 'Turunkan ke T1 (Mendesak — Pos Medis Lapangan)') }}
                         </option>
                         <option value="T2">
-                            Turunkan ke T2 (Terjadwal —
-                            Pendampingan Psikososial)
+                            {{ $t('healthcare.actions.optionDowngradeT2', 'Turunkan ke T2 (Terjadwal — Pendampingan Psikososial)') }}
                         </option>
                         <option value="T3">
-                            Turunkan ke T3 (Pemantauan —
-                            Dukungan Dasar)
+                            {{ $t('healthcare.actions.optionDowngradeT3', 'Turunkan ke T3 (Pemantauan — Dukungan Dasar)') }}
                         </option>
                     </select>
                 </div>
@@ -147,12 +141,12 @@
                     <label
                         class="text-[11px] font-semibold text-slate-700 block mb-1"
                     >
-                        Pertimbangan Klinis Keputusan
+                        {{ $t('healthcare.actions.clinicalConsiderations', 'Pertimbangan Klinis Keputusan') }}
                     </label>
                     <textarea
                         v-model="decisionNotes"
                         rows="2"
-                        placeholder="Alasan klinis penegakan atau penurunan triase..."
+                        :placeholder="$t('healthcare.actions.clinicalConsiderationsPlaceholder', 'Alasan klinis penegakan atau penurunan triase...')"
                         class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600"
                     ></textarea>
                 </div>
@@ -163,13 +157,14 @@
                         :disabled="isSubmitting"
                         class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
                     >
-                        Tetapkan Klasifikasi Triase
+                        {{ $t('healthcare.actions.submitDecision', 'Tetapkan Klasifikasi Triase') }}
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Section C: Referral Dispatch Form -->
+        <p v-if="item.status === 'CONFIRMED' && item.raw && !item.raw.patient_id" class="text-xs text-amber-800">{{ $t('healthcare.actions.patientIdRequiredForReferral', 'Identitas pasien diperlukan untuk rujukan. Respons lapangan tetap dapat ditugaskan.') }}</p>
+        <!-- Section C: Clinical referral creation -->
         <div
             v-if="
                 item.status === 'CONFIRMED' &&
@@ -182,11 +177,11 @@
                 <h3
                     class="text-xs font-bold text-slate-900 uppercase tracking-wider"
                 >
-                    Terbitkan Rujukan Medis Darurat
+                    {{ $t('healthcare.actions.referralTitle', 'Terbitkan Rujukan Medis Darurat') }}
                 </h3>
                 <span
                     class="text-[10px] text-teal-700 font-semibold"
-                    >Rujukan</span
+                    >{{ $t('healthcare.actions.referralBadge', 'Rujukan') }}</span
                 >
             </div>
 
@@ -200,16 +195,14 @@
                     <label
                         class="text-[11px] font-semibold text-slate-700 block mb-1"
                     >
-                        Fasilitas Kesehatan Tujuan
-                        Rujukan
+                        {{ $t('healthcare.actions.targetFacility', 'Fasilitas Kesehatan Tujuan Rujukan') }}
                     </label>
                     <select
                         v-model="facilityId"
                         class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-teal-600"
                     >
                         <option :value="null">
-                            -- Pilih Fasilitas Kesehatan
-                            Rujukan --
+                            {{ $t('healthcare.actions.selectFacility', '-- Pilih Fasilitas Kesehatan Rujukan --') }}
                         </option>
                         <option
                             v-for="f in facilities ||
@@ -226,13 +219,12 @@
                     <label
                         class="text-[11px] font-semibold text-slate-700 block mb-1"
                     >
-                        Instruksi Medis untuk Tim
-                        Transport / Faskes
+                        {{ $t('healthcare.actions.instructionsLabel', 'Instruksi Medis untuk Tim Transport / Faskes') }}
                     </label>
                     <textarea
                         v-model="referralNotes"
                         rows="2"
-                        placeholder="Instruksi medis saat transport / penanganan awal di faskes..."
+                        :placeholder="$t('healthcare.actions.instructionsPlaceholder', 'Instruksi medis saat transport / penanganan awal di faskes...')"
                         class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-teal-600"
                     ></textarea>
                 </div>
@@ -242,60 +234,28 @@
                         type="submit"
                         :disabled="
                             isSubmitting ||
+                            (item.raw && !item.raw.patient_id) ||
                             !referralForm.facility_id
                         "
                         class="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-lg transition"
                     >
-                        Terbitkan Rujukan Medis
+                        {{ $t('healthcare.actions.submitReferralButton', 'Terbitkan Rujukan Medis') }}
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Section D: If Referral already issued -->
-        <div
-            v-if="item.hasReferral"
-            class="p-4 rounded-xl bg-teal-50/50 border border-teal-200 text-xs space-y-1.5"
-        >
-            <div
-                class="flex items-center justify-between"
-            >
-                <span class="font-bold text-teal-900"
-                    >Rujukan Medis Diterbitkan</span
-                >
-                <span
-                    class="text-xs font-semibold text-teal-800 flex items-center gap-1.5"
-                >
-                    <span class="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0"></span>
-                    {{
-                        formatReferralStatus(
-                            item.referrals[0]
-                                ?.status,
-                        )
-                    }}
-                </span>
-            </div>
-            <p class="text-slate-600">
-                Faskes Tujuan:
-                <strong>{{
-                    item.referrals[0]?.facility
-                        ?.name || "Faskes Rujukan"
-                }}</strong>
-            </p>
-            <p
-                v-if="item.referrals[0]?.notes"
-                class="text-slate-500 italic"
-            >
-                "{{ item.referrals[0].notes }}"
-            </p>
-        </div>
-    </div>
+    </fieldset>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import type { HealthcareEmergencyQueueItem } from "@/lib/healthcareEmergency";
-import { formatReferralStatus } from "@/lib/referralStatus";
+
+function $t(key: string, fallback?: string): string {
+    const fn = (globalThis as any)?.__rapidMindT || (typeof window !== "undefined" ? (window as any)?.__rapidMindT : null);
+    return typeof fn === "function" ? fn(key, fallback) : (fallback ?? key);
+}
 import type {
     VerificationForm,
     DecisionForm,

@@ -1,18 +1,192 @@
 # RAPID-MIND — Technical Architecture & Development Plan
 
+## Current architecture/handoff checkpoint — 10 November 2026
+
+Use [CURRENT_IMPLEMENTATION.md](CURRENT_IMPLEMENTATION.md) as the primary source
+inventory and [P0-HANDOFF.md](../P0-HANDOFF.md) for acceptance limits. The five
+commits are `e561c98` (81 files), `1e44ff8` (6), `be61204` (5), `9f8fd4b` (7),
+then `7076e13` (8). The first four cover exactly 99 distinct reviewed files;
+eight superseded `scripts/c2/` files remain excluded. Earlier current-state blocks
+below are dated historical snapshots, not current execution instructions.
+
+Facility/case authorization, routing snapshots, audited read sharing, scoped nested
+history/summary/mutations/counts and recipient/version-scoped events are implemented
+and tested. Assessment worklist invalidation/reconciliation, assessment version/
+replay/scoring guards and bounded emergency retry are implemented. Audience lookup
+and dispatch failures cannot turn persisted T0 into a false clinical-submission
+failure. Independent clinical/Referral/Dispatch state machines remain unchanged.
+The prior broad-access finding is superseded; Admin reporting/query gaps remain.
+Both November migrations, the protected November 9 backup/publication and synthetic
+provisioning have recorded completion evidence, not a fresh runtime check here.
+
+Online Inertia, offline document bootstrap and unlocked-shell same-document
+navigation are distinct. `7076e13` retains a key only for uninterrupted authorized
+navigation, rejects stale asynchronous route results and keeps URL-only history.
+Reload/pagehide, visibility, logout, owner and worker invalidation still lock.
+Recorded tests: 64 focused PASS, final 13-test subset PASS again, type-check and
+diff-check PASS; not rerun here. Owner reports successful manual Chrome offline
+navigation after controlled worker activation; this narrow check is not full
+acceptance or a new publication hash. Password/passphrase remain separate;
+online double-prompt UX is DEFERRED. SRQ still has four controls; the receiving
+team owns the requested three-button revision and full P1/P2 acceptance.
+
+P0 IMPLEMENTED YES; P0 CORE BROWSER VERIFIED YES; P0 LOCAL DEMO ACCEPTANCE
+CONDITIONAL PASS. Natural background/foreground privacy locking NOT TESTED;
+production security acceptance NOT ESTABLISHED. Preserve seven historical browser
+PASS and six runner-safety PASS results. **C2 NOT ACCEPTED; C3 not started.**
+Keep the four checkpoints C2.1 environment, C2.2 authorization/realtime,
+C2.3 assessment/clinical data and C2.4 emergency/final verification.
+
+SQL/history decision RESOLVED: retain existing competition repository/history and
+historical synthetic dump. Exclude private runtime artifacts. Local DevTools was
+verified disabled; teammates must set `INERTIA_DEVTOOLS_ENABLED=false` in their own
+ignored `.env`. Production defaults and clinical requirements are unchanged.
+
+
 **Project:** RAPID-MIND  
 **Document type:** Technical architecture + implementation plan  
 **Status:** Working baseline for development  
-**Primary source:** `docs/workflow.md` (finalized product workflow)
-**Last documentation alignment:** 2026-10-17
+**Requirements authority:** current owner instructions and later-approved safety decisions; approved domain specifications; original `docs/workflow.md` subject to those decisions
+**Last documentation alignment:** 2026-11-10 (source baseline `demo` at `7076e13`)
 
 ---
 
-## Current authority and implementation status — 17 October 2026
+## Historical safety and implementation baseline — 7 November 2026
+
+This block preserves the D1 source review. Authorization gaps and unverified-C2
+statements here are superseded by the November 10 checkpoint above, without
+changing the original measured results or historical execution claims.
+
+D1 re-inspected source, test sources, applicable specifications and dated reports.
+No test, build, browser run, live database/configuration check, enrollment or
+cutover was performed. `IMPLEMENTED` describes source; `PASS` needs an executed
+scoped check; `ACCEPTED` needs all agreed exit criteria. Historical results below
+are retained with their original limits and are not D1 reruns.
+
+### Priority and current contracts
+
+- **P0 — privacy/T0:** encrypted-first AES-256-GCM clinical storage, wrapped-key
+  lifecycle, lock/recovery, explicit human T0 verification and atomic priority-1
+  outbox are implemented. Missing network/GPS/full identity must not prevent safe
+  offline T0. Local save, server receipt, Healthcare decisions, referral and
+  Dispatch remain separate. Browser SMS handoff is not guaranteed delivery.
+- **Local enrollment:** ordinary assets require server-authorized exact
+  `http://localhost:8080`, local environment/configured URL/direct Host, default-off
+  `OFFLINE_ENCRYPTION_LOCAL_ENROLLMENT`, and matching active Relawan web session.
+  Existing enrolled owners can unlock offline. Browser navigation uses a
+  version-bound session; API routes require bearer JWT with user/version and
+  refresh-family checks. Authentication does not decrypt local clinical data.
+- **Migration/retention:** legacy or inconsistent storage blocks ordinary access;
+  missing mode is not plaintext permission. Fresh enrollment does not migrate old
+  rows. Retention computes eligibility, not automatic deletion. Old-client/native
+  IndexedDB writers require separate cutover safeguards. Controlled dummy-profile
+  enrollment evidence does not prove general real-user migration/cleanup or
+  production activation. See [offline security](RAPID_MIND_OFFLINE_SECURITY_DESIGN.md).
+- **P1 — observations:** multiple validated reasons, exclusive UNKNOWN and optional
+  OTHER note (maximum 500 characters) persist through drafts/sync and Healthcare
+  presentation without diagnosis, scoring or automatic T0 effects.
+- **P2 — SRQ:** YES/NO/UNCLEAR/UNANSWERED span client/storage/API/server/Healthcare;
+  definitive booleans remain compatible. Required unresolved/malformed answers
+  block definitive scoring. Apparent manual/STT Q17 YES needs human confirmation
+  before persistence; final T0 sending is separate. Manual T0 remains independent.
+
+These later-approved safety contracts supersede older binary-only SRQ, automatic
+T0/SMS, deferred encryption and auto-purge assumptions. Preserve architecture,
+role boundaries and the historical record; do not defer critical privacy or
+emergency integrity to finish a demo. Older §8.2 "eventually" encryption and
+§§20–22 build priorities are historical planning, not current authorization.
+
+### Current integration and acceptance boundaries
+
+| Scope | Source / recorded status | Remaining boundary |
+|---|---|---|
+| Referral/Dispatch 2D/2E | Implemented UI/backend, read projections, histories, fixture seeder and ID-only events on the Healthcare-only channel; [recorded isolated automated evidence](checkpoints/checkpoint-2de-frontend-realtime-fixtures.md) | Requires additive Dispatch/history/unit tables and Referral verification column. Missing schema disables new controls; legacy compatibility remains. Source/test results do not establish current DB deployment, live transport/browser acceptance or final legacy retirement. |
+| B4.4 | [Recorded controlled-local enrollment acceptance](checkpoints/checkpoint-b44-controlled-development-activation.md) with ordinary assets and owner dummy-profile setup | Not production activation, general real-clinical-user cutover or automatic historical migration. |
+| November Safety C1 | **IMPLEMENTED — ACCEPTANCE PENDING**; [report](checkpoints/checkpoint-c1-local-browser-integration.md) records 29 Node files / 0 failures, 82 PHP tests / 302 assertions, typecheck/build/lint, Chromium **18 PASS / 1 NOT TESTED** | Actual generated worker/ordinary production-built assets, synthetic authentication/server responses. Natural background/foreground locking remains NOT TESTED; synthetic hidden-state stimulus is not native acceptance. Mobile background lock, live backend auth/sync and different-release asset migration are unverified. |
+| November Safety C2 | **PENDING** local Relawan → outbox/sync → Laravel/PostgreSQL → Healthcare integration acceptance | Must cover authorization, realtime, replay/idempotency, failures and privacy; no completion inferred from existing synchronization code or old browser results. |
+| November Safety C3 | **PENDING** final local P0–P2 regression/signoff | Includes outstanding C1 conditions; no production readiness or clinical-policy certification implied. |
+
+October **STT C1/C2** below refer to speech foundation/transcript interpretation.
+They are distinct from November **Safety C1/C2**. Historical STT passes do not
+close current browser/privacy or integration acceptance gates. Do not start new
+Admin/heatmap, STT-enhancement, deployment or other backlog phases automatically.
+
+Referral completion UI is schema-dependent and means completion of internal work,
+not hospital acceptance/treatment or Dispatch completion. Dispatch can serve an
+unidentified confirmed T0 without Referral. Final legacy endpoint/cast/constraint
+retirement and runtime acceptance remain unestablished here. The
+[2F-B2.2 maintenance report](checkpoints/checkpoint-2fb2-additive-deployment.md)
+is a dated stopped attempt, not evidence of current container/database state.
+
+**APPROVED TEAM SUPERSESSION — 7 November 2026:** Healthcare may explicitly and
+auditably downgrade T0-Suspect to T1/T2/T3. This supersedes the historical
+T1/T2-only restriction and resolves the prior product discrepancy. Controller/UI
+support exists; this is not external clinical-protocol certification or new runtime
+acceptance. Earlier unresolved-T3 references below retain their historical scope.
+
+Official Admin counts/geography must use Healthcare-validated outcomes without
+patient identifiers, separate from recommendations and unverified suspects. Current
+queries do not yet meet that full contract: distributions/maps/trends mix sources,
+validated counters omit emergency downgrade categories, and deduplication/counting
+unit are undefined. The current confirmed-total KPI has no recommendation fallback.
+See [Admin query evidence](RAPID_MIND_ADMIN_WORKSPACE.md). Necessary Healthcare
+case details require case/facility authorization; inspected broad reads/role-only
+checks do not establish that scope. Do not equate Dispatch assignment with external
+vehicle contact or pickup. Three SRQ choices are permissible with UNANSWERED
+preserved; current UI has four controls, and Q17 human confirmation remains.
+
+The compact [current inventory](CURRENT_IMPLEMENTATION.md) lists current contracts,
+source anchors and evidence limits. Later-approved safety requirements outrank
+older conflicting workflow/UX concepts; source shows implementation, not clinical
+approval. The local skill may carry detailed changing progress when available,
+but these tracked documents do not depend on its presence.
+
+---
+
+## Historical authority and implementation status — 24 October 2026
+
+The following October snapshot, architecture and execution records are retained
+for provenance. All uses of "current", "pending" or "complete" below refer to
+their recorded baseline. In particular, backend-only Dispatch, pending 2D/2E,
+workflow-first precedence and October STT C1/C2 labels do not override the November
+baseline above. Historical test counts/results and original decisions are unchanged.
 
 `docs/workflow.md` is the finalized product and functional workflow. This plan supplies architecture, sequencing, and historical implementation checkpoints; the repository source determines current implementation. When workflow, safety decisions, UX detail, and implemented behavior differ, record the difference explicitly before changing clinical policy or working architecture. A workflow requirement alone is not implementation or test evidence.
 
-**Healthcare Emergency Worklist baseline:** commit `b4779f1` (16 October 2026) extracted seven Vue components from `Emergencies/Index.vue`, plus `useEmergencyQueue.ts` and `useEmergencyActions.ts`. Three focused Node regression files cover queue/actions behavior, including the corrected same-tick form synchronization regression. The project-owner request reports Checkpoint 4B TypeScript/build/Node checks, Checkpoint 4C Antigravity browser regression, and Checkpoint 4D cross-role Relawan → Healthcare rehearsal. These are reported historical evidence, not checks rerun in this documentation checkpoint; see `workflow-verification.md`.
+The compact current-state inventory is `docs/CURRENT_IMPLEMENTATION.md`. The
+sections after this status block preserve dated architecture and execution history;
+they must not be read as overriding this current snapshot.
+
+### Current checkpoint status
+
+| Checkpoint | Status | Evidence boundary |
+|---|---|---|
+| Healthcare Emergency Queue — Checkpoint 1 | **COMPLETE** | Source confirms oldest-first pending ordering, deterministic ties, stable selection, missing-gender fallback, and accessibility corrections. Reported verification: 31 Laravel tests, 501 assertions, plus six Antigravity browser categories passed. This documentation pass did not rerun them. |
+| Referral/Dispatch 2A — Architecture Audit | **COMPLETE** | Approved separation: Referral is clinical handoff; EmergencyDispatch is response coordination/movement; T0 dispatch may exist without referral; the `ON_SITE → COMPLETED` demo branch remains. |
+| Referral/Dispatch 2B — Domain Foundation | **COMPLETE** | Additive schema, models, enums, relationships, factories, and lifecycle/constraint tests. Reported combined result: **115 tests, 1,210 assertions** on guarded PostgreSQL/PostGIS testing. No development database cutover was performed. |
+| Referral/Dispatch 2C — Backend Workflows | **COMPLETE** | Locked/idempotent assignment, progression, linking, clinical completion, history/audit, and four Healthcare POST routes. Reported combined result: **149 tests, 1,670 assertions**, including **4 real PostgreSQL concurrency scenarios**. The later focused rerun is overlapping evidence and is not added as another test set. |
+| Referral/Dispatch 2D + 2E | **PENDING** | Frontend integration, read projections, dispatch controls, realtime reconciliation, and deterministic synthetic fixtures remain pending. Legacy endpoints, Referral casts, and existing constraints are not removed in this stage. |
+| Referral/Dispatch 2F + 2G | **PENDING** | Coordinated database/application cutover and final verification. This scope has not started and is not inferred from backend availability. No development database reset or destructive migration is authorized yet. |
+
+### Current implementation boundary
+
+- The Checkpoint 1 queue-ordering and gender-fallback defects previously listed
+  here are resolved in source. Pending T0 is oldest-first with an ID tie-break,
+  and absent gender uses an explicit fallback.
+- Referral and Dispatch now have independent schema and backend workflows.
+  However, the current `Rujukan` Vue page still drives the legacy movement-like
+  Referral lifecycle. Independent Dispatch commands are **BACKEND ONLY** until
+  the 2D + 2E frontend integration and read-projection work. Coordinated
+  database/application cutover remains in 2F + 2G.
+- Existing Healthcare emergency Reverb/Echo reconciliation remains implemented.
+  Checkpoint 2C introduced no Dispatch broadcast/subscription, and no external
+  response-unit contact, reservation, or acknowledgement is claimed.
+- Admin already renders Posko and Faskes markers. This is a marker map, not a
+  T0–T3 geospatial density heatmap. Admin has no equivalent Reverb/Echo aggregate
+  subscription in current source.
+- The development database was not migrated, reset, or reseeded by 2B/2C. Runtime
+  use of the new backend requires the additive 2B schema to be applied during an
+  explicitly approved cutover.
 
 ### Open workflow / implementation differences
 
@@ -21,7 +195,14 @@
 - **SMS:** workflow language describes automatic fallback; the browser implementation offers a user-mediated `sms:` composer handoff. Automatic delivery, native handler launch, and receipt are not verified. A pure PWA cannot promise silent SMS transmission.
 - **Offline/background sync:** local IndexedDB/outbox and selected offline gates have evidence, but browser and device support varies. Complete connectivity-failure coverage and a mid-flight POST disconnect/reconnect case are not established by Checkpoints 4C/4D.
 - **Data protection:** workflow claims local AES-256 encryption, local purging, and pseudonymization; corresponding end-to-end implementations were not verified in this checkpoint. Base64 is encoding, not encryption. HTTPS/WSS transport encryption does not establish application-level end-to-end encryption.
-- **Healthcare queue:** backend orders pending emergencies oldest first (`created_at`, then `id`); frontend `normalizeEmergencyQueue` sorts pending items newest first and has no matching ID tie-break. The extracted header still references a legacy `genderLabel` absent from normalized queue items. Both remain unresolved.
+- **T0 downgrade taxonomy:** the earlier Healthcare design baseline
+  restricts T0 downgrade to T1/T2, while current source also exposes and accepts
+  T3. This is not silently approved by documentation; it requires an explicit
+  project-owner clinical/product decision.
+- **Admin metrics:** current summary and analytics surfaces use different T0
+  populations in places, and `totalConfirmed` can fall back to system-triage
+  counts. Copy and metric semantics require a separate application-correctness
+  decision; documentation does not relabel these as uniformly clinical outcomes.
 
 ---
 

@@ -1,12 +1,18 @@
 import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
+import { useHealthcareDraft } from "./useHealthcareDraft.ts";
 
 export type VerificationForm = { method: string; notes: string };
 export type DecisionForm = { clinical_result: string; notes: string };
 export type ReferralForm = { facility_id: number | null; notes: string };
 type ActionFeedback = { type: "success" | "error"; message: string };
 
-export function useEmergencyActions() {
+function __t(key: string, fallback: string): string {
+    const fn = (globalThis as any)?.__rapidMindT;
+    return typeof fn === "function" ? fn(key, fallback) : fallback;
+}
+
+export function useEmergencyActions(active: (kind: "verification" | "decision" | "referral") => boolean = () => true) {
     const isSubmitting = ref(false);
 
     // Forms
@@ -25,6 +31,10 @@ export function useEmergencyActions() {
         notes: "",
     });
 
+    const verificationDraft = useHealthcareDraft(() => verificationForm.value, () => active('verification'));
+    const decisionDraft = useHealthcareDraft(() => decisionForm.value, () => active('decision'));
+    const referralDraft = useHealthcareDraft(() => referralForm.value, () => active('referral'));
+
     // Action Feedback State
     const actionFeedback = ref<ActionFeedback | null>(null);
 
@@ -33,6 +43,9 @@ export function useEmergencyActions() {
         decisionForm.value = { clinical_result: "T0_CONFIRMED", notes: "" };
         referralForm.value = { facility_id: null, notes: "" };
         actionFeedback.value = null;
+        verificationDraft.reset();
+        decisionDraft.reset();
+        referralDraft.reset();
     }
 
     // ACTION DISPATCH HANDLERS
@@ -47,7 +60,10 @@ export function useEmergencyActions() {
                 onSuccess: () => {
                     actionFeedback.value = {
                         type: "success",
-                        message: "Kasus darurat berhasil diakui.",
+                        message: __t(
+                            "healthcare.actions.acknowledgeSuccess",
+                            "Kasus darurat berhasil diakui.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -55,7 +71,10 @@ export function useEmergencyActions() {
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal mengakui kasus.",
+                            __t(
+                                "healthcare.actions.acknowledgeError",
+                                "Gagal mengakui kasus.",
+                            ),
                     };
                 },
                 onFinish: () => {
@@ -67,6 +86,7 @@ export function useEmergencyActions() {
 
     function submitVerification(item: any) {
         if (!item.emergencyId) return;
+        const saved = verificationDraft.submitted();
         isSubmitting.value = true;
         actionFeedback.value = null;
         router.post(
@@ -74,9 +94,13 @@ export function useEmergencyActions() {
             verificationForm.value,
             {
                 onSuccess: () => {
+                    saved();
                     actionFeedback.value = {
                         type: "success",
-                        message: "Verifikasi medis berhasil disimpan.",
+                        message: __t(
+                            "healthcare.actions.verifySuccess",
+                            "Verifikasi medis berhasil disimpan.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -84,7 +108,10 @@ export function useEmergencyActions() {
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal menyimpan verifikasi.",
+                            __t(
+                                "healthcare.actions.verifyError",
+                                "Gagal menyimpan verifikasi.",
+                            ),
                     };
                 },
                 onFinish: () => {
@@ -96,6 +123,7 @@ export function useEmergencyActions() {
 
     function submitClassification(item: any) {
         if (!item.emergencyId) return;
+        const saved = decisionDraft.submitted();
         isSubmitting.value = true;
         actionFeedback.value = null;
         router.post(
@@ -103,9 +131,13 @@ export function useEmergencyActions() {
             decisionForm.value,
             {
                 onSuccess: () => {
+                    saved();
                     actionFeedback.value = {
                         type: "success",
-                        message: "Klasifikasi triase berhasil ditetapkan.",
+                        message: __t(
+                            "healthcare.actions.classifySuccess",
+                            "Klasifikasi triase berhasil ditetapkan.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -113,7 +145,10 @@ export function useEmergencyActions() {
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal menetapkan klasifikasi.",
+                            __t(
+                                "healthcare.actions.classifyError",
+                                "Gagal menetapkan klasifikasi.",
+                            ),
                     };
                 },
                 onFinish: () => {
@@ -125,6 +160,7 @@ export function useEmergencyActions() {
 
     function submitReferral(item: any) {
         if (!item.emergencyId) return;
+        const saved = referralDraft.submitted();
         isSubmitting.value = true;
         actionFeedback.value = null;
         router.post(
@@ -132,9 +168,13 @@ export function useEmergencyActions() {
             referralForm.value,
             {
                 onSuccess: () => {
+                    saved();
                     actionFeedback.value = {
                         type: "success",
-                        message: "Rujukan medis berhasil diterbitkan.",
+                        message: __t(
+                            "healthcare.actions.referralSuccess",
+                            "Rujukan medis berhasil diterbitkan.",
+                        ),
                     };
                 },
                 onError: (errors) => {
@@ -142,7 +182,10 @@ export function useEmergencyActions() {
                         type: "error",
                         message:
                             (Object.values(errors)[0] as string) ||
-                            "Gagal menerbitkan rujukan.",
+                            __t(
+                                "healthcare.actions.referralError",
+                                "Gagal menerbitkan rujukan.",
+                            ),
                     };
                 },
                 onFinish: () => {

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Healthcare;
 
+use App\Domain\Healthcare\ClinicalReferralWorkflow;
+use App\Domain\Healthcare\HealthcareCaseAccess;
+use App\Domain\Healthcare\HealthcareOperationsRead;
+use App\Domain\Healthcare\HealthcareWorkflowEvents;
 use App\Enums\AssessmentStatus;
 use App\Enums\EmergencyStatus;
 use App\Enums\ReferralStatus;
@@ -33,12 +37,14 @@ use Throwable;
 
 final class HealthcareController extends Controller
 {
-    public function emergencies(): InertiaResponse
+    public function emergencies(HealthcareOperationsRead $operations): InertiaResponse
     {
+        $ready = $operations->ready();
         $user = Auth::user();
 
-        $emergencies = EmergencyEvent::with([
+        $emergencies = HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user())->with([
             'patient.shelter',
+            'assessment' => fn ($query) => HealthcareCaseAccess::cases($query, Auth::user()),
             'assessment.triageResult',
             'assessment.srqResponses',
             'assessment.riskAssessment',
@@ -50,26 +56,16 @@ final class HealthcareController extends Controller
             'referrals.facility',
             'referrals.statusHistory.changer:id,name',
         ])
-            ->where(function ($query): void {
-                $query->whereIn('status', [
-                    EmergencyStatus::PENDING,
-                    EmergencyStatus::ACKNOWLEDGED,
-                    EmergencyStatus::REVIEWING,
-                ])->orWhere(function ($confirmed): void {
-                    $confirmed->where('status', EmergencyStatus::CONFIRMED)
-                        ->where(function ($followUp): void {
-                            $followUp->whereDoesntHave('referrals')
-                                ->orWhereHas('referrals', fn($referral) => $referral
-                                    ->where('status', '!=', ReferralStatus::COMPLETED));
-                        });
-                });
-            })
+            ->when($ready, fn ($query) => $query->with($operations->relations()))
+            ->where(fn ($query) => $operations->queue($query, $ready))
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN created_at END ASC")
             ->orderByRaw("CASE WHEN status = 'PENDING' THEN id END ASC")
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
+
+        $emergencies->each(fn ($emergency) => $operations->emergency($emergency, $ready));
 
         $facilities = HealthcareFacility::where('is_active', true)->get();
         $facility = $user->facility_id ? HealthcareFacility::find($user->facility_id) : null;
@@ -78,13 +74,16 @@ final class HealthcareController extends Controller
             'emergencies' => $emergencies,
             'facilities' => $facilities,
             'facility' => $facility,
+            ...$operations->options($ready),
         ]);
     }
 
-    public function emergencyDetail(string $emergencyId): InertiaResponse
+    public function emergencyDetail(string $emergencyId, HealthcareOperationsRead $operations): InertiaResponse
     {
-        $emergency = EmergencyEvent::with([
+        $ready = $operations->ready();
+        $emergency = HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user())->with([
             'patient.shelter',
+            'assessment' => fn ($query) => HealthcareCaseAccess::cases($query, Auth::user()),
             'assessment.triageResult',
             'assessment.srqResponses',
             'assessment.riskAssessment',
@@ -95,12 +94,14 @@ final class HealthcareController extends Controller
             'verifications.verifier',
             'referrals.facility',
             'referrals.statusHistory.changer',
-        ])->findOrFail($emergencyId);
+        ])->when($ready, fn ($query) => $query->with($operations->relations()))->findOrFail($emergencyId);
+        $operations->emergency($emergency, $ready);
 
         $facilities = HealthcareFacility::where('is_active', true)->get();
 
         return Inertia::render('Healthcare/Emergencies/Show', [
             'emergency' => $emergency,
+            ...$operations->options($ready),
             'facilities' => $facilities,
         ]);
     }
@@ -109,7 +110,8 @@ final class HealthcareController extends Controller
     {
         $user = Auth::user();
         $result = DB::transaction(function () use ($emergencyId, $user): array {
-            $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            $emergency = HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user(), true)->whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            HealthcareCaseAccess::authorize($emergency, $user);
 
             if ($emergency->status === EmergencyStatus::ACKNOWLEDGED) {
                 return ['replay' => true];
@@ -159,7 +161,8 @@ final class HealthcareController extends Controller
         $notes = $validated['notes'] ?? null;
 
         $result = DB::transaction(function () use ($emergencyId, $user, $method, $notes): array {
-            $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            $emergency = HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user(), true)->whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            HealthcareCaseAccess::authorize($emergency, $user);
             $savedVerification = $emergency->verifications()
                 ->whereNotNull('method')
                 ->whereNull('clinical_result')
@@ -219,7 +222,7 @@ final class HealthcareController extends Controller
     public function classify(Request $request, string $emergencyId): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
-        $emergency = EmergencyEvent::findOrFail($emergencyId);
+        $emergency = HealthcareCaseAccess::cases(EmergencyEvent::query(), $user, true)->findOrFail($emergencyId);
 
         $validated = $request->validate([
             'clinical_result' => ['required', 'string', 'in:T0_CONFIRMED,T1,T2,T3'],
@@ -235,7 +238,8 @@ final class HealthcareController extends Controller
         };
 
         $result = DB::transaction(function () use ($emergency, $newStatus, $user, $clinicalResult, $validated): array {
-            $emergency = EmergencyEvent::whereKey($emergency->id)->lockForUpdate()->firstOrFail();
+            $emergency = HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user(), true)->whereKey($emergency->id)->lockForUpdate()->firstOrFail();
+            HealthcareCaseAccess::authorize($emergency, $user);
 
             if (in_array($emergency->status, [EmergencyStatus::CONFIRMED, EmergencyStatus::DOWNGRADED], true)) {
                 $savedDecision = $emergency->verifications()
@@ -295,7 +299,7 @@ final class HealthcareController extends Controller
         return $this->mutationSuccessRedirect('Status klinis darurat berhasil diperbarui.', $realtimeDelivered);
     }
 
-    public function createEmergencyReferral(Request $request, string $emergencyId): JsonResponse|RedirectResponse
+    public function createEmergencyReferral(Request $request, string $emergencyId, ClinicalReferralWorkflow $referrals): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
         $validated = $request->validate([
@@ -303,8 +307,9 @@ final class HealthcareController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $result = DB::transaction(function () use ($emergencyId, $user, $validated): array {
-            $emergency = EmergencyEvent::whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+        $result = DB::transaction(function () use ($emergencyId, $user, $validated, $referrals): array {
+            $emergency = HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user(), true)->whereKey($emergencyId)->lockForUpdate()->firstOrFail();
+            HealthcareCaseAccess::authorize($emergency, $user);
 
             if ($emergency->status !== EmergencyStatus::CONFIRMED) {
                 return ['conflict' => true, 'current' => $emergency->status];
@@ -321,18 +326,14 @@ final class HealthcareController extends Controller
             }
 
             $referral = $emergency->referrals()->create([
+                'emergency_verification_id' => $emergency->verifications()->where('clinical_result', TriageCategory::T0_CONFIRMED)->oldest('id')->value('id'),
                 'patient_id' => $emergency->patient_id,
                 'referred_by' => $user->id,
                 'facility_id' => (int) $validated['facility_id'],
                 'status' => ReferralStatus::ACTIVE,
                 'notes' => $validated['notes'] ?? null,
             ]);
-            ReferralStatusHistory::create([
-                'referral_id' => $referral->id,
-                'status' => ReferralStatus::ACTIVE,
-                'changed_by' => $user->id,
-                'notes' => 'Rujukan darurat diterbitkan setelah konfirmasi T0.',
-            ]);
+            $referrals->recordCreated($referral, $user, 'Rujukan darurat diterbitkan setelah konfirmasi T0.');
 
             return ['created' => true];
         });
@@ -386,7 +387,7 @@ final class HealthcareController extends Controller
 
     public function validations(): InertiaResponse
     {
-        $assessments = Assessment::with(['patient', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'clinicalValidation.validator'])
+        $assessments = HealthcareCaseAccess::cases(Assessment::query(), Auth::user())->with(['patient', 'user:id,name,shelter_id', 'user.shelter', 'triageResult', 'clinicalValidation.validator'])
             ->where('status', AssessmentStatus::COMPLETED)
             ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->get()
@@ -397,6 +398,8 @@ final class HealthcareController extends Controller
                 $assessment->id,
             ))->values();
 
+        $assessments->each(fn ($case) => $case->setAttribute('can_manage', HealthcareCaseAccess::manages($case, Auth::user())));
+
         return Inertia::render('Healthcare/Validations/Index', [
             'pendingAssessments' => $assessments->filter(fn(Assessment $a) => $a->clinicalValidation === null)->values(),
             'completedAssessments' => $assessments->filter(fn(Assessment $a) => $a->clinicalValidation !== null)->values(),
@@ -405,7 +408,7 @@ final class HealthcareController extends Controller
 
     public function validationDetail(string $assessmentId): InertiaResponse
     {
-        $assessment = Assessment::with([
+        $assessment = HealthcareCaseAccess::cases(Assessment::query(), Auth::user())->with([
             'patient.shelter',
             'user:id,name,shelter_id',
             'user.shelter',
@@ -414,16 +417,19 @@ final class HealthcareController extends Controller
             'riskAssessment',
             'functionAssessment',
             'clinicalValidation.validator',
+            'clinicalValidation.referral' => fn ($query) => HealthcareCaseAccess::referrals($query, Auth::user()),
             'clinicalValidation.referral.facility',
         ])->where('status', AssessmentStatus::COMPLETED)
             ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->findOrFail($assessmentId);
 
-        $previousAssessments = Assessment::with(['triageResult', 'clinicalValidation.validator'])
+        $previousAssessments = HealthcareCaseAccess::cases(Assessment::query(), Auth::user())->with(['triageResult', 'clinicalValidation.validator'])
             ->where('patient_id', $assessment->patient_id)
             ->where('status', AssessmentStatus::COMPLETED)
             ->where('completed_at', '<', $assessment->completed_at)
             ->orderByDesc('completed_at')->orderByDesc('id')->limit(5)->get();
+
+        $assessment->setAttribute('can_manage', HealthcareCaseAccess::manages($assessment, Auth::user()));
 
         return Inertia::render('Healthcare/Validations/Show', [
             'assessment' => $assessment,
@@ -432,10 +438,10 @@ final class HealthcareController extends Controller
         ]);
     }
 
-    public function validateAssessment(Request $request, string $assessmentId): JsonResponse|RedirectResponse
+    public function validateAssessment(Request $request, string $assessmentId, ClinicalReferralWorkflow $referrals): JsonResponse|RedirectResponse
     {
         $user = Auth::user();
-        $assessment = Assessment::where('status', AssessmentStatus::COMPLETED)
+        $assessment = HealthcareCaseAccess::cases(Assessment::query(), $user, true)->where('status', AssessmentStatus::COMPLETED)
             ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
             ->findOrFail($assessmentId);
 
@@ -455,11 +461,12 @@ final class HealthcareController extends Controller
         $clinicalResult = TriageCategory::from($validated['clinical_result']);
 
         try {
-            DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated): void {
-                $assessment = Assessment::whereKey($assessment->id)
+            DB::transaction(function () use ($assessment, $user, $clinicalResult, $validated, $referrals): void {
+                $assessment = HealthcareCaseAccess::cases(Assessment::query(), $user, true)->whereKey($assessment->id)
                     ->where('status', AssessmentStatus::COMPLETED)
                     ->whereHas('triageResult', fn($query) => $query->whereIn('system_recommendation', ['T1', 'T2']))
                     ->lockForUpdate()->firstOrFail();
+                HealthcareCaseAccess::authorize($assessment, $user);
                 if ($assessment->clinicalValidation()->exists()) {
                     return;
                 }
@@ -483,12 +490,7 @@ final class HealthcareController extends Controller
                         'status' => ReferralStatus::ACTIVE,
                         'notes' => $validated['intervention_plan'] ?? 'Rujukan tindak lanjut klinis.',
                     ]);
-                    ReferralStatusHistory::create([
-                        'referral_id' => $referral->id,
-                        'status' => ReferralStatus::ACTIVE,
-                        'changed_by' => $user->id,
-                        'notes' => 'Rujukan klinis diterbitkan pasca-validasi asesmen.',
-                    ]);
+                    $referrals->recordCreated($referral, $user, 'Rujukan klinis diterbitkan pasca-validasi asesmen.');
                 }
 
                 AuditLog::create([
@@ -523,14 +525,19 @@ final class HealthcareController extends Controller
         return back()->with('message', 'Validasi klinis berhasil disimpan.');
     }
 
-    public function referrals(): InertiaResponse
+    public function referrals(HealthcareOperationsRead $operations): InertiaResponse
     {
-        $referrals = Referral::with(['patient', 'facility', 'referrer', 'emergencyEvent', 'statusHistory.changer'])
+        $ready = $operations->ready();
+        $referrals = HealthcareCaseAccess::referrals(Referral::query(), Auth::user())->with(['patient', 'facility', 'referrer', 'emergencyEvent', 'statusHistory.changer'])
+            ->when($ready, fn ($query) => $query->with('dispatch.responseUnit:id,code,name'))
             ->latest('created_at')
             ->get();
 
+        $referrals->each(fn ($referral) => $referral->setAttribute('can_manage', HealthcareCaseAccess::manages(HealthcareCaseAccess::referralCase($referral), Auth::user())));
+
         return Inertia::render('Healthcare/Referrals/Index', [
             'referrals' => $referrals,
+            'operationsAvailable' => $ready,
         ]);
     }
 
@@ -545,7 +552,10 @@ final class HealthcareController extends Controller
         $newStatus = ReferralStatus::from($validated['status']);
 
         $result = DB::transaction(function () use ($referralId, $expectedStatus, $newStatus, $validated): array {
-            $referral = Referral::whereKey($referralId)->lockForUpdate()->firstOrFail();
+            $referral = HealthcareCaseAccess::referrals(Referral::query(), Auth::user(), true)->whereKey($referralId)->lockForUpdate()->firstOrFail();
+            $case = HealthcareCaseAccess::referralCase($referral);
+            abort_unless($case, 404);
+            HealthcareCaseAccess::authorize($case, Auth::user());
             $current = $referral->status;
 
             // A response lost after a successful write may be retried with the old expectation.
@@ -564,10 +574,21 @@ final class HealthcareController extends Controller
             $referral->update(['status' => $newStatus]);
             ReferralStatusHistory::create([
                 'referral_id' => $referral->id,
+                'previous_status' => $current,
                 'status' => $newStatus,
                 'changed_by' => Auth::id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
+            AuditLog::create([
+                'actor_id' => Auth::id(),
+                'action' => 'REFERRAL_LEGACY_STATUS_CHANGED',
+                'entity_type' => 'Referral',
+                'entity_id' => $referral->id,
+                'old_values' => ['status' => $current->value],
+                'new_values' => ['status' => $newStatus->value, 'notes' => $validated['notes'] ?? null],
+            ]);
+
+            HealthcareWorkflowEvents::changed($referral);
 
             return [
                 'updated' => true,
@@ -596,35 +617,41 @@ final class HealthcareController extends Controller
 
     public function patients(): InertiaResponse
     {
-        $patients = Patient::with([
+        $ready = app(HealthcareOperationsRead::class)->ready();
+        $patients = HealthcareCaseAccess::patients(Patient::query(), Auth::user())->with([
             'shelter',
-            'assessments' => fn($query) => $query
+            'assessments' => fn($query) => HealthcareCaseAccess::cases($query, Auth::user())
                 ->where('status', AssessmentStatus::COMPLETED)
                 ->orderByDesc('completed_at')
                 ->orderByDesc('id'),
             'assessments.triageResult',
             'assessments.clinicalValidation',
-            'emergencyEvents' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'emergencyEvents' => fn($query) => HealthcareCaseAccess::cases($query, Auth::user())->orderByDesc('created_at')->orderByDesc('id'),
             'emergencyEvents.verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'emergencyEvents.referrals',
+            ...($ready ? ['emergencyEvents.dispatch'] : []),
         ])
             ->latest('created_at')
             ->get()
-            ->each(fn(Patient $patient) => $patient->setAttribute(
+            ->each(function (Patient $patient) {
+                $patient->emergencyEvents->each(fn ($case) => HealthcareCaseAccess::hideUnauthorizedAssessment($case, Auth::user()));
+                $patient->setAttribute(
                 'latest_clinical_status',
                 $this->latestPatientClinicalStatus($patient),
-            ));
+                );
+            });
 
         return Inertia::render('Healthcare/Patients/Index', [
             'patients' => $patients,
         ]);
     }
 
-    public function patientDetail(string $patientId): InertiaResponse
+    public function patientDetail(string $patientId, HealthcareOperationsRead $operations): InertiaResponse
     {
-        $patient = Patient::with([
+        $ready = $operations->ready();
+        $patient = HealthcareCaseAccess::patients(Patient::query(), Auth::user())->with([
             'shelter',
-            'assessments' => fn($query) => $query
+            'assessments' => fn($query) => HealthcareCaseAccess::cases($query, Auth::user())
                 ->where('status', AssessmentStatus::COMPLETED)
                 ->orderByDesc('completed_at')
                 ->orderByDesc('id'),
@@ -634,23 +661,28 @@ final class HealthcareController extends Controller
             'assessments.functionAssessment',
             'assessments.triageResult',
             'assessments.clinicalValidation.validator',
-            'emergencyEvents' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'emergencyEvents' => fn($query) => HealthcareCaseAccess::cases($query, Auth::user())->orderByDesc('created_at')->orderByDesc('id'),
             'emergencyEvents.user:id,name',
             'emergencyEvents.shelter',
             'emergencyEvents.verifications' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'emergencyEvents.verifications.verifier',
             'emergencyEvents.referrals.facility',
-            'referrals' => fn($query) => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'referrals' => fn($query) => HealthcareCaseAccess::referrals($query, Auth::user())->orderByDesc('created_at')->orderByDesc('id'),
             'referrals.facility',
             'referrals.referrer',
             'referrals.statusHistory' => fn($query) => $query->orderBy('created_at')->orderBy('id'),
             'referrals.statusHistory.changer',
-            'referrals.emergencyEvent',
+            'referrals.emergencyEvent' => fn ($query) => HealthcareCaseAccess::cases($query, Auth::user()),
+            'referrals.clinicalValidation.assessment' => fn ($query) => HealthcareCaseAccess::cases($query, Auth::user()),
             'referrals.clinicalValidation.assessment.triageResult',
+            'emergencyEvents.referrals.statusHistory.changer',
+            ...($ready ? array_map(fn ($relation) => 'emergencyEvents.'.$relation, $operations->relations()) : []),
         ])->findOrFail($patientId);
+        $patient->emergencyEvents->each(fn ($emergency) => $operations->emergency($emergency, $ready));
 
         return Inertia::render('Healthcare/Patients/Show', [
             'patient' => $patient,
+            'operationsAvailable' => $ready,
         ]);
     }
 
@@ -667,7 +699,8 @@ final class HealthcareController extends Controller
             }
 
             return $emergency->status === EmergencyStatus::CONFIRMED
-                && ($emergency->referrals->isEmpty()
+                && (! $emergency->relationLoaded('dispatch') || ! $emergency->dispatch
+                    || $emergency->dispatch->status->value !== 'COMPLETED'
                     || $emergency->referrals->contains(
                         fn(Referral $referral): bool => $referral->status !== ReferralStatus::COMPLETED,
                     ));
@@ -746,7 +779,7 @@ final class HealthcareController extends Controller
     private function broadcastEmergencyUpdateBestEffort(string $emergencyId): bool
     {
         try {
-            EmergencyUpdated::dispatch(EmergencyEvent::findOrFail($emergencyId));
+            EmergencyUpdated::dispatch(HealthcareCaseAccess::cases(EmergencyEvent::query(), Auth::user(), true)->findOrFail($emergencyId));
 
             return true;
         } catch (Throwable $exception) {

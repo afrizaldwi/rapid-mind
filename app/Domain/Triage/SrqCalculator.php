@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Triage;
 
+use App\Domain\Assessment\SrqAnswer;
+
 final class SrqCalculator
 {
     /**
@@ -14,6 +16,7 @@ final class SrqCalculator
      */
     public function calculate(array $answers): int
     {
+        $answers = SrqAnswer::definitive($answers);
         $score = 0;
 
         for ($i = 1; $i <= 20; $i++) {
